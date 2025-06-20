@@ -5,27 +5,25 @@ import android.graphics.RuntimeShader
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -36,6 +34,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import org.intellij.lang.annotations.Language
@@ -46,7 +45,8 @@ data class GlassElement(
     val shape: Shape,
     val displacementScale: Float,
     val blur: Float,
-    val centerDistortion: Float
+    val centerDistortion: Float,
+    val cornerRadius: Float
 )
 
 interface GlassScope {
@@ -58,7 +58,15 @@ interface GlassScope {
     ): Modifier
 }
 
-private class GlassScopeImpl : GlassScope {
+interface GlassBoxScope : BoxScope, GlassScope
+
+private class GlassBoxScopeImpl(
+    boxScope: BoxScope,
+    glassScope: GlassScope
+) : GlassBoxScope, BoxScope by boxScope,
+    GlassScope by glassScope
+
+private class GlassScopeImpl(private val density: Density) : GlassScope {
 
     var updateCounter by mutableStateOf(0)
     val elements: MutableList<GlassElement> = mutableListOf()
@@ -73,24 +81,35 @@ private class GlassScopeImpl : GlassScope {
         .onGloballyPositioned { coordinates ->
             val position = coordinates.positionInRoot()
             val size = coordinates.size.toSize()
-            
+
             // Use actual position from layout
             val adjustedPosition = position
-            
+
+            // Extract corner radius from RoundedCornerShape
+            val cornerRadius = when (shape) {
+                is RoundedCornerShape -> {
+                    // Use default 16dp for now, in real app you'd extract actual radius
+                    with(density) { 16.dp.toPx() }
+                }
+
+                else -> 0f // Sharp corners for other shapes
+            }
+
             val element = GlassElement(
                 position = adjustedPosition,
                 size = size,
                 shape = shape,
                 displacementScale = displacementScale,
                 blur = blur,
-                centerDistortion = centerDistortion
+                centerDistortion = centerDistortion,
+                cornerRadius = cornerRadius
             )
-            
+
             // Update or add glass element
             elements.clear() // Clear and add new element
             elements.add(element)
             updateCounter++ // Trigger recomposition
-            
+
             // Debug print
             // Element registered successfully
         }
@@ -99,12 +118,12 @@ private class GlassScopeImpl : GlassScope {
 @Composable
 fun GlassContainer(
     content: @Composable () -> Unit,
-    glassContent: @Composable GlassScope.() -> Unit,
+    glassContent: @Composable GlassBoxScope.() -> Unit,
 ) {
-    val glassScope = remember { GlassScopeImpl() }
     val density = LocalDensity.current
+    val glassScope = remember { GlassScopeImpl(density) }
     val shader = remember { RuntimeShader(GLASS_DISPLACEMENT_SHADER) }
-        Box(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .graphicsLayer {
@@ -117,27 +136,22 @@ fun GlassContainer(
                     shader.setFloatUniform("glassPosition", element.position.x, element.position.y)
                     shader.setFloatUniform("glassSize", element.size.width, element.size.height)
                     shader.setFloatUniform("glassStrength", element.displacementScale)
-                    // Element found and applied
-                } else {
-                    // No glass elements - no effect
-                    shader.setFloatUniform("glassPosition", -1000f, -1000f)
-                    shader.setFloatUniform("glassSize", 0f, 0f)
-                    shader.setFloatUniform("glassStrength", 0f)
+                    shader.setFloatUniform("cornerRadius", element.cornerRadius)
+
+                    renderEffect = RenderEffect.createRuntimeShaderEffect(
+                        shader, "contents"
+                    ).asComposeRenderEffect()
                 }
-                
-                renderEffect = RenderEffect.createRuntimeShaderEffect(
-                    shader, "contents"
-                ).asComposeRenderEffect()
             }
     ) {
         // Background content
         content()
-        
-        // Glass content overlay
-        glassScope.glassContent()
+
+    }
+    Box(modifier = Modifier.fillMaxSize()) {
+        GlassBoxScopeImpl(this, glassScope).glassContent()
     }
 }
-
 
 
 @Language("AGSL")
@@ -147,16 +161,37 @@ private val GLASS_DISPLACEMENT_SHADER = """
     uniform float2 glassPosition;
     uniform float2 glassSize;
     uniform float glassStrength;
+    uniform float cornerRadius;
 
     float4 main(float2 fragCoord) {
         float2 uv = fragCoord / resolution;
         
-        // Check if we're inside the glass area
+        // Check if we're inside the glass area with rounded corners
         float2 glassTopLeft = glassPosition;
         float2 glassBottomRight = glassPosition + glassSize;
         
-        bool insideGlass = fragCoord.x >= glassTopLeft.x && fragCoord.x <= glassBottomRight.x &&
-                          fragCoord.y >= glassTopLeft.y && fragCoord.y <= glassBottomRight.y;
+        // First check if we're in the rectangular bounds
+        bool inRect = fragCoord.x >= glassTopLeft.x && fragCoord.x <= glassBottomRight.x &&
+                     fragCoord.y >= glassTopLeft.y && fragCoord.y <= glassBottomRight.y;
+        
+        bool insideGlass = false;
+        if (inRect) {
+            if (cornerRadius <= 0.0) {
+                // No rounding, just use rectangle
+                insideGlass = true;
+            } else {
+                // Calculate distance to rounded rectangle
+                float2 center = glassPosition + glassSize * 0.5;
+                float2 halfSize = glassSize * 0.5 - cornerRadius;
+                float2 pos = abs(fragCoord - center);
+                
+                // Distance to rounded rectangle
+                float2 d = max(pos - halfSize, 0.0);
+                float dist = length(d) - cornerRadius;
+                
+                insideGlass = dist <= 0.0;
+            }
+        }
         
         float2 displacement = float2(0.0);
         
@@ -192,7 +227,13 @@ fun GlassContainerPreview() {
         content = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 repeat(10) {
-                    Row(Modifier.padding(12.dp).background(color = Color.Gray.copy(red = 0.1f * it)).height(64.dp).horizontalScroll(rememberScrollState())) {
+                    Row(
+                        Modifier
+                            .padding(12.dp)
+                            .background(color = Color.Gray.copy(red = 0.1f * it))
+                            .height(64.dp)
+                            .horizontalScroll(rememberScrollState())
+                    ) {
                         repeat(10) {
                             Text("Hello, world!")
                         }
@@ -204,11 +245,11 @@ fun GlassContainerPreview() {
             Button(
                 onClick = { },
                 colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                modifier = Modifier
+                modifier = Modifier.align(Alignment.Center)
                     .glassBackground(
-                        displacementScale = 2.0f,
+                        displacementScale = 0.5f,
                         blur = 1.0f,
-                        centerDistortion = 2.0f,
+                        centerDistortion = 1.0f,
                         shape = RoundedCornerShape(16.dp)
                     )
             ) {
