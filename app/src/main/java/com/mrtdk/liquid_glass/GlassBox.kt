@@ -54,7 +54,7 @@ import org.intellij.lang.annotations.Language
 data class GlassElement(
     val position: Offset,
     val size: Size,
-    val displacementScale: Float,
+    val scale: Float,
     val blur: Float,
     val centerDistortion: Float,
     val cornerRadius: Float
@@ -62,7 +62,7 @@ data class GlassElement(
 
 interface GlassScope {
     fun Modifier.glassBackground(
-        displacementScale: Float,
+        scale: Float,
         blur: Float,
         centerDistortion: Float,
         shape: CornerBasedShape,
@@ -83,7 +83,7 @@ private class GlassScopeImpl(private val density: Density) : GlassScope {
     val elements: MutableList<GlassElement> = mutableListOf()
 
     override fun Modifier.glassBackground(
-        displacementScale: Float,
+        scale: Float,
         blur: Float,
         centerDistortion: Float,
         shape: CornerBasedShape,
@@ -101,7 +101,7 @@ private class GlassScopeImpl(private val density: Density) : GlassScope {
                 position = adjustedPosition,
                 size = size,
                 cornerRadius = shape.topStart.toPx(size, density),
-                displacementScale = displacementScale,
+                scale = scale,
                 blur = blur,
                 centerDistortion = centerDistortion,
             )
@@ -142,7 +142,7 @@ fun GlassContainer(
                 val maxElements = 10
                 val positions = FloatArray(maxElements * 2) // x,y pairs
                 val sizes = FloatArray(maxElements * 2) // width,height pairs  
-                val strengths = FloatArray(maxElements)
+                val scales = FloatArray(maxElements)
                 val radii = FloatArray(maxElements)
                 
                 for (i in 0 until minOf(elements.size, maxElements)) {
@@ -151,13 +151,13 @@ fun GlassContainer(
                     positions[i * 2 + 1] = element.position.y
                     sizes[i * 2] = element.size.width
                     sizes[i * 2 + 1] = element.size.height
-                    strengths[i] = element.displacementScale
+                    scales[i] = element.scale
                     radii[i] = element.cornerRadius
                 }
                 
                 shader.setFloatUniform("glassPositions", positions)
                 shader.setFloatUniform("glassSizes", sizes)
-                shader.setFloatUniform("glassStrengths", strengths)
+                shader.setFloatUniform("glassScales", scales)
                 shader.setFloatUniform("cornerRadii", radii)
                 
                 if (elements.isNotEmpty()) {
@@ -185,85 +185,60 @@ private val GLASS_DISPLACEMENT_SHADER = """
     uniform int elementsCount;
     uniform float2 glassPositions[10];
     uniform float2 glassSizes[10];
-    uniform float glassStrengths[10];
+    uniform float glassScales[10];
     uniform float cornerRadii[10];
 
-    // Calculate displacement for a single glass element
-    float2 calculateDisplacement(float2 fragCoord, float2 glassCenter, float2 glassSize, float strength) {
-//        // Normalize coordinates to element space
-//        float2 localPos = (fragCoord - glassCenter) / max(glassSize.x, glassSize.y);
-//        float distance = length(localPos);
-//        
-//        // Apply displacement only within element bounds (distance <= 0.5)
-//        if (distance > 0.5) return float2(0.0);
-//        
-//        // Normalize distance to 0-1 range within element
-//        float normalizedDistance = distance * 2.0; // 0.0 to 1.0
-//        
-//        // Create smooth falloff from center to edge
-//        float falloff = 1.0 - smoothstep(0.0, 1.0, normalizedDistance);
-//        
-//        // Calculate displacement direction and magnitude
-//        float2 direction = normalize(localPos + float2(0.001, 0.001));
-//        float magnitude = strength * falloff * 50.0; // Scale to pixels
-//        
-//        return direction * magnitude;
-        bool isOdd = fragCoord % 2 == 0;
-        if (isOdd) {
-            return float2(-5.0);
-        } else {
-            return float2(5.0);
+    // Calculate lens effect using UV scaling
+    float2 calculateLensEffect(float2 fragCoord, float2 glassPosition, float2 glassSize, float cornerRadius, float scale) {
+        if (scale <= 0.0) return fragCoord;
+        
+        // Convert glass parameters to UV space
+        float2 lensCenter = glassPosition + glassSize * 0.5;
+        float2 lensSize = glassSize;
+        
+                 // Convert to relative coordinates [-1, 1] within lens
+         float2 rel = (fragCoord - lensCenter) / (lensSize * 0.5);
+         
+         // Normalize corner radius to relative space
+         float normalizedCornerRadius = cornerRadius / (min(lensSize.x, lensSize.y) * 0.5);
+         
+         // SDF for rounded rectangle
+         float2 ab = abs(rel) - (float2(1.0) - normalizedCornerRadius);
+         float sdf = length(max(ab, 0.0)) - normalizedCornerRadius;
+        
+        // Apply lens effect only inside the lens
+        if (sdf < 0.0) {
+            // Distance from center normalized to [0, 1]
+            float dist = length(rel) / length(float2(1.0));
+            
+            // Scale factor with smooth falloff from center to edges
+            float scaleFactor = mix(1.0, 1.0 + scale, 1.0 - smoothstep(0.90, 1.0, dist));
+            
+                         // Apply scaling: zoom into the center
+             float2 newCoord = lensCenter + (fragCoord - lensCenter) / scaleFactor;
+             
+             return newCoord;
         }
-        return float2(0.0)
+        
+        return fragCoord;
     }
 
     float4 main(float2 fragCoord) {
-        float2 uv = fragCoord / resolution;
+        float2 finalCoord = fragCoord;
         
-        // Process all glass elements in one pass
-        bool insideGlass = false;
-        float2 displacement = float2(0.0);
-        
-        // Apply displacement for each glass element separately
+        // Apply lens effects for each glass element
         for (int i = 0; i < 10; i++) {
             if (i >= elementsCount) break;
             
             float2 glassPosition = glassPositions[i];
             float2 glassSize = glassSizes[i];
             float cornerRadius = cornerRadii[i];
-            float glassStrength = glassStrengths[i];
+            float glassScale = glassScales[i];
             
-            // Check if current pixel is inside this glass element
-            float2 glassTopLeft = glassPosition;
-            float2 glassBottomRight = glassPosition + glassSize;
-            
-            bool inRect = fragCoord.x >= glassTopLeft.x && fragCoord.x <= glassBottomRight.x &&
-                         fragCoord.y >= glassTopLeft.y && fragCoord.y <= glassBottomRight.y;
-            
-            bool insideGlass = false;
-            if (inRect) {
-                if (cornerRadius <= 0.0) {
-                    insideGlass = true;
-                } else {
-                    float2 center = glassPosition + glassSize * 0.5;
-                    float2 halfSize = glassSize * 0.5 - cornerRadius;
-                    float2 pos = abs(fragCoord - center);
-                    
-                    float2 d = max(pos - halfSize, 0.0);
-                    float dist = length(d) - cornerRadius;
-                    
-                    insideGlass = dist <= 0.0;
-                }
-            }
-            
-            if (insideGlass) {
-                 // Use the displacement function
-                 float2 glassCenter = glassPosition + glassSize * 0.5;
-                 displacement += calculateDisplacement(fragCoord, glassCenter, glassSize, glassStrength);
-            }
+            finalCoord = calculateLensEffect(finalCoord, glassPosition, glassSize, cornerRadius, glassScale);
         }
         
-        float2 finalCoord = fragCoord + displacement;
+        // Sample the background with modified coordinates
         float4 color = contents.eval(finalCoord);
         
         return color;
@@ -293,21 +268,21 @@ fun GlassContainerPreview() {
         },
         glassContent = {
             val glassModifier = Modifier.glassBackground(
-                displacementScale = 0f,
+                scale = 0f,
                 blur = 0f,
                 centerDistortion = 0f,
                 shape = CircleShape,
             )
 
             val glassModifier2 = Modifier.glassBackground(
-                displacementScale = 0.5f,
+                scale = 0.5f,
                 blur = 0.5f,
                 centerDistortion = 0.5f,
                 shape = RoundedCornerShape(16.dp),
             )
 
             val glassModifier3 = Modifier.glassBackground(
-                displacementScale = 1f,
+                scale = 1f,
                 blur = 1.0f,
                 centerDistortion = 1f,
                 shape = CircleShape,
