@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -64,7 +65,7 @@ interface GlassScope {
         displacementScale: Float,
         blur: Float,
         centerDistortion: Float,
-        cornerRadius: Dp,
+        shape: CornerBasedShape,
     ): Modifier
 }
 
@@ -85,9 +86,9 @@ private class GlassScopeImpl(private val density: Density) : GlassScope {
         displacementScale: Float,
         blur: Float,
         centerDistortion: Float,
-        cornerRadius: Dp,
+        shape: CornerBasedShape,
     ): Modifier = this
-        .background(color = Color.Transparent, shape = RoundedCornerShape(cornerRadius))
+        .background(color = Color.Transparent, shape = shape)
         .onGloballyPositioned { coordinates ->
             val position = coordinates.positionInRoot()
             val size = coordinates.size.toSize()
@@ -99,7 +100,7 @@ private class GlassScopeImpl(private val density: Density) : GlassScope {
             val element = GlassElement(
                 position = adjustedPosition,
                 size = size,
-                cornerRadius = with(density) { cornerRadius.toPx() },
+                cornerRadius = shape.topStart.toPx(size, density),
                 displacementScale = displacementScale,
                 blur = blur,
                 centerDistortion = centerDistortion,
@@ -279,8 +280,16 @@ fun GlassContainerPreview() {
                 displacementScale = 0.5f,
                 blur = 1.0f,
                 centerDistortion = 1.0f,
-                cornerRadius = 32.dp,
+                shape = CircleShape,
             )
+
+            val glassModifier2 = Modifier.glassBackground(
+                displacementScale = 0.5f,
+                blur = 1.0f,
+                centerDistortion = 1.0f,
+                shape = RoundedCornerShape(16.dp),
+            )
+
             Row(Modifier.align(Alignment.Center).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 FloatingActionButton(
                     modifier = glassModifier,
@@ -295,7 +304,7 @@ fun GlassContainerPreview() {
                     onClick = { },
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
                     shape = RoundedCornerShape(16.dp),
-                    modifier = glassModifier
+                    modifier = glassModifier2
                         .size(200.dp, 64.dp)
                 ) {
                     Text("Glass content")
@@ -304,7 +313,7 @@ fun GlassContainerPreview() {
                     modifier = glassModifier,
                     shape = CircleShape,
                     containerColor = Color.Transparent,
-                    elevation = FloatingActionButtonDefaults.elevation(0.dp),
+                    elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
                     onClick = {},
                 ) {
                     Icon(Icons.Default.Add, null)
