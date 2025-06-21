@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
@@ -280,9 +281,39 @@ private val GLASS_DISPLACEMENT_SHADER = """
         return (1.0 - normalizedDist) * 0.15; // Reduced intensity from 0.4 to 0.15
     }
 
+    // Calculate rim highlight effect with vertical lighting variation
+    float calculateRimHighlight(float2 localCoord, float2 halfSize, float cornerRadius) {
+        // Calculate SDF for current position
+        float2 absCoord = abs(localCoord);
+        float2 rectSize = halfSize - float2(cornerRadius);
+        float2 d = absCoord - rectSize;
+        float outsideDistance = length(max(d, 0.0));
+        float insideDistance = min(max(d.x, d.y), 0.0);
+        float sdf = outsideDistance + insideDistance - cornerRadius;
+        
+        // Rim highlight appears in a thin band around the element edge
+        float rimWidth = 4.0;
+        if (sdf > 0.0 && sdf < rimWidth) {
+            // Basic intensity falls off from edge outward
+            float intensity = (rimWidth - sdf) / rimWidth;
+            
+            // Calculate vertical position factor (-1 at top, +1 at bottom)
+            float verticalPos = localCoord.y / halfSize.y;
+            
+            // Lighting factor: stronger at top (negative Y), weaker at bottom (positive Y)
+            // Map from [-1, 1] to [1.2, 0.3] - stronger highlight at top, weaker at bottom
+            float lightingFactor = mix(1.2, 0.7, (verticalPos + 1.0) * 0.5);
+            
+            return intensity * 0.6 * lightingFactor;
+        }
+        
+        return 0.0;
+    }
+
     float4 main(float2 fragCoord) {
         float2 finalCoord = fragCoord;
         float shadowAlpha = 0.0;
+        float rimHighlight = 0.0;
         
         // Apply lens effects and calculate elevation shadows for each glass element
         for (int i = 0; i < 10; i++) {
@@ -294,22 +325,83 @@ private val GLASS_DISPLACEMENT_SHADER = """
             float glassScale = glassScales[i];
             float elevation = elevations[i];
             
+            float2 lensCenter = glassPosition + glassSize * 0.5;
+            float2 localCoord = fragCoord - lensCenter;
+            float2 halfSize = glassSize * 0.5;
+            
             // Apply lens effect
             finalCoord = calculateLensEffect(finalCoord, glassPosition, glassSize, cornerRadius, glassScale);
             
             // Calculate elevation shadow if enabled
             if (elevation > 0.0) {
-                float2 lensCenter = glassPosition + glassSize * 0.5;
-                float2 localCoord = fragCoord - lensCenter;
-                float2 halfSize = glassSize * 0.5;
-                
                 float currentShadow = calculateElevationShadow(localCoord, halfSize, cornerRadius, elevation);
                 shadowAlpha = max(shadowAlpha, currentShadow);
             }
+            
+            // Calculate rim highlight
+            float currentRim = calculateRimHighlight(localCoord, halfSize, cornerRadius);
+            rimHighlight = max(rimHighlight, currentRim);
         }
         
         // Sample the background with modified coordinates
         float4 color = contents.eval(finalCoord);
+        
+        // Apply rim highlight effect - reflects surrounding content
+        if (rimHighlight > 0.0) {
+            // Calculate surface normal for more realistic reflection
+            float2 surfaceNormal = float2(0.0);
+            
+            // Find the closest glass element to determine surface normal
+            for (int i = 0; i < 10; i++) {
+                if (i >= elementsCount) break;
+                
+                float2 glassPosition = glassPositions[i];
+                float2 glassSize = glassSizes[i];
+                float cornerRadius = cornerRadii[i];
+                
+                float2 lensCenter = glassPosition + glassSize * 0.5;
+                float2 localCoord = fragCoord - lensCenter;
+                float2 halfSize = glassSize * 0.5;
+                
+                // Calculate if this pixel is in the rim highlight zone for this element
+                float2 absCoord = abs(localCoord);
+                float2 rectSize = halfSize - float2(cornerRadius);
+                float2 d = absCoord - rectSize;
+                float outsideDistance = length(max(d, 0.0));
+                float insideDistance = min(max(d.x, d.y), 0.0);
+                float sdf = outsideDistance + insideDistance - cornerRadius;
+                
+                if (sdf > 0.0 && sdf < 4.0) {
+                    // Calculate surface normal by sampling SDF gradient
+                    float epsilon = 1.0;
+                    float2 localCoordX = localCoord + float2(epsilon, 0.0);
+                    float2 localCoordY = localCoord + float2(0.0, epsilon);
+                    
+                    // Calculate SDF at offset positions
+                    float2 absCoordX = abs(localCoordX);
+                    float2 dX = absCoordX - rectSize;
+                    float sdfX = length(max(dX, 0.0)) + min(max(dX.x, dX.y), 0.0) - cornerRadius;
+                    
+                    float2 absCoordY = abs(localCoordY);
+                    float2 dY = absCoordY - rectSize;
+                    float sdfY = length(max(dY, 0.0)) + min(max(dY.x, dY.y), 0.0) - cornerRadius;
+                    
+                    // Surface normal points outward from the element
+                    surfaceNormal = normalize(float2(sdfX - sdf, sdfY - sdf));
+                    break;
+                }
+            }
+            
+            // Use surface normal for simple reflection
+            float2 reflectionOffset = surfaceNormal * 12.0;
+            float4 reflectedColor = contents.eval(fragCoord + reflectionOffset);
+            
+            // Brighten the reflected color to create highlight effect  
+            reflectedColor.rgb = reflectedColor.rgb * 1.5 + 0.2;
+            
+            // Mix with the base color
+            color = mix(color, reflectedColor, rimHighlight);
+        }
         
         // Apply shadow by darkening the color
         if (shadowAlpha > 0.0) {
@@ -325,7 +417,8 @@ private val GLASS_DISPLACEMENT_SHADER = """
 fun GlassContainerPreview() {
     GlassContainer(
         content = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
+            Column(Modifier.verticalScroll(rememberScrollState()).background(Brush.verticalGradient(
+                listOf(Color.Black, Color.Blue)))) {
                 repeat(10) {
                     Row(
                         Modifier
