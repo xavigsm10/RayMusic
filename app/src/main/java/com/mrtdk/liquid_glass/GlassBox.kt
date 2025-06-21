@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -35,6 +36,7 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import org.intellij.lang.annotations.Language
@@ -42,7 +44,6 @@ import org.intellij.lang.annotations.Language
 data class GlassElement(
     val position: Offset,
     val size: Size,
-    val shape: Shape,
     val displacementScale: Float,
     val blur: Float,
     val centerDistortion: Float,
@@ -54,7 +55,7 @@ interface GlassScope {
         displacementScale: Float,
         blur: Float,
         centerDistortion: Float,
-        shape: Shape = RoundedCornerShape(0.dp)
+        cornerRadius: Dp,
     ): Modifier
 }
 
@@ -75,9 +76,9 @@ private class GlassScopeImpl(private val density: Density) : GlassScope {
         displacementScale: Float,
         blur: Float,
         centerDistortion: Float,
-        shape: Shape
+        cornerRadius: Dp,
     ): Modifier = this
-        .background(color = Color.Transparent)
+        .background(color = Color.Transparent, shape = RoundedCornerShape(cornerRadius))
         .onGloballyPositioned { coordinates ->
             val position = coordinates.positionInRoot()
             val size = coordinates.size.toSize()
@@ -85,24 +86,14 @@ private class GlassScopeImpl(private val density: Density) : GlassScope {
             // Use actual position from layout
             val adjustedPosition = position
 
-            // Extract corner radius from RoundedCornerShape
-            val cornerRadius = when (shape) {
-                is RoundedCornerShape -> {
-                    // Use default 16dp for now, in real app you'd extract actual radius
-                    with(density) { 16.dp.toPx() }
-                }
-
-                else -> 0f // Sharp corners for other shapes
-            }
 
             val element = GlassElement(
                 position = adjustedPosition,
                 size = size,
-                shape = shape,
+                cornerRadius = with(density) { cornerRadius.toPx() },
                 displacementScale = displacementScale,
                 blur = blur,
                 centerDistortion = centerDistortion,
-                cornerRadius = cornerRadius
             )
 
             // Update or add glass element
@@ -137,6 +128,8 @@ fun GlassContainer(
                     shader.setFloatUniform("glassSize", element.size.width, element.size.height)
                     shader.setFloatUniform("glassStrength", element.displacementScale)
                     shader.setFloatUniform("cornerRadius", element.cornerRadius)
+
+                    println("glassSize ${element.size.width}, ${element.size.height}")
 
                     renderEffect = RenderEffect.createRuntimeShaderEffect(
                         shader, "contents"
@@ -245,12 +238,15 @@ fun GlassContainerPreview() {
             Button(
                 onClick = { },
                 colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                modifier = Modifier.align(Alignment.Center)
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(200.dp, 64.dp)
                     .glassBackground(
                         displacementScale = 0.5f,
                         blur = 1.0f,
                         centerDistortion = 1.0f,
-                        shape = RoundedCornerShape(16.dp)
+                        cornerRadius = 16.dp,
                     )
             ) {
                 Text("Glass content")
