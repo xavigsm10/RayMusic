@@ -25,7 +25,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
-import androidx.compose.material3.FloatingActionButtonElevation
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,7 +37,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -57,7 +55,8 @@ data class GlassElement(
     val scale: Float,
     val blur: Float,
     val centerDistortion: Float,
-    val cornerRadius: Float
+    val cornerRadius: Float,
+    val elevation: Float
 )
 
 interface GlassScope {
@@ -66,6 +65,7 @@ interface GlassScope {
         blur: Float,
         centerDistortion: Float,
         shape: CornerBasedShape,
+        elevation: Dp = 0.dp,
     ): Modifier
 }
 
@@ -87,6 +87,7 @@ private class GlassScopeImpl(private val density: Density) : GlassScope {
         blur: Float,
         centerDistortion: Float,
         shape: CornerBasedShape,
+        elevation: Dp,
     ): Modifier = this
         .background(color = Color.Transparent, shape = shape)
         .onGloballyPositioned { coordinates ->
@@ -104,12 +105,13 @@ private class GlassScopeImpl(private val density: Density) : GlassScope {
                 scale = scale,
                 blur = blur,
                 centerDistortion = centerDistortion,
+                elevation = with(density) { elevation.toPx() },
             )
 
             // Add or update glass element
             // Remove existing element with same position/size if any
-            elements.removeAll { existing -> 
-                existing.position == element.position && existing.size == element.size 
+            elements.removeAll { existing ->
+                existing.position == element.position && existing.size == element.size
             }
             elements.add(element)
             updateCounter++ // Trigger recomposition
@@ -137,14 +139,15 @@ fun GlassContainer(
                 // Pass all glass elements to shader
                 val elements = glassScope.elements
                 shader.setIntUniform("elementsCount", elements.size)
-                
+
                 // Prepare arrays for shader (up to 10 elements)
                 val maxElements = 10
                 val positions = FloatArray(maxElements * 2) // x,y pairs
                 val sizes = FloatArray(maxElements * 2) // width,height pairs  
                 val scales = FloatArray(maxElements)
                 val radii = FloatArray(maxElements)
-                
+                val elevations = FloatArray(maxElements)
+
                 for (i in 0 until minOf(elements.size, maxElements)) {
                     val element = elements[i]
                     positions[i * 2] = element.position.x
@@ -153,13 +156,15 @@ fun GlassContainer(
                     sizes[i * 2 + 1] = element.size.height
                     scales[i] = element.scale
                     radii[i] = element.cornerRadius
+                    elevations[i] = element.elevation
                 }
-                
+
                 shader.setFloatUniform("glassPositions", positions)
                 shader.setFloatUniform("glassSizes", sizes)
                 shader.setFloatUniform("glassScales", scales)
                 shader.setFloatUniform("cornerRadii", radii)
-                
+                shader.setFloatUniform("elevations", elevations)
+
                 if (elements.isNotEmpty()) {
                     println("Rendering ${elements.size} glass elements")
                     renderEffect = RenderEffect.createRuntimeShaderEffect(
@@ -187,6 +192,7 @@ private val GLASS_DISPLACEMENT_SHADER = """
     uniform float2 glassSizes[10];
     uniform float glassScales[10];
     uniform float cornerRadii[10];
+    uniform float elevations[10];
 
     // Calculate lens effect using UV scaling
     float2 calculateLensEffect(float2 fragCoord, float2 glassPosition, float2 glassSize, float cornerRadius, float scale) {
@@ -196,18 +202,27 @@ private val GLASS_DISPLACEMENT_SHADER = """
         float2 lensCenter = glassPosition + glassSize * 0.5;
         float2 lensSize = glassSize;
         
-        // Convert to relative coordinates [-1, 1] within lens
-        float2 rel = (fragCoord - lensCenter) / (lensSize * 0.5);
+        // Convert to pixel coordinates relative to lens center
+        float2 localCoord = fragCoord - lensCenter;
         
-        // Normalize corner radius to relative space
-        float normalizedCornerRadius = cornerRadius / (min(lensSize.x, lensSize.y) * 0.5);
+        // Calculate half-sizes
+        float2 halfSize = lensSize * 0.5;
         
-        // SDF for rounded rectangle
-        float2 ab = abs(rel) - (float2(1.0) - normalizedCornerRadius);
-        float sdf = length(max(ab, 0.0)) - normalizedCornerRadius;
+        // SDF for rounded rectangle in pixel space
+        float2 absCoord = abs(localCoord);
+        float2 rectSize = halfSize - float2(cornerRadius);
+        
+        // Distance to the rounded rectangle
+        float2 d = absCoord - rectSize;
+        float outsideDistance = length(max(d, 0.0));
+        float insideDistance = min(max(d.x, d.y), 0.0);
+        float sdf = outsideDistance + insideDistance - cornerRadius;
        
         // Apply lens effect only inside the lens
         if (sdf < 0.0) {
+            // Convert back to relative coordinates for lens calculation
+            float2 rel = localCoord / halfSize;
+            
             // Distance from center normalized to [0, 1]
             float dist = length(rel);
             float normalizedDist = dist / length(float2(1.0));
@@ -231,10 +246,45 @@ private val GLASS_DISPLACEMENT_SHADER = """
         return fragCoord;
     }
 
+    // Calculate elevation shadow alpha for given position relative to element
+    float calculateElevationShadow(float2 localCoord, float2 halfSize, float cornerRadius, float elevation) {
+        if (elevation <= 0.0) return 0.0;
+        
+        // Shadow offset and blur based on elevation
+        float shadowOffsetY = elevation * 0.5; // Shadow moves down
+        float shadowBlur = elevation * 2.0; // Shadow gets bigger and softer
+        
+        // Offset the shadow position downward
+        float2 shadowCoord = localCoord - float2(0.0, shadowOffsetY);
+        
+        // Calculate SDF for the shadow (same shape as element but offset)
+        float2 absCoord = abs(shadowCoord);
+        float2 rectSize = halfSize - float2(cornerRadius);
+        float2 d = absCoord - rectSize;
+        float outsideDistance = length(max(d, 0.0));
+        float insideDistance = min(max(d.x, d.y), 0.0);
+        float shadowSdf = outsideDistance + insideDistance - cornerRadius;
+        
+        // Only render shadow outside the original element
+        float2 originalAbsCoord = abs(localCoord);
+        float2 originalD = originalAbsCoord - rectSize;
+        float originalOutsideDistance = length(max(originalD, 0.0));
+        float originalInsideDistance = min(max(originalD.x, originalD.y), 0.0);
+        float originalSdf = originalOutsideDistance + originalInsideDistance - cornerRadius;
+        
+        // Shadow only appears outside the original element and within shadow blur range
+        if (originalSdf <= 0.0 || shadowSdf > shadowBlur) return 0.0;
+        
+        // Smooth falloff
+        float normalizedDist = shadowSdf / shadowBlur;
+        return (1.0 - normalizedDist) * 0.15; // Reduced intensity from 0.4 to 0.15
+    }
+
     float4 main(float2 fragCoord) {
         float2 finalCoord = fragCoord;
+        float shadowAlpha = 0.0;
         
-        // Apply lens effects for each glass element
+        // Apply lens effects and calculate elevation shadows for each glass element
         for (int i = 0; i < 10; i++) {
             if (i >= elementsCount) break;
             
@@ -242,12 +292,29 @@ private val GLASS_DISPLACEMENT_SHADER = """
             float2 glassSize = glassSizes[i];
             float cornerRadius = cornerRadii[i];
             float glassScale = glassScales[i];
+            float elevation = elevations[i];
             
+            // Apply lens effect
             finalCoord = calculateLensEffect(finalCoord, glassPosition, glassSize, cornerRadius, glassScale);
+            
+            // Calculate elevation shadow if enabled
+            if (elevation > 0.0) {
+                float2 lensCenter = glassPosition + glassSize * 0.5;
+                float2 localCoord = fragCoord - lensCenter;
+                float2 halfSize = glassSize * 0.5;
+                
+                float currentShadow = calculateElevationShadow(localCoord, halfSize, cornerRadius, elevation);
+                shadowAlpha = max(shadowAlpha, currentShadow);
+            }
         }
         
         // Sample the background with modified coordinates
         float4 color = contents.eval(finalCoord);
+        
+        // Apply shadow by darkening the color
+        if (shadowAlpha > 0.0) {
+            color.rgb = mix(color.rgb, float3(0.0), shadowAlpha);
+        }
         
         return color;
     }
@@ -287,6 +354,7 @@ fun GlassContainerPreview() {
                 blur = 0.5f,
                 centerDistortion = 0.5f,
                 shape = RoundedCornerShape(16.dp),
+                elevation = 8.dp,
             )
 
             val glassModifier3 = Modifier.glassBackground(
@@ -294,9 +362,15 @@ fun GlassContainerPreview() {
                 blur = 1.0f,
                 centerDistortion = 1f,
                 shape = CircleShape,
+                elevation = 6.dp,
             )
 
-            Row(Modifier.align(Alignment.Center).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+            Row(
+                Modifier
+                    .align(Alignment.Center)
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
                 FloatingActionButton(
                     modifier = glassModifier,
                     containerColor = Color.Transparent,
