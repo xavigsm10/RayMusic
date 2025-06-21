@@ -57,7 +57,10 @@ data class GlassElement(
     val blur: Float,
     val centerDistortion: Float,
     val cornerRadius: Float,
-    val elevation: Float
+    val elevation: Float,
+    val tint: Color,
+    val lightness: Float,
+    val darkness: Float,
 )
 
 interface GlassScope {
@@ -67,6 +70,9 @@ interface GlassScope {
         centerDistortion: Float,
         shape: CornerBasedShape,
         elevation: Dp = 0.dp,
+        tint: Color = Color.Transparent,
+        lightness: Float = 0f,
+        darkness: Float = 0f,
     ): Modifier
 }
 
@@ -89,6 +95,9 @@ private class GlassScopeImpl(private val density: Density) : GlassScope {
         centerDistortion: Float,
         shape: CornerBasedShape,
         elevation: Dp,
+        tint: Color,
+        lightness: Float,
+        darkness: Float,
     ): Modifier = this
         .background(color = Color.Transparent, shape = shape)
         .onGloballyPositioned { coordinates ->
@@ -107,6 +116,9 @@ private class GlassScopeImpl(private val density: Density) : GlassScope {
                 blur = blur,
                 centerDistortion = centerDistortion,
                 elevation = with(density) { elevation.toPx() },
+                tint = tint,
+                lightness = lightness,
+                darkness = darkness,
             )
 
             // Add or update glass element
@@ -141,14 +153,18 @@ fun GlassContainer(
                 val elements = glassScope.elements
                 shader.setIntUniform("elementsCount", elements.size)
 
-                // Prepare arrays for shader (up to 10 elements)
+                                // Prepare arrays for shader (up to 10 elements)
                 val maxElements = 10
                 val positions = FloatArray(maxElements * 2) // x,y pairs
                 val sizes = FloatArray(maxElements * 2) // width,height pairs  
                 val scales = FloatArray(maxElements)
                 val radii = FloatArray(maxElements)
                 val elevations = FloatArray(maxElements)
-
+                val centerDistortions = FloatArray(maxElements)
+                val tints = FloatArray(maxElements * 4) // r,g,b,a values
+                val lightness = FloatArray(maxElements)
+                val darkness = FloatArray(maxElements)
+                
                 for (i in 0 until minOf(elements.size, maxElements)) {
                     val element = elements[i]
                     positions[i * 2] = element.position.x
@@ -158,13 +174,27 @@ fun GlassContainer(
                     scales[i] = element.scale
                     radii[i] = element.cornerRadius
                     elevations[i] = element.elevation
+                    centerDistortions[i] = element.centerDistortion
+                    
+                    // Convert Color to RGBA floats
+                    tints[i * 4] = element.tint.red
+                    tints[i * 4 + 1] = element.tint.green
+                    tints[i * 4 + 2] = element.tint.blue
+                    tints[i * 4 + 3] = element.tint.alpha
+                    
+                    lightness[i] = element.lightness
+                    darkness[i] = element.darkness
                 }
-
+                
                 shader.setFloatUniform("glassPositions", positions)
                 shader.setFloatUniform("glassSizes", sizes)
                 shader.setFloatUniform("glassScales", scales)
                 shader.setFloatUniform("cornerRadii", radii)
                 shader.setFloatUniform("elevations", elevations)
+                shader.setFloatUniform("centerDistortions", centerDistortions)
+                shader.setFloatUniform("glassTints", tints)
+                shader.setFloatUniform("glassLightness", lightness)
+                shader.setFloatUniform("glassDarkness", darkness)
 
                 if (elements.isNotEmpty()) {
                     println("Rendering ${elements.size} glass elements")
@@ -194,9 +224,13 @@ private val GLASS_DISPLACEMENT_SHADER = """
     uniform float glassScales[10];
     uniform float cornerRadii[10];
     uniform float elevations[10];
+    uniform float centerDistortions[10];
+    uniform float glassTints[40]; // 10 elements * 4 components (r,g,b,a)
+    uniform float glassLightness[10];
+    uniform float glassDarkness[10];
 
     // Calculate lens effect using UV scaling
-    float2 calculateLensEffect(float2 fragCoord, float2 glassPosition, float2 glassSize, float cornerRadius, float scale) {
+    float2 calculateLensEffect(float2 fragCoord, float2 glassPosition, float2 glassSize, float cornerRadius, float scale, float centerDistortion) {
         if (scale <= 0.0) return fragCoord;
         
         // Convert glass parameters to UV space
@@ -228,18 +262,26 @@ private val GLASS_DISPLACEMENT_SHADER = """
             float dist = length(rel);
             float normalizedDist = dist / length(float2(1.0));
             
-            // Create convex distortion profile
-            // Maximum distortion at center, smooth falloff to edges
-            float convexFactor = 1.0 - smoothstep(0.0, 1.0, normalizedDist);
+            // Base scale factor from scale parameter
+            float baseScaleFactor = 1.0 + scale;
             
-            // Apply convex scaling: stronger in center, weaker at edges
-            float distortionStrength = scale * (0.3 + 0.7 * convexFactor);
+            // Calculate distortion factor based on centerDistortion parameter
+            float distortionFactor = 1.0;
+            if (centerDistortion > 0.0) {
+                // Create convex distortion profile - stronger in center, weaker at edges
+                float convexProfile = 1.0 - smoothstep(0.0, 1.0, normalizedDist);
+                
+                // Apply center distortion: 
+                // - At center: full scale + distortion
+                // - At edges: just base scale
+                distortionFactor = 1.0 + centerDistortion * convexProfile;
+            }
             
-            // Calculate scale factor
-            float scaleFactor = 1.0 + distortionStrength;
+            // Combine base scale with distortion
+            float finalScaleFactor = baseScaleFactor * distortionFactor;
             
-            // Apply scaling with convex distortion
-            float2 newCoord = lensCenter + (fragCoord - lensCenter) / scaleFactor;
+            // Apply scaling
+            float2 newCoord = lensCenter + (fragCoord - lensCenter) / finalScaleFactor;
             
             return newCoord;
         }
@@ -314,6 +356,9 @@ private val GLASS_DISPLACEMENT_SHADER = """
         float2 finalCoord = fragCoord;
         float shadowAlpha = 0.0;
         float rimHighlight = 0.0;
+        float4 tintColor = float4(0.0);
+        float lightnessEffect = 0.0;
+        float darknessEffect = 0.0;
         
         // Apply lens effects and calculate elevation shadows for each glass element
         for (int i = 0; i < 10; i++) {
@@ -329,8 +374,17 @@ private val GLASS_DISPLACEMENT_SHADER = """
             float2 localCoord = fragCoord - lensCenter;
             float2 halfSize = glassSize * 0.5;
             
+            // Calculate SDF for this element
+            float2 absCoord = abs(localCoord);
+            float2 rectSize = halfSize - float2(cornerRadius);
+            float2 d = absCoord - rectSize;
+            float outsideDistance = length(max(d, 0.0));
+            float insideDistance = min(max(d.x, d.y), 0.0);
+            float sdf = outsideDistance + insideDistance - cornerRadius;
+            
             // Apply lens effect
-            finalCoord = calculateLensEffect(finalCoord, glassPosition, glassSize, cornerRadius, glassScale);
+            float centerDistort = centerDistortions[i];
+            finalCoord = calculateLensEffect(finalCoord, glassPosition, glassSize, cornerRadius, glassScale, centerDistort);
             
             // Calculate elevation shadow if enabled
             if (elevation > 0.0) {
@@ -341,10 +395,72 @@ private val GLASS_DISPLACEMENT_SHADER = """
             // Calculate rim highlight
             float currentRim = calculateRimHighlight(localCoord, halfSize, cornerRadius);
             rimHighlight = max(rimHighlight, currentRim);
+            
+            // Apply tint, lightness, and darkness effects inside the element
+            if (sdf < 0.0) {
+                // Extract tint color for this element
+                float4 elementTint = float4(
+                    glassTints[i * 4],
+                    glassTints[i * 4 + 1], 
+                    glassTints[i * 4 + 2],
+                    glassTints[i * 4 + 3]
+                );
+                
+                // Apply tint if it has alpha > 0
+                if (elementTint.a > 0.0) {
+                    tintColor = mix(tintColor, elementTint, elementTint.a);
+                }
+                
+                // Apply lightness and darkness effects with different distribution patterns
+                float currentLightness = glassLightness[i];
+                float currentDarkness = glassDarkness[i];
+                
+                float minDimension = min(halfSize.x, halfSize.y);
+                float maxRadius = minDimension * 0.8; // 80% of element's smaller dimension
+                
+                // LIGHTNESS: Radiates from center outward
+                if (currentLightness > 0.0) {
+                    float distanceFromCenter = length(localCoord);
+                    float normalizedDistance = distanceFromCenter / maxRadius;
+                    normalizedDistance = clamp(normalizedDistance, 0.0, 1.0);
+                    
+                    // Maximum intensity at center, fades outward
+                    float lightnessIntensity = 1.0 - normalizedDistance;
+                    lightnessIntensity = smoothstep(0.0, 1.0, lightnessIntensity);
+                    lightnessEffect = max(lightnessEffect, currentLightness * lightnessIntensity);
+                }
+                
+                // DARKNESS: Emanates from edges inward
+                if (currentDarkness > 0.0) {
+                    float distanceFromEdge = abs(sdf);
+                    
+                    if (distanceFromEdge < maxRadius) {
+                        // Maximum intensity at edges, fades toward center
+                        float darknessIntensity = (maxRadius - distanceFromEdge) / maxRadius;
+                        darknessIntensity = smoothstep(0.0, 1.0, darknessIntensity);
+                        darknessEffect = max(darknessEffect, currentDarkness * darknessIntensity);
+                    }
+                }
+            }
         }
         
         // Sample the background with modified coordinates
         float4 color = contents.eval(finalCoord);
+        
+        // Apply tint color blending
+        if (tintColor.a > 0.0) {
+            color.rgb = mix(color.rgb, tintColor.rgb, tintColor.a * 0.5);
+        }
+        
+        // Apply lightness effect (brightening)
+        if (lightnessEffect > 0.0) {
+            color.rgb = mix(color.rgb, float3(1.0), lightnessEffect * 0.5);
+        }
+        
+        // Apply darkness effect (darkening)
+        if (darknessEffect > 0.0) {
+            color.rgb = mix(color.rgb, float3(0.0), darknessEffect * 0.5);
+        }
         
         // Apply rim highlight effect - reflects surrounding content
         if (rimHighlight > 0.0) {
@@ -436,10 +552,11 @@ fun GlassContainerPreview() {
         },
         glassContent = {
             val glassModifier = Modifier.glassBackground(
-                scale = 0f,
+                scale = 0.3f,
                 blur = 0f,
                 centerDistortion = 0f,
                 shape = CircleShape,
+                tint = Color.Blue.copy(alpha = 0.5f),
             )
 
             val glassModifier2 = Modifier.glassBackground(
@@ -448,6 +565,8 @@ fun GlassContainerPreview() {
                 centerDistortion = 0.5f,
                 shape = RoundedCornerShape(16.dp),
                 elevation = 8.dp,
+                lightness = 0.5f,
+                darkness = 0.5f,
             )
 
             val glassModifier3 = Modifier.glassBackground(
@@ -456,6 +575,9 @@ fun GlassContainerPreview() {
                 centerDistortion = 1f,
                 shape = CircleShape,
                 elevation = 6.dp,
+                tint = Color.Red.copy(alpha = 0.1f),
+                darkness = 0.3f,
+                lightness = 1f,
             )
 
             Row(
