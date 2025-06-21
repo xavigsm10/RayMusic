@@ -196,28 +196,36 @@ private val GLASS_DISPLACEMENT_SHADER = """
         float2 lensCenter = glassPosition + glassSize * 0.5;
         float2 lensSize = glassSize;
         
-                 // Convert to relative coordinates [-1, 1] within lens
-         float2 rel = (fragCoord - lensCenter) / (lensSize * 0.5);
-         
-         // Normalize corner radius to relative space
-         float normalizedCornerRadius = cornerRadius / (min(lensSize.x, lensSize.y) * 0.5);
-         
-         // SDF for rounded rectangle
-         float2 ab = abs(rel) - (float2(1.0) - normalizedCornerRadius);
-         float sdf = length(max(ab, 0.0)) - normalizedCornerRadius;
+        // Convert to relative coordinates [-1, 1] within lens
+        float2 rel = (fragCoord - lensCenter) / (lensSize * 0.5);
         
+        // Normalize corner radius to relative space
+        float normalizedCornerRadius = cornerRadius / (min(lensSize.x, lensSize.y) * 0.5);
+        
+        // SDF for rounded rectangle
+        float2 ab = abs(rel) - (float2(1.0) - normalizedCornerRadius);
+        float sdf = length(max(ab, 0.0)) - normalizedCornerRadius;
+       
         // Apply lens effect only inside the lens
         if (sdf < 0.0) {
             // Distance from center normalized to [0, 1]
-            float dist = length(rel) / length(float2(1.0));
+            float dist = length(rel);
+            float normalizedDist = dist / length(float2(1.0));
             
-            // Scale factor with smooth falloff from center to edges
-            float scaleFactor = mix(1.0, 1.0 + scale, 1.0 - smoothstep(0.90, 1.0, dist));
+            // Create convex distortion profile
+            // Maximum distortion at center, smooth falloff to edges
+            float convexFactor = 1.0 - smoothstep(0.0, 1.0, normalizedDist);
             
-                         // Apply scaling: zoom into the center
-             float2 newCoord = lensCenter + (fragCoord - lensCenter) / scaleFactor;
-             
-             return newCoord;
+            // Apply convex scaling: stronger in center, weaker at edges
+            float distortionStrength = scale * (0.3 + 0.7 * convexFactor);
+            
+            // Calculate scale factor
+            float scaleFactor = 1.0 + distortionStrength;
+            
+            // Apply scaling with convex distortion
+            float2 newCoord = lensCenter + (fragCoord - lensCenter) / scaleFactor;
+            
+            return newCoord;
         }
         
         return fragCoord;
