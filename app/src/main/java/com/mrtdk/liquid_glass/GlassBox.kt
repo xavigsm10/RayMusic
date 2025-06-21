@@ -188,6 +188,35 @@ private val GLASS_DISPLACEMENT_SHADER = """
     uniform float glassStrengths[10];
     uniform float cornerRadii[10];
 
+    // Calculate displacement for a single glass element
+    float2 calculateDisplacement(float2 fragCoord, float2 glassCenter, float2 glassSize, float strength) {
+//        // Normalize coordinates to element space
+//        float2 localPos = (fragCoord - glassCenter) / max(glassSize.x, glassSize.y);
+//        float distance = length(localPos);
+//        
+//        // Apply displacement only within element bounds (distance <= 0.5)
+//        if (distance > 0.5) return float2(0.0);
+//        
+//        // Normalize distance to 0-1 range within element
+//        float normalizedDistance = distance * 2.0; // 0.0 to 1.0
+//        
+//        // Create smooth falloff from center to edge
+//        float falloff = 1.0 - smoothstep(0.0, 1.0, normalizedDistance);
+//        
+//        // Calculate displacement direction and magnitude
+//        float2 direction = normalize(localPos + float2(0.001, 0.001));
+//        float magnitude = strength * falloff * 50.0; // Scale to pixels
+//        
+//        return direction * magnitude;
+        bool isOdd = fragCoord % 2 == 0;
+        if (isOdd) {
+            return float2(-5.0);
+        } else {
+            return float2(5.0);
+        }
+        return float2(0.0)
+    }
+
     float4 main(float2 fragCoord) {
         float2 uv = fragCoord / resolution;
         
@@ -211,10 +240,10 @@ private val GLASS_DISPLACEMENT_SHADER = """
             bool inRect = fragCoord.x >= glassTopLeft.x && fragCoord.x <= glassBottomRight.x &&
                          fragCoord.y >= glassTopLeft.y && fragCoord.y <= glassBottomRight.y;
             
-            bool inThisGlass = false;
+            bool insideGlass = false;
             if (inRect) {
                 if (cornerRadius <= 0.0) {
-                    inThisGlass = true;
+                    insideGlass = true;
                 } else {
                     float2 center = glassPosition + glassSize * 0.5;
                     float2 halfSize = glassSize * 0.5 - cornerRadius;
@@ -223,32 +252,19 @@ private val GLASS_DISPLACEMENT_SHADER = """
                     float2 d = max(pos - halfSize, 0.0);
                     float dist = length(d) - cornerRadius;
                     
-                    inThisGlass = dist <= 0.0;
+                    insideGlass = dist <= 0.0;
                 }
             }
             
-            if (inThisGlass) {
-                // Create displacement for this glass element
-                float2 glassCenter = glassPosition + glassSize * 0.5;
-                float2 localPos = (fragCoord - glassCenter) / max(glassSize.x, glassSize.y);
-                
-                // Radial displacement from center
-                float distance = length(localPos);
-                float2 direction = normalize(localPos);
-                float effect = sin(distance * 15.0) * exp(-distance * 2.0) * glassStrength;
-                
-                displacement += direction * effect * 20.0;
-                insideGlass = true;
+            if (insideGlass) {
+                 // Use the displacement function
+                 float2 glassCenter = glassPosition + glassSize * 0.5;
+                 displacement += calculateDisplacement(fragCoord, glassCenter, glassSize, glassStrength);
             }
         }
         
         float2 finalCoord = fragCoord + displacement;
         float4 color = contents.eval(finalCoord);
-        
-        // Glass area visual effect (optional tint)
-        if (insideGlass) {
-            color.rgb += float3(0.05, 0.05, 0.1); // Subtle blue tint
-        }
         
         return color;
     }
@@ -277,17 +293,24 @@ fun GlassContainerPreview() {
         },
         glassContent = {
             val glassModifier = Modifier.glassBackground(
-                displacementScale = 0.5f,
-                blur = 1.0f,
-                centerDistortion = 1.0f,
+                displacementScale = 0f,
+                blur = 0f,
+                centerDistortion = 0f,
                 shape = CircleShape,
             )
 
             val glassModifier2 = Modifier.glassBackground(
                 displacementScale = 0.5f,
-                blur = 1.0f,
-                centerDistortion = 1.0f,
+                blur = 0.5f,
+                centerDistortion = 0.5f,
                 shape = RoundedCornerShape(16.dp),
+            )
+
+            val glassModifier3 = Modifier.glassBackground(
+                displacementScale = 1f,
+                blur = 1.0f,
+                centerDistortion = 1f,
+                shape = CircleShape,
             )
 
             Row(Modifier.align(Alignment.Center).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
@@ -305,12 +328,12 @@ fun GlassContainerPreview() {
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
                     shape = RoundedCornerShape(16.dp),
                     modifier = glassModifier2
-                        .size(200.dp, 64.dp)
+                        .size(200.dp, 300.dp)
                 ) {
                     Text("Glass content")
                 }
                 FloatingActionButton(
-                    modifier = glassModifier,
+                    modifier = glassModifier3,
                     shape = CircleShape,
                     containerColor = Color.Transparent,
                     elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
