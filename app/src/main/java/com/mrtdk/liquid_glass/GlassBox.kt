@@ -28,6 +28,7 @@ import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
@@ -49,8 +51,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import org.intellij.lang.annotations.Language
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.geometry.center
 
 data class GlassElement(
+    val id: String,
     val position: Offset,
     val size: Size,
     val scale: Float,
@@ -101,12 +106,9 @@ private class GlassScopeImpl(private val density: Density) : GlassScope {
             val position = coordinates.positionInRoot()
             val size = coordinates.size.toSize()
 
-            // Use actual position from layout
-            val adjustedPosition = position
-
-
             val element = GlassElement(
-                position = adjustedPosition,
+                id = "glass_${System.currentTimeMillis()}", // Простой уникальный ID
+                position = position,
                 size = size,
                 cornerRadius = shape.topStart.toPx(size, density),
                 scale = scale,
@@ -116,17 +118,12 @@ private class GlassScopeImpl(private val density: Density) : GlassScope {
                 tint = tint,
                 darkness = darkness,
             )
-
-            // Add or update glass element
-            // Remove existing element with same position/size if any
-            elements.removeAll { existing ->
-                existing.position == element.position && existing.size == element.size
-            }
+            
+            // Очищаем все элементы и добавляем новый
+            // Поскольку шейдер пересоздается, это безопасно
+            elements.clear()
             elements.add(element)
-            updateCounter++ // Trigger recomposition
-
-            // Debug print
-            // Element registered successfully
+            updateCounter++
         }
 }
 
@@ -137,7 +134,19 @@ fun GlassContainer(
 ) {
     val density = LocalDensity.current
     val glassScope = remember { GlassScopeImpl(density) }
-    val shader = remember { RuntimeShader(GLASS_DISPLACEMENT_SHADER) }
+    
+    // Пересоздаем шейдер при каждом изменении элементов
+    val shader = remember(glassScope.updateCounter) { 
+        RuntimeShader(GLASS_DISPLACEMENT_SHADER) 
+    }
+    
+    // Очищаем элементы при выходе из композиции
+    DisposableEffect(Unit) {
+        onDispose {
+            glassScope.elements.clear()
+        }
+    }
+    
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -145,22 +154,24 @@ fun GlassContainer(
                 shader.setFloatUniform("resolution", size.width, size.height)
                 val a = glassScope.updateCounter
 
-                // Pass all glass elements to shader
+                // Получаем текущие элементы
                 val elements = glassScope.elements
-                shader.setIntUniform("elementsCount", elements.size)
-
-                                // Prepare arrays for shader (up to 10 elements)
+                
+                // Ограничиваем количество элементов и очищаем массивы
                 val maxElements = 10
-                val positions = FloatArray(maxElements * 2) // x,y pairs
-                val sizes = FloatArray(maxElements * 2) // width,height pairs  
+                val positions = FloatArray(maxElements * 2)
+                val sizes = FloatArray(maxElements * 2)
                 val scales = FloatArray(maxElements)
                 val radii = FloatArray(maxElements)
                 val elevations = FloatArray(maxElements)
                 val centerDistortions = FloatArray(maxElements)
-                val tints = FloatArray(maxElements * 4) // r,g,b,a values
+                val tints = FloatArray(maxElements * 4)
                 val darkness = FloatArray(maxElements)
                 
-                for (i in 0 until minOf(elements.size, maxElements)) {
+                val elementsCount = minOf(elements.size, maxElements)
+                shader.setIntUniform("elementsCount", elementsCount)
+                
+                for (i in 0 until elementsCount) {
                     val element = elements[i]
                     positions[i * 2] = element.position.x
                     positions[i * 2 + 1] = element.position.y
@@ -171,7 +182,6 @@ fun GlassContainer(
                     elevations[i] = element.elevation
                     centerDistortions[i] = element.centerDistortion
                     
-                    // Convert Color to RGBA floats
                     tints[i * 4] = element.tint.red
                     tints[i * 4 + 1] = element.tint.green
                     tints[i * 4 + 2] = element.tint.blue
@@ -180,6 +190,7 @@ fun GlassContainer(
                     darkness[i] = element.darkness
                 }
                 
+                // Всегда устанавливаем униформы, даже если массивы пустые
                 shader.setFloatUniform("glassPositions", positions)
                 shader.setFloatUniform("glassSizes", sizes)
                 shader.setFloatUniform("glassScales", scales)
@@ -189,23 +200,18 @@ fun GlassContainer(
                 shader.setFloatUniform("glassTints", tints)
                 shader.setFloatUniform("glassDarkness", darkness)
 
-                if (elements.isNotEmpty()) {
-                    println("Rendering ${elements.size} glass elements")
-                    renderEffect = RenderEffect.createRuntimeShaderEffect(
-                        shader, "contents"
-                    ).asComposeRenderEffect()
-                }
+                // Применяем шейдер всегда, но с правильным количеством элементов
+                renderEffect = RenderEffect.createRuntimeShaderEffect(
+                    shader, "contents"
+                ).asComposeRenderEffect()
             }
     ) {
-        // Background content
         content()
-
     }
     Box(modifier = Modifier.fillMaxSize()) {
         GlassBoxScopeImpl(this, glassScope).glassContent()
     }
 }
-
 
 @Language("AGSL")
 private val GLASS_DISPLACEMENT_SHADER = """

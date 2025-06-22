@@ -582,8 +582,8 @@ private fun GlassBoxScope.GlassButton(
         shape = RoundedCornerShape(cornerRadius.dp),
         modifier = Modifier
             .align(buttonAlignment)
+            .padding(bottom = 32.dp, start = 16.dp, end = 16.dp, top = 16.dp)
             .size(buttonWidth.dp, buttonHeight.dp)
-            .padding(bottom = 16.dp, start = 16.dp, end = 16.dp, top = 16.dp)
             .glassBackground(
                 scale = scale,
                 blur = blur,
