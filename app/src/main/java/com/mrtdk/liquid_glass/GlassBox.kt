@@ -21,10 +21,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,7 +38,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
@@ -51,8 +46,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import org.intellij.lang.annotations.Language
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.ui.geometry.center
+import kotlin.random.Random
 
 data class GlassElement(
     val id: String,
@@ -69,6 +63,7 @@ data class GlassElement(
 
 interface GlassScope {
     fun Modifier.glassBackground(
+        id: Long,
         scale: Float,
         blur: Float,
         centerDistortion: Float,
@@ -81,11 +76,36 @@ interface GlassScope {
 
 interface GlassBoxScope : BoxScope, GlassScope
 
+@Composable
+fun GlassBoxScope.GlassBox(
+    modifier: Modifier = Modifier,
+    contentAlignment: Alignment = Alignment.TopStart,
+    propagateMinConstraints: Boolean = false,
+    scale: Float = 0f,
+    blur: Float = 0f,
+    centerDistortion: Float = 0f,
+    shape: CornerBasedShape = RoundedCornerShape(0.dp),
+    elevation: Dp = 0.dp,
+    tint: Color = Color.Transparent,
+    darkness: Float = 0f,
+    content: @Composable BoxScope.() -> Unit = { },
+) {
+    val id = remember { Random.nextLong() }
+    Box(
+        modifier = modifier.glassBackground(
+            id, scale, blur, centerDistortion, shape, elevation, tint, darkness
+        ),
+        contentAlignment, propagateMinConstraints, content
+    )
+}
+
 private class GlassBoxScopeImpl(
     boxScope: BoxScope,
     glassScope: GlassScope
 ) : GlassBoxScope, BoxScope by boxScope,
-    GlassScope by glassScope
+    GlassScope by glassScope {
+
+}
 
 private class GlassScopeImpl(private val density: Density) : GlassScope {
 
@@ -93,6 +113,7 @@ private class GlassScopeImpl(private val density: Density) : GlassScope {
     val elements: MutableList<GlassElement> = mutableListOf()
 
     override fun Modifier.glassBackground(
+        id: Long,
         scale: Float,
         blur: Float,
         centerDistortion: Float,
@@ -118,7 +139,7 @@ private class GlassScopeImpl(private val density: Density) : GlassScope {
                 tint = tint,
                 darkness = darkness,
             )
-            
+
             // Очищаем все элементы и добавляем новый
             // Поскольку шейдер пересоздается, это безопасно
             elements.clear()
@@ -134,19 +155,19 @@ fun GlassContainer(
 ) {
     val density = LocalDensity.current
     val glassScope = remember { GlassScopeImpl(density) }
-    
+
     // Пересоздаем шейдер при каждом изменении элементов
-    val shader = remember(glassScope.updateCounter) { 
-        RuntimeShader(GLASS_DISPLACEMENT_SHADER) 
+    val shader = remember(glassScope.updateCounter) {
+        RuntimeShader(GLASS_DISPLACEMENT_SHADER)
     }
-    
+
     // Очищаем элементы при выходе из композиции
     DisposableEffect(Unit) {
         onDispose {
             glassScope.elements.clear()
         }
     }
-    
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -156,7 +177,7 @@ fun GlassContainer(
 
                 // Получаем текущие элементы
                 val elements = glassScope.elements
-                
+
                 // Ограничиваем количество элементов и очищаем массивы
                 val maxElements = 10
                 val positions = FloatArray(maxElements * 2)
@@ -167,10 +188,10 @@ fun GlassContainer(
                 val centerDistortions = FloatArray(maxElements)
                 val tints = FloatArray(maxElements * 4)
                 val darkness = FloatArray(maxElements)
-                
+
                 val elementsCount = minOf(elements.size, maxElements)
                 shader.setIntUniform("elementsCount", elementsCount)
-                
+
                 for (i in 0 until elementsCount) {
                     val element = elements[i]
                     positions[i * 2] = element.position.x
@@ -181,15 +202,15 @@ fun GlassContainer(
                     radii[i] = element.cornerRadius
                     elevations[i] = element.elevation
                     centerDistortions[i] = element.centerDistortion
-                    
+
                     tints[i * 4] = element.tint.red
                     tints[i * 4 + 1] = element.tint.green
                     tints[i * 4 + 2] = element.tint.blue
                     tints[i * 4 + 3] = element.tint.alpha
-                    
+
                     darkness[i] = element.darkness
                 }
-                
+
                 // Всегда устанавливаем униформы, даже если массивы пустые
                 shader.setFloatUniform("glassPositions", positions)
                 shader.setFloatUniform("glassSizes", sizes)
@@ -511,8 +532,15 @@ private val GLASS_DISPLACEMENT_SHADER = """
 fun GlassContainerPreview() {
     GlassContainer(
         content = {
-            Column(Modifier.verticalScroll(rememberScrollState()).background(Brush.verticalGradient(
-                listOf(Color.Black, Color.Blue)))) {
+            Column(
+                Modifier
+                    .verticalScroll(rememberScrollState())
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color.Black, Color.Blue)
+                        )
+                    )
+            ) {
                 repeat(10) {
                     Row(
                         Modifier
@@ -529,32 +557,6 @@ fun GlassContainerPreview() {
             }
         },
         glassContent = {
-            val glassModifier = Modifier.glassBackground(
-                scale = 0.3f,
-                blur = 0f,
-                centerDistortion = 0f,
-                shape = CircleShape,
-                tint = Color.Blue.copy(alpha = 0.5f),
-            )
-
-            val glassModifier2 = Modifier.glassBackground(
-                scale = 0.5f,
-                blur = 0.5f,
-                centerDistortion = 0.5f,
-                shape = RoundedCornerShape(16.dp),
-                elevation = 8.dp,
-                darkness = 0.5f,
-            )
-
-            val glassModifier3 = Modifier.glassBackground(
-                scale = 1f,
-                blur = 1.0f,
-                centerDistortion = 1f,
-                shape = CircleShape,
-                elevation = 6.dp,
-                tint = Color.Red.copy(alpha = 0.1f),
-                darkness = 0.3f,
-            )
 
             Row(
                 Modifier
@@ -562,30 +564,39 @@ fun GlassContainerPreview() {
                     .fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                FloatingActionButton(
-                    modifier = glassModifier,
-                    containerColor = Color.Transparent,
+                this@GlassContainer.GlassBox(
+                    scale = 0.3f,
+                    blur = 0f,
+                    centerDistortion = 0f,
                     shape = CircleShape,
-                    elevation = FloatingActionButtonDefaults.elevation(0.dp),
-                    onClick = {},
+                    contentAlignment = Alignment.Center,
+                    tint = Color.Blue.copy(alpha = 0.5f),
                 ) {
                     Icon(Icons.Default.Add, null)
                 }
-                Button(
-                    onClick = { },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+
+                this@GlassContainer.GlassBox(
+                    modifier = Modifier.size(200.dp, 300.dp),
+                    scale = 0.5f,
+                    blur = 0.5f,
+                    centerDistortion = 0.5f,
                     shape = RoundedCornerShape(16.dp),
-                    modifier = glassModifier2
-                        .size(200.dp, 300.dp)
+                    elevation = 8.dp,
+                    darkness = 0.5f,
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text("Glass content")
                 }
-                FloatingActionButton(
-                    modifier = glassModifier3,
+
+                this@GlassContainer.GlassBox(
+                    scale = 1f,
+                    blur = 1.0f,
+                    centerDistortion = 1f,
                     shape = CircleShape,
-                    containerColor = Color.Transparent,
-                    elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
-                    onClick = {},
+                    elevation = 6.dp,
+                    tint = Color.Red.copy(alpha = 0.1f),
+                    darkness = 0.3f,
+                    contentAlignment = Alignment.Center,
                 ) {
                     Icon(Icons.Default.Add, null)
                 }

@@ -8,7 +8,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -96,7 +95,7 @@ fun GlassBoxDemo() {
 
     // Show bottom sheet state
     var showBottomSheet by remember { mutableStateOf(false) }
-    
+
     // Reset function to default values
     fun resetToDefaults() {
         buttonWidth = 200f
@@ -408,7 +407,7 @@ private fun LoremIpsumText() {
 
 @Composable
 private fun DemoImages() {
-    repeat(3) { index ->
+    repeat(4) { index ->
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -418,13 +417,14 @@ private fun DemoImages() {
                 .then(
                     when (index) {
                         0 -> gridImageModifier()
-                        1 -> blackBackgroundModifier()
+                        1 -> solidColorModifier(color = Color.Black)
+                        2 -> solidColorModifier(color = Color.White)
                         else -> rainbowGradientModifier()
                     }
                 )
         ) {
-            if (index == 1) {
-                WhiteTextContent()
+            if (index == 1 || index == 2) {
+                TextContent(if (index == 1) Color.White else Color.Black)
             }
         }
     }
@@ -462,9 +462,9 @@ private fun gridImageModifier(): Modifier {
         }
 }
 
-private fun blackBackgroundModifier(): Modifier {
+private fun solidColorModifier(color: Color): Modifier {
     return Modifier.background(
-        Color.Black,
+        color,
         RoundedCornerShape(12.dp)
     )
 }
@@ -489,7 +489,7 @@ private fun rainbowGradientModifier(): Modifier {
 }
 
 @Composable
-private fun WhiteTextContent() {
+private fun TextContent(color: Color) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -499,7 +499,7 @@ private fun WhiteTextContent() {
     ) {
         Text(
             text = "GLASS MORPHISM",
-            color = Color.White,
+            color = color,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
@@ -507,14 +507,14 @@ private fun WhiteTextContent() {
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Advanced UI Effects",
-            color = Color.White.copy(alpha = 0.8f),
+            color = color.copy(alpha = 0.8f),
             fontSize = 14.sp,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Real-time rendering with\ncustom AGSL shaders",
-            color = Color.White.copy(alpha = 0.6f),
+            color = color.copy(alpha = 0.6f),
             fontSize = 12.sp,
             textAlign = TextAlign.Center,
             lineHeight = 16.sp
@@ -576,29 +576,24 @@ private fun GlassBoxScope.GlassButton(
         else -> Alignment.BottomCenter
     }
 
-    Button(
-        onClick = { },
-        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-        shape = RoundedCornerShape(cornerRadius.dp),
+    GlassBox(
         modifier = Modifier
             .align(buttonAlignment)
             .padding(bottom = 32.dp, start = 16.dp, end = 16.dp, top = 16.dp)
-            .size(buttonWidth.dp, buttonHeight.dp)
-            .glassBackground(
-                scale = scale,
-                blur = blur,
-                centerDistortion = distortion,
-                shape = RoundedCornerShape(cornerRadius.dp),
-                elevation = elevation.dp,
-                tint = Color(
-                    tintRed / 255f,
-                    tintGreen / 255f,
-                    tintBlue / 255f,
-                    tintAlpha / 255f
-                ),
-                darkness = darkness
-            ),
-        contentPadding = PaddingValues(0.dp)
+            .size(buttonWidth.dp, buttonHeight.dp),
+        shape = RoundedCornerShape(cornerRadius.dp),
+        contentAlignment = Alignment.Center,
+        scale = scale,
+        blur = blur,
+        centerDistortion = distortion,
+        elevation = elevation.dp,
+        tint = Color(
+            tintRed / 255f,
+            tintGreen / 255f,
+            tintBlue / 255f,
+            tintAlpha / 255f
+        ),
+        darkness = darkness,
     ) {
         Text(
             "Glass Button",
