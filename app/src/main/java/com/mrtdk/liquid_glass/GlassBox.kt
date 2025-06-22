@@ -25,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,7 +60,27 @@ data class GlassElement(
     val elevation: Float,
     val tint: Color,
     val darkness: Float,
-)
+) {
+    // Проверяем равенство с допуском для Float значений
+    fun equalsWithTolerance(other: GlassElement): Boolean {
+        if (id != other.id) return false
+
+        val tolerance = 0.01f
+        val positionDiff = (position - other.position)
+        val positionDistance =
+            kotlin.math.sqrt(positionDiff.x * positionDiff.x + positionDiff.y * positionDiff.y)
+        return positionDistance < tolerance &&
+                kotlin.math.abs(size.width - other.size.width) < tolerance &&
+                kotlin.math.abs(size.height - other.size.height) < tolerance &&
+                kotlin.math.abs(scale - other.scale) < tolerance &&
+                kotlin.math.abs(blur - other.blur) < tolerance &&
+                kotlin.math.abs(centerDistortion - other.centerDistortion) < tolerance &&
+                kotlin.math.abs(cornerRadius - other.cornerRadius) < tolerance &&
+                kotlin.math.abs(elevation - other.elevation) < tolerance &&
+                kotlin.math.abs(darkness - other.darkness) < tolerance &&
+                tint == other.tint
+    }
+}
 
 interface GlassScope {
     fun Modifier.glassBackground(
@@ -111,6 +132,20 @@ private class GlassScopeImpl(private val density: Density) : GlassScope {
 
     var updateCounter by mutableStateOf(0)
     val elements: MutableList<GlassElement> = mutableListOf()
+    private val activeElements = mutableSetOf<String>()
+
+    fun markElementAsActive(elementId: String) {
+        activeElements.add(elementId)
+    }
+
+    fun cleanupInactiveElements() {
+        val elementsToRemove = elements.filter { it.id !in activeElements }
+        if (elementsToRemove.isNotEmpty()) {
+            elements.removeAll { it.id !in activeElements }
+            updateCounter++
+        }
+        activeElements.clear()
+    }
 
     override fun Modifier.glassBackground(
         id: Long,
@@ -124,11 +159,14 @@ private class GlassScopeImpl(private val density: Density) : GlassScope {
     ): Modifier = this
         .background(color = Color.Transparent, shape = shape)
         .onGloballyPositioned { coordinates ->
+            val elementId = "glass_$id"
+            markElementAsActive(elementId)
+
             val position = coordinates.positionInRoot()
             val size = coordinates.size.toSize()
 
             val element = GlassElement(
-                id = "glass_${System.currentTimeMillis()}", // Простой уникальный ID
+                id = elementId,
                 position = position,
                 size = size,
                 cornerRadius = shape.topStart.toPx(size, density),
@@ -140,11 +178,22 @@ private class GlassScopeImpl(private val density: Density) : GlassScope {
                 darkness = darkness,
             )
 
-            // Очищаем все элементы и добавляем новый
-            // Поскольку шейдер пересоздается, это безопасно
-            elements.clear()
-            elements.add(element)
-            updateCounter++
+            // Находим существующий элемент с таким же ID
+            val existingIndex = elements.indexOfFirst { it.id == element.id }
+
+            // Обновляем только если элемент изменился
+            if (existingIndex == -1) {
+                // Новый элемент
+                elements.add(element)
+                updateCounter++
+            } else {
+                // Проверяем, изменился ли элемент с допуском для Float значений
+                val existing = elements[existingIndex]
+                if (!existing.equalsWithTolerance(element)) {
+                    elements[existingIndex] = element
+                    updateCounter++
+                }
+            }
         }
 }
 
@@ -159,6 +208,11 @@ fun GlassContainer(
     // Пересоздаем шейдер при каждом изменении элементов
     val shader = remember(glassScope.updateCounter) {
         RuntimeShader(GLASS_DISPLACEMENT_SHADER)
+    }
+
+    // Очищаем неактивные элементы при каждой композиции
+    SideEffect {
+        glassScope.cleanupInactiveElements()
     }
 
     // Очищаем элементы при выходе из композиции
@@ -176,7 +230,7 @@ fun GlassContainer(
                 val a = glassScope.updateCounter
 
                 // Получаем текущие элементы
-                val elements = glassScope.elements
+                val elements = glassScope.elements.also { println(it) }
 
                 // Ограничиваем количество элементов и очищаем массивы
                 val maxElements = 10
