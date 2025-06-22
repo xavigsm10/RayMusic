@@ -2,6 +2,7 @@ package com.mrtdk.liquid_glass
 
 import android.graphics.RenderEffect
 import android.graphics.RuntimeShader
+import android.graphics.Shader
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -242,6 +243,7 @@ fun GlassContainer(
                 val centerDistortions = FloatArray(maxElements)
                 val tints = FloatArray(maxElements * 4)
                 val darkness = FloatArray(maxElements)
+                val blurs = FloatArray(maxElements)
 
                 val elementsCount = minOf(elements.size, maxElements)
                 shader.setIntUniform("elementsCount", elementsCount)
@@ -263,6 +265,7 @@ fun GlassContainer(
                     tints[i * 4 + 3] = element.tint.alpha
 
                     darkness[i] = element.darkness
+                    blurs[i] = element.blur
                 }
 
                 // Всегда устанавливаем униформы, даже если массивы пустые
@@ -274,8 +277,9 @@ fun GlassContainer(
                 shader.setFloatUniform("centerDistortions", centerDistortions)
                 shader.setFloatUniform("glassTints", tints)
                 shader.setFloatUniform("glassDarkness", darkness)
+                shader.setFloatUniform("glassBlurs", blurs)
 
-                // Применяем шейдер всегда, но с правильным количеством элементов
+                // Применяем shader effect с blur внутри шейдера
                 renderEffect = RenderEffect.createRuntimeShaderEffect(
                     shader, "contents"
                 ).asComposeRenderEffect()
@@ -301,6 +305,82 @@ private val GLASS_DISPLACEMENT_SHADER = """
     uniform float centerDistortions[10];
     uniform float glassTints[40]; // 10 elements * 4 components (r,g,b,a)
     uniform float glassDarkness[10];
+    uniform float glassBlurs[10];
+
+    // High-quality box blur with 15x15 sampling pattern
+    float4 calculateBoxBlur(float2 fragCoord, float blurRadius) {
+        if (blurRadius <= 0.0) {
+            return contents.eval(fragCoord);
+        }
+        
+        // Convert blur from [0,1] to pixel radius (max 30 pixels)
+        float actualBlurRadius = blurRadius * 30.0;
+        
+        float4 blurredColor = float4(0.0);
+        float totalSamples = 0.0;
+        
+        // 15x15 box blur (225 samples total)
+        for (int x = -7; x <= 7; x++) {
+            for (int y = -7; y <= 7; y++) {
+                float2 offset = float2(float(x), float(y)) * actualBlurRadius / 7.0;
+                float2 sampleCoord = fragCoord + offset;
+                
+                blurredColor += contents.eval(sampleCoord);
+                totalSamples += 1.0;
+            }
+        }
+        
+        return blurredColor / totalSamples;
+    }
+
+    // Simplified lens-aware blur using fixed constant loop
+    float4 calculateLensAwareBlur(float2 fragCoord, float blurRadius) {
+        if (blurRadius <= 0.0) {
+            return contents.eval(fragCoord);
+        }
+        
+        // Convert blur from [0,1] to pixel radius (max 30 pixels)
+        float actualBlurRadius = blurRadius * 30.0;
+        
+        float4 blurredColor = float4(0.0);
+        float totalSamples = 0.0;
+        
+        // Simplified 9x9 box blur to avoid shader complexity
+        for (int x = -4; x <= 4; x++) {
+            for (int y = -4; y <= 4; y++) {
+                float2 offset = float2(float(x), float(y)) * actualBlurRadius / 4.0;
+                float2 sampleCoord = fragCoord + offset;
+                
+                // Apply basic lens distortion inline without loops
+                float2 lensedCoord = sampleCoord;
+                
+                // Check first element only to avoid complex loops
+                if (elementsCount > 0) {
+                    float2 glassPosition = glassPositions[0];
+                    float2 glassSize = glassSizes[0];
+                    float cornerRadius = cornerRadii[0];
+                    float glassScale = glassScales[0];
+                    float centerDistort = centerDistortions[0];
+                    
+                    // Simplified lens effect inline
+                    float2 lensCenter = glassPosition + glassSize * 0.5;
+                    float2 localCoord = lensedCoord - lensCenter;
+                    float2 halfSize = glassSize * 0.5;
+                    
+                    // Basic lens scaling without complex SDF
+                    if (length(localCoord) < length(halfSize) && glassScale > 0.0) {
+                        float scaleFactor = 1.0 + glassScale;
+                        lensedCoord = lensCenter + localCoord / scaleFactor;
+                    }
+                }
+                
+                blurredColor += contents.eval(lensedCoord);
+                totalSamples += 1.0;
+            }
+        }
+        
+        return blurredColor / totalSamples;
+    }
 
     // Calculate lens effect using UV scaling
     float2 calculateLensEffect(float2 fragCoord, float2 glassPosition, float2 glassSize, float cornerRadius, float scale, float centerDistortion) {
@@ -431,6 +511,8 @@ private val GLASS_DISPLACEMENT_SHADER = """
         float rimHighlight = 0.0;
         float4 tintColor = float4(0.0);
         float darknessEffect = 0.0;
+        float currentBlur = 0.0;
+
         
         // Apply lens effects and calculate elevation shadows for each glass element
         for (int i = 0; i < 10; i++) {
@@ -499,11 +581,21 @@ private val GLASS_DISPLACEMENT_SHADER = """
                         darknessEffect = max(darknessEffect, currentDarkness * darknessIntensity);
                     }
                 }
+                
+                // Track the blur level for this pixel
+                currentBlur = max(currentBlur, glassBlurs[i]);
             }
         }
         
-        // Sample the background with modified coordinates
-        float4 color = contents.eval(finalCoord);
+        // Sample the background: apply lens effects first, then blur
+        float4 color;
+        if (currentBlur <= 0.0) {
+            // No blur - use pre-calculated lens-distorted coordinates
+            color = contents.eval(finalCoord);
+        } else {
+            // Apply blur with lens effects
+            color = calculateLensAwareBlur(fragCoord, currentBlur);
+        }
         
         // Apply tint color blending
         if (tintColor.a > 0.0) {
@@ -563,7 +655,7 @@ private val GLASS_DISPLACEMENT_SHADER = """
             
             // Use surface normal for simple reflection
             float2 reflectionOffset = surfaceNormal * 12.0;
-            float4 reflectedColor = contents.eval(fragCoord + reflectionOffset);
+            float4 reflectedColor = calculateLensAwareBlur(fragCoord + reflectionOffset, currentBlur * 0.5);
             
             // Brighten the reflected color to create highlight effect  
             reflectedColor.rgb = reflectedColor.rgb * 1.5 + 0.2;
@@ -619,6 +711,7 @@ fun GlassContainerPreview() {
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 this@GlassContainer.GlassBox(
+                    modifier = Modifier.size(64.dp),
                     scale = 0.3f,
                     blur = 0f,
                     centerDistortion = 0f,
@@ -643,6 +736,7 @@ fun GlassContainerPreview() {
                 }
 
                 this@GlassContainer.GlassBox(
+                    modifier = Modifier.size(64.dp),
                     scale = 1f,
                     blur = 1.0f,
                     centerDistortion = 1f,
