@@ -61,6 +61,7 @@ data class GlassElement(
     val elevation: Float,
     val tint: Color,
     val darkness: Float,
+    val warpEdges: Float,
 ) {
     // Проверяем равенство с допуском для Float значений
     fun equalsWithTolerance(other: GlassElement): Boolean {
@@ -79,6 +80,7 @@ data class GlassElement(
                 kotlin.math.abs(cornerRadius - other.cornerRadius) < tolerance &&
                 kotlin.math.abs(elevation - other.elevation) < tolerance &&
                 kotlin.math.abs(darkness - other.darkness) < tolerance &&
+                kotlin.math.abs(warpEdges - other.warpEdges) < tolerance &&
                 tint == other.tint
     }
 }
@@ -93,6 +95,7 @@ interface GlassScope {
         elevation: Dp = 0.dp,
         tint: Color = Color.Transparent,
         darkness: Float = 0f,
+        warpEdges: Float = 0f,
     ): Modifier
 }
 
@@ -110,12 +113,13 @@ fun GlassBoxScope.GlassBox(
     elevation: Dp = 0.dp,
     tint: Color = Color.Transparent,
     darkness: Float = 0f,
+    warpEdges: Float = 0f,
     content: @Composable BoxScope.() -> Unit = { },
 ) {
     val id = remember { Random.nextLong() }
     Box(
         modifier = modifier.glassBackground(
-            id, scale, blur, centerDistortion, shape, elevation, tint, darkness
+            id, scale, blur, centerDistortion, shape, elevation, tint, darkness, warpEdges
         ),
         contentAlignment, propagateMinConstraints, content
     )
@@ -157,6 +161,7 @@ private class GlassScopeImpl(private val density: Density) : GlassScope {
         elevation: Dp,
         tint: Color,
         darkness: Float,
+        warpEdges: Float,
     ): Modifier = this
         .background(color = Color.Transparent, shape = shape)
         .onGloballyPositioned { coordinates ->
@@ -177,6 +182,7 @@ private class GlassScopeImpl(private val density: Density) : GlassScope {
                 elevation = with(density) { elevation.toPx() },
                 tint = tint,
                 darkness = darkness,
+                warpEdges = warpEdges,
             )
 
             // Находим существующий элемент с таким же ID
@@ -243,6 +249,7 @@ fun GlassContainer(
                 val centerDistortions = FloatArray(maxElements)
                 val tints = FloatArray(maxElements * 4)
                 val darkness = FloatArray(maxElements)
+                val warpEdges = FloatArray(maxElements)
                 val blurs = FloatArray(maxElements)
 
                 val elementsCount = minOf(elements.size, maxElements)
@@ -265,6 +272,7 @@ fun GlassContainer(
                     tints[i * 4 + 3] = element.tint.alpha
 
                     darkness[i] = element.darkness
+                    warpEdges[i] = element.warpEdges
                     blurs[i] = element.blur
                 }
 
@@ -277,6 +285,7 @@ fun GlassContainer(
                 shader.setFloatUniform("centerDistortions", centerDistortions)
                 shader.setFloatUniform("glassTints", tints)
                 shader.setFloatUniform("glassDarkness", darkness)
+                shader.setFloatUniform("glassWarpEdges", warpEdges)
                 shader.setFloatUniform("glassBlurs", blurs)
 
                 // Применяем shader effect с blur внутри шейдера
@@ -305,81 +314,120 @@ private val GLASS_DISPLACEMENT_SHADER = """
     uniform float centerDistortions[10];
     uniform float glassTints[40]; // 10 elements * 4 components (r,g,b,a)
     uniform float glassDarkness[10];
+    uniform float glassWarpEdges[10];
     uniform float glassBlurs[10];
 
-    // High-quality box blur with 15x15 sampling pattern
-    float4 calculateBoxBlur(float2 fragCoord, float blurRadius) {
-        if (blurRadius <= 0.0) {
-            return contents.eval(fragCoord);
-        }
+    // Calculate warp region boundaries
+    // Returns 0.0 if pixel is in inner region (no warp)
+    // Returns 1.0 if pixel is in warp region
+    // warpEdges: 0.0 = no warp region, 1.0 = warp region extends to 50% between edge and center
+    float calculateWarpRegion(float2 localCoord, float2 halfSize, float cornerRadius, float warpEdges) {
+        if (warpEdges <= 0.0) return 0.0;
         
-        // Convert blur from [0,1] to pixel radius (max 30 pixels)
-        float actualBlurRadius = blurRadius * 30.0;
+        // Calculate SDF for the outer element boundary
+        float2 absCoord = abs(localCoord);
+        float2 rectSize = halfSize - float2(cornerRadius);
+        float2 d = absCoord - rectSize;
+        float outsideDistance = length(max(d, 0.0));
+        float insideDistance = min(max(d.x, d.y), 0.0);
+        float outerSdf = outsideDistance + insideDistance - cornerRadius;
         
-        float4 blurredColor = float4(0.0);
-        float totalSamples = 0.0;
+        // Only process pixels inside the element
+        if (outerSdf >= 0.0) return 0.0;
         
-        // 15x15 box blur (225 samples total)
-        for (int x = -7; x <= 7; x++) {
-            for (int y = -7; y <= 7; y++) {
-                float2 offset = float2(float(x), float(y)) * actualBlurRadius / 7.0;
-                float2 sampleCoord = fragCoord + offset;
-                
-                blurredColor += contents.eval(sampleCoord);
-                totalSamples += 1.0;
-            }
-        }
+        // Calculate the inset distance based on the smaller dimension
+        float minDimension = min(halfSize.x, halfSize.y);
+        float maxInset = minDimension * 0.5; // Maximum 50% of the smaller dimension radius
+        float currentInset = warpEdges * maxInset;
         
-        return blurredColor / totalSamples;
+        // Create inner boundary by shrinking the element uniformly
+        float2 innerHalfSize = halfSize - float2(currentInset);
+        
+        // Calculate inner corner radius proportionally
+        // If the inner area is smaller, the corner radius should be proportionally smaller
+        float scaleFactor = min(innerHalfSize.x / halfSize.x, innerHalfSize.y / halfSize.y);
+        float innerCornerRadius = cornerRadius * scaleFactor;
+        
+        // Make sure inner corner radius doesn't become negative and isn't larger than the inner dimensions
+        innerCornerRadius = max(0.0, min(innerCornerRadius, min(innerHalfSize.x, innerHalfSize.y)));
+        
+        // Calculate SDF for the inner boundary
+        float2 innerRectSize = innerHalfSize - float2(innerCornerRadius);
+        float2 innerD = absCoord - innerRectSize;
+        float innerOutsideDistance = length(max(innerD, 0.0));
+        float innerInsideDistance = min(max(innerD.x, innerD.y), 0.0);
+        float innerSdf = innerOutsideDistance + innerInsideDistance - innerCornerRadius;
+        
+        // Return 1.0 if in warp region (between outer and inner boundaries), 0.0 if in inner region
+        return innerSdf > 0.0 ? 1.0 : 0.0;
     }
 
-    // Simplified lens-aware blur using fixed constant loop
-    float4 calculateLensAwareBlur(float2 fragCoord, float blurRadius) {
-        if (blurRadius <= 0.0) {
-            return contents.eval(fragCoord);
+    // Calculate warp distortion for edge areas
+    // Pulls pixels from inner region and creates barrel distortion effect
+    float2 calculateWarpDistortion(float2 localCoord, float2 halfSize, float cornerRadius, float warpEdges) {
+        if (warpEdges <= 0.0) return localCoord;
+        
+        // Calculate the inset distance and inner boundaries (same as in calculateWarpRegion)
+        float minDimension = min(halfSize.x, halfSize.y);
+        float maxInset = minDimension * 0.5;
+        float currentInset = warpEdges * maxInset;
+        float2 innerHalfSize = halfSize - float2(currentInset);
+        
+        float scaleFactor = min(innerHalfSize.x / halfSize.x, innerHalfSize.y / halfSize.y);
+        float innerCornerRadius = cornerRadius * scaleFactor;
+        innerCornerRadius = max(0.0, min(innerCornerRadius, min(innerHalfSize.x, innerHalfSize.y)));
+        
+        // Calculate SDF for the inner boundary
+        float2 absCoord = abs(localCoord);
+        float2 innerRectSize = innerHalfSize - float2(innerCornerRadius);
+        float2 innerD = absCoord - innerRectSize;
+        float innerOutsideDistance = length(max(innerD, 0.0));
+        float innerInsideDistance = min(max(innerD.x, innerD.y), 0.0);
+        float innerSdf = innerOutsideDistance + innerInsideDistance - innerCornerRadius;
+        
+        // Only apply distortion in warp region
+        if (innerSdf <= 0.0) return localCoord;
+        
+        // Calculate distance from inner boundary (normalized)
+        float maxWarpDistance = currentInset;
+        float warpDistance = min(innerSdf, maxWarpDistance);
+        float normalizedWarpDistance = warpDistance / maxWarpDistance; // 0.0 at inner boundary, 1.0 at outer edge
+        
+        // Create radial distortion vector from center
+        float2 centerDirection = normalize(localCoord);
+        float distanceFromCenter = length(localCoord);
+        
+        // Calculate warp intensity (stronger near outer edges)
+        float warpIntensity = normalizedWarpDistance * normalizedWarpDistance; // Quadratic falloff
+        warpIntensity *= warpEdges * 2.0; // Scale by warp parameter
+        
+        // Create barrel distortion effect - pull pixels from inner area
+        // The idea is to map current position to a position closer to the inner boundary
+        float pullStrength = warpIntensity * 0.8; // How much to pull towards inner area
+        
+        // Calculate the direction to the nearest point on inner boundary
+        float2 nearestInnerPoint = localCoord;
+        
+        // Simple approach: scale down the coordinate towards the inner boundary
+        float targetScale = 1.0 - pullStrength;
+        targetScale = max(0.1, targetScale); // Prevent complete collapse
+        
+        float2 pulledCoord = localCoord * targetScale;
+        
+        // Add some radial distortion for more realistic lens effect
+        float radialDistortion = warpIntensity * 0.3;
+        float2 radialOffset = centerDirection * radialDistortion * distanceFromCenter * 0.1;
+        
+        // For strong warp, add some swirl/reflection effects
+        if (warpEdges > 0.7 && normalizedWarpDistance > 0.8) {
+            float angle = atan(localCoord.y, localCoord.x);
+            float swirl = normalizedWarpDistance * warpEdges * 0.5;
+            angle += swirl;
+            float r = length(pulledCoord);
+            pulledCoord = float2(cos(angle), sin(angle)) * r;
         }
         
-        // Convert blur from [0,1] to pixel radius (max 30 pixels)
-        float actualBlurRadius = blurRadius * 30.0;
-        
-        float4 blurredColor = float4(0.0);
-        float totalSamples = 0.0;
-        
-        // Simplified 9x9 box blur to avoid shader complexity
-        for (int x = -4; x <= 4; x++) {
-            for (int y = -4; y <= 4; y++) {
-                float2 offset = float2(float(x), float(y)) * actualBlurRadius / 4.0;
-                float2 sampleCoord = fragCoord + offset;
-                
-                // Apply basic lens distortion inline without loops
-                float2 lensedCoord = sampleCoord;
-                
-                // Check first element only to avoid complex loops
-                if (elementsCount > 0) {
-                    float2 glassPosition = glassPositions[0];
-                    float2 glassSize = glassSizes[0];
-                    float cornerRadius = cornerRadii[0];
-                    float glassScale = glassScales[0];
-                    float centerDistort = centerDistortions[0];
-                    
-                    // Simplified lens effect inline
-                    float2 lensCenter = glassPosition + glassSize * 0.5;
-                    float2 localCoord = lensedCoord - lensCenter;
-                    float2 halfSize = glassSize * 0.5;
-                    
-                    // Basic lens scaling without complex SDF
-                    if (length(localCoord) < length(halfSize) && glassScale > 0.0) {
-                        float scaleFactor = 1.0 + glassScale;
-                        lensedCoord = lensCenter + localCoord / scaleFactor;
-                    }
-                }
-                
-                blurredColor += contents.eval(lensedCoord);
-                totalSamples += 1.0;
-            }
-        }
-        
-        return blurredColor / totalSamples;
+        return pulledCoord + radialOffset;
     }
 
     // Calculate lens effect using UV scaling
@@ -487,7 +535,7 @@ private val GLASS_DISPLACEMENT_SHADER = """
         float sdf = outsideDistance + insideDistance - cornerRadius;
         
         // Rim highlight appears in a thin band around the element edge
-        float rimWidth = 4.0;
+        float rimWidth = 5.0;
         if (sdf > 0.0 && sdf < rimWidth) {
             // Basic intensity falls off from edge outward
             float intensity = (rimWidth - sdf) / rimWidth;
@@ -496,10 +544,10 @@ private val GLASS_DISPLACEMENT_SHADER = """
             float verticalPos = localCoord.y / halfSize.y;
             
             // Lighting factor: stronger at top (negative Y), weaker at bottom (positive Y)
-            // Map from [-1, 1] to [1.2, 0.3] - stronger highlight at top, weaker at bottom
+            // Map from [-1, 1] to [1.2, 0.7] - stronger highlight at top, weaker at bottom
             float lightingFactor = mix(1.2, 0.7, (verticalPos + 1.0) * 0.5);
             
-            return intensity * 0.6 * lightingFactor;
+            return intensity * 0.8 * lightingFactor;
         }
         
         return 0.0;
@@ -511,7 +559,7 @@ private val GLASS_DISPLACEMENT_SHADER = """
         float rimHighlight = 0.0;
         float4 tintColor = float4(0.0);
         float darknessEffect = 0.0;
-        float currentBlur = 0.0;
+        float blurRadius = 0.0;
 
         
         // Apply lens effects and calculate elevation shadows for each glass element
@@ -523,6 +571,8 @@ private val GLASS_DISPLACEMENT_SHADER = """
             float cornerRadius = cornerRadii[i];
             float glassScale = glassScales[i];
             float elevation = elevations[i];
+            float warpEdges = glassWarpEdges[i];
+            float blur = glassBlurs[i];
             
             float2 lensCenter = glassPosition + glassSize * 0.5;
             float2 localCoord = fragCoord - lensCenter;
@@ -536,9 +586,26 @@ private val GLASS_DISPLACEMENT_SHADER = """
             float insideDistance = min(max(d.x, d.y), 0.0);
             float sdf = outsideDistance + insideDistance - cornerRadius;
             
-            // Apply lens effect
-            float centerDistort = centerDistortions[i];
-            finalCoord = calculateLensEffect(finalCoord, glassPosition, glassSize, cornerRadius, glassScale, centerDistort);
+            // Apply blur for this element if we're inside it
+            if (sdf < 0.0 && blur > 0.0) {
+                blurRadius = max(blurRadius, blur * 20.0); // Scale blur value
+            }
+            
+            // Check if we're in a warp region
+            float warpRegionFactor = calculateWarpRegion(localCoord, halfSize, cornerRadius, warpEdges);
+            if (warpRegionFactor > 0.0) {
+                // Apply warp distortion in warp region
+                float2 warpedCoord = calculateWarpDistortion(localCoord, halfSize, cornerRadius, warpEdges);
+                float2 warpedFragCoord = lensCenter + warpedCoord;
+                
+                // Apply lens effect to the warped coordinates
+                float centerDistort = centerDistortions[i];
+                finalCoord = calculateLensEffect(warpedFragCoord, glassPosition, glassSize, cornerRadius, glassScale, centerDistort);
+            } else {
+                // Apply lens effect only to non-warp regions (inner region)
+                float centerDistort = centerDistortions[i];
+                finalCoord = calculateLensEffect(finalCoord, glassPosition, glassSize, cornerRadius, glassScale, centerDistort);
+            }
             
             // Calculate elevation shadow if enabled
             if (elevation > 0.0) {
@@ -581,20 +648,27 @@ private val GLASS_DISPLACEMENT_SHADER = """
                         darknessEffect = max(darknessEffect, currentDarkness * darknessIntensity);
                     }
                 }
-                
-                // Track the blur level for this pixel
-                currentBlur = max(currentBlur, glassBlurs[i]);
             }
         }
         
-        // Sample the background: apply lens effects first, then blur
-        float4 color;
-        if (currentBlur <= 0.0) {
-            // No blur - use pre-calculated lens-distorted coordinates
-            color = contents.eval(finalCoord);
-        } else {
-            // Apply blur with lens effects
-            color = calculateLensAwareBlur(fragCoord, currentBlur);
+        // Sample the background with modified coordinates
+        float4 color = contents.eval(finalCoord);
+        
+        // Apply blur effect if needed
+        if (blurRadius > 0.0) {
+            float4 blurredColor = float4(0.0);
+            float totalWeight = 0.0;
+            
+            // Simple box blur implementation
+            for (int dx = -3; dx <= 3; dx++) {
+                for (int dy = -3; dy <= 3; dy++) {
+                    float2 sampleCoord = finalCoord + float2(float(dx), float(dy)) * blurRadius / 3.0;
+                    float weight = 1.0;
+                    blurredColor += contents.eval(sampleCoord) * weight;
+                    totalWeight += weight;
+                }
+            }
+            color = blurredColor / totalWeight;
         }
         
         // Apply tint color blending
@@ -655,9 +729,9 @@ private val GLASS_DISPLACEMENT_SHADER = """
             
             // Use surface normal for simple reflection
             float2 reflectionOffset = surfaceNormal * 12.0;
-            float4 reflectedColor = calculateLensAwareBlur(fragCoord + reflectionOffset, currentBlur * 0.5);
+            float4 reflectedColor = contents.eval(fragCoord + reflectionOffset);
             
-            // Brighten the reflected color to create highlight effect  
+            // Brighten the reflected color to create highlight effect
             reflectedColor.rgb = reflectedColor.rgb * 1.5 + 0.2;
             
             // Mix with the base color
@@ -711,13 +785,14 @@ fun GlassContainerPreview() {
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 this@GlassContainer.GlassBox(
-                    modifier = Modifier.size(64.dp),
+                    modifier = Modifier.size(80.dp),
                     scale = 0.3f,
-                    blur = 0f,
-                    centerDistortion = 0f,
+                    blur = 0.0f,
+                    centerDistortion = 0.2f,
                     shape = CircleShape,
                     contentAlignment = Alignment.Center,
                     tint = Color.Blue.copy(alpha = 0.5f),
+                    warpEdges = 0.5f, // Test barrel distortion
                 ) {
                     Icon(Icons.Default.Add, null)
                 }
@@ -730,20 +805,22 @@ fun GlassContainerPreview() {
                     shape = RoundedCornerShape(16.dp),
                     elevation = 8.dp,
                     darkness = 0.5f,
+                    warpEdges = 0.7f, // Strong barrel distortion
                     contentAlignment = Alignment.Center,
                 ) {
                     Text("Glass content")
                 }
 
                 this@GlassContainer.GlassBox(
-                    modifier = Modifier.size(64.dp),
+                    modifier = Modifier.size(80.dp),
                     scale = 1f,
-                    blur = 1.0f,
+                    blur = 1f,
                     centerDistortion = 1f,
                     shape = CircleShape,
                     elevation = 6.dp,
                     tint = Color.Red.copy(alpha = 0.1f),
                     darkness = 0.3f,
+                    warpEdges = 0.9f, // Maximum barrel distortion with swirl effects
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(Icons.Default.Add, null)

@@ -89,6 +89,7 @@ fun GlassBoxDemo() {
     var tintBlue by remember { mutableFloatStateOf(204f) } // 0.8 * 255
     var tintAlpha by remember { mutableFloatStateOf(77f) } // 0.3 * 255
     var darkness by remember { mutableFloatStateOf(0f) }
+    var warpEdges by remember { mutableFloatStateOf(0f) }
 
     // Alignment state: 0 = Start, 1 = Center, 2 = End
     var alignment by remember { mutableIntStateOf(1) }
@@ -110,6 +111,7 @@ fun GlassBoxDemo() {
         tintBlue = 204f  // 0.8 * 255
         tintAlpha = 77f  // 0.3 * 255
         darkness = 0f
+        warpEdges = 0f
         alignment = 1  // Center
     }
 
@@ -167,7 +169,8 @@ fun GlassBoxDemo() {
                     tintGreen = tintGreen,
                     tintBlue = tintBlue,
                     tintAlpha = tintAlpha,
-                    darkness = darkness
+                    darkness = darkness,
+                    warpEdges = warpEdges
                 )
             }
         )
@@ -301,6 +304,14 @@ fun GlassBoxDemo() {
                         label = "Darkness",
                         value = darkness,
                         onValueChange = { darkness = it },
+                        valueRange = 0f..1f,
+                        steps = 19
+                    )
+
+                    SliderWithLabel(
+                        label = "Warp Edges",
+                        value = warpEdges,
+                        onValueChange = { warpEdges = it },
                         valueRange = 0f..1f,
                         steps = 19
                     )
@@ -568,7 +579,8 @@ private fun GlassBoxScope.GlassButton(
     tintGreen: Float,
     tintBlue: Float,
     tintAlpha: Float,
-    darkness: Float
+    darkness: Float,
+    warpEdges: Float
 ) {
     val buttonAlignment = when (alignment) {
         0 -> Alignment.BottomStart
@@ -594,6 +606,7 @@ private fun GlassBoxScope.GlassButton(
             tintAlpha / 255f
         ),
         darkness = darkness,
+        warpEdges = warpEdges,
     ) {
         Text(
             "Glass Button",
