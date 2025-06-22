@@ -89,14 +89,30 @@ fun GlassBoxDemo() {
     var tintGreen by remember { mutableFloatStateOf(128f) } // 0.5 * 255
     var tintBlue by remember { mutableFloatStateOf(204f) } // 0.8 * 255
     var tintAlpha by remember { mutableFloatStateOf(77f) } // 0.3 * 255
-    var lightness by remember { mutableFloatStateOf(0f) }
     var darkness by remember { mutableFloatStateOf(0f) }
 
     // Alignment state: 0 = Start, 1 = Center, 2 = End
-    val alignment by remember { mutableIntStateOf(1) }
+    var alignment by remember { mutableIntStateOf(1) }
 
     // Show bottom sheet state
     var showBottomSheet by remember { mutableStateOf(false) }
+    
+    // Reset function to default values
+    fun resetToDefaults() {
+        buttonWidth = 200f
+        buttonHeight = 60f
+        cornerRadius = 16f
+        blur = 0f
+        scale = 0.3f
+        distortion = 0f
+        elevation = 8f
+        tintRed = 51f  // 0.2 * 255
+        tintGreen = 128f  // 0.5 * 255
+        tintBlue = 204f  // 0.8 * 255
+        tintAlpha = 77f  // 0.3 * 255
+        darkness = 0f
+        alignment = 1  // Center
+    }
 
     Box(
         modifier = Modifier
@@ -152,7 +168,6 @@ fun GlassBoxDemo() {
                     tintGreen = tintGreen,
                     tintBlue = tintBlue,
                     tintAlpha = tintAlpha,
-                    lightness = lightness,
                     darkness = darkness
                 )
             }
@@ -187,7 +202,7 @@ fun GlassBoxDemo() {
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
                 ) {
-                    Header()
+                    Header(onResetClick = ::resetToDefaults)
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -235,7 +250,10 @@ fun GlassBoxDemo() {
                         steps = 49
                     )
 
-                    AlignmentSelector(alignment)
+                    AlignmentSelector(
+                        alignment = alignment,
+                        onAlignmentChange = { alignment = it }
+                    )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -278,14 +296,6 @@ fun GlassBoxDemo() {
                         onValueChange = { elevation = it },
                         valueRange = 0f..24f,
                         steps = 23
-                    )
-
-                    SliderWithLabel(
-                        label = "Lightness",
-                        value = lightness,
-                        onValueChange = { lightness = it },
-                        valueRange = 0f..1f,
-                        steps = 19
                     )
 
                     SliderWithLabel(
@@ -407,9 +417,9 @@ private fun DemoImages() {
                 .clip(RoundedCornerShape(12.dp))
                 .then(
                     when (index) {
-                        0 -> GridImageModifier()
-                        1 -> BlackBackgroundModifier()
-                        else -> RainbowGradientModifier()
+                        0 -> gridImageModifier()
+                        1 -> blackBackgroundModifier()
+                        else -> rainbowGradientModifier()
                     }
                 )
         ) {
@@ -420,8 +430,7 @@ private fun DemoImages() {
     }
 }
 
-@Composable
-private fun GridImageModifier(): Modifier {
+private fun gridImageModifier(): Modifier {
     return Modifier
         .background(Color.White, RoundedCornerShape(12.dp))
         .drawBehind {
@@ -453,16 +462,14 @@ private fun GridImageModifier(): Modifier {
         }
 }
 
-@Composable
-private fun BlackBackgroundModifier(): Modifier {
+private fun blackBackgroundModifier(): Modifier {
     return Modifier.background(
         Color.Black,
         RoundedCornerShape(12.dp)
     )
 }
 
-@Composable
-private fun RainbowGradientModifier(): Modifier {
+private fun rainbowGradientModifier(): Modifier {
     return Modifier.background(
         Brush.linearGradient(
             colors = listOf(
@@ -561,7 +568,6 @@ private fun GlassBoxScope.GlassButton(
     tintGreen: Float,
     tintBlue: Float,
     tintAlpha: Float,
-    lightness: Float,
     darkness: Float
 ) {
     val buttonAlignment = when (alignment) {
@@ -590,7 +596,6 @@ private fun GlassBoxScope.GlassButton(
                     tintBlue / 255f,
                     tintAlpha / 255f
                 ),
-                lightness = lightness,
                 darkness = darkness
             ),
         contentPadding = PaddingValues(0.dp)
@@ -605,7 +610,7 @@ private fun GlassBoxScope.GlassButton(
 }
 
 @Composable
-private fun Header() {
+private fun Header(onResetClick: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -617,12 +622,28 @@ private fun Header() {
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold
         )
+        Button(
+            onClick = onResetClick,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF667eea).copy(alpha = 0.3f),
+                contentColor = Color.White
+            ),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Text(
+                "Reset",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
     }
 }
 
 @Composable
-private fun AlignmentSelector(alignment: Int) {
-    var alignment1 = alignment
+private fun AlignmentSelector(
+    alignment: Int,
+    onAlignmentChange: (Int) -> Unit
+) {
     Text("Alignment", color = Color.White, fontSize = 14.sp)
     Spacer(modifier = Modifier.height(4.dp))
     Row(
@@ -631,9 +652,9 @@ private fun AlignmentSelector(alignment: Int) {
     ) {
         listOf("Start", "Center", "End").forEachIndexed { index, label ->
             FilterChip(
-                onClick = { alignment1 = index },
+                onClick = { onAlignmentChange(index) },
                 label = { Text(label) },
-                selected = alignment1 == index,
+                selected = alignment == index,
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = Color(0xFF667eea)
                 )
