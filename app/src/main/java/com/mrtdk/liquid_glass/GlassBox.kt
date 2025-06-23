@@ -659,11 +659,13 @@ private val GLASS_DISPLACEMENT_SHADER = """
             float4 blurredColor = float4(0.0);
             float totalWeight = 0.0;
             
-            // Simple box blur implementation
-            for (int dx = -3; dx <= 3; dx++) {
-                for (int dy = -3; dy <= 3; dy++) {
-                    float2 sampleCoord = finalCoord + float2(float(dx), float(dy)) * blurRadius / 3.0;
-                    float weight = 1.0;
+            // Enhanced blur implementation with more samples
+            for (int dx = -5; dx <= 5; dx++) {
+                for (int dy = -5; dy <= 5; dy++) {
+                    float2 sampleCoord = finalCoord + float2(float(dx), float(dy)) * blurRadius / 5.0;
+                    // Gaussian-like weight falloff for better quality
+                    float distance = sqrt(float(dx * dx + dy * dy));
+                    float weight = exp(-distance * distance / 8.0);
                     blurredColor += contents.eval(sampleCoord) * weight;
                     totalWeight += weight;
                 }
@@ -728,11 +730,15 @@ private val GLASS_DISPLACEMENT_SHADER = """
             }
             
             // Use surface normal for simple reflection
-            float2 reflectionOffset = surfaceNormal * 12.0;
+            float2 reflectionOffset = surfaceNormal * 24.0;
             float4 reflectedColor = contents.eval(fragCoord + reflectionOffset);
             
-            // Brighten the reflected color to create highlight effect
-            reflectedColor.rgb = reflectedColor.rgb * 1.5 + 0.2;
+            // Brighten the reflected color to create highlight effect with minimum intensity
+            reflectedColor.rgb = reflectedColor.rgb * 1.8 + 0.35; 
+            
+            // Ensure minimum highlight intensity even on dark backgrounds
+            float minHighlightIntensity = 0.15; // Minimum highlight brightness
+            reflectedColor.rgb = max(reflectedColor.rgb, float3(minHighlightIntensity));
             
             // Mix with the base color
             color = mix(color, reflectedColor, rimHighlight);
