@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "liquid-glass-ui-component"
+rootProject.name = "liquid-glass-compose"
 include(":app")
 include(":glass")

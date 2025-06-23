@@ -1,8 +1,7 @@
-package com.mrtdk.liquid_glass
+package com.mrtdk.glass
 
 import android.graphics.RenderEffect
 import android.graphics.RuntimeShader
-import android.graphics.Shader
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -50,7 +49,7 @@ import androidx.compose.ui.unit.toSize
 import org.intellij.lang.annotations.Language
 import kotlin.random.Random
 
-data class GlassElement(
+internal data class GlassElement(
     val id: String,
     val position: Offset,
     val size: Size,
@@ -535,86 +534,3 @@ private val GLASS_DISPLACEMENT_SHADER = """
         return color;
     }
 """.trimIndent()
-
-@Preview(showBackground = true)
-@Composable
-fun GlassContainerPreview() {
-    GlassContainer(
-        content = {
-            Column(
-                Modifier
-                    .verticalScroll(rememberScrollState())
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color.Black, Color.Blue)
-                        )
-                    )
-            ) {
-                repeat(10) {
-                    Row(
-                        Modifier
-                            .padding(12.dp)
-                            .background(color = Color.Gray.copy(red = 0.1f * it))
-                            .height(64.dp)
-                            .horizontalScroll(rememberScrollState())
-                    ) {
-                        repeat(10) {
-                            Text("Hello, world!")
-                        }
-                    }
-                }
-            }
-        },
-        glassContent = {
-
-            Row(
-                Modifier
-                    .align(Alignment.Center)
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                this@GlassContainer.GlassBox(
-                    modifier = Modifier.size(80.dp),
-                    scale = 0.3f,
-                    blur = 0.0f,
-                    centerDistortion = 0.2f,
-                    shape = CircleShape,
-                    contentAlignment = Alignment.Center,
-                    tint = Color.Blue.copy(alpha = 0.5f),
-                    warpEdges = 0.5f,
-                ) {
-                    Icon(Icons.Default.Add, null)
-                }
-
-                this@GlassContainer.GlassBox(
-                    modifier = Modifier.size(200.dp, 300.dp),
-                    scale = 0.5f,
-                    blur = 0.5f,
-                    centerDistortion = 0.5f,
-                    shape = RoundedCornerShape(16.dp),
-                    elevation = 8.dp,
-                    darkness = 0.5f,
-                    warpEdges = 0.7f,
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("Glass content")
-                }
-
-                this@GlassContainer.GlassBox(
-                    modifier = Modifier.size(80.dp),
-                    scale = 1f,
-                    blur = 1f,
-                    centerDistortion = 1f,
-                    shape = CircleShape,
-                    elevation = 6.dp,
-                    tint = Color.Red.copy(alpha = 0.1f),
-                    darkness = 0.3f,
-                    warpEdges = 0.9f,
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Default.Add, null)
-                }
-            }
-        }
-    )
-}

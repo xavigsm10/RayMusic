@@ -36,7 +36,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.SliderState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -57,6 +56,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mrtdk.glass.GlassBox
+import com.mrtdk.glass.GlassBoxScope
+import com.mrtdk.glass.GlassContainer
 import com.mrtdk.liquid_glass.ui.theme.LiquidglassuicomponentTheme
 import kotlin.math.roundToInt
 
@@ -416,7 +418,7 @@ private fun InfoCards() {
 private fun LoremIpsumText() {
     Text(
         text = buildString {
-            repeat(5) {
+            repeat(2) {
                 append("Lorem ipsum dolor sit amet, consectetur adipiscing elit. ")
                 append("Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. ")
                 append("Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris. ")
