@@ -36,6 +36,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -79,17 +80,17 @@ fun GlassBoxDemo() {
     // State for controlling the glass button parameters
     var buttonWidth by remember { mutableFloatStateOf(200f) }
     var buttonHeight by remember { mutableFloatStateOf(60f) }
-    var cornerRadius by remember { mutableFloatStateOf(16f) }
-    var blur by remember { mutableFloatStateOf(0f) }
+    var cornerRadius by remember { mutableFloatStateOf(30f) }
+    var blur by remember { mutableFloatStateOf(0.4f) }
     var scale by remember { mutableFloatStateOf(0.3f) }
     var distortion by remember { mutableFloatStateOf(0f) }
     var elevation by remember { mutableFloatStateOf(8f) }
-    var tintRed by remember { mutableFloatStateOf(51f) } // 0.2 * 255
-    var tintGreen by remember { mutableFloatStateOf(128f) } // 0.5 * 255
-    var tintBlue by remember { mutableFloatStateOf(204f) } // 0.8 * 255
-    var tintAlpha by remember { mutableFloatStateOf(77f) } // 0.3 * 255
+    var tintRed by remember { mutableFloatStateOf(255f) }
+    var tintGreen by remember { mutableFloatStateOf(255f) }
+    var tintBlue by remember { mutableFloatStateOf(255f) }
+    var tintAlpha by remember { mutableFloatStateOf(200f) }
     var darkness by remember { mutableFloatStateOf(0f) }
-    var warpEdges by remember { mutableFloatStateOf(0f) }
+    var warpEdges by remember { mutableFloatStateOf(0.5f) }
 
     // Alignment state: 0 = Start, 1 = Center, 2 = End
     var alignment by remember { mutableIntStateOf(1) }
@@ -101,17 +102,17 @@ fun GlassBoxDemo() {
     fun resetToDefaults() {
         buttonWidth = 200f
         buttonHeight = 60f
-        cornerRadius = 16f
-        blur = 0f
+        cornerRadius = 30f
+        blur = 0.4f
         scale = 0.3f
         distortion = 0f
         elevation = 8f
-        tintRed = 51f  // 0.2 * 255
-        tintGreen = 128f  // 0.5 * 255
-        tintBlue = 204f  // 0.8 * 255
-        tintAlpha = 77f  // 0.3 * 255
+        tintRed = 255f
+        tintGreen = 255f
+        tintBlue = 255f
+        tintAlpha = 200f
         darkness = 0f
-        warpEdges = 0f
+        warpEdges = 0.5f
         alignment = 1  // Center
     }
 
@@ -273,7 +274,8 @@ fun GlassBoxDemo() {
                         value = scale,
                         onValueChange = { scale = it },
                         valueRange = 0f..2f,
-                        steps = 39
+                        steps = 39,
+                        isPercentage = true
                     )
 
                     SliderWithLabel(
@@ -281,7 +283,8 @@ fun GlassBoxDemo() {
                         value = blur,
                         onValueChange = { blur = it },
                         valueRange = 0f..2f,
-                        steps = 39
+                        steps = 39,
+                        isPercentage = true
                     )
 
                     SliderWithLabel(
@@ -289,7 +292,8 @@ fun GlassBoxDemo() {
                         value = distortion,
                         onValueChange = { distortion = it },
                         valueRange = 0f..2f,
-                        steps = 39
+                        steps = 39,
+                        isPercentage = true
                     )
 
                     SliderWithLabel(
@@ -305,7 +309,8 @@ fun GlassBoxDemo() {
                         value = darkness,
                         onValueChange = { darkness = it },
                         valueRange = 0f..1f,
-                        steps = 19
+                        steps = 19,
+                        isPercentage = true
                     )
 
                     SliderWithLabel(
@@ -313,7 +318,8 @@ fun GlassBoxDemo() {
                         value = warpEdges,
                         onValueChange = { warpEdges = it },
                         valueRange = 0f..1f,
-                        steps = 19
+                        steps = 19,
+                        isPercentage = true
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -327,36 +333,45 @@ fun GlassBoxDemo() {
                     )
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    SliderWithLabel(
+                    ColorSliderWithLabel(
                         label = "Red",
                         value = tintRed,
                         onValueChange = { tintRed = it },
                         valueRange = 0f..255f,
-                        steps = 254
+                        steps = 254,
+                        color = Color.Red
                     )
 
-                    SliderWithLabel(
+                    ColorSliderWithLabel(
                         label = "Green",
                         value = tintGreen,
                         onValueChange = { tintGreen = it },
                         valueRange = 0f..255f,
-                        steps = 254
+                        steps = 254,
+                        color = Color.Green
                     )
 
-                    SliderWithLabel(
+                    ColorSliderWithLabel(
                         label = "Blue",
                         value = tintBlue,
                         onValueChange = { tintBlue = it },
                         valueRange = 0f..255f,
-                        steps = 254
+                        steps = 254,
+                        color = Color.Blue
                     )
 
-                    SliderWithLabel(
+                    AlphaSliderWithLabel(
                         label = "Alpha",
                         value = tintAlpha,
                         onValueChange = { tintAlpha = it },
                         valueRange = 0f..255f,
-                        steps = 254
+                        steps = 254,
+                        currentColor = Color(
+                            tintRed / 255f,
+                            tintGreen / 255f,
+                            tintBlue / 255f,
+                            1f
+                        )
                     )
 
                     Spacer(modifier = Modifier.height(32.dp))
@@ -677,7 +692,58 @@ fun SliderWithLabel(
     value: Float,
     onValueChange: (Float) -> Unit,
     valueRange: ClosedFloatingPointRange<Float>,
-    steps: Int = 0
+    steps: Int = 0,
+    isPercentage: Boolean = false
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                color = Color.White.copy(alpha = 0.8f),
+                fontSize = 14.sp
+            )
+            Text(
+                text = if (isPercentage) {
+                    when {
+                        valueRange.endInclusive <= 1f -> "${(value * 100).roundToInt()}%"
+                        valueRange.endInclusive <= 2f -> "${(value * 50).roundToInt()}%"
+                        else -> "${value.roundToInt()}"
+                    }
+                } else "${value.roundToInt()}",
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            steps = steps,
+            colors = SliderDefaults.colors(
+                thumbColor = Color(0xFF667eea),
+                activeTrackColor = Color(0xFF667eea),
+                inactiveTrackColor = Color.Gray.copy(alpha = 0.3f)
+            )
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ColorSliderWithLabel(
+    label: String,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+    steps: Int = 0,
+    color: Color
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -704,10 +770,86 @@ fun SliderWithLabel(
             valueRange = valueRange,
             steps = steps,
             colors = SliderDefaults.colors(
-                thumbColor = Color(0xFF667eea),
-                activeTrackColor = Color(0xFF667eea),
-                inactiveTrackColor = Color.Gray.copy(alpha = 0.3f)
+                thumbColor = color,
+                activeTrackColor = color,
+                inactiveTrackColor = color.copy(alpha = 0.3f)
+            ),
+            track = { sliderState ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    color
+                                )
+                            )
+                        )
+                )
+            }
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AlphaSliderWithLabel(
+    label: String,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+    steps: Int = 0,
+    currentColor: Color
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                color = Color.White.copy(alpha = 0.8f),
+                fontSize = 14.sp
             )
+            Text(
+                text = "${value.roundToInt()}",
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            steps = steps,
+            colors = SliderDefaults.colors(
+                thumbColor = currentColor,
+                activeTrackColor = currentColor,
+                inactiveTrackColor = currentColor.copy(alpha = 0.3f)
+            ),
+            track = { sliderState ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    currentColor
+                                )
+                            )
+                        )
+                )
+            }
         )
         Spacer(modifier = Modifier.height(8.dp))
     }
