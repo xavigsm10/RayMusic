@@ -532,7 +532,7 @@ private val GLASS_DISPLACEMENT_SHADER = """
         }
         
         if (tintColor.a > 0.0) {
-            color.rgb = mix(color.rgb, tintColor.rgb, tintColor.a * 0.5);
+            color.rgb = mix(color.rgb, tintColor.rgb, tintColor.a * 0.9);
         }
         
         if (darknessEffect > 0.0) {

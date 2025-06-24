@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mrtdk.glass.GlassBox
@@ -95,8 +96,8 @@ fun GlassBoxDemo() {
     var darkness by remember { mutableFloatStateOf(0f) }
     var warpEdges by remember { mutableFloatStateOf(0.5f) }
 
-    // Alignment state: 0 = Start, 1 = Center, 2 = End
-    var alignment by remember { mutableIntStateOf(1) }
+    // Component type state: 0 = Card, 1 = Button
+    var componentType by remember { mutableIntStateOf(1) }
 
     // Show bottom sheet state
     var showSettings by remember { mutableStateOf(false) }
@@ -116,7 +117,6 @@ fun GlassBoxDemo() {
         tintAlpha = 200f
         darkness = 0f
         warpEdges = 0.5f
-        alignment = 1  // Center
     }
 
     Box(
@@ -161,22 +161,39 @@ fun GlassBoxDemo() {
                 }
             },
             glassContent = {
-                GlassButton(
-                    alignment = alignment,
-                    buttonWidth = buttonWidth,
-                    buttonHeight = buttonHeight,
-                    cornerRadius = cornerRadius,
-                    scale = scale,
-                    blur = blur,
-                    distortion = distortion,
-                    elevation = elevation,
-                    tintRed = tintRed,
-                    tintGreen = tintGreen,
-                    tintBlue = tintBlue,
-                    tintAlpha = tintAlpha,
-                    darkness = darkness,
-                    warpEdges = warpEdges
-                )
+                if (componentType == 0) {
+                    GlassCard(
+                        buttonWidth = buttonWidth,
+                        buttonHeight = buttonHeight,
+                        cornerRadius = cornerRadius,
+                        scale = scale,
+                        blur = blur,
+                        distortion = distortion,
+                        elevation = elevation,
+                        tintRed = tintRed,
+                        tintGreen = tintGreen,
+                        tintBlue = tintBlue,
+                        tintAlpha = tintAlpha,
+                        darkness = darkness,
+                        warpEdges = warpEdges
+                    )
+                } else {
+                    GlassButton(
+                        buttonWidth = buttonWidth,
+                        buttonHeight = buttonHeight,
+                        cornerRadius = cornerRadius,
+                        scale = scale,
+                        blur = blur,
+                        distortion = distortion,
+                        elevation = elevation,
+                        tintRed = tintRed,
+                        tintGreen = tintGreen,
+                        tintBlue = tintBlue,
+                        tintAlpha = tintAlpha,
+                        darkness = darkness,
+                        warpEdges = warpEdges
+                    )
+                }
 
                 // Settings button to open bottom sheet - positioned above modal sheet
                 GlassBox(
@@ -225,6 +242,13 @@ fun GlassBoxDemo() {
                         showSettings = false
                     }
 
+                    ComponentTypeSelector(
+                        componentType = componentType,
+                        onComponentTypeChange = { componentType = it }
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
                     // Size controls
                     Text(
                         "Size",
@@ -267,11 +291,6 @@ fun GlassBoxDemo() {
                         onValueChange = { cornerRadius = it },
                         valueRange = 0f..50f,
                         steps = 49
-                    )
-
-                    AlignmentSelector(
-                        alignment = alignment,
-                        onAlignmentChange = { alignment = it }
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -598,7 +617,6 @@ private fun ChessboardPattern() {
 
 @Composable
 private fun GlassBoxScope.GlassButton(
-    alignment: Int,
     buttonWidth: Float,
     buttonHeight: Float,
     cornerRadius: Float,
@@ -613,15 +631,9 @@ private fun GlassBoxScope.GlassButton(
     darkness: Float,
     warpEdges: Float
 ) {
-    val buttonAlignment = when (alignment) {
-        0 -> Alignment.BottomStart
-        2 -> Alignment.BottomEnd
-        else -> Alignment.BottomCenter
-    }
-
     GlassBox(
         modifier = Modifier
-            .align(buttonAlignment)
+            .align(Alignment.BottomCenter)
             .padding(bottom = 32.dp, start = 16.dp, end = 16.dp, top = 16.dp)
             .size(buttonWidth.dp, buttonHeight.dp),
         shape = RoundedCornerShape(cornerRadius.dp),
@@ -882,5 +894,193 @@ fun AlphaSliderWithLabel(
             }
         )
         Spacer(modifier = Modifier.height(8.dp))
+    }
+}
+
+@Composable
+private fun ComponentTypeSelector(
+    componentType: Int,
+    onComponentTypeChange: (Int) -> Unit
+) {
+    Text("Component Type", color = Color.White, fontSize = 14.sp)
+    Spacer(modifier = Modifier.height(4.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        listOf("Card", "Button").forEachIndexed { index, label ->
+            FilterChip(
+                onClick = { onComponentTypeChange(index) },
+                label = { Text(label) },
+                selected = componentType == index,
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = Color(0xFF667eea)
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun GlassBoxScope.GlassCard(
+    buttonWidth: Float,
+    buttonHeight: Float,
+    cornerRadius: Float,
+    scale: Float,
+    blur: Float,
+    distortion: Float,
+    elevation: Float,
+    tintRed: Float,
+    tintGreen: Float,
+    tintBlue: Float,
+    tintAlpha: Float,
+    darkness: Float,
+    warpEdges: Float
+) {
+
+    GlassBox(
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .padding(bottom = 32.dp, start = 16.dp, end = 16.dp, top = 16.dp)
+            .size(buttonWidth.dp, buttonHeight.dp * 2.5f),
+        shape = RoundedCornerShape(cornerRadius.dp),
+        contentAlignment = Alignment.TopStart,
+        scale = scale,
+        blur = blur,
+        centerDistortion = distortion,
+        elevation = elevation.dp,
+        tint = Color(
+            tintRed / 255f,
+            tintGreen / 255f,
+            tintBlue / 255f,
+            tintAlpha / 255f
+        ),
+        darkness = darkness,
+        warpEdges = warpEdges,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            // Top row with image and text
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Image placeholder with gradient
+                Box(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    Color(0xFF667eea),
+                                    Color(0xFF764ba2),
+                                    Color(0xFFf093fb)
+                                )
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "🌊",
+                        fontSize = 24.sp,
+                        color = Color.White
+                    )
+                }
+                
+                // Title and subtitle
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        "Liquid Glass",
+                        color = Color.DarkGray,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    Spacer(modifier = Modifier.height(2.dp))
+                    
+                    Text(
+                        "Advanced glass morphism effects",
+                        color = Color.Black.copy(alpha = 0.7f),
+                        fontSize = 12.sp
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // Description
+            Text(
+                "Description",
+                color = Color.Black.copy(alpha = 0.8f),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium
+            )
+            
+            Spacer(modifier = Modifier.height(4.dp))
+            
+            // Lorem Ipsum text
+            Text(
+                "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.",
+                color = Color.Black.copy(alpha = 0.6f),
+                fontSize = 11.sp,
+                lineHeight = 14.sp,
+                overflow = TextOverflow.Ellipsis,
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Stats row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        "Scale",
+                        color = Color.White.copy(alpha = 0.6f),
+                        fontSize = 10.sp
+                    )
+                    Text(
+                        "${(scale * 100).roundToInt()}%",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        "Blur",
+                        color = Color.White.copy(alpha = 0.6f),
+                        fontSize = 10.sp
+                    )
+                    Text(
+                        "${(blur * 100).roundToInt()}%",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        "Warp",
+                        color = Color.White.copy(alpha = 0.6f),
+                        fontSize = 10.sp
+                    )
+                    Text(
+                        "${(warpEdges * 100).roundToInt()}%",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
     }
 }
