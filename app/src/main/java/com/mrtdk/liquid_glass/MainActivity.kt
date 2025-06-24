@@ -39,7 +39,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -77,11 +76,8 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GlassBoxDemo() {
-    // Bottom sheet state - open to half height
-    val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     // State for controlling the glass button parameters
     var buttonWidth by remember { mutableFloatStateOf(200f) }
     var buttonHeight by remember { mutableFloatStateOf(60f) }
@@ -709,30 +705,6 @@ private fun Header(onResetClick: () -> Unit, onBackClick: () -> Unit) {
                 "Reset",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium
-            )
-        }
-    }
-}
-
-@Composable
-private fun AlignmentSelector(
-    alignment: Int,
-    onAlignmentChange: (Int) -> Unit
-) {
-    Text("Alignment", color = Color.White, fontSize = 14.sp)
-    Spacer(modifier = Modifier.height(4.dp))
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        listOf("Start", "Center", "End").forEachIndexed { index, label ->
-            FilterChip(
-                onClick = { onAlignmentChange(index) },
-                label = { Text(label) },
-                selected = alignment == index,
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = Color(0xFF667eea)
-                )
             )
         }
     }

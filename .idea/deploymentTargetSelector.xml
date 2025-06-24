@@ -4,10 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-06-24T05:47:52.513044Z">
+        <DropdownSelection timestamp="2025-06-24T07:05:28.757357Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=/Users/shpilevoj/.android/avd/Pixel_6.avd" />
+              <DeviceId pluginId="LocalEmulator" identifier="path=/Users/shpilevoj/.android/avd/Pixel_2.avd" />
             </handle>
           </Target>
         </DropdownSelection>
@@ -25,8 +25,16 @@
       <SelectionState runConfigName="SimpleBlurTestPreview">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="MainActivity">
+      <SelectionState runConfigName="MainActivity (1)">
         <option name="selectionMode" value="DROPDOWN" />
+        <DropdownSelection timestamp="2025-06-24T07:06:55.486792Z">
+          <Target type="DEFAULT_BOOT">
+            <handle>
+              <DeviceId pluginId="LocalEmulator" identifier="path=/Users/shpilevoj/.android/avd/Pixel_6.avd" />
+            </handle>
+          </Target>
+        </DropdownSelection>
+        <DialogSelection />
       </SelectionState>
     </selectionStates>
   </component>

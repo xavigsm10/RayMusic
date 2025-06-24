@@ -1,6 +1,26 @@
-# Liquid Glass Compose
+## Liquid Glass Compose
 
-Glass morphism effects demonstration project in Jetpack Compose with support for Android API 24+.
+<img src="screenshots/button_example.png" width="350"/>
+
+# 🚧 Experimental Release: 0.1.0
+
+**This is an experimental version (0.1.0) of Liquid Glass Compose!**
+
+You can download this version via the [Releases](https://github.com/Mortd3kay/liquid-glass-compose/releases) tab.
+
+---
+
+If the community shows real interest, the plan is to build a full-featured design system with optimized glassmorphism components. 
+
+**If you like the idea — star the repo and follow the updates! ⭐**
+
+---
+
+Glass morphism effects demonstration project in Jetpack Compose with support for Android API 33+.
+<img src="screenshots/button.gif" width="350"/>
+
+<img src="screenshots/card.gif" width="350"/>
+
 
 ## 🎯 Features
 
@@ -17,10 +37,14 @@ Glass morphism effects demonstration project in Jetpack Compose with support for
 - All effects work at hardware level
 - Maximum performance
 
+<img src="screenshots/tinted_glass.png" width="350"/>
+
 ### Android 7.0 - 12 (API 24-32)
 - Fallback implementation using standard Compose modifiers
 - Glass effect simulation using gradients and transparency
 - No blur support (blur only available with AGSL shaders)
+
+<img src="screenshots/fallback.png" width="350"/>
 
 ## 🏗️ Project Structure
 
@@ -46,7 +70,7 @@ liquid-glass-compose/
 GlassContainer(
     modifier = Modifier.fillMaxSize(),
     content = {
-        // Your main content
+        // Your main content (background of glass)
         Image(...)
     }
 ) {
@@ -72,6 +96,8 @@ GlassContainer(
 - `tint` - Glass color tint
 - `darkness` (0.0-1.0) - Edge darkening
 - `warpEdges` (0.0-1.0) - Edges distortion
+
+<img src="screenshots/clear_lens.png" width="350"/>
 
 ## 🛠️ Build
 
@@ -114,13 +140,7 @@ The demo application includes:
 - Kotlin 2.0.21+
 - Gradle 8.10.0+
 
-## 📄 License
 
-```
-Copyright 2024 MRTDK
-
-Licensed under the Apache License, Version 2.0
-```
 
 ## 🤝 Contributing
 
