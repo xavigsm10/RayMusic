@@ -1,28 +1,15 @@
 package com.mrtdk.glass
 
+import android.annotation.SuppressLint
 import android.graphics.RenderEffect
 import android.graphics.RuntimeShader
+import android.os.Build
+import androidx.annotation.FloatRange
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
@@ -32,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -41,20 +29,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import org.intellij.lang.annotations.Language
 import kotlin.random.Random
-import kotlin.annotation.AnnotationTarget.VALUE_PARAMETER
-import kotlin.annotation.AnnotationRetention.SOURCE
-import kotlin.annotation.Target
-
-@Target(VALUE_PARAMETER)
-@Retention(SOURCE)
-annotation class FloatRange(val min: Float = 0f, val max: Float = 1f)
 
 internal data class GlassElement(
     val id: String,
@@ -112,18 +92,18 @@ fun GlassBoxScope.GlassBox(
     modifier: Modifier = Modifier,
     contentAlignment: Alignment = Alignment.TopStart,
     propagateMinConstraints: Boolean = false,
-    @FloatRange(min = 0f, max = 1f)
+    @FloatRange(from = 0.0, to = 1.0)
     scale: Float = 0f,
-    @FloatRange(min = 0f, max = 1f)
+    @FloatRange(from = 0.0, to = 1.0)
     blur: Float = 0f,
-    @FloatRange(min = 0f, max = 1f)
+    @FloatRange(from = 0.0, to = 1.0)
     centerDistortion: Float = 0f,
     shape: CornerBasedShape = RoundedCornerShape(0.dp),
     elevation: Dp = 0.dp,
     tint: Color = Color.Transparent,
-    @FloatRange(min = 0f, max = 1f)
+    @FloatRange(from = 0.0, to = 1.0)
     darkness: Float = 0f,
-    @FloatRange(min = 0f, max = 1f)
+    @FloatRange(from = 0.0, to = 1.0)
     warpEdges: Float = 0f,
     content: @Composable BoxScope.() -> Unit = { },
 ) {
@@ -222,8 +202,103 @@ private class GlassScopeImpl(private val density: Density) : GlassScope {
         }
 }
 
+/**
+ * Fallback implementation for Android versions < 13 (API 33)
+ * Uses standard Compose modifiers to simulate glass effects
+ */
+private class GlassScopeFallbackImpl(private val density: Density) : GlassScope {
+
+    override fun Modifier.glassBackground(
+        id: Long,
+        scale: Float,
+        blur: Float,
+        centerDistortion: Float,
+        shape: CornerBasedShape,
+        elevation: Dp,
+        tint: Color,
+        darkness: Float,
+        warpEdges: Float,
+    ): Modifier {
+        // Create a glass-like effect using available modifiers
+        val glassTint = if (tint == Color.Transparent) {
+            Color.White.copy(alpha = 0.1f)
+        } else {
+            tint.copy(alpha = (tint.alpha * 0.9f).coerceIn(0f, 1f))
+        }
+
+        // Create a darker overlay for the darkness effect
+        val darknessOverlay = if (darkness > 0f) {
+            Color.Black.copy(alpha = darkness * 0.3f)
+        } else {
+            Color.Transparent
+        }
+
+        // Create a gradient for glass-like appearance
+        val glassGradient = Brush.verticalGradient(
+            colors = listOf(
+                glassTint,
+                glassTint.copy(alpha = glassTint.alpha * 0.7f),
+                glassTint.copy(alpha = glassTint.alpha * 0.5f),
+                glassTint
+            )
+        )
+
+        return this
+            // Apply glass gradient background
+            .background(
+                brush = glassGradient,
+                shape = shape
+            )
+            // Apply darkness overlay if needed
+            .let { modifier ->
+                if (darknessOverlay != Color.Transparent) {
+                    modifier.background(
+                        color = darknessOverlay,
+                        shape = shape
+                    )
+                } else {
+                    modifier
+                }
+            }
+            // Apply scale effect (limited simulation)
+            .let { modifier ->
+                if (scale > 0f) {
+                    modifier.graphicsLayer {
+                        scaleX = 1f + (scale * 0.1f)
+                        scaleY = 1f + (scale * 0.1f)
+                    }
+                } else {
+                    modifier
+                }
+            }
+            // Apply transparency for warp edges effect
+            .let { modifier ->
+                if (warpEdges > 0f) {
+                    modifier.alpha(1f - (warpEdges * 0.2f).coerceIn(0f, 0.8f))
+                } else {
+                    modifier
+                }
+            }
+    }
+}
+
 @Composable
 fun GlassContainer(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+    glassContent: @Composable GlassBoxScope.() -> Unit,
+) {
+    // Check if AGSL is supported (Android 13+)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        GlassContainerWithShader(modifier, content, glassContent)
+    } else {
+        GlassContainerFallback(modifier, content, glassContent)
+    }
+}
+
+@SuppressLint("NewApi") // Version check is performed in GlassContainer
+@Composable
+private fun GlassContainerWithShader(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
     glassContent: @Composable GlassBoxScope.() -> Unit,
@@ -305,6 +380,23 @@ fun GlassContainer(
                 ).asComposeRenderEffect()
             }
     ) {
+        content()
+    }
+    Box(modifier = modifier) {
+        GlassBoxScopeImpl(this, glassScope).glassContent()
+    }
+}
+
+@Composable
+private fun GlassContainerFallback(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+    glassContent: @Composable GlassBoxScope.() -> Unit,
+) {
+    val density = LocalDensity.current
+    val glassScope = remember { GlassScopeFallbackImpl(density) }
+
+    Box(modifier = modifier) {
         content()
     }
     Box(modifier = modifier) {

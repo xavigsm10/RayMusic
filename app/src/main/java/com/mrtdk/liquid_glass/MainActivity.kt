@@ -1,5 +1,6 @@
 package com.mrtdk.liquid_glass
 
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -209,7 +210,7 @@ fun GlassBoxDemo() {
                     scale = 0.1f,
                     blur = 0.4f,
                     shape = RoundedCornerShape(16.dp),
-                    tint = Color.LightGray,
+                    tint = Color.LightGray.copy(alpha = 0.8f),
 
                     ) {
                     Icon(
@@ -418,15 +419,23 @@ fun GlassBoxDemo() {
 
 @Composable
 private fun InfoCards() {
-    repeat(3) { index ->
+        val isUsingShaders = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+    val renderingMode = if (isUsingShaders) "AGSL Shaders" else "Compose Fallback"
+    val apiLevel = Build.VERSION.SDK_INT
+    
+    repeat(4) { index ->
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 8.dp),
             colors = CardDefaults.cardColors(
                 containerColor = when (index) {
-                    0 -> Color(0xFF667eea).copy(alpha = 0.3f)
-                    1 -> Color(0xFF764ba2).copy(alpha = 0.3f)
+                    0 -> if (isUsingShaders) Color(0xFF4CAF50).copy(alpha = 0.3f) else Color(
+                        0xFFFF9800
+                    ).copy(alpha = 0.3f)
+
+                    1 -> Color(0xFF667eea).copy(alpha = 0.3f)
+                    2 -> Color(0xFF764ba2).copy(alpha = 0.3f)
                     else -> Color(0xFFf093fb).copy(alpha = 0.3f)
                 }
             ),
@@ -434,8 +443,9 @@ private fun InfoCards() {
         ) {
             Text(
                 text = when (index) {
-                    0 -> "Glass Effect Demo\n\nThis is a demonstration of advanced glass morphism effects with real-time parameter control. The glass elements create realistic distortion, blur, and lighting effects."
-                    1 -> "Interactive Controls\n\nUse the settings panel below to adjust all parameters in real-time. You can modify size, shape, distortion, colors, and lighting effects to see how they affect the glass appearance."
+                    0 -> "Rendering Mode: $renderingMode\n\nAPI Level: $apiLevel\n\n${if (isUsingShaders) "✅ Using AGSL shaders for maximum performance and realistic effects" else "⚠️ Using Compose fallback implementation for compatibility with Android < 13"}"
+                    1 -> "Glass Effect Demo\n\nThis is a demonstration of advanced glass morphism effects with real-time parameter control. The glass elements create realistic distortion, blur, and lighting effects."
+                    2 -> "Interactive Controls\n\nUse the settings panel below to adjust all parameters in real-time. You can modify size, shape, distortion, colors, and lighting effects to see how they affect the glass appearance."
                     else -> "Advanced Rendering\n\nThe glass effects are implemented using custom AGSL shaders that provide hardware-accelerated rendering with support for multiple glass elements, elevation shadows, and rim highlights."
                 },
                 modifier = Modifier.padding(16.dp),
@@ -990,7 +1000,7 @@ private fun GlassBoxScope.GlassCard(
                         color = Color.White
                     )
                 }
-                
+
                 // Title and subtitle
                 Column(
                     modifier = Modifier.weight(1f),
@@ -1002,9 +1012,9 @@ private fun GlassBoxScope.GlassCard(
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
-                    
+
                     Spacer(modifier = Modifier.height(2.dp))
-                    
+
                     Text(
                         "Advanced glass morphism effects",
                         color = Color.Black.copy(alpha = 0.7f),
@@ -1012,9 +1022,9 @@ private fun GlassBoxScope.GlassCard(
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             // Description
             Text(
                 "Description",
@@ -1022,9 +1032,9 @@ private fun GlassBoxScope.GlassCard(
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium
             )
-            
+
             Spacer(modifier = Modifier.height(4.dp))
-            
+
             // Lorem Ipsum text
             Text(
                 "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.",
@@ -1033,9 +1043,9 @@ private fun GlassBoxScope.GlassCard(
                 lineHeight = 14.sp,
                 overflow = TextOverflow.Ellipsis,
             )
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             // Stats row
             Row(
                 modifier = Modifier.fillMaxWidth(),
