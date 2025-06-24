@@ -112,13 +112,17 @@ GlassContainer(
 ./gradlew :app:installDebug
 ```
 
-## 📱 Demo Application
+## 📲 Demo Application
 
-The demo application includes:
-- Interactive controls for all parameters
-- Visual indication of the rendering mode being used
-- Various background images for testing
-- Examples of card and button usage
+Try the interactive demo app included in this repository! The demo lets you:
+- See real-time glass morphism effects on cards and buttons
+- Experiment with all parameters: blur, scale, distortion, elevation, tint, darkness, warp edges
+- Instantly preview changes and rendering modes (AGSL or fallback)
+
+<img src="screenshots/demo_app.png" width="350"/>
+<img src="screenshots/settings.png" width="350"/>
+
+---
 
 ## 🔧 Technical Implementation
 
