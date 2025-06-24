@@ -2,9 +2,11 @@ package com.mrtdk.liquid_glass
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +25,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -31,9 +34,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -98,7 +99,7 @@ fun GlassBoxDemo() {
     var alignment by remember { mutableIntStateOf(1) }
 
     // Show bottom sheet state
-    var showBottomSheet by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
 
     // Reset function to default values
     fun resetToDefaults() {
@@ -124,6 +125,7 @@ fun GlassBoxDemo() {
             .background(Color.Black)
     ) {
         GlassContainer(
+            modifier = Modifier.fillMaxSize(),
             content = {
                 // Background content with scrollable text and images
                 Column(
@@ -175,41 +177,53 @@ fun GlassBoxDemo() {
                     darkness = darkness,
                     warpEdges = warpEdges
                 )
+
+                // Settings button to open bottom sheet - positioned above modal sheet
+                GlassBox(
+                    modifier = Modifier
+                        .clickable { showSettings = true }
+                        .padding(horizontal = 16.dp, vertical = 32.dp)
+                        .size(48.dp)
+                        .align(Alignment.TopEnd),
+                    elevation = 8.dp,
+                    warpEdges = 0.8f,
+                    darkness = 0.5f,
+                    contentAlignment = Alignment.Center,
+                    scale = 0.1f,
+                    blur = 0.4f,
+                    shape = RoundedCornerShape(16.dp),
+                    tint = Color.LightGray,
+
+                    ) {
+                    Icon(
+                        Icons.Default.Settings,
+                        contentDescription = "Settings",
+                        tint = Color.Black,
+                    )
+                }
             }
         )
 
-        // Settings button to open bottom sheet - positioned above modal sheet
-        FloatingActionButton(
-            onClick = { showBottomSheet = true },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(bottom = 24.dp, end = 16.dp),
-            containerColor = Color(0xFF667eea)
-        ) {
-            Icon(
-                Icons.Default.Settings,
-                contentDescription = "Settings",
-                tint = Color.White
-            )
-        }
-
         // Modal Bottom Sheet
-        if (showBottomSheet) {
-            ModalBottomSheet(
-                onDismissRequest = { showBottomSheet = false },
-                sheetState = bottomSheetState,
-                contentWindowInsets = { WindowInsets.safeContent },
-                containerColor = Color(0xFF1a1a1a),
-                contentColor = Color.White,
+        if (showSettings) {
+            BackHandler {
+                showSettings = false
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(color = Color(0xFF1a1a1a)),
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
+                        .windowInsetsPadding(WindowInsets.safeContent)
                 ) {
-                    Header(onResetClick = ::resetToDefaults)
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Header(onResetClick = ::resetToDefaults) {
+                        showSettings = false
+                    }
 
                     // Size controls
                     Text(
@@ -376,7 +390,7 @@ fun GlassBoxDemo() {
                         )
                     )
 
-                    Spacer(modifier = Modifier.height(32.dp))
+                    Spacer(Modifier.height(32.dp))
                 }
             }
         }
@@ -635,18 +649,32 @@ private fun GlassBoxScope.GlassButton(
 }
 
 @Composable
-private fun Header(onResetClick: () -> Unit) {
+private fun Header(onResetClick: () -> Unit, onBackClick: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 32.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            "Glass Parameters",
-            color = Color.White,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Default.ArrowBack,
+                contentDescription = "Back",
+                tint = Color.White,
+                modifier = Modifier
+                    .clickable { onBackClick() }
+                    .padding(end = 8.dp)
+            )
+            Text(
+                "Glass Parameters",
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
         Button(
             onClick = onResetClick,
             colors = ButtonDefaults.buttonColors(

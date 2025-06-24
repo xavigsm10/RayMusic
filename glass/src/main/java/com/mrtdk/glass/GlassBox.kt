@@ -48,6 +48,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import org.intellij.lang.annotations.Language
 import kotlin.random.Random
+import kotlin.annotation.AnnotationTarget.VALUE_PARAMETER
+import kotlin.annotation.AnnotationRetention.SOURCE
+import kotlin.annotation.Target
+
+@Target(VALUE_PARAMETER)
+@Retention(SOURCE)
+annotation class FloatRange(val min: Float = 0f, val max: Float = 1f)
 
 internal data class GlassElement(
     val id: String,
@@ -105,20 +112,33 @@ fun GlassBoxScope.GlassBox(
     modifier: Modifier = Modifier,
     contentAlignment: Alignment = Alignment.TopStart,
     propagateMinConstraints: Boolean = false,
+    @FloatRange(min = 0f, max = 1f)
     scale: Float = 0f,
+    @FloatRange(min = 0f, max = 1f)
     blur: Float = 0f,
+    @FloatRange(min = 0f, max = 1f)
     centerDistortion: Float = 0f,
     shape: CornerBasedShape = RoundedCornerShape(0.dp),
     elevation: Dp = 0.dp,
     tint: Color = Color.Transparent,
+    @FloatRange(min = 0f, max = 1f)
     darkness: Float = 0f,
+    @FloatRange(min = 0f, max = 1f)
     warpEdges: Float = 0f,
     content: @Composable BoxScope.() -> Unit = { },
 ) {
     val id = remember { Random.nextLong() }
     Box(
         modifier = modifier.glassBackground(
-            id, scale, blur, centerDistortion, shape, elevation, tint, darkness, warpEdges
+            id, 
+            scale.coerceIn(0f, 1f), 
+            blur.coerceIn(0f, 1f), 
+            centerDistortion.coerceIn(0f, 1f), 
+            shape, 
+            elevation, 
+            tint, 
+            darkness.coerceIn(0f, 1f), 
+            warpEdges.coerceIn(0f, 1f)
         ),
         contentAlignment, propagateMinConstraints, content
     )
@@ -204,6 +224,7 @@ private class GlassScopeImpl(private val density: Density) : GlassScope {
 
 @Composable
 fun GlassContainer(
+    modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
     glassContent: @Composable GlassBoxScope.() -> Unit,
 ) {
@@ -225,8 +246,7 @@ fun GlassContainer(
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
+        modifier = modifier
             .graphicsLayer {
                 shader.setFloatUniform("resolution", size.width, size.height)
                 val a = glassScope.updateCounter
@@ -287,7 +307,7 @@ fun GlassContainer(
     ) {
         content()
     }
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = modifier) {
         GlassBoxScopeImpl(this, glassScope).glassContent()
     }
 }
