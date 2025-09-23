@@ -4,7 +4,7 @@
 
 # 🚧 Experimental Release: 0.1.0
 
-**This is an experimental version (0.1.0) of Liquid Glass Compose!**
+**This is an experimental version (0.1.0) of Liquid Glass Compose Library!**
 
 You can download this version via the [Releases](https://github.com/Mortd3kay/liquid-glass-compose/releases) tab.
 
