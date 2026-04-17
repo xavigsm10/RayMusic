@@ -320,69 +320,73 @@ private fun GlassContainerWithShader(
         }
     }
 
-    Box(
-        modifier = modifier
-            .graphicsLayer {
-                shader.setFloatUniform("resolution", size.width, size.height)
-                val a = glassScope.updateCounter
+    var containerPosition by remember { mutableStateOf(Offset.Zero) }
 
-                val elements = glassScope.elements.also { println(it) }
+    Box(modifier = modifier.onGloballyPositioned { containerPosition = it.positionInRoot() }) {
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .graphicsLayer {
+                    shader.setFloatUniform("resolution", size.width, size.height)
+                    val a = glassScope.updateCounter
 
-                val maxElements = 10
-                val positions = FloatArray(maxElements * 2)
-                val sizes = FloatArray(maxElements * 2)
-                val scales = FloatArray(maxElements)
-                val radii = FloatArray(maxElements)
-                val elevations = FloatArray(maxElements)
-                val centerDistortions = FloatArray(maxElements)
-                val tints = FloatArray(maxElements * 4)
-                val darkness = FloatArray(maxElements)
-                val warpEdges = FloatArray(maxElements)
-                val blurs = FloatArray(maxElements)
+                    val elements = glassScope.elements.also { println(it) }
 
-                val elementsCount = minOf(elements.size, maxElements)
-                shader.setIntUniform("elementsCount", elementsCount)
+                    val maxElements = 10
+                    val positions = FloatArray(maxElements * 2)
+                    val sizes = FloatArray(maxElements * 2)
+                    val scales = FloatArray(maxElements)
+                    val radii = FloatArray(maxElements)
+                    val elevations = FloatArray(maxElements)
+                    val centerDistortions = FloatArray(maxElements)
+                    val tints = FloatArray(maxElements * 4)
+                    val darkness = FloatArray(maxElements)
+                    val warpEdges = FloatArray(maxElements)
+                    val blurs = FloatArray(maxElements)
 
-                for (i in 0 until elementsCount) {
-                    val element = elements[i]
-                    positions[i * 2] = element.position.x
-                    positions[i * 2 + 1] = element.position.y
-                    sizes[i * 2] = element.size.width
-                    sizes[i * 2 + 1] = element.size.height
-                    scales[i] = element.scale
-                    radii[i] = element.cornerRadius
-                    elevations[i] = element.elevation
-                    centerDistortions[i] = element.centerDistortion
+                    val elementsCount = minOf(elements.size, maxElements)
+                    shader.setIntUniform("elementsCount", elementsCount)
 
-                    tints[i * 4] = element.tint.red
-                    tints[i * 4 + 1] = element.tint.green
-                    tints[i * 4 + 2] = element.tint.blue
-                    tints[i * 4 + 3] = element.tint.alpha
+                    for (i in 0 until elementsCount) {
+                        val element = elements[i]
+                        val relativePos = element.position - containerPosition
+                        positions[i * 2] = relativePos.x
+                        positions[i * 2 + 1] = relativePos.y
+                        sizes[i * 2] = element.size.width
+                        sizes[i * 2 + 1] = element.size.height
+                        scales[i] = element.scale
+                        radii[i] = element.cornerRadius
+                        elevations[i] = element.elevation
+                        centerDistortions[i] = element.centerDistortion
 
-                    darkness[i] = element.darkness
-                    warpEdges[i] = element.warpEdges
-                    blurs[i] = element.blur
+                        tints[i * 4] = element.tint.red
+                        tints[i * 4 + 1] = element.tint.green
+                        tints[i * 4 + 2] = element.tint.blue
+                        tints[i * 4 + 3] = element.tint.alpha
+
+                        darkness[i] = element.darkness
+                        warpEdges[i] = element.warpEdges
+                        blurs[i] = element.blur
+                    }
+
+                    shader.setFloatUniform("glassPositions", positions)
+                    shader.setFloatUniform("glassSizes", sizes)
+                    shader.setFloatUniform("glassScales", scales)
+                    shader.setFloatUniform("cornerRadii", radii)
+                    shader.setFloatUniform("elevations", elevations)
+                    shader.setFloatUniform("centerDistortions", centerDistortions)
+                    shader.setFloatUniform("glassTints", tints)
+                    shader.setFloatUniform("glassDarkness", darkness)
+                    shader.setFloatUniform("glassWarpEdges", warpEdges)
+                    shader.setFloatUniform("glassBlurs", blurs)
+
+                    renderEffect = RenderEffect.createRuntimeShaderEffect(
+                        shader, "contents"
+                    ).asComposeRenderEffect()
                 }
-
-                shader.setFloatUniform("glassPositions", positions)
-                shader.setFloatUniform("glassSizes", sizes)
-                shader.setFloatUniform("glassScales", scales)
-                shader.setFloatUniform("cornerRadii", radii)
-                shader.setFloatUniform("elevations", elevations)
-                shader.setFloatUniform("centerDistortions", centerDistortions)
-                shader.setFloatUniform("glassTints", tints)
-                shader.setFloatUniform("glassDarkness", darkness)
-                shader.setFloatUniform("glassWarpEdges", warpEdges)
-                shader.setFloatUniform("glassBlurs", blurs)
-
-                renderEffect = RenderEffect.createRuntimeShaderEffect(
-                    shader, "contents"
-                ).asComposeRenderEffect()
-            }
-    ) {
-        content()
-    }
-    Box(modifier = modifier) {
+        ) {
+            content()
+        }
         GlassBoxScopeImpl(this, glassScope).glassContent()
     }
 }
@@ -397,9 +401,9 @@ private fun GlassContainerFallback(
     val glassScope = remember { GlassScopeFallbackImpl(density) }
 
     Box(modifier = modifier) {
-        content()
-    }
-    Box(modifier = modifier) {
+        Box(modifier = Modifier.matchParentSize()) {
+            content()
+        }
         GlassBoxScopeImpl(this, glassScope).glassContent()
     }
 }

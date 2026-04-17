@@ -13,3 +13,10 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Folders excluded by user request
+liquid-glass-android/
+screenshots/
+StreamXBot/
+expo-liquid-glass-native/
+Echo-Music/

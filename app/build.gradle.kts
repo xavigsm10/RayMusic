@@ -29,6 +29,7 @@ android {
 
 dependencies {
     implementation(project(":glass"))
+    implementation(project(":innertube"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -37,6 +38,20 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation("androidx.compose.material:material-icons-extended")
+    
+    // Media playback
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.session)
+    implementation(libs.androidx.media3.ui)
+    implementation("androidx.media3:media3-datasource-okhttp:1.5.1")
+    
+    // Image loading
+    implementation("io.coil-kt:coil-compose:2.6.0")
+    
+    // Permissions
+    implementation("com.google.accompanist:accompanist-permissions:0.35.0-alpha")
+    
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 }
