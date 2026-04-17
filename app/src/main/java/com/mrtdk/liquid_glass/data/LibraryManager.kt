@@ -1,0 +1,190 @@
+package com.mrtdk.liquid_glass.data
+
+import android.content.Context
+import android.content.SharedPreferences
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import com.mrtdk.liquid_glass.ui.screens.PlayerState
+import android.net.Uri
+
+enum class ItemType { ALBUM, ARTIST, SONG }
+
+data class LibraryItem(
+    val id: String,
+    val title: String,
+    val subtitle: String,
+    val thumbnail: String?,
+    val type: ItemType
+)
+
+data class Playlist(
+    val id: String,
+    val name: String,
+    val items: List<LibraryItem>,
+    val coverUrl: String? = null,
+    val isPinned: Boolean = false
+)
+
+object LibraryManager {
+    private const val PREFS_NAME = "liquid_glass_library"
+    private lateinit var prefs: SharedPreferences
+
+    private val _savedItems = MutableStateFlow<List<LibraryItem>>(emptyList())
+    val savedItems: StateFlow<List<LibraryItem>> = _savedItems
+
+    private val _playlists = MutableStateFlow<List<Playlist>>(emptyList())
+    val playlists: StateFlow<List<Playlist>> = _playlists
+
+    private val _recentlyPlayed = MutableStateFlow<List<LibraryItem>>(emptyList())
+    val recentlyPlayed: StateFlow<List<LibraryItem>> = _recentlyPlayed
+
+    fun init(context: Context) {
+        prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val saved = prefs.getString("saved_items", "") ?: ""
+        if (saved.isNotEmpty()) {
+            val items = saved.split("|||").mapNotNull { itemStr ->
+                val parts = itemStr.split("||")
+                if (parts.size >= 5) {
+                    LibraryItem(
+                        id = parts[0],
+                        title = parts[1],
+                        subtitle = parts[2],
+                        thumbnail = parts[3].takeIf { it.isNotBlank() },
+                        type = ItemType.valueOf(parts[4])
+                    )
+                } else null
+            }
+            _savedItems.value = items
+        }
+        
+        val savedPlaylists = prefs.getString("playlists", "") ?: ""
+        if (savedPlaylists.isNotEmpty()) {
+            val pl = savedPlaylists.split("@@@").mapNotNull { pStr ->
+                val pParts = pStr.split("@@")
+                if (pParts.size >= 3) {
+                    val id = pParts[0]
+                    val name = pParts[1]
+                    val pItemsStr = pParts[2]
+                    val coverUrl = if (pParts.size >= 4) pParts[3].takeIf { it.isNotBlank() } else null
+                    val isPinned = if (pParts.size >= 5) pParts[4] == "true" else false
+                    val pItems = if (pItemsStr.isNotBlank()) pItemsStr.split("|||").mapNotNull { itemStr ->
+                        val parts = itemStr.split("||")
+                        if (parts.size >= 5) {
+                            LibraryItem(parts[0], parts[1], parts[2], parts[3].takeIf { it.isNotBlank() }, ItemType.valueOf(parts[4]))
+                        } else null
+                    } else emptyList()
+                    Playlist(id, name, pItems, coverUrl, isPinned)
+                } else null
+            }
+            _playlists.value = pl
+        }
+
+        // Load recently played
+        val savedRecent = prefs.getString("recently_played", "") ?: ""
+        if (savedRecent.isNotEmpty()) {
+            val items = savedRecent.split("|||").mapNotNull { itemStr ->
+                val parts = itemStr.split("||")
+                if (parts.size >= 5) {
+                    LibraryItem(parts[0], parts[1], parts[2], parts[3].takeIf { it.isNotBlank() }, ItemType.valueOf(parts[4]))
+                } else null
+            }
+            _recentlyPlayed.value = items
+        }
+    }
+
+    fun saveItem(item: LibraryItem) {
+        if (_savedItems.value.any { it.id == item.id }) return
+        val newList = listOf(item) + _savedItems.value
+        _savedItems.value = newList
+        saveToPrefs(newList)
+    }
+
+    fun removeItem(id: String) {
+        val newList = _savedItems.value.filter { it.id != id }
+        _savedItems.value = newList
+        saveToPrefs(newList)
+    }
+
+    private fun saveToPrefs(list: List<LibraryItem>) {
+        val serialized = list.joinToString("|||") { 
+            "${it.id}||${it.title}||${it.subtitle}||${it.thumbnail ?: ""}||${it.type.name}" 
+        }
+        prefs.edit().putString("saved_items", serialized).apply()
+    }
+
+    fun addRecentlyPlayed(item: LibraryItem) {
+        val filtered = _recentlyPlayed.value.filter { it.id != item.id }
+        val newList = (listOf(item) + filtered).take(30)
+        _recentlyPlayed.value = newList
+        saveRecentlyPlayedToPrefs(newList)
+    }
+
+    private fun saveRecentlyPlayedToPrefs(list: List<LibraryItem>) {
+        val serialized = list.joinToString("|||") {
+            "${it.id}||${it.title}||${it.subtitle}||${it.thumbnail ?: ""}||${it.type.name}"
+        }
+        prefs.edit().putString("recently_played", serialized).apply()
+    }
+
+    fun createPlaylist(name: String, coverUrl: String? = null) {
+        val id = java.util.UUID.randomUUID().toString()
+        val newList = listOf(Playlist(id, name, emptyList(), coverUrl, false)) + _playlists.value
+        _playlists.value = newList
+        savePlaylistsToPrefs(newList)
+    }
+
+    fun togglePinPlaylist(playlistId: String) {
+        val newList = _playlists.value.map { if (it.id == playlistId) it.copy(isPinned = !it.isPinned) else it }
+        _playlists.value = newList
+        savePlaylistsToPrefs(newList)
+    }
+
+    fun deletePlaylist(playlistId: String) {
+        val newList = _playlists.value.filter { it.id != playlistId }
+        _playlists.value = newList
+        savePlaylistsToPrefs(newList)
+    }
+
+    fun addSongToPlaylist(playlistId: String, song: LibraryItem) {
+        val newList = _playlists.value.map { pl ->
+            if (pl.id == playlistId) {
+                if (pl.items.any { it.id == song.id }) pl else pl.copy(items = listOf(song) + pl.items)
+            } else pl
+        }
+        _playlists.value = newList
+        savePlaylistsToPrefs(newList)
+    }
+
+    private fun savePlaylistsToPrefs(list: List<Playlist>) {
+        val serialized = list.joinToString("@@@") { pl ->
+            val itemsStr = pl.items.joinToString("|||") { "${it.id}||${it.title}||${it.subtitle}||${it.thumbnail ?: ""}||${it.type.name}" }
+            "${pl.id}@@${pl.name}@@$itemsStr@@${pl.coverUrl ?: ""}@@${pl.isPinned}"
+        }
+        prefs.edit().putString("playlists", serialized).apply()
+    }
+
+    fun saveLastPlayerState(state: PlayerState?) {
+        if (state == null) {
+            prefs.edit().remove("last_player_state").apply()
+        } else {
+            val ser = "${state.title}<||>${state.artist}<||>${state.artUrl?.toString() ?: ""}<||>${state.videoId ?: ""}<||>${state.contentUri?.toString() ?: ""}"
+            prefs.edit().putString("last_player_state", ser).apply()
+        }
+    }
+
+    fun getLastPlayerState(): PlayerState? {
+        val ser = prefs.getString("last_player_state", "") ?: ""
+        if (ser.isBlank()) return null
+        val parts = ser.split("<||>")
+        if (parts.size >= 5) {
+            val title = parts[0]
+            val artist = parts[1]
+            val artUrl = parts[2].takeIf { it.isNotBlank() }
+            val videoId = parts[3].takeIf { it.isNotBlank() }
+            val uriStr = parts[4].takeIf { it.isNotBlank() }
+            val contentUri = uriStr?.let { Uri.parse(it) }
+            return PlayerState(title, artist, artUrl, videoId, contentUri)
+        }
+        return null
+    }
+}
