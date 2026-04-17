@@ -12,6 +12,7 @@
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/app" />
             <option value="$PROJECT_DIR$/glass" />
+            <option value="$PROJECT_DIR$/innertube" />
           </set>
         </option>
       </GradleProjectSettings>

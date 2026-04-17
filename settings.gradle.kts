@@ -16,9 +16,11 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven { setUrl("https://jitpack.io") }
     }
 }
 
 rootProject.name = "liquid-glass-compose"
 include(":app")
 include(":glass")
+include(":innertube")
