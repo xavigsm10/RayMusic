@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.ui.res.painterResource
 import com.mrtdk.liquid_glass.R
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -116,6 +117,7 @@ fun PlayerScreen(
         var showLyrics by remember { mutableStateOf(false) }
         
         var showOptionsMenu by remember { mutableStateOf(false) }
+        var showLyricsMenu by remember { mutableStateOf(false) }
         var showPlaylistMenu by remember { mutableStateOf(false) }
         var showNewPlaylistDialog by remember { mutableStateOf(false) }
         
@@ -137,6 +139,10 @@ fun PlayerScreen(
         var dominantColor by remember { mutableStateOf(Color(0xFF1E1E1E)) }
 
         var lyricsLines by remember { mutableStateOf<List<com.mrtdk.liquid_glass.utils.LyricLine>?>(null) }
+        var showManualLyricsSearch by remember { mutableStateOf(false) }
+        var manualLyricsQueryTitle by remember { mutableStateOf(playerState?.title ?: "") }
+        var manualLyricsQueryArtist by remember { mutableStateOf(playerState?.artist ?: "") }
+
         LaunchedEffect(playerState?.title, playerState?.artist) {
             lyricsLines = null
             if (playerState != null) {
@@ -323,8 +329,8 @@ fun PlayerScreen(
             
             // Calculating destinations depending on normal vs collapsed bottom bar
             val normalTargetOffsetX = 28.dp
-            val collapsedTargetOffsetX = 108.dp
-            val normalTargetOffsetY = maxHeight - 156.dp
+            val collapsedTargetOffsetX = 92.dp
+            val normalTargetOffsetY = maxHeight - 148.dp
             val collapsedTargetOffsetY = maxHeight - 64.dp
             
             val targetOffsetX = if (isBottomBarCollapsed) collapsedTargetOffsetX else normalTargetOffsetX
@@ -372,7 +378,7 @@ fun PlayerScreen(
                             .fillMaxSize()
                             .background(
                                 Brush.verticalGradient(
-                                    0.75f to Color.Transparent,
+                                    0.85f to Color.Transparent,
                                     1f to dominantColor.copy(alpha = contentAlpha)
                                 )
                             )
@@ -402,9 +408,9 @@ fun PlayerScreen(
                            Column(modifier = Modifier.weight(1f).clickable { 
                                if (playerState?.videoId != null) {
                                    onArtistSelected(com.mrtdk.liquid_glass.ui.screens.ArtistState(
-                                       id = playerState.videoId,
+                                       id = playerState.artist,
                                        name = playerState.artist,
-                                       thumbnail = playerState.artUrl?.toString()
+                                       thumbnail = null
                                    ))
                                }
                            }) {
@@ -421,7 +427,13 @@ fun PlayerScreen(
                                }
                            })
                            Spacer(modifier = Modifier.width(20.dp))
-                           Icon(Icons.Default.MoreVert, "More", tint = contentColor, modifier = Modifier.size(24.dp).clickable { showOptionsMenu = true })
+                           Icon(Icons.Default.MoreVert, "More", tint = contentColor, modifier = Modifier.size(24.dp).clickable { 
+                               if (showLyrics) {
+                                   showLyricsMenu = true
+                               } else {
+                                   showOptionsMenu = true
+                               }
+                           })
                       }
                       
                       if (showQueue) {
@@ -639,9 +651,9 @@ fun PlayerScreen(
                                   Column(modifier = Modifier.fillMaxWidth().clickable { 
                                       if (state.videoId != null) {
                                           onArtistSelected(com.mrtdk.liquid_glass.ui.screens.ArtistState(
-                                              id = state.videoId,
+                                              id = state.artist,
                                               name = state.artist,
-                                              thumbnail = state.artUrl?.toString()
+                                              thumbnail = null
                                           ))
                                       }
                                   }) {
@@ -748,6 +760,132 @@ fun PlayerScreen(
                     Spacer(modifier=Modifier.height(32.dp))
                 }
             }
+        }
+
+        if (showLyricsMenu) {
+            ModalBottomSheet(onDismissRequest = { showLyricsMenu = false }, containerColor = Color(0xFF1E1E1E)) {
+                Column(modifier = Modifier.padding(minOf(16.dp, 24.dp))) {
+                    Text(text = "Proveedor de letras", color=Color.White, fontSize=20.sp, fontWeight=FontWeight.Bold)
+                    Spacer(modifier=Modifier.height(16.dp))
+                    
+                    Row(modifier=Modifier.fillMaxWidth().clickable { showLyricsMenu=false }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
+                        Text("LRCLIB (Activo)", color=Color.White, fontSize=16.sp)
+                    }
+                    Row(modifier=Modifier.fillMaxWidth().clickable { showLyricsMenu=false }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
+                        Text("KuGou (Próximamente)", color=Color.Gray, fontSize=16.sp)
+                    }
+                    Row(modifier=Modifier.fillMaxWidth().clickable { showLyricsMenu=false }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
+                        Text("Musixmatch (Próximamente)", color=Color.Gray, fontSize=16.sp)
+                    }
+                    
+                    Spacer(modifier=Modifier.height(16.dp))
+                    androidx.compose.material3.Divider(color = Color.DarkGray)
+                    Spacer(modifier=Modifier.height(16.dp))
+                    
+                    Row(modifier=Modifier.fillMaxWidth().clickable { 
+                        showLyricsMenu=false 
+                        try {
+                            val intent = android.content.Intent(android.content.Intent.ACTION_WEB_SEARCH).apply {
+                                putExtra(android.app.SearchManager.QUERY, "${playerState?.artist ?: ""} ${playerState?.title ?: ""} lyrics")
+                            }
+                            context.startActivity(intent)
+                        } catch (e: Exception) {}
+                    }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
+                        Icon(Icons.Default.Search, contentDescription=null, tint=Color.White)
+                        Spacer(modifier=Modifier.width(16.dp))
+                        Text("Buscar letra en internet", color=Color.White, fontSize=16.sp)
+                    }
+                    Spacer(modifier=Modifier.height(32.dp))
+                }
+            }
+        }
+
+        if (showLyricsMenu) {
+            ModalBottomSheet(onDismissRequest = { showLyricsMenu = false }, containerColor = Color(0xFF1E1E1E)) {
+                Column(modifier = Modifier.padding(minOf(16.dp, 24.dp))) {
+                    Text(text = "Proveedor de letras", color=Color.White, fontSize=20.sp, fontWeight=FontWeight.Bold)
+                    Spacer(modifier=Modifier.height(16.dp))
+                    
+                    Row(modifier=Modifier.fillMaxWidth().clickable { showLyricsMenu=false }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
+                        Text("LRCLIB (Activo)", color=Color.White, fontSize=16.sp)
+                    }
+                    Row(modifier=Modifier.fillMaxWidth().clickable { showLyricsMenu=false }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
+                        Text("KuGou (Próximamente)", color=Color.Gray, fontSize=16.sp)
+                    }
+                    Row(modifier=Modifier.fillMaxWidth().clickable { showLyricsMenu=false }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
+                        Text("Musixmatch (Próximamente)", color=Color.Gray, fontSize=16.sp)
+                    }
+                    
+                    Spacer(modifier=Modifier.height(16.dp))
+                    androidx.compose.material3.Divider(color = Color.DarkGray)
+                    Spacer(modifier=Modifier.height(16.dp))
+                    
+                    Row(modifier=Modifier.fillMaxWidth().clickable { 
+                        showLyricsMenu=false 
+                        manualLyricsQueryTitle = playerState?.title ?: ""
+                        manualLyricsQueryArtist = playerState?.artist ?: ""
+                        showManualLyricsSearch = true
+                    }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
+                        Icon(Icons.Default.Search, contentDescription=null, tint=Color.White)
+                        Spacer(modifier=Modifier.width(16.dp))
+                        Text("Buscar letra manualmente", color=Color.White, fontSize=16.sp)
+                    }
+                    Spacer(modifier=Modifier.height(32.dp))
+                }
+            }
+        }
+        
+        val coroutineScope = rememberCoroutineScope()
+        if (showManualLyricsSearch) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { showManualLyricsSearch = false },
+                containerColor = Color(0xFF1E1E1E),
+                title = { Text("Buscar letra", color = Color.White) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        androidx.compose.material3.OutlinedTextField(
+                            value = manualLyricsQueryTitle,
+                            onValueChange = { manualLyricsQueryTitle = it },
+                            label = { Text("Título de la canción", color = Color.Gray) },
+                            singleLine = true,
+                            colors = androidx.compose.material3.TextFieldDefaults.colors(
+                                focusedTextColor = Color.White, unfocusedTextColor = Color.White,
+                                focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent
+                            )
+                        )
+                        androidx.compose.material3.OutlinedTextField(
+                            value = manualLyricsQueryArtist,
+                            onValueChange = { manualLyricsQueryArtist = it },
+                            label = { Text("Artista", color = Color.Gray) },
+                            singleLine = true,
+                            colors = androidx.compose.material3.TextFieldDefaults.colors(
+                                focusedTextColor = Color.White, unfocusedTextColor = Color.White,
+                                focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent
+                            )
+                        )
+                    }
+                },
+                confirmButton = {
+                    androidx.compose.material3.TextButton(onClick = {
+                        showManualLyricsSearch = false
+                        lyricsLines = null // reset so user sees loading
+                        val targetTitle = manualLyricsQueryTitle
+                        val targetArtist = manualLyricsQueryArtist
+                        coroutineScope.launch {
+                            lyricsLines = com.mrtdk.liquid_glass.utils.LyricsProvider.fetchLyrics(
+                                targetTitle, targetArtist
+                            )
+                        }
+                    }) {
+                        Text("Buscar", color = Color(0xFFFA243C))
+                    }
+                },
+                dismissButton = {
+                    androidx.compose.material3.TextButton(onClick = { showManualLyricsSearch = false }) {
+                        Text("Cancelar", color = Color.Gray)
+                    }
+                }
+            )
         }
         
         if (showPlaylistMenu) {

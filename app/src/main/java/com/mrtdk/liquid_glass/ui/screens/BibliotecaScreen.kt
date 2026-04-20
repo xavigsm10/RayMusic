@@ -46,6 +46,7 @@ import com.mrtdk.liquid_glass.data.ItemType
 fun BibliotecaScreen(
     innerPadding: PaddingValues,
     onSongSelected: (com.mrtdk.liquid_glass.ui.screens.PlayerState) -> Unit = {},
+    onArtistSelected: (com.mrtdk.liquid_glass.ui.screens.ArtistState) -> Unit = {},
     onPlaylistSelected: (com.mrtdk.liquid_glass.data.Playlist) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -122,6 +123,14 @@ fun BibliotecaScreen(
                                                 artist = item.subtitle,
                                                 artUrl = item.thumbnail,
                                                 videoId = item.id
+                                            )
+                                        )
+                                    } else if (item.type == ItemType.ARTIST) {
+                                        onArtistSelected(
+                                            com.mrtdk.liquid_glass.ui.screens.ArtistState(
+                                                id = item.id,
+                                                name = item.title,
+                                                thumbnail = item.thumbnail
                                             )
                                         )
                                     }
@@ -306,6 +315,14 @@ fun BibliotecaScreen(
                                         artist = item.subtitle,
                                         artUrl = item.thumbnail,
                                         videoId = item.id
+                                    )
+                                )
+                            } else if (item.type == ItemType.ARTIST) {
+                                onArtistSelected(
+                                    com.mrtdk.liquid_glass.ui.screens.ArtistState(
+                                        id = item.id,
+                                        name = item.title,
+                                        thumbnail = item.thumbnail
                                     )
                                 )
                             }
