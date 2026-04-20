@@ -262,7 +262,11 @@ class MainActivity : ComponentActivity() {
                                             PlaylistDetailScreen(
                                                 playlist = state.playlist,
                                                 onBack = { playlistDetail = null },
-                                                onSongSelected = playSong
+                                                onSongSelected = playSong,
+                                                onArtistSelected = {
+                                                    playlistDetail = null // Close playlist to show artist screen? No, actually just show the screen! But artistDetail and playlistDetail are mutually exclusive in `NavState`? Wait! Let's check `NavState`.
+                                                    artistDetail = it
+                                                }
                                             )
                                         }
                                         state.album != null -> {
@@ -295,7 +299,8 @@ class MainActivity : ComponentActivity() {
                                                 3 -> BibliotecaScreen(
                                                     innerPadding = innerPadding, 
                                                     onSongSelected = playSong,
-                                                    onPlaylistSelected = { playlistDetail = it }
+                                                    onPlaylistSelected = { playlistDetail = it },
+                                                    onArtistSelected = { artistDetail = it }
                                                 )
                                                 4 -> BusquedaScreen(
                                                     innerPadding = innerPadding,
@@ -309,6 +314,7 @@ class MainActivity : ComponentActivity() {
                                                         albumDetail = album
                                                     }
                                                 )
+                                                2 -> com.mrtdk.liquid_glass.ui.screens.RadioScreen(innerPadding)
                                                 else -> DemoBackground(innerPadding)
                                             }
                                         }
@@ -322,10 +328,8 @@ class MainActivity : ComponentActivity() {
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .padding(
-                                                top = innerPadding.calculateTopPadding(),
-                                                bottom = if (isKeyboardOpen) 0.dp else innerPadding.calculateBottomPadding()
-                                            )
+                                            .padding(innerPadding)
+                                            .consumeWindowInsets(innerPadding)
                                             .imePadding(),
                                         contentAlignment = Alignment.BottomCenter
                                     ) {
@@ -340,12 +344,12 @@ class MainActivity : ComponentActivity() {
                                             stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
                                         )
 
-                                        val bottomPad = if (isKeyboardOpen) 0.dp else 16.dp
+                                        val bottomPad = if (isKeyboardOpen) 2.dp else 16.dp
                                         val navBarHeightWithPadding = 72.dp + bottomPad
 
-                                        val mpPadStart by androidx.compose.animation.core.animateDpAsState(if (isCollapsed) 80.dp else 16.dp, springSpec)
-                                        val mpPadEnd by androidx.compose.animation.core.animateDpAsState(if (isCollapsed) 80.dp else 16.dp, springSpec)
-                                        val mpPadBottom by androidx.compose.animation.core.animateDpAsState(if (isCollapsed) bottomPad else navBarHeightWithPadding + 12.dp, springSpec)
+                                        val mpPadStart by androidx.compose.animation.core.animateDpAsState(if (isCollapsed) 80.dp else 16.dp, springSpec, label = "mpPadStart")
+                                        val mpPadEnd by androidx.compose.animation.core.animateDpAsState(if (isCollapsed) 80.dp else 16.dp, springSpec, label = "mpPadEnd")
+                                        val mpPadBottom by androidx.compose.animation.core.animateDpAsState(if (isCollapsed) bottomPad else navBarHeightWithPadding + 12.dp, springSpec, label = "mpPadBottom")
 
                                         val navBarOffset by androidx.compose.animation.core.animateDpAsState(if (isCollapsed) 100.dp else 0.dp, springSpec)
                                         val navBarAlpha by androidx.compose.animation.core.animateFloatAsState(if (isCollapsed) 0f else 1f, floatSpringSpec)
@@ -401,9 +405,18 @@ class MainActivity : ComponentActivity() {
                                                 scope.MiniPlayer(
                                                     playerState = playerState,
                                                     isPlaying = isPlaying,
-                                                    onTogglePlayPause = { musicPlayer?.togglePlayPause() },
+                                                    onTogglePlayPause = { 
+                                                        if (duration <= 0L && playerState != null) {
+                                                            val state = playerState!!
+                                                            if (state.contentUri != null) musicPlayer?.playLocalSong(state.contentUri)
+                                                            else if (state.videoId != null) musicPlayer?.playOnlineSong(state.videoId)
+                                                        } else {
+                                                            musicPlayer?.togglePlayPause() 
+                                                        }
+                                                    },
                                                     onClick = { if (playerState != null) showPlayer = true },
                                                     modifier = Modifier.fillMaxWidth(),
+                                                    hideImage = showPlayer,
                                                     tintColor = globalDominantColor.copy(alpha = 0.45f),
                                                     contentColor = contentTintColor
                                                 )
@@ -425,7 +438,6 @@ class MainActivity : ComponentActivity() {
                                                     scope.GlassBox(
                                                         modifier = Modifier.size(56.dp).clickable { 
                                                             isBottomBarCollapsed = false
-                                                            selectedIndex = 0
                                                         },
                                                         shape = CircleShape,
                                                         tint = globalDominantColor.copy(alpha = 0.35f),
@@ -464,7 +476,15 @@ class MainActivity : ComponentActivity() {
                                 duration = duration,
                                 isBottomBarCollapsed = isBottomBarCollapsed,
                                 onClose = { showPlayer = false },
-                                onTogglePlayPause = { musicPlayer?.togglePlayPause() },
+                                onTogglePlayPause = { 
+                                    if (duration <= 0L && playerState != null) {
+                                        val state = playerState!!
+                                        if (state.contentUri != null) musicPlayer?.playLocalSong(state.contentUri)
+                                        else if (state.videoId != null) musicPlayer?.playOnlineSong(state.videoId)
+                                    } else {
+                                        musicPlayer?.togglePlayPause() 
+                                    }
+                                },
                                 onSeek = { musicPlayer?.seekTo(it) },
                                 onVolumeChange = { musicPlayer?.setVolume(it) },
                                 onArtistSelected = { artist ->

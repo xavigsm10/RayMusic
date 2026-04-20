@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -33,6 +34,7 @@ fun GlassBoxScope.MiniPlayer(
     onTogglePlayPause: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    hideImage: Boolean = false,
     tintColor: Color = Color.White.copy(alpha = 0.15f),
     contentColor: Color = Color.White
 ) {
@@ -73,7 +75,7 @@ fun GlassBoxScope.MiniPlayer(
                         .build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize().alpha(if (hideImage) 0f else 1f)
                 )
             }
             Spacer(modifier = Modifier.width(12.dp))

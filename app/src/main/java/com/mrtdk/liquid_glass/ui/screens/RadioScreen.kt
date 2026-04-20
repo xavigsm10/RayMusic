@@ -1,0 +1,167 @@
+package com.mrtdk.liquid_glass.ui.screens
+
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import kotlinx.coroutines.delay
+
+@Composable
+fun RadioScreen(innerPadding: PaddingValues) {
+    val context = LocalContext.current
+    var isListening by remember { mutableStateOf(false) }
+    var hasPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+        hasPermission = isGranted
+        if (isGranted) {
+            isListening = true
+        }
+    }
+
+    val colorPrimary = Color(0xFFFA243C) // Apple Music / liquid_glass red-pink
+    
+    // Pulse Animation
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = if (isListening) 1.5f else 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scale"
+    )
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = if (isListening) 0.5f else 0f,
+        targetValue = if (isListening) 0.0f else 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "alpha"
+    )
+
+    // Flow simulation
+    LaunchedEffect(isListening) {
+        if (isListening) {
+            // Emulate Echo-Music's listening duration
+            delay(4000)
+            isListening = false
+            // Here it would transition to Success/Error view, for now we stop.
+            // Since we don't have the Echo-Music's backend in liquid_glass,
+            // we can trigger the native Google Music Search as a robust fallback.
+            try {
+                val intent = Intent("com.google.android.googlequicksearchbox.MUSIC_SEARCH")
+                context.startActivity(intent)
+            } catch (e: Exception) {
+                // Fallback to basic speech recognition if Google is not available
+                val speechIntent = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                }
+                try {
+                    context.startActivity(speechIntent)
+                } catch (e: Exception) {}
+            }
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .padding(innerPadding),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                if (isListening) {
+                    // Outer Pulse
+                    Box(
+                        modifier = Modifier
+                            .size(200.dp)
+                            .scale(scale)
+                            .clip(CircleShape)
+                            .background(colorPrimary.copy(alpha = alpha))
+                    )
+                    // Inner Pulse
+                    Box(
+                        modifier = Modifier
+                            .size(150.dp)
+                            .scale(scale * 0.85f)
+                            .clip(CircleShape)
+                            .background(colorPrimary.copy(alpha = alpha * 1.5f))
+                    )
+                }
+                
+                // Big Apple Music Style Button
+                Box(
+                    modifier = Modifier
+                        .size(120.dp)
+                        .clip(CircleShape)
+                        .background(colorPrimary)
+                        .clickable {
+                            if (!hasPermission) {
+                                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                            } else {
+                                isListening = !isListening
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Mic,
+                        contentDescription = "Listening Microphone",
+                        modifier = Modifier.size(48.dp),
+                        tint = Color.White
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(48.dp))
+            
+            Text(
+                text = if (isListening) "Escuchando..." else "Toca para identificar música",
+                color = Color.White,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Asegúrate de que tu dispositivo pueda\noír la música claramente.",
+                color = Color.Gray,
+                fontSize = 14.sp,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
