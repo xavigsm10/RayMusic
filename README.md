@@ -1,161 +1,39 @@
-## Liquid Glass Compose
+# RayMusic
 
-<img src="screenshots/button_example.png" width="350"/>
+![Inicio](Capturas%20de%20Pantalla/Inicio.png)
 
-# 🚧 Experimental Release: 0.1.0
-
-**This is an experimental version (0.1.0) of Liquid Glass Compose Library!**
-
-You can download this version via the [Releases](https://github.com/Mortd3kay/liquid-glass-compose/releases) tab.
+**RayMusic** es un moderno y espectacular reproductor de música de YouTube para Android, diseñado con la máxima atención al detalle y la estética. Su interfaz cuenta con el impresionante **efecto Liquid Glass** (efecto de cristal líquido), el cual ofrece desenfoques dinámicos, refracciones y refracciones de color en tiempo real a lo largo de toda la aplicación, logrando un diseño visualmente deslumbrante y súper inmersivo para tu música.
 
 ---
 
-If the community shows real interest, the plan is to build a full-featured design system with optimized glassmorphism components. 
+## Capturas de Pantalla
 
-**If you like the idea — star the repo and follow the updates! ⭐**
+Aquí tienes un vistazo de la interfaz y elementos de la aplicación:
 
----
-
-Glass morphism effects demonstration project in Jetpack Compose with support for Android API 21+.
-<img src="screenshots/button.gif" width="350"/>
-
-<img src="screenshots/card.gif" width="350"/>
-
-
-## 🎯 Features
-
-- ✨ Realistic glass morphism effects
-- 📱 Support for Android API 21+ (Android 5.0 and above)
-- 🔄 Automatic fallback for older Android versions
-- 🎨 Real-time customizable parameters
-- 🚀 High performance using AGSL shaders
-
-## 📱 Version Support
-
-### Android 13+ (API 33+)
-- Full support with AGSL shaders
-- All effects work at hardware level
-- Maximum performance
-
-<img src="screenshots/tinted_glass.png" width="350"/>
-
-### Android 5.0 - 12 (API 21-32)
-- Fallback implementation using standard Compose modifiers
-- Glass effect simulation using gradients and transparency
-- No blur support (blur only available with AGSL shaders)
-
-<img src="screenshots/fallback.png" width="350"/>
-
-## 🏗️ Project Structure
-
-```
-liquid-glass-compose/
-├── app/                    # Demo application
-│   └── src/main/java/
-│       └── com/mrtdk/liquid_glass/
-│           └── MainActivity.kt
-└── glass/                  # Glass library
-    ├── build.gradle.kts
-    ├── README.md          # Library documentation
-    └── src/main/java/
-        └── com/mrtdk/glass/
-            └── GlassBox.kt
-```
-
-## 🚀 Usage
-
-### Basic Example
-
-```kotlin
-GlassContainer(
-    modifier = Modifier.fillMaxSize(),
-    content = {
-        // Your main content (background of glass)
-        Image(...)
-    }
-) {
-    GlassBox(
-        modifier = Modifier
-            .size(200.dp)
-            .align(Alignment.Center),
-        blur = 0.5f,
-        scale = 0.3f,
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Text("Glass Effect")
-    }
-}
-```
-
-### Advanced Parameters
-
-- `blur` (0.0-1.0) - Blur intensity
-- `scale` (0.0-1.0) - Magnification/lens effect  
-- `centerDistortion` (0.0-1.0) - Lens distortion (like fisheye)
-- `elevation` - Shadow
-- `tint` - Glass color tint
-- `darkness` (0.0-1.0) - Edge darkening
-- `warpEdges` (0.0-1.0) - Edges distortion
-
-<img src="screenshots/clear_lens.png" width="350"/>
-
-## 🛠️ Build
-
-```bash
-# Build library
-./gradlew :glass:build
-
-# Build demo app
-./gradlew :app:build
-
-# Run application
-./gradlew :app:installDebug
-```
-
-## 📲 Demo Application
-
-Try the interactive demo app included in this repository! The demo lets you:
-- See real-time glass morphism effects on cards and buttons
-- Experiment with all parameters: blur, scale, distortion, elevation, tint, darkness, warp edges
-- Instantly preview changes and rendering modes (AGSL or fallback)
-
-<img src="screenshots/demo_app.png" width="350"/>
-<img src="screenshots/settings.png" width="350"/>
+| | |
+|:---:|:---:|
+| ![Inicio](Capturas%20de%20Pantalla/Inicio.png) <br> **Inicio** | ![Reproductor en Detalle](Capturas%20de%20Pantalla/Reproductor%20en%20Detalle.png) <br> **Reproductor en Detalle** |
+| ![Reproductor en Detalle 2](Capturas%20de%20Pantalla/Reproductor%20en%20Detalle%202.png) <br> **Reproductor en Detalle 2** | ![Letras](Capturas%20de%20Pantalla/Letras.png) <br> **Letras** |
+| ![Canciones en acontinuacion](Capturas%20de%20Pantalla/Canciones%20en%20acontinuacion.png) <br> **A Continuación** | ![Albumes](Capturas%20de%20Pantalla/Albumes.png) <br> **Álbumes** |
+| ![Novedades](Capturas%20de%20Pantalla/Novedades.png) <br> **Novedades** | ![Biblioteca](Capturas%20de%20Pantalla/Biblioteca.png) <br> **Biblioteca** |
+| ![Vista pagina Playlist](Capturas%20de%20Pantalla/Vista%20pagina%20Playlist.png) <br> **Vista de Playlist** | ![Playlist](Capturas%20de%20Pantalla/Playlist.png) <br> **Tus Playlists** |
 
 ---
 
-## 🔧 Technical Implementation
+## Funcionalidades Principales
 
-### Android 13+ (AGSL Shaders)
-- Uses `RuntimeShader` with custom AGSL code
-- GPU hardware acceleration
-- Support for up to 10 glass elements simultaneously in one GlassContainer
-- Realistic effects: blur, distortion, shadows, reflections
+RayMusic te permite tener el control absoluto de tus ritmos y canciones favoritas:
 
-### Android 5.0-12 (Fallback)
-- Gradient backgrounds to simulate glass
-- No blur support (blur only works with AGSL shaders)
-- Transparency and scaling effects
+*   **Efecto Liquid Glass Total:** Disfruta de una interfaz de usuario hiperrealista, donde las barras, los fondos y mini-reproductores adquieren colores vibrantes y translúcidos de las portadas musicales.
+*   **Gestión Completa de Biblioteca:** Guarda artistas, álbumes y canciones completas para tenerlas siempre a la mano en la sección Biblioteca.
+*   **Listas de Reproducción Personalizadas (Playlists):** Crea, edita y administra tus propias playlists asignándoles fotos personalizadas con recortes exactos y ajustables a tu gusto.
+*   **Buscador Inteligente de Letras:** Lee las letras sincronizadas en pantalla, cambia de proveedor si es necesario o utiliza la búsqueda web directamente desde el reproductor.
+*   **Cola de Reproducción Infinita y Autoplay:** Administra "A Continuación" y deja que la música nunca se detenga con mezclas generadas a partir de lo que estabas escuchando.
+*   **Identificador de Canciones por Micrófono (Radio):** Accede a la pestaña estilo "Apple Music" donde el dispositivo puede escuchar la pista que suena a tu alrededor y reconocerla al instante.
+*   **Mini-Reproductor Animado:** Navega por la app sin perder el contexto; desliza el reproductor para transformarlo mágicamente en un mini-reproductor con elegantes animaciones.
+*   **Feed "Sugerencias Destacadas":** La pantalla de Inicio mezcla algoritmos rápidos para recomendarte nuevas pistas, álbumes y listas basados en tu historial.
+*   **Colores Dominantes Dinámicos:** Todo el esquema de color de la app cambia adaptándose fluidamente a la carátula de la canción actual.
 
-## 📋 Requirements
+---
 
-- Android API 21+ (Android 5.0)
-- Jetpack Compose BOM 2024.09.00+
-- Kotlin 2.0.21+
-- Gradle 8.10.0+
-
-
-
-## 🤝 Contributing
-
-If you want to contribute to the project:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📞 Contact
-
-If you have questions or suggestions, please create an Issue in the repository. 
+Diseñado meticulosamente para que cada transición y toque se sienta como estar tocando cristal real y sumergiéndote en tu colección musical de primer nivel.

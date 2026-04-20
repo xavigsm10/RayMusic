@@ -308,10 +308,10 @@ fun CreatePlaylistModal(onDismiss: () -> Unit) {
                             .clip(RoundedCornerShape(12.dp))
                             .pointerInput(Unit) {
                                 detectTransformGestures { _, pan, zoom, _ ->
-                                    imageScale = (imageScale * zoom).coerceIn(1f, 4f)
-                                    // Limit pan so image doesn't go too far off-center
-                                    val maxPanX = (imageScale - 1f) * 200f
-                                    val maxPanY = (imageScale - 1f) * 200f
+                                    imageScale = (imageScale * zoom).coerceIn(1f, 5f)
+                                    // Limit pan generously so they can move it around freely
+                                    val maxPanX = 500f * imageScale
+                                    val maxPanY = 500f * imageScale
                                     imageOffsetX = (imageOffsetX + pan.x).coerceIn(-maxPanX, maxPanX)
                                     imageOffsetY = (imageOffsetY + pan.y).coerceIn(-maxPanY, maxPanY)
                                 }
@@ -449,7 +449,8 @@ fun CreatePlaylistModal(onDismiss: () -> Unit) {
 fun PlaylistDetailScreen(
     playlist: Playlist,
     onBack: () -> Unit,
-    onSongSelected: (com.mrtdk.liquid_glass.ui.screens.PlayerState) -> Unit
+    onSongSelected: (com.mrtdk.liquid_glass.ui.screens.PlayerState) -> Unit,
+    onArtistSelected: (com.mrtdk.liquid_glass.ui.screens.ArtistState) -> Unit = {}
 ) {
     val context = LocalContext.current
     var dominantColor by remember { mutableStateOf(Color(0xFF2B2B2B)) }
@@ -657,21 +658,29 @@ fun PlaylistDetailScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
-                        // Build queue from remaining songs after this one
-                        val remainingQueue = playlist.items.drop(trackIndex + 1).map { t ->
-                            com.mrtdk.liquid_glass.ui.screens.QueueItem(
-                                title = t.title,
-                                artist = t.subtitle,
-                                artUrl = playlistCoverForPlayer ?: t.thumbnail,
-                                videoId = t.id
-                            )
+                        if (track.type == com.mrtdk.liquid_glass.data.ItemType.ARTIST) {
+                            onArtistSelected(com.mrtdk.liquid_glass.ui.screens.ArtistState(
+                                id = track.id,
+                                name = track.title, // Title is the artist name in LibraryItem
+                                thumbnail = track.thumbnail
+                            ))
+                        } else {
+                            // Build queue from remaining songs after this one
+                            val remainingQueue = playlist.items.drop(trackIndex + 1).filter { it.type == com.mrtdk.liquid_glass.data.ItemType.SONG }.map { t ->
+                                com.mrtdk.liquid_glass.ui.screens.QueueItem(
+                                    title = t.title,
+                                    artist = t.subtitle,
+                                    artUrl = playlistCoverForPlayer ?: t.thumbnail,
+                                    videoId = t.id
+                                )
+                            }
+                            onSongSelected(com.mrtdk.liquid_glass.ui.screens.PlayerState(
+                                track.title, track.subtitle, 
+                                playlistCoverForPlayer ?: track.thumbnail, 
+                                track.id,
+                                queue = remainingQueue
+                            ))
                         }
-                        onSongSelected(com.mrtdk.liquid_glass.ui.screens.PlayerState(
-                            track.title, track.subtitle, 
-                            playlistCoverForPlayer ?: track.thumbnail, 
-                            track.id,
-                            queue = remainingQueue
-                        ))
                     }
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically

@@ -62,8 +62,10 @@ fun ArtistScreen(
 
     // Dominant colour extracted from artist photo
     var dominantColor by remember { mutableStateOf(Color(0xFF111111)) }
+    
+    var artistThumb by remember { mutableStateOf(artistState.thumbnail) }
 
-    val hdThumb = artistState.thumbnail
+    val hdThumb = artistThumb
         ?.replace("=w226-h226", "=w800-h800")
         ?.replace("=w120-h120", "=w800-h800")
 
@@ -100,6 +102,14 @@ fun ArtistScreen(
             }
             YouTube.search(artistState.name, YouTube.SearchFilter.FILTER_ALBUM).onSuccess { r ->
                 albums = r.items.filterIsInstance<AlbumItem>()
+            }
+            if (artistThumb == null) {
+                YouTube.search(artistState.name, YouTube.SearchFilter.FILTER_ARTIST).onSuccess { r ->
+                    val actualArtist = r.items.filterIsInstance<ArtistItem>().firstOrNull()
+                    if (actualArtist != null) {
+                        artistThumb = actualArtist.thumbnail
+                    }
+                }
             }
         }
     }
@@ -272,7 +282,7 @@ fun ArtistScreen(
                                         id = artistState.id,
                                         title = artistState.name,
                                         subtitle = "Artist",
-                                        thumbnail = hdThumb,
+                                        thumbnail = artistThumb, // Use the fetched real artist image
                                         type = ItemType.ARTIST
                                     )
                                 )

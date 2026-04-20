@@ -140,8 +140,8 @@ fun AlbumScreen(
                             .background(
                                 Brush.verticalGradient(
                                     0.0f to Color.Transparent,
-                                    0.6f to Color.Transparent,
-                                    0.85f to dominantColor.copy(alpha = 0.6f),
+                                    0.75f to Color.Transparent,
+                                    0.9f to dominantColor.copy(alpha = 0.5f),
                                     1.0f to dominantColor
                                 )
                             )

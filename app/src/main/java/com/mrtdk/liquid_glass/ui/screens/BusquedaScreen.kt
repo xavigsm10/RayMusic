@@ -106,11 +106,9 @@ fun BusquedaScreen(
 
     val categories = remember { loadCategories(context) }
 
-    // Detect keyboard visibility
     val density = LocalDensity.current
     val imeBottom = WindowInsets.ime.getBottom(density)
     val isKeyboardOpen = imeBottom > 0
-    val keyboardHeightDp = with(density) { imeBottom.toDp() }
 
     if (query.isEmpty()) {
         Column(
@@ -180,7 +178,7 @@ fun BusquedaScreen(
             .background(Color.Black),
         contentPadding = PaddingValues(
             top = innerPadding.calculateTopPadding() + 16.dp,
-            bottom = if (isKeyboardOpen) keyboardHeightDp + 80.dp else innerPadding.calculateBottomPadding() + 180.dp
+            bottom = innerPadding.calculateBottomPadding() + 180.dp
         )
     ) {
         // Filter tabs row (after submit)
