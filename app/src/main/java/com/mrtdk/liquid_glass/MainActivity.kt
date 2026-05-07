@@ -6,6 +6,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import kotlinx.coroutines.withContext
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -185,34 +186,85 @@ class MainActivity : ComponentActivity() {
                         else if (state.videoId != null) musicPlayer?.playOnlineSong(state.videoId)
                     }
 
+                    var upNextSongs by remember { mutableStateOf<List<com.echo.innertube.models.SongItem>>(emptyList()) }
+                    var queueSeedVideoId by remember { mutableStateOf<String?>(null) }
+                    val songHistory = remember { androidx.compose.runtime.mutableStateListOf<PlayerState>() }
+
+                    LaunchedEffect(playerState?.videoId) {
+                        val vid = playerState?.videoId ?: return@LaunchedEffect
+                        if (upNextSongs.isEmpty() || queueSeedVideoId == null) {
+                            queueSeedVideoId = vid
+                            withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                com.echo.innertube.YouTube.next(com.echo.innertube.models.WatchEndpoint(videoId = vid)).onSuccess { nextResult ->
+                                    val relatedEndpoint = nextResult.relatedEndpoint ?: return@onSuccess
+                                    com.echo.innertube.YouTube.related(relatedEndpoint).onSuccess { relatedPage ->
+                                        upNextSongs = relatedPage.songs.take(20)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Refetch more songs when queue gets low for infinite playback
+                    LaunchedEffect(upNextSongs.size) {
+                        if (upNextSongs.size <= 3 && playerState?.videoId != null) {
+                            val vid = playerState!!.videoId!!
+                            withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                com.echo.innertube.YouTube.next(com.echo.innertube.models.WatchEndpoint(videoId = vid)).onSuccess { nextResult ->
+                                    val relatedEndpoint = nextResult.relatedEndpoint ?: return@onSuccess
+                                    com.echo.innertube.YouTube.related(relatedEndpoint).onSuccess { relatedPage ->
+                                        val existingIds = upNextSongs.map { it.id }.toSet()
+                                        val newSongs = relatedPage.songs.filter { it.id !in existingIds }.take(15)
+                                        if (newSongs.isNotEmpty()) {
+                                            upNextSongs = upNextSongs + newSongs
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    val skipNextFun: () -> Unit = {
+                        if (playerState != null && playerState!!.queue.isNotEmpty()) {
+                            val next = playerState!!.queue.first()
+                            songHistory.add(playerState!!)
+                            playSong(PlayerState(
+                                title = next.title,
+                                artist = next.artist,
+                                artUrl = next.artUrl,
+                                videoId = next.videoId,
+                                queue = playerState!!.queue.drop(1)
+                            ))
+                        } else if (upNextSongs.isNotEmpty()) {
+                            val next = upNextSongs.first()
+                            songHistory.add(playerState!!)
+                            val upgradedArt = next.thumbnail?.let {
+                                if (it.contains("=w")) it.substringBefore("=w") + "=w1200-h1200-l90-rj"
+                                else if (it.contains("ytimg.com/vi/")) it.replace("hqdefault", "maxresdefault").replace("mqdefault", "maxresdefault")
+                                else it
+                            } ?: next.thumbnail
+                            upNextSongs = upNextSongs.drop(1)
+                            playSong(PlayerState(
+                                title = next.title,
+                                artist = next.artists.joinToString { it.name },
+                                artUrl = upgradedArt,
+                                videoId = next.id
+                            ))
+                        }
+                    }
+
+                    val skipPreviousFun: () -> Unit = {
+                        if (songHistory.isNotEmpty()) {
+                            val prev = songHistory.removeLast()
+                            playSong(prev)
+                        }
+                    }
+
                     // Auto-play next song when current song ends
                     val songEndedCount by musicPlayer!!.songEnded.collectAsState()
                     LaunchedEffect(songEndedCount) {
                         if (songEndedCount > 0 && playerState != null) {
-                            val queue = playerState!!.queue
-                            if (queue.isNotEmpty()) {
-                                val nextItem = queue.first()
-                                val remainingQueue = queue.drop(1)
-                                val nextState = PlayerState(
-                                    title = nextItem.title,
-                                    artist = nextItem.artist,
-                                    artUrl = nextItem.artUrl,
-                                    videoId = nextItem.videoId,
-                                    queue = remainingQueue
-                                )
-                                playerState = nextState
-                                showPlayer = true
-                                LibraryManager.addRecentlyPlayed(
-                                    com.mrtdk.liquid_glass.data.LibraryItem(
-                                        id = nextItem.videoId ?: nextItem.title,
-                                        title = nextItem.title,
-                                        subtitle = nextItem.artist,
-                                        thumbnail = nextItem.artUrl?.toString(),
-                                        type = com.mrtdk.liquid_glass.data.ItemType.SONG
-                                    )
-                                )
-                                if (nextItem.videoId != null) musicPlayer?.playOnlineSong(nextItem.videoId)
-                            }
+                            skipNextFun()
                         }
                     }
 
@@ -235,24 +287,36 @@ class MainActivity : ComponentActivity() {
                                             if ((targetState.playlist != null && initialState.playlist == null) || 
                                                 (targetState.album != null && initialState.album == null) || 
                                                 (targetState.artist != null && initialState.artist == null)) {
-                                                // Forward (Slide in from right)
+                                                // Forward (Slide in from right) — fast, snappy transition
                                                 androidx.compose.animation.slideInHorizontally(
-                                                    animationSpec = androidx.compose.animation.core.spring(stiffness = androidx.compose.animation.core.Spring.StiffnessLow)
-                                                ) { width -> width } + androidx.compose.animation.fadeIn() togetherWith androidx.compose.animation.slideOutHorizontally(
-                                                    animationSpec = androidx.compose.animation.core.spring(stiffness = androidx.compose.animation.core.Spring.StiffnessLow)
-                                                ) { width -> -width / 3 } + androidx.compose.animation.fadeOut()
+                                                    animationSpec = androidx.compose.animation.core.tween(250, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                                                ) { width -> width } + androidx.compose.animation.fadeIn(
+                                                    animationSpec = androidx.compose.animation.core.tween(200)
+                                                ) togetherWith androidx.compose.animation.slideOutHorizontally(
+                                                    animationSpec = androidx.compose.animation.core.tween(250, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                                                ) { width -> -width / 4 } + androidx.compose.animation.fadeOut(
+                                                    animationSpec = androidx.compose.animation.core.tween(150)
+                                                )
                                             } else if ((initialState.playlist != null && targetState.playlist == null) || 
                                                      (initialState.album != null && targetState.album == null) || 
                                                      (initialState.artist != null && targetState.artist == null)) {
-                                                // Backward (Slide out to right)
+                                                // Backward (Slide out to right) — fast, snappy transition
                                                 androidx.compose.animation.slideInHorizontally(
-                                                    animationSpec = androidx.compose.animation.core.spring(stiffness = androidx.compose.animation.core.Spring.StiffnessLow)
-                                                ) { width -> -width / 3 } + androidx.compose.animation.fadeIn() togetherWith androidx.compose.animation.slideOutHorizontally(
-                                                    animationSpec = androidx.compose.animation.core.spring(stiffness = androidx.compose.animation.core.Spring.StiffnessLow)
-                                                ) { width -> width } + androidx.compose.animation.fadeOut()
+                                                    animationSpec = androidx.compose.animation.core.tween(250, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                                                ) { width -> -width / 4 } + androidx.compose.animation.fadeIn(
+                                                    animationSpec = androidx.compose.animation.core.tween(200)
+                                                ) togetherWith androidx.compose.animation.slideOutHorizontally(
+                                                    animationSpec = androidx.compose.animation.core.tween(250, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                                                ) { width -> width } + androidx.compose.animation.fadeOut(
+                                                    animationSpec = androidx.compose.animation.core.tween(150)
+                                                )
                                             } else {
-                                                // Tab switch (Crossfade)
-                                                androidx.compose.animation.fadeIn() togetherWith androidx.compose.animation.fadeOut()
+                                                // Tab switch (Fast crossfade)
+                                                androidx.compose.animation.fadeIn(
+                                                    animationSpec = androidx.compose.animation.core.tween(150)
+                                                ) togetherWith androidx.compose.animation.fadeOut(
+                                                    animationSpec = androidx.compose.animation.core.tween(150)
+                                                )
                                             }
                                         },
                                         label = "ios_page_transition"
@@ -283,6 +347,9 @@ class MainActivity : ComponentActivity() {
                                                 onSongSelected = playSong,
                                                 onAlbumSelected = { album ->
                                                     albumDetail = album
+                                                },
+                                                onArtistSelected = { artist ->
+                                                    artistDetail = artist
                                                 }
                                             )
                                         }
@@ -295,7 +362,11 @@ class MainActivity : ComponentActivity() {
                                                     onArtistSelected = { artistDetail = it },
                                                     onAlbumSelected = { albumDetail = it }
                                                 )
-                                                1 -> NovedadesScreen(innerPadding, onSongSelected = playSong)
+                                                1 -> NovedadesScreen(
+                                                    innerPadding = innerPadding,
+                                                    onSongSelected = playSong,
+                                                    onAlbumSelected = { albumDetail = it }
+                                                )
                                                 3 -> BibliotecaScreen(
                                                     innerPadding = innerPadding, 
                                                     onSongSelected = playSong,
@@ -314,7 +385,14 @@ class MainActivity : ComponentActivity() {
                                                         albumDetail = album
                                                     }
                                                 )
-                                                2 -> com.mrtdk.liquid_glass.ui.screens.RadioScreen(innerPadding)
+                                                2 -> com.mrtdk.liquid_glass.ui.screens.RadioScreen(
+                                                    innerPadding = innerPadding,
+                                                    onSearchResult = { recognizedText ->
+                                                        searchQuery = recognizedText
+                                                        isSearchSubmitted = true
+                                                        selectedIndex = 4 // Navigate to search screen
+                                                    }
+                                                )
                                                 else -> DemoBackground(innerPadding)
                                             }
                                         }
@@ -475,6 +553,11 @@ class MainActivity : ComponentActivity() {
                                 currentPosition = currentPosition,
                                 duration = duration,
                                 isBottomBarCollapsed = isBottomBarCollapsed,
+                                upNextSongs = upNextSongs,
+                                onUpNextSongsChange = { upNextSongs = it },
+                                songHistory = songHistory,
+                                onSkipNext = skipNextFun,
+                                onSkipPrevious = skipPreviousFun,
                                 onClose = { showPlayer = false },
                                 onTogglePlayPause = { 
                                     if (duration <= 0L && playerState != null) {
