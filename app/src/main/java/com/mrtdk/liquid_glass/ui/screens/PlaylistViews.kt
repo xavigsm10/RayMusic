@@ -320,7 +320,7 @@ fun CreatePlaylistModal(onDismiss: () -> Unit) {
                         AsyncImage(
                             model = coverUri,
                             contentDescription = null,
-                            contentScale = ContentScale.Crop,
+                            contentScale = ContentScale.Fit,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .graphicsLayer {

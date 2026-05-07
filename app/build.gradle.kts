@@ -25,6 +25,13 @@ android {
     kotlin {
         compilerOptions.jvmTarget = JvmTarget.JVM_11
     }
+    packaging {
+        resources {
+            excludes += "META-INF/CONTRIBUTORS.md"
+            excludes += "META-INF/LICENSE.md"
+            excludes += "META-INF/NOTICE.md"
+        }
+    }
 }
 
 dependencies {
@@ -48,6 +55,9 @@ dependencies {
     
     // Image loading
     implementation("io.coil-kt:coil-compose:2.6.0")
+    // Romaji translation
+    implementation("com.atilika.kuromoji:kuromoji-ipadic:0.9.0")
+    implementation("com.anyascii:anyascii:0.3.2")
     
     // Permissions
     implementation("com.google.accompanist:accompanist-permissions:0.35.0-alpha")

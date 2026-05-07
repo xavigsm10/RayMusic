@@ -39,6 +39,8 @@ import com.echo.innertube.models.SongItem
 import com.echo.innertube.models.WatchEndpoint
 import com.echo.innertube.pages.RelatedPage
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 
 @Composable
@@ -69,23 +71,33 @@ fun InicioScreen(
     // Recently played from LibraryManager
     val recentlyPlayed by LibraryManager.recentlyPlayed.collectAsState()
 
-    // Initial load — local songs and youtube homepage
+    // Initial load — local songs and youtube homepage (in parallel for speed)
     LaunchedEffect(Unit) {
-        val scanner = LocalMediaScanner(context)
-        localSongs = scanner.getLocalSongs()
-
         withContext(Dispatchers.IO) {
-            YouTube.home().onSuccess { page ->
-                homePage = page
+            // Run local scan and YouTube home in parallel
+            val localDeferred = async {
+                val scanner = LocalMediaScanner(context)
+                scanner.getLocalSongs()
+            }
+            val homeDeferred = async {
+                YouTube.home().getOrNull()
+            }
 
-                var current = page
+            localSongs = localDeferred.await()
+            val page = homeDeferred.await()
+            
+            if (page != null) {
+                homePage = page
+                // Only fetch 2 continuations initially for faster first paint
+                var current: com.echo.innertube.pages.HomePage = page
                 var fetched = 0
-                while (current.continuation != null && fetched < 4) {
-                    val next = YouTube.home(continuation = current.continuation).getOrNull()
+                while (current.continuation != null && fetched < 2) {
+                    val cont = current.continuation ?: break
+                    val next = YouTube.home(continuation = cont).getOrNull()
                     if (next != null) {
                         current = next
                         homePage = homePage?.copy(
-                            sections = homePage!!.sections + next.sections,
+                            sections = (homePage?.sections ?: emptyList()) + next.sections,
                             continuation = next.continuation
                         )
                         fetched++
@@ -95,74 +107,87 @@ fun InicioScreen(
         }
     }
 
-    // Dynamic Quick Picks + Similar sections when a song is playing or from history
-    val seedVideoId = playerState?.videoId ?: recentlyPlayed.firstOrNull { it.type == ItemType.SONG }?.id
-    val seedArtist = playerState?.artist ?: recentlyPlayed.firstOrNull { it.type == ItemType.SONG }?.subtitle ?: "Artistas"
+    // Dynamic Quick Picks + Similar sections mixed algorithm
+    var algorithmSeeds by remember { mutableStateOf<List<LibraryItem>>(emptyList()) }
 
-    LaunchedEffect(seedVideoId) {
-        val vid = seedVideoId ?: return@LaunchedEffect
+    LaunchedEffect(recentlyPlayed) {
+        val recentSongs = recentlyPlayed.filter { it.type == ItemType.SONG }
+        if (recentSongs.isNotEmpty() && algorithmSeeds.isEmpty()) {
+            // First load: pick 3 diverse seeds from the top 15 recently played
+            algorithmSeeds = recentSongs.take(15).shuffled().take(3)
+        } else if (recentSongs.isNotEmpty()) {
+            // Update seeds when a new song is played to keep it fresh but mixed
+            val latest = recentSongs.first()
+            if (!algorithmSeeds.contains(latest)) {
+                algorithmSeeds = (listOf(latest) + algorithmSeeds.take(2))
+            }
+        }
+    }
+
+    LaunchedEffect(algorithmSeeds) {
+        if (algorithmSeeds.isEmpty()) return@LaunchedEffect
+        
         withContext(Dispatchers.IO) {
-            YouTube.next(WatchEndpoint(videoId = vid)).onSuccess { nextResult ->
-                val relatedEndpoint = nextResult.relatedEndpoint ?: return@onSuccess
-                YouTube.related(relatedEndpoint).onSuccess { relatedPage ->
-                    quickPickSongs = relatedPage.songs.take(12)
-                    seleccionesParaTi = relatedPage.songs.drop(12).take(10)
-                    seleccionesTitle = seedArtist
-                    
-                    val suggestions = mutableListOf<com.echo.innertube.models.YTItem>()
-                    val availableSongs = relatedPage.songs.filterNot { it in quickPickSongs || it in seleccionesParaTi }
-                    suggestions.addAll(availableSongs.take(7))
-                    if (suggestions.size < 7) {
-                        suggestions.addAll(relatedPage.songs.take(7 - suggestions.size))
-                    }
-                    featuredSuggestions = suggestions.shuffled()
+            val allQuickPicks = mutableListOf<SongItem>()
+            val allParaTi = mutableListOf<SongItem>()
+            val allSuggestions = mutableListOf<com.echo.innertube.models.YTItem>()
+            val sections = mutableListOf<SimilarSection>()
 
-                    // Build multiple "Similar to" / "Porque escuchaste a" sections
-                    val sections = mutableListOf<SimilarSection>()
-
-                    // Primary: similar to current artist
-                    val primaryItems = mutableListOf<com.echo.innertube.models.YTItem>()
-                    primaryItems.addAll(relatedPage.artists.take(5))
-                    primaryItems.addAll(availableSongs.drop(7).take(5))
-                    if (primaryItems.isNotEmpty()) {
-                        sections.add(SimilarSection(
-                            artistName = seedArtist,
-                            items = primaryItems.shuffled()
-                        ))
-                    }
-
-                    // Try to get additional similar sections from related songs' artists
-                    val uniqueArtistNames = relatedPage.songs
-                        .flatMap { it.artists }
-                        .map { it.name }
-                        .distinct()
-                        .filter { it != seedArtist }
-                        .take(5) // Get up to 5 additional sections
-
-                    for (artistName in uniqueArtistNames) {
-                        val artistSongs = relatedPage.songs.filter { song ->
-                            song.artists.any { it.name == artistName }
-                        }
-                        if (artistSongs.isNotEmpty()) {
-                            val mixedItems = mutableListOf<com.echo.innertube.models.YTItem>()
-                            mixedItems.addAll(artistSongs.take(4))
-                            
-                            val otherArtists = relatedPage.artists.filter { it.title != artistName && it.title != seedArtist }.shuffled().take(4)
-                            mixedItems.addAll(otherArtists)
-                            
-                            if (mixedItems.size >= 4) {
-                                sections.add(SimilarSection(
-                                    artistName = artistName,
-                                    items = mixedItems.shuffled()
-                                ))
-                            }
-                        }
-                        if (sections.size >= 5) break
-                    }
-
-                    similarSections = sections
+            // Fetch related pages in parallel for a richer mix
+            val deferreds = algorithmSeeds.map { song ->
+                async {
+                    val vid = song.id
+                    val artist = song.subtitle
+                    val nextResult = YouTube.next(WatchEndpoint(videoId = vid)).getOrNull()
+                    val relatedEndpoint = nextResult?.relatedEndpoint
+                    if (relatedEndpoint != null) {
+                        val relatedPage = YouTube.related(relatedEndpoint).getOrNull()
+                        if (relatedPage != null) {
+                            Pair(artist, relatedPage)
+                        } else null
+                    } else null
                 }
             }
+
+            val results = deferreds.awaitAll().filterNotNull()
+
+            for ((seedArtist, relatedPage) in results) {
+                allQuickPicks.addAll(relatedPage.songs.take(6))
+                allParaTi.addAll(relatedPage.songs.drop(6).take(5))
+
+                val availableSongs = relatedPage.songs.drop(11)
+                allSuggestions.addAll(availableSongs.take(4))
+
+                // Primary similar section for this seed
+                val primaryItems = mutableListOf<com.echo.innertube.models.YTItem>()
+                primaryItems.addAll(relatedPage.artists.take(3))
+                primaryItems.addAll(availableSongs.drop(4).take(3))
+                if (primaryItems.isNotEmpty()) {
+                    sections.add(SimilarSection(
+                        artistName = seedArtist,
+                        items = primaryItems.shuffled()
+                    ))
+                }
+            }
+
+            quickPickSongs = allQuickPicks.distinctBy { it.id }.shuffled().take(12)
+            seleccionesParaTi = allParaTi.distinctBy { it.id }.shuffled().take(10)
+
+            if (results.isNotEmpty()) {
+                val primaryArtist = results.first().first
+                seleccionesTitle = if (primaryArtist.isNotEmpty() && primaryArtist != "Artistas") primaryArtist else "Mix para ti"
+            }
+
+            featuredSuggestions = allSuggestions.distinctBy {
+                when (it) {
+                    is SongItem -> it.id
+                    is com.echo.innertube.models.AlbumItem -> it.id
+                    is com.echo.innertube.models.ArtistItem -> it.id
+                    else -> it.toString()
+                }
+            }.shuffled().take(7)
+
+            similarSections = sections.distinctBy { it.artistName }.take(5)
         }
     }
 
@@ -299,6 +324,75 @@ fun InicioScreen(
         }
 
         // ═══════════════════════════════════════════════════════════
+        // KEEP LISTENING — "Sigue escuchando" (2-row horizontal grid)
+        // ═══════════════════════════════════════════════════════════
+        if (recentlyPlayed.isNotEmpty()) {
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Sigue escuchando", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    val columns = recentlyPlayed.take(20).chunked(2)
+                    items(columns.size) { colIndex ->
+                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            columns[colIndex].forEach { item ->
+                                val hdThumb = upgradeThumb(item.thumbnail)
+                                Row(
+                                    modifier = Modifier
+                                        .width(340.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .clickable {
+                                            if (item.type == ItemType.SONG) {
+                                                onSongSelected(PlayerState(
+                                                    title = item.title,
+                                                    artist = item.subtitle,
+                                                    artUrl = upgradeThumbHD(item.thumbnail),
+                                                    videoId = item.id
+                                                ))
+                                            } else {
+                                                onAlbumSelected(AlbumState(
+                                                    id = item.id,
+                                                    playlistId = item.id,
+                                                    title = item.title,
+                                                    artist = item.subtitle,
+                                                    thumbnail = item.thumbnail,
+                                                    year = null
+                                                ))
+                                            }
+                                        }
+                                        .padding(4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                                        contentDescription = item.title,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.size(86.dp).clip(if (item.type == ItemType.ARTIST) CircleShape else RoundedCornerShape(10.dp))
+                                    )
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(item.title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(item.subtitle, color = Color.Gray, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════
         // SIMILAR TO [ARTIST] — Multiple sections
         // ═══════════════════════════════════════════════════════════
         similarSections.forEach { section ->
@@ -373,61 +467,7 @@ fun InicioScreen(
             }
         }
 
-        // ═══════════════════════════════════════════════════════════
-        // RECENTLY PLAYED — tracked play history (larger carousel cards)
-        // ═══════════════════════════════════════════════════════════
-        if (recentlyPlayed.isNotEmpty()) {
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Escuchado recientemente", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                    Icon(Icons.Default.ChevronRight, contentDescription = "See all", tint = Color.Gray)
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    items(recentlyPlayed.take(10).size) { index ->
-                        val item = recentlyPlayed[index]
-                        val hdThumb = upgradeThumb(item.thumbnail)
-                        Column(
-                            modifier = Modifier
-                                .width(160.dp)
-                                .clickable {
-                                    onSongSelected(PlayerState(
-                                        title = item.title,
-                                        artist = item.subtitle,
-                                        artUrl = upgradeThumbHD(item.thumbnail),
-                                        videoId = item.id
-                                    ))
-                                }
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(160.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xFF1C1C1E))
-                            ) {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
-                                    contentDescription = item.title,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(item.title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(item.subtitle, color = Color.Gray, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(32.dp))
-            }
-        }
+        // (Old Escuchado Recientemente block removed in favor of Sigue escuchando)
 
         // ═══════════════════════════════════════════════════════════
         // Selecciones para ti (because you listened to...)
@@ -586,7 +626,7 @@ fun InicioScreen(
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Featured Suggestion Card — large card with image + color gradient
+// Featured Suggestion Card — full-bleed image with overlaid text
 // ═══════════════════════════════════════════════════════════════════
 @Composable
 private fun FeaturedSuggestionCard(
@@ -639,75 +679,61 @@ private fun FeaturedSuggestionCard(
 
     val hdThumb = upgradeThumb(thumbUrl)
 
-    // Extract dominant color for gradient bottom
-    var dominantColor by remember { mutableStateOf(Color(0xFF1C1C1E)) }
-    var cardTextColor by remember { mutableStateOf(Color.White) }
-
-    LaunchedEffect(hdThumb) {
-        if (hdThumb != null) {
-            withContext(Dispatchers.IO) {
-                try {
-                    val request = ImageRequest.Builder(context).data(hdThumb).allowHardware(false).size(80).build()
-                    val result = coil.Coil.imageLoader(context).execute(request)
-                    if (result is coil.request.SuccessResult) {
-                        val drawable = result.drawable
-                        val bitmap = (drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
-                            ?: android.graphics.Bitmap.createBitmap(1, 1, android.graphics.Bitmap.Config.ARGB_8888).also {
-                                val canvas = android.graphics.Canvas(it)
-                                drawable.setBounds(0, 0, canvas.width, canvas.height)
-                                drawable.draw(canvas)
-                            }
-                        val sampledColor = Color(bitmap.getPixel(bitmap.width / 2, bitmap.height - 1))
-                        dominantColor = sampledColor
-                        cardTextColor = if (sampledColor.luminance() > 0.5f) Color.Black else Color.White
-                    }
-                } catch (_: Exception) {}
-            }
-        }
-    }
-
-    Column(
+    // Single Box: image fills entire card, text overlays at the bottom
+    Box(
         modifier = Modifier
-            .width(200.dp)
+            .width(180.dp)
+            .height(280.dp)
             .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFF1C1C1E))
             .clickable(onClick = clickAction)
     ) {
+        // Layer 1: Full-bleed album art
+        AsyncImage(
+            model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+            contentDescription = titleStr,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Layer 2: Bottom gradient overlay (transparent → dark)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(180.dp)
-                .background(Color(0xFF1C1C1E))
-        ) {
-            AsyncImage(
-                model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
-                contentDescription = titleStr,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(30.dp)
-                    .align(Alignment.BottomCenter)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, dominantColor)
+                .fillMaxHeight(0.55f)
+                .align(Alignment.BottomCenter)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.75f),
+                            Color.Black.copy(alpha = 0.92f)
                         )
                     )
-            )
-        }
+                )
+        )
+
+        // Layer 3: Text floating over the gradient
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .background(dominantColor)
-                .padding(horizontal = 12.dp, vertical = 10.dp)
+                .align(Alignment.BottomStart)
+                .padding(horizontal = 14.dp, vertical = 14.dp)
         ) {
-            if (labelStr.isNotEmpty()) {
-                Text(labelStr.uppercase(), color = cardTextColor.copy(alpha = 0.6f), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
-                Spacer(modifier = Modifier.height(2.dp))
-            }
-            Text(titleStr, color = cardTextColor, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(subtitleStr, color = cardTextColor.copy(alpha = 0.7f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                titleStr,
+                color = Color.White,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                subtitleStr,
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
