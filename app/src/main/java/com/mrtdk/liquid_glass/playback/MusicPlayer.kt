@@ -80,7 +80,7 @@ class MusicPlayer(private val context: Context) {
         pollingJob = scope.launch {
             while (true) {
                 _currentPosition.value = controller?.currentPosition ?: 0L
-                delay(500)
+                delay(50)
             }
         }
     }

@@ -10,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -39,10 +40,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -53,6 +56,7 @@ import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -95,6 +99,11 @@ fun PlayerScreen(
     currentPosition: Long,
     duration: Long,
     isBottomBarCollapsed: Boolean = false,
+    upNextSongs: List<SongItem> = emptyList(),
+    onUpNextSongsChange: (List<SongItem>) -> Unit = {},
+    songHistory: List<PlayerState> = emptyList(),
+    onSkipNext: () -> Unit = {},
+    onSkipPrevious: () -> Unit = {},
     onClose: () -> Unit,
     onTogglePlayPause: () -> Unit,
     onSeek: (Long) -> Unit,
@@ -121,7 +130,6 @@ fun PlayerScreen(
         var showPlaylistMenu by remember { mutableStateOf(false) }
         var showNewPlaylistDialog by remember { mutableStateOf(false) }
         
-        val songHistory = remember { mutableStateListOf<PlayerState>() }
         var swipeDirection by remember { mutableIntStateOf(1) }
         val hdArtUrl = remember(playerState?.artUrl) {
             val url = playerState?.artUrl
@@ -143,13 +151,35 @@ fun PlayerScreen(
         var manualLyricsQueryTitle by remember { mutableStateOf(playerState?.title ?: "") }
         var manualLyricsQueryArtist by remember { mutableStateOf(playerState?.artist ?: "") }
 
-        LaunchedEffect(playerState?.title, playerState?.artist) {
+        var selectedLyricsProvider by remember { mutableStateOf("LRCLIB") }
+        var isRomajiEnabled by remember { mutableStateOf(false) }
+
+        LaunchedEffect(playerState?.title, playerState?.artist, selectedLyricsProvider, isRomajiEnabled) {
             lyricsLines = null
             if (playerState != null) {
                 launch {
-                    lyricsLines = com.mrtdk.liquid_glass.utils.LyricsProvider.fetchLyrics(
-                        playerState.title, playerState.artist
-                    )
+                    val lines = when (selectedLyricsProvider) {
+                        "KuGou" -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchKuGouLyrics(playerState.title, playerState.artist)
+                        "BetterLyrics" -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchBetterLyrics(playerState.title, playerState.artist)
+                        "LyricsPlus" -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchLyricsPlus(playerState.title, playerState.artist)
+                        "SimpMusic" -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchSimpMusicLyrics(playerState.title, playerState.artist)
+                        "YouTube Music" -> playerState.videoId?.let { com.mrtdk.liquid_glass.utils.LyricsProvider.fetchYouTubeLyrics(it) }
+                        "YouTube Subtitle" -> playerState.videoId?.let { com.mrtdk.liquid_glass.utils.LyricsProvider.fetchYouTubeSubtitleLyrics(it) }
+                        else -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchLyrics(playerState.title, playerState.artist)
+                    }
+                    if (isRomajiEnabled && lines != null) {
+                        val prefs = com.mrtdk.liquid_glass.utils.LyricsRomanizationPreferences(true, true, true, true, true)
+                        lyricsLines = lines.map { line ->
+                            val romanized = com.mrtdk.liquid_glass.utils.LyricsUtils.romanizeLyricsLine(line.text, prefs)
+                            if (romanized != null) {
+                                line.copy(text = romanized)
+                            } else {
+                                line
+                            }
+                        }
+                    } else {
+                        lyricsLines = lines
+                    }
                 }
             }
         }
@@ -181,67 +211,6 @@ fun PlayerScreen(
                         } catch (e: Exception) { }
                     }
                 }
-            }
-        }
-        
-        var upNextSongs by remember { mutableStateOf<List<SongItem>>(emptyList()) }
-        // Track the initial video ID that seeded the queue — only refetch if queue is empty
-        var queueSeedVideoId by remember { mutableStateOf<String?>(null) }
-        LaunchedEffect(playerState?.videoId) {
-            val vid = playerState?.videoId ?: return@LaunchedEffect
-            // Only fetch related songs if queue is empty or this is a completely new seed
-            // (i.e., not a skip within the current queue)
-            if (upNextSongs.isEmpty() || (queueSeedVideoId == null)) {
-                queueSeedVideoId = vid
-                withContext(Dispatchers.IO) {
-                    YouTube.next(WatchEndpoint(videoId = vid)).onSuccess { nextResult ->
-                        val relatedEndpoint = nextResult.relatedEndpoint ?: return@onSuccess
-                        YouTube.related(relatedEndpoint).onSuccess { relatedPage ->
-                            upNextSongs = relatedPage.songs.take(20)
-                        }
-                    }
-                }
-            }
-        }
-
-        val skipNextFun: () -> Unit = {
-            if (playerState != null && playerState.queue.isNotEmpty()) {
-                val next = playerState.queue.first()
-                songHistory.add(playerState)
-                swipeDirection = 1
-                onSongSelected(PlayerState(
-                    title = next.title,
-                    artist = next.artist,
-                    artUrl = next.artUrl,
-                    videoId = next.videoId,
-                    queue = playerState.queue.drop(1)
-                ))
-            } else if (upNextSongs.isNotEmpty()) {
-                val next = upNextSongs.first()
-                songHistory.add(playerState!!)
-                swipeDirection = 1
-                // Upgrade thumbnail to HD
-                val upgradedArt = next.thumbnail?.let {
-                    if (it.contains("=w")) it.substringBefore("=w") + "=w1200-h1200-l90-rj"
-                    else if (it.contains("ytimg.com/vi/")) it.replace("hqdefault", "maxresdefault").replace("mqdefault", "maxresdefault")
-                    else it
-                } ?: next.thumbnail
-                // Remove the played song from the queue to keep it stable
-                upNextSongs = upNextSongs.drop(1)
-                onSongSelected(PlayerState(
-                    title = next.title,
-                    artist = next.artists.joinToString { it.name },
-                    artUrl = upgradedArt,
-                    videoId = next.id
-                ))
-            }
-        }
-
-        val skipPreviousFun: () -> Unit = {
-            if (songHistory.isNotEmpty()) {
-                val prev = songHistory.removeLast()
-                swipeDirection = -1
-                onSongSelected(prev)
             }
         }
         
@@ -339,7 +308,7 @@ fun PlayerScreen(
             val imgWidthTarget = if (isOverlayActive) lyricsImageSize 
                 else androidx.compose.ui.unit.lerp(maxWidth, 40.dp, dragProgress)
             val imgHeightTarget = if (isOverlayActive) lyricsImageSize 
-                else androidx.compose.ui.unit.lerp(maxWidth / 0.85f, 40.dp, dragProgress)
+                else androidx.compose.ui.unit.lerp(maxWidth / 0.92f, 40.dp, dragProgress)
                 
             val imgOffsetXTarget = if (isOverlayActive) 24.dp 
                 else androidx.compose.ui.unit.lerp(0.dp, targetOffsetX, dragProgress)
@@ -457,14 +426,17 @@ fun PlayerScreen(
                                   items(playerState.queue.size) { index ->
                                       val qItem = playerState.queue[index]
                                       Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable {
-                                          songHistory.add(playerState)
                                           swipeDirection = 1
+                                          val selectedItem = playerState.queue[index]
+                                          val remaining = playerState.queue.drop(index + 1)
+                                          val historyToAdd = playerState.queue.take(index).map { q -> PlayerState(q.title, q.artist, q.artUrl, q.videoId) }
+                                          // Note: history modification should ideally be handled by parent, but we do onSongSelected
                                           onSongSelected(PlayerState(
                                               title = qItem.title,
                                               artist = qItem.artist,
                                               artUrl = qItem.artUrl,
                                               videoId = qItem.videoId,
-                                              queue = playerState.queue.drop(index + 1)
+                                              queue = remaining
                                           ))
                                       }) {
                                           AsyncImage(model = ImageRequest.Builder(context).data(qItem.artUrl).crossfade(true).build(), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp)))
@@ -486,7 +458,6 @@ fun PlayerScreen(
                                       else it
                                   } ?: song.thumbnail
                                   Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable {
-                                      songHistory.add(playerState!!)
                                       swipeDirection = 1
                                       val upgradedArt = song.thumbnail?.let {
                                           if (it.contains("=w")) it.substringBefore("=w") + "=w1200-h1200-l90-rj"
@@ -494,7 +465,7 @@ fun PlayerScreen(
                                           else it
                                       } ?: song.thumbnail
                                       // Remove clicked song and all before it from the queue
-                                      upNextSongs = upNextSongs.drop(i + 1)
+                                      onUpNextSongsChange(upNextSongs.drop(i + 1))
                                       onSongSelected(PlayerState(
                                           title = song.title,
                                           artist = song.artists.joinToString { it.name },
@@ -513,51 +484,149 @@ fun PlayerScreen(
                               }
                           }
                       } else if (showLyrics) {
-                           Spacer(modifier = Modifier.height(16.dp))
-                           Box(modifier = Modifier.weight(1f)) {
-                                if (lyricsLines != null && lyricsLines!!.isNotEmpty()) {
-                                    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
-                                    
-                                    LaunchedEffect(currentPosition) {
-                                        val currentIdx = lyricsLines!!.indexOfLast { it.timeMs != -1L && it.timeMs <= currentPosition + 500 }
-                                        if (currentIdx >= 0 && !listState.isScrollInProgress) {
-                                            listState.animateScrollToItem(currentIdx.coerceAtLeast(0), scrollOffset = -100)
-                                        }
-                                    }
-                                    
-                                    LazyColumn(state = listState, modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
-                                        item { Spacer(modifier = Modifier.height(60.dp)) }
-                                        items(lyricsLines!!.size) { i ->
-                                            val line = lyricsLines!![i]
-                                            val isCurrent = line.timeMs != -1L && currentPosition >= line.timeMs && 
-                                                (i == lyricsLines!!.lastIndex || currentPosition < lyricsLines!![i+1].timeMs)
-                                            val isPast = line.timeMs != -1L && currentPosition > line.timeMs
-                                            
-                                            val targetAlpha = if (line.timeMs == -1L || isCurrent) 1f else if (isPast) 0.5f else 0.3f
-                                            val scale = if (isCurrent) 1.05f else 1f
-                                            val animAlpha by androidx.compose.animation.core.animateFloatAsState(targetAlpha, label="")
-                                            val animScale by androidx.compose.animation.core.animateFloatAsState(scale, label="")
-                                            
-                                            Text(
-                                                text = line.text,
-                                                color = contentColor.copy(alpha = animAlpha),
-                                                fontSize = 28.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                lineHeight = 36.sp,
-                                                modifier = Modifier.fillMaxWidth()
-                                                    .graphicsLayer { scaleX = animScale; scaleY = animScale; transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f) }
-                                                    .clickable { if(line.timeMs!=-1L) onSeek(line.timeMs) }
-                                            )
-                                        }
-                                        item { Spacer(modifier = Modifier.height(200.dp)) }
-                                    }
-                                } else {
-                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                        CircularProgressIndicator(color = contentColor)
-                                    }
-                                }
-                           }
-                      }
+                            Spacer(modifier = Modifier.height(44.dp))
+                            Box(modifier = Modifier.weight(1f).clipToBounds()) {
+                                 val currentLyricsLines = lyricsLines
+                                 if (currentLyricsLines != null && currentLyricsLines.isNotEmpty()) {
+                                     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+                                     val isSynced = currentLyricsLines.any { it.timeMs > 0L }
+                                     
+                                     LaunchedEffect(currentPosition, currentLyricsLines) {
+                                         if (!isSynced) return@LaunchedEffect
+                                         val currentIdx = currentLyricsLines.indexOfLast { it.timeMs != -1L && it.timeMs <= currentPosition + 500 }
+                                         if (currentIdx >= 0 && !listState.isScrollInProgress) {
+                                             listState.animateScrollToItem(currentIdx.coerceAtLeast(0), scrollOffset = -100)
+                                         }
+                                     }
+                                     
+                                     LazyColumn(state = listState, modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+                                         item { Spacer(modifier = Modifier.height(60.dp)) }
+                                         items(currentLyricsLines.size) { i ->
+                                             val line = currentLyricsLines[i]
+                                             val isCurrent = isSynced && line.timeMs != -1L && currentPosition >= line.timeMs && 
+                                                 (i == currentLyricsLines.lastIndex || currentPosition < currentLyricsLines[i+1].timeMs)
+                                             val isPast = isSynced && line.timeMs != -1L && currentPosition > line.timeMs
+                                             val distance = if (isSynced) {
+                                                 val curIdx = currentLyricsLines.indexOfLast { it.timeMs != -1L && it.timeMs <= currentPosition + 500 }
+                                                 if (curIdx >= 0) kotlin.math.abs(i - curIdx) else 0
+                                             } else 0
+                                             
+                                             // Compute word timing for word-by-word gradient fill
+                                             val nextLineTime = currentLyricsLines.getOrNull(i + 1)?.timeMs
+                                             val lineDuration = remember(line.timeMs, nextLineTime) {
+                                                 if (nextLineTime != null && nextLineTime > 0 && line.timeMs > 0) nextLineTime - line.timeMs else 4000L
+                                             }
+                                             val activeDuration = remember(lineDuration) {
+                                                 (lineDuration * 0.95).toLong().coerceAtLeast(300L)
+                                             }
+                                             val lineRelTime = if (isCurrent && line.timeMs > 0) (currentPosition - line.timeMs).coerceAtLeast(0L) else if (isPast) activeDuration else 0L
+                                             
+                                             val targetAlpha = when {
+                                                 !isSynced || isCurrent -> 1f
+                                                 distance == 1 -> 0.55f
+                                                 distance == 2 -> 0.4f
+                                                 else -> 0.3f
+                                             }
+                                             val targetScale = when {
+                                                 !isSynced || isCurrent -> 1.05f
+                                                 distance == 1 -> 0.95f
+                                                 distance >= 2 -> 0.85f
+                                                 else -> 1f
+                                             }
+                                             val targetBlur = if (!isCurrent && isSynced) {
+                                                 when (distance) {
+                                                     1 -> 2.5f
+                                                     2 -> 4f
+                                                     else -> 6f
+                                                 }
+                                             } else 0f
+                                             
+                                             val animAlpha by androidx.compose.animation.core.animateFloatAsState(targetAlpha, animationSpec = tween(260, easing = FastOutSlowInEasing), label="lyricsAlpha")
+                                             val animScale by androidx.compose.animation.core.animateFloatAsState(targetScale, animationSpec = tween(320, easing = FastOutSlowInEasing), label="lyricsScale")
+                                             val animBlur by androidx.compose.animation.core.animateFloatAsState(targetBlur, animationSpec = tween(420, easing = FastOutSlowInEasing), label="lyricsBlur")
+                                             
+                                             // Word-by-word data
+                                             val wordData = remember(line.text, activeDuration) {
+                                                 val words = line.text.split(" ").filter { it.isNotEmpty() }
+                                                 if (words.isEmpty()) {
+                                                     listOf(Triple(line.text, 0L, activeDuration))
+                                                 } else {
+                                                     val totalChars = line.text.length
+                                                     var accumulatedTime = 0L
+                                                     words.mapIndexed { wordIndex, word ->
+                                                         val charCount = if (wordIndex < words.lastIndex) word.length + 1 else word.length
+                                                         val wordStart = accumulatedTime
+                                                         val wordDur = if (totalChars > 0) (activeDuration * charCount.toFloat() / totalChars).toLong() else activeDuration
+                                                         accumulatedTime += wordDur
+                                                         Triple(if (wordIndex < words.lastIndex) "$word " else word, wordStart, wordStart + wordDur)
+                                                     }
+                                                 }
+                                             }
+                                             
+                                             // Word-by-word FlowRow rendering
+                                             @OptIn(ExperimentalLayoutApi::class)
+                                             FlowRow(
+                                                 modifier = Modifier.fillMaxWidth()
+                                                     .graphicsLayer {
+                                                         scaleX = animScale; scaleY = animScale
+                                                         alpha = animAlpha
+                                                         transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
+                                                     }
+                                                     .then(if (animBlur > 0f) Modifier.blur(animBlur.dp) else Modifier)
+                                                     .clickable { if(line.timeMs != -1L) onSeek(line.timeMs) },
+                                                 horizontalArrangement = Arrangement.Start,
+                                                 verticalArrangement = Arrangement.spacedBy(4.dp)
+                                             ) {
+                                                 wordData.forEach { (wordText, startRelative, endRelative) ->
+                                                     val wordDuration = (endRelative - startRelative).coerceAtLeast(1L)
+                                                     
+                                                     val wordProgress by androidx.compose.animation.core.animateFloatAsState(
+                                                         targetValue = when {
+                                                             lineRelTime >= endRelative -> 1f
+                                                             lineRelTime < startRelative -> 0f
+                                                             else -> (lineRelTime - startRelative).toFloat() / wordDuration
+                                                         },
+                                                         animationSpec = tween(
+                                                             durationMillis = wordDuration.coerceIn(140L, 260L).toInt(),
+                                                             easing = FastOutSlowInEasing
+                                                         ),
+                                                         label = "wordProgress"
+                                                     )
+                                                     
+                                                     val finalFontWeight = if (isCurrent) FontWeight.ExtraBold else FontWeight.Bold
+                                                     
+                                                     Text(
+                                                         text = wordText,
+                                                         fontSize = 28.sp,
+                                                         style = TextStyle(
+                                                             brush = if (isCurrent) Brush.horizontalGradient(
+                                                                 0.0f to contentColor,
+                                                                 (wordProgress - 0.05f).coerceAtLeast(0f) to contentColor,
+                                                                 (wordProgress + 0.05f).coerceAtMost(1f) to contentColor.copy(alpha = 0.4f),
+                                                                 1.0f to contentColor.copy(alpha = 0.4f)
+                                                             ) else null,
+                                                             fontWeight = finalFontWeight,
+                                                             lineHeight = 36.sp,
+                                                             shadow = if (isCurrent && wordProgress > 0.1f) Shadow(
+                                                                 color = contentColor.copy(alpha = 0.6f * wordProgress),
+                                                                 offset = Offset.Zero,
+                                                                 blurRadius = (12f * wordProgress).coerceAtLeast(0.1f)
+                                                             ) else null
+                                                         ),
+                                                         color = if (!isCurrent) contentColor else Color.Unspecified
+                                                     )
+                                                 }
+                                             }
+                                         }
+                                         item { Spacer(modifier = Modifier.height(200.dp)) }
+                                     }
+                                 } else {
+                                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                         CircularProgressIndicator(color = contentColor)
+                                     }
+                                 }
+                            }
+                       }
                       
                       Box(
                           modifier = Modifier
@@ -599,8 +668,8 @@ fun PlayerScreen(
                                       onToggleLyrics = { showLyrics = !showLyrics; showQueue = false }, onToggleQueue = { showQueue = !showQueue; showLyrics = false },
                                       includeVolumeAndIcons = true,
                                       includeProgress = false,
-                                      onSkipNext = skipNextFun,
-                                      onSkipPrevious = skipPreviousFun
+                                      onSkipNext = { swipeDirection = 1; onSkipNext() },
+                                      onSkipPrevious = { swipeDirection = -1; onSkipPrevious() }
                                   )
                               }
                           }
@@ -629,8 +698,8 @@ fun PlayerScreen(
                           Box(modifier = Modifier.weight(1f).pointerInput(playerState) {
                               detectHorizontalDragGestures(
                                   onDragEnd = {
-                                      if (dragAccumulator < -60f) skipNextFun()
-                                      else if (dragAccumulator > 60f) skipPreviousFun()
+                                      if (dragAccumulator < -60f) { swipeDirection = 1; onSkipNext() }
+                                      else if (dragAccumulator > 60f) { swipeDirection = -1; onSkipPrevious() }
                                       dragAccumulator = 0f
                                   },
                                   onHorizontalDrag = { change, dragAmount ->
@@ -739,8 +808,8 @@ fun PlayerScreen(
                               onToggleLyrics = { showLyrics = !showLyrics; showQueue = false }, onToggleQueue = { showQueue = !showQueue; showLyrics = false },
                               includeVolumeAndIcons = true,
                               includeProgress = false,
-                              onSkipNext = skipNextFun,
-                              onSkipPrevious = skipPreviousFun
+                              onSkipNext = { swipeDirection = 1; onSkipNext() },
+                              onSkipPrevious = { swipeDirection = -1; onSkipPrevious() }
                           )
                       }
                  }
@@ -806,14 +875,32 @@ fun PlayerScreen(
                     Text(text = "Proveedor de letras", color=Color.White, fontSize=20.sp, fontWeight=FontWeight.Bold)
                     Spacer(modifier=Modifier.height(16.dp))
                     
-                    Row(modifier=Modifier.fillMaxWidth().clickable { showLyricsMenu=false }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
-                        Text("LRCLIB (Activo)", color=Color.White, fontSize=16.sp)
+                    Row(modifier=Modifier.fillMaxWidth().clickable { selectedLyricsProvider = "LRCLIB"; showLyricsMenu=false }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
+                        Text(if (selectedLyricsProvider == "LRCLIB") "LRCLIB (Activo)" else "LRCLIB", color=if (selectedLyricsProvider == "LRCLIB") Color.White else Color.Gray, fontSize=16.sp)
                     }
-                    Row(modifier=Modifier.fillMaxWidth().clickable { showLyricsMenu=false }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
-                        Text("KuGou (Próximamente)", color=Color.Gray, fontSize=16.sp)
+                    Row(modifier=Modifier.fillMaxWidth().clickable { selectedLyricsProvider = "KuGou"; showLyricsMenu=false }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
+                        Text(if (selectedLyricsProvider == "KuGou") "KuGou (Activo)" else "KuGou", color=if (selectedLyricsProvider == "KuGou") Color.White else Color.Gray, fontSize=16.sp)
                     }
-                    Row(modifier=Modifier.fillMaxWidth().clickable { showLyricsMenu=false }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
-                        Text("Musixmatch (Próximamente)", color=Color.Gray, fontSize=16.sp)
+                    Row(modifier=Modifier.fillMaxWidth().clickable { selectedLyricsProvider = "BetterLyrics"; showLyricsMenu=false }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
+                        Text(if (selectedLyricsProvider == "BetterLyrics") "BetterLyrics (Activo)" else "BetterLyrics", color=if (selectedLyricsProvider == "BetterLyrics") Color.White else Color.Gray, fontSize=16.sp)
+                    }
+                    Row(modifier=Modifier.fillMaxWidth().clickable { selectedLyricsProvider = "LyricsPlus"; showLyricsMenu=false }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
+                        Text(if (selectedLyricsProvider == "LyricsPlus") "LyricsPlus (Activo)" else "LyricsPlus", color=if (selectedLyricsProvider == "LyricsPlus") Color.White else Color.Gray, fontSize=16.sp)
+                    }
+                    Row(modifier=Modifier.fillMaxWidth().clickable { selectedLyricsProvider = "SimpMusic"; showLyricsMenu=false }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
+                        Text(if (selectedLyricsProvider == "SimpMusic") "SimpMusic (Activo)" else "SimpMusic", color=if (selectedLyricsProvider == "SimpMusic") Color.White else Color.Gray, fontSize=16.sp)
+                    }
+                    Row(modifier=Modifier.fillMaxWidth().clickable { selectedLyricsProvider = "YouTube Music"; showLyricsMenu=false }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
+                        Text(if (selectedLyricsProvider == "YouTube Music") "YouTube Music (Activo)" else "YouTube Music", color=if (selectedLyricsProvider == "YouTube Music") Color.White else Color.Gray, fontSize=16.sp)
+                    }
+                    Row(modifier=Modifier.fillMaxWidth().clickable { selectedLyricsProvider = "YouTube Subtitle"; showLyricsMenu=false }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
+                        Text(if (selectedLyricsProvider == "YouTube Subtitle") "YouTube Subtitle (Activo)" else "YouTube Subtitle", color=if (selectedLyricsProvider == "YouTube Subtitle") Color.White else Color.Gray, fontSize=16.sp)
+                    }
+                    Spacer(modifier=Modifier.height(8.dp))
+                    androidx.compose.material3.Divider(color = Color.DarkGray)
+                    Spacer(modifier=Modifier.height(8.dp))
+                    Row(modifier=Modifier.fillMaxWidth().clickable { isRomajiEnabled = !isRomajiEnabled; showLyricsMenu=false }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
+                        Text(if (isRomajiEnabled) "Desactivar Romaji" else "Activar Romaji", color=Color.White, fontSize=16.sp)
                     }
                     
                     Spacer(modifier=Modifier.height(16.dp))
@@ -872,9 +959,28 @@ fun PlayerScreen(
                         val targetTitle = manualLyricsQueryTitle
                         val targetArtist = manualLyricsQueryArtist
                         coroutineScope.launch {
-                            lyricsLines = com.mrtdk.liquid_glass.utils.LyricsProvider.fetchLyrics(
-                                targetTitle, targetArtist
-                            )
+                            val lines = when (selectedLyricsProvider) {
+                                "KuGou" -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchKuGouLyrics(targetTitle, targetArtist)
+                                "BetterLyrics" -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchBetterLyrics(targetTitle, targetArtist)
+                                "LyricsPlus" -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchLyricsPlus(targetTitle, targetArtist)
+                                "SimpMusic" -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchSimpMusicLyrics(targetTitle, targetArtist)
+                                "YouTube Music" -> playerState?.videoId?.let { com.mrtdk.liquid_glass.utils.LyricsProvider.fetchYouTubeLyrics(it) }
+                                "YouTube Subtitle" -> playerState?.videoId?.let { com.mrtdk.liquid_glass.utils.LyricsProvider.fetchYouTubeSubtitleLyrics(it) }
+                                else -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchLyrics(targetTitle, targetArtist)
+                            }
+                            if (isRomajiEnabled && lines != null) {
+                                val prefs = com.mrtdk.liquid_glass.utils.LyricsRomanizationPreferences(true, true, true, true, true)
+                                lyricsLines = lines.map { line ->
+                                    val romanized = com.mrtdk.liquid_glass.utils.LyricsUtils.romanizeLyricsLine(line.text, prefs)
+                                    if (romanized != null) {
+                                        line.copy(text = romanized)
+                                    } else {
+                                        line
+                                    }
+                                }
+                            } else {
+                                lyricsLines = lines
+                            }
                         }
                     }) {
                         Text("Buscar", color = Color(0xFFFA243C))
@@ -999,16 +1105,16 @@ fun PlayerBottomControls(
                 contentColor = contentColor,
                 onClick = onSkipPrevious
             )
-            Spacer(modifier = Modifier.width(40.dp))
-            Box(modifier = Modifier.size(56.dp).clickable { onTogglePlayPause() }, contentAlignment = Alignment.Center) {
+            Spacer(modifier = Modifier.width(36.dp))
+            Box(modifier = Modifier.size(72.dp).clickable { onTogglePlayPause() }, contentAlignment = Alignment.Center) {
                 Icon(
                     painter = painterResource(id = if (isPlaying) R.drawable.pause else R.drawable.resume),
                     contentDescription = if (isPlaying) "Pause" else "Play",
                     tint = contentColor,
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier.size(64.dp)
                 )
             }
-            Spacer(modifier = Modifier.width(40.dp))
+            Spacer(modifier = Modifier.width(36.dp))
             AnimatedSkipButton(
                 iconId = R.drawable.forward,
                 contentDescription = "Next",
@@ -1091,7 +1197,7 @@ fun AnimatedSkipButton(
     
     Box(
         modifier = Modifier
-            .size(44.dp)
+            .size(56.dp)
             .clip(CircleShape)
             .background(Color.White.copy(alpha = bgAlpha))
             .clickable(
@@ -1116,7 +1222,7 @@ fun AnimatedSkipButton(
             contentDescription = contentDescription,
             tint = contentColor,
             modifier = Modifier
-                .size(40.dp)
+                .size(52.dp)
                 .graphicsLayer { scaleX = scale; scaleY = scale }
         )
     }

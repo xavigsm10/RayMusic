@@ -28,7 +28,10 @@ import androidx.core.content.ContextCompat
 import kotlinx.coroutines.delay
 
 @Composable
-fun RadioScreen(innerPadding: PaddingValues) {
+fun RadioScreen(
+    innerPadding: PaddingValues,
+    onSearchResult: (String) -> Unit = {}
+) {
     val context = LocalContext.current
     var isListening by remember { mutableStateOf(false) }
     var hasPermission by remember {
@@ -67,26 +70,12 @@ fun RadioScreen(innerPadding: PaddingValues) {
         label = "alpha"
     )
 
-    // Flow simulation
-    LaunchedEffect(isListening) {
-        if (isListening) {
-            // Emulate Echo-Music's listening duration
-            delay(4000)
-            isListening = false
-            // Here it would transition to Success/Error view, for now we stop.
-            // Since we don't have the Echo-Music's backend in liquid_glass,
-            // we can trigger the native Google Music Search as a robust fallback.
-            try {
-                val intent = Intent("com.google.android.googlequicksearchbox.MUSIC_SEARCH")
-                context.startActivity(intent)
-            } catch (e: Exception) {
-                // Fallback to basic speech recognition if Google is not available
-                val speechIntent = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                    putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                }
-                try {
-                    context.startActivity(speechIntent)
-                } catch (e: Exception) {}
+    val speechLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        isListening = false
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val spokenText = result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+            if (!spokenText.isNullOrBlank()) {
+                onSearchResult(spokenText)
             }
         }
     }
@@ -132,7 +121,14 @@ fun RadioScreen(innerPadding: PaddingValues) {
                             if (!hasPermission) {
                                 permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                             } else {
-                                isListening = !isListening
+                                val intent = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                    putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                                    putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Canta o di el nombre de la canción")
+                                }
+                                try {
+                                    speechLauncher.launch(intent)
+                                    isListening = true
+                                } catch (e: Exception) {}
                             }
                         },
                     contentAlignment = Alignment.Center
