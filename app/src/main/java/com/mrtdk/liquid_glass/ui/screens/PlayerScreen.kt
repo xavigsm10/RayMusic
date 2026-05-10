@@ -33,6 +33,8 @@ import androidx.compose.ui.res.painterResource
 import com.mrtdk.liquid_glass.R
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.AllInclusive
+import androidx.compose.material.icons.filled.ToggleOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -352,15 +354,6 @@ fun PlayerScreen(
                                 )
                             )
                     )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .statusBarsPadding()
-                            .padding(top = 8.dp),
-                        contentAlignment = Alignment.TopCenter
-                    ) {
-                        Box(modifier = Modifier.width(40.dp).height(5.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.5f)))
-                    }
                 }
             }
 
@@ -409,16 +402,26 @@ fun PlayerScreen(
                           Spacer(modifier = Modifier.height(24.dp))
                           Row(modifier = Modifier.fillMaxWidth().padding(start = 124.dp, end = 24.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                Box(modifier = Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(50)).background(contentColor.copy(alpha=0.15f)).clickable{}, contentAlignment=Alignment.Center) {
-                                   Icon(painterResource(id = R.drawable.shuffle), "Shuffle", tint=contentColor, modifier=Modifier.size(20.dp))
+                                   Icon(painterResource(id = R.drawable.shuffle), "Shuffle", tint=contentColor.copy(alpha=0.5f), modifier=Modifier.size(20.dp))
                                }
                                Box(modifier = Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(50)).background(contentColor.copy(alpha=0.15f)).clickable{}, contentAlignment=Alignment.Center) {
-                                   Icon(painterResource(id = R.drawable.repeat), "Repeat", tint=contentColor, modifier=Modifier.size(20.dp))
+                                   Icon(painterResource(id = R.drawable.repeat), "Repeat", tint=contentColor.copy(alpha=0.5f), modifier=Modifier.size(20.dp))
+                               }
+                               Box(modifier = Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(50)).background(contentColor.copy(alpha=0.8f)).clickable{}, contentAlignment=Alignment.Center) {
+                                   Icon(Icons.Default.AllInclusive, "Autoplay", tint=if (contentColor == Color.White) Color.Black else Color.White, modifier=Modifier.size(20.dp))
+                               }
+                               Box(modifier = Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(50)).background(contentColor.copy(alpha=0.8f)).clickable{}, contentAlignment=Alignment.Center) {
+                                   Icon(Icons.Default.ToggleOn, "Toggle", tint=if (contentColor == Color.White) Color.Black else Color.White, modifier=Modifier.size(24.dp))
                                }
                           }
                            if (playerState != null && playerState.queue.isNotEmpty()) {
-                               Text(text = "Siguiente en Album/Playlist", color=contentColor, fontSize=18.sp, fontWeight=FontWeight.Bold, modifier = Modifier.padding(top=32.dp, bottom=16.dp))
-                           }
-                           Text(text = "Continue Playing", color=contentColor, fontSize=18.sp, fontWeight=FontWeight.Bold, modifier = Modifier.padding(top=32.dp, start=24.dp, end=24.dp, bottom=16.dp))
+                               Text(text = "Siguiente en Album/Playlist", color=contentColor, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top=32.dp, start=24.dp, end=24.dp, bottom=16.dp))
+                           } else {
+                                Column(modifier = Modifier.padding(top=32.dp, start=24.dp, end=24.dp, bottom=16.dp)) {
+                                    Text(text = "Continue Playing", color=contentColor, fontSize=18.sp, fontWeight=FontWeight.Bold)
+                                    Text(text = "AutoPlaying similar music", color=contentColor.copy(alpha=0.7f), fontSize=14.sp)
+                                }
+                            }
                           
                           LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                               // 1. Manual Queue Section (Album/Playlist)

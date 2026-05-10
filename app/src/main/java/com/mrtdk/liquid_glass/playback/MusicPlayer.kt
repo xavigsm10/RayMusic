@@ -96,166 +96,36 @@ class MusicPlayer(private val context: Context) {
         controller?.play()
     }
 
-    fun playOnlineSong(videoId: String) {
-        scope.launch {
-            val streamUrl = withContext(Dispatchers.IO) {
-                var formatUrl: String? = null
-                var usedClient = ""
-                var fallbackUrl: String? = null
-                var fallbackClient = ""
-                
-                if (YouTube.cookie == null) {
-                    // Try to grab a fresh visitorData to prevent LOGIN_REQUIRED or UNPLAYABLE errors
-                    if (YouTube.visitorData == null) {
-                        try {
-                            YouTube.visitorData = YouTube.visitorData().getOrNull()
-                        } catch (e: Exception) {
-                            android.util.Log.e("MusicPlayer", "Failed to fetch visitorData: ${e.message}")
-                        }
-                    }
-                }
-                
-                val httpClient = okhttp3.OkHttpClient.Builder().proxy(YouTube.proxy).build()
-
-                val clientsToTry = listOf(
-                    com.echo.innertube.models.YouTubeClient.ANDROID_VR_NO_AUTH,
-                    com.echo.innertube.models.YouTubeClient.WEB_REMIX,
-                    com.echo.innertube.models.YouTubeClient.TVHTML5_SIMPLY_EMBEDDED_PLAYER,
-                    com.echo.innertube.models.YouTubeClient.TVHTML5,
-                    com.echo.innertube.models.YouTubeClient.ANDROID_VR_1_43_32,
-                    com.echo.innertube.models.YouTubeClient.ANDROID_VR_1_61_48,
-                    com.echo.innertube.models.YouTubeClient.ANDROID_CREATOR,
-                    com.echo.innertube.models.YouTubeClient.IPADOS,
-                    com.echo.innertube.models.YouTubeClient.MOBILE,
-                    com.echo.innertube.models.YouTubeClient.IOS,
-                    com.echo.innertube.models.YouTubeClient.WEB,
-                    com.echo.innertube.models.YouTubeClient.WEB_CREATOR
-                )
-
-                for (client in clientsToTry) {
-                    try {
-                        android.util.Log.d("MusicPlayer", "Testing client: ${client.clientName}")
-                        val signatureTimestamp = if (client.useSignatureTimestamp) com.echo.innertube.NewPipeUtils.getSignatureTimestamp(videoId).getOrNull() else null
-                        val playerResponse = YouTube.player(videoId, null, client, signatureTimestamp).getOrNull()
-                        
-                        android.util.Log.d("MusicPlayer", "Client ${client.clientName} playabilityStatus: ${playerResponse?.playabilityStatus?.status}")
-                        
-                        // Enrich the response using NewPipe's extractor, just like Echo-Music does
-                        val responseToUse = if (playerResponse != null) {
-                            YouTube.newPipePlayer(videoId, playerResponse) ?: playerResponse
-                        } else null
-                        
-                        val formats = responseToUse?.streamingData?.adaptiveFormats ?: emptyList()
-                        android.util.Log.d("MusicPlayer", "Client ${client.clientName} returned ${formats.size} adaptive formats.")
-                        
-                        val format = formats.findLast { it.itag == 251 || it.itag == 140 } ?: formats.find { it.mimeType.startsWith("audio/") }
-                        
-                        if (format != null) {
-                            val candidateUrl = com.echo.innertube.NewPipeUtils.getStreamUrl(format, videoId).getOrNull() ?: format.url
-                            
-                            if (candidateUrl != null) {
-                                val cName = client.clientName
-                                val ua = when {
-                                    cName.equals("WEB_REMIX", ignoreCase = true) || cName.equals("WEB", ignoreCase = true) || cName.equals("WEB_CREATOR", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.USER_AGENT_WEB
-                                    cName.equals("TVHTML5", ignoreCase = true) || cName.contains("TVHTML5_SIMPLY", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.TVHTML5.userAgent
-                                    cName.startsWith("IOS", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.IOS.userAgent
-                                    cName.startsWith("ANDROID_VR", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.ANDROID_VR_NO_AUTH.userAgent
-                                    cName.startsWith("ANDROID", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.MOBILE.userAgent
-                                    else -> com.echo.innertube.models.YouTubeClient.ANDROID_VR_NO_AUTH.userAgent
-                                }
-                                
-                                val origin = when {
-                                    cName.equals("WEB_REMIX", ignoreCase = true) || cName.equals("WEB", ignoreCase = true) || cName.equals("WEB_CREATOR", ignoreCase = true) -> "https://music.youtube.com"
-                                    cName.equals("TVHTML5", ignoreCase = true) || cName.contains("TVHTML5_SIMPLY", ignoreCase = true) -> "https://www.youtube.com"
-                                    else -> null
-                                }
-                                
-                                val referer = when {
-                                    cName.equals("WEB_REMIX", ignoreCase = true) || cName.equals("WEB", ignoreCase = true) || cName.equals("WEB_CREATOR", ignoreCase = true) -> "https://music.youtube.com/"
-                                    cName.equals("TVHTML5", ignoreCase = true) || cName.contains("TVHTML5_SIMPLY", ignoreCase = true) -> "https://www.youtube.com/tv"
-                                    else -> null
-                                }
-
-                                val testUrl = if (candidateUrl.contains("c=")) candidateUrl else candidateUrl + (if (candidateUrl.contains("?")) "&" else "?") + "c=" + cName
-                                
-                                if (fallbackUrl == null) {
-                                    android.util.Log.d("MusicPlayer", "Assigned fallback candidate to: ${client.clientName}")
-                                    fallbackUrl = candidateUrl
-                                    fallbackClient = client.clientName
-                                }
-                                
-                                val requestBuilder = okhttp3.Request.Builder()
-                                    .get()
-                                    .url(testUrl)
-                                    .header("User-Agent", ua)
-                                    .header("Range", "bytes=0-1")
-                                    
-                                if (origin != null) {
-                                    requestBuilder.header("Origin", origin)
-                                    requestBuilder.header("Referer", referer ?: "")
-                                }
-                                    
-                                YouTube.cookie?.let { requestBuilder.header("Cookie", it) }
-                                
-                                try {
-                                    val response = httpClient.newCall(requestBuilder.build()).execute()
-                                    android.util.Log.d("MusicPlayer", "Client ${client.clientName} validation HTTP code: ${response.code}")
-                                    if (response.isSuccessful || response.code == 206) {
-                                        android.util.Log.d("MusicPlayer", "Client ${client.clientName} VALIDATED OK!")
-                                        formatUrl = candidateUrl
-                                        usedClient = client.clientName
-                                        break
-                                    }
-                                } catch (e: Exception) {
-                                    android.util.Log.d("MusicPlayer", "Client ${client.clientName} HTTP validation crashed: ${e.message}")
-                                }
-                            }
-                        }
-                    } catch (e: Exception) {
-                        android.util.Log.e("MusicPlayer", "Client ${client.clientName} crashed completely wrapper: ${e.message}")
-                        continue
-                    }
-                }
-                
-                // If everything failed validation, use the first fallback we found
-                if (formatUrl == null && fallbackUrl != null) {
-                    formatUrl = fallbackUrl
-                    usedClient = fallbackClient
-                }
-                
-                // If everything fails, try NewPipe stream fallback directly like Echo-Music does
-                if (formatUrl == null) {
-                    val fallbackStreams = YouTube.getNewPipeStreamUrls(videoId)
-                    val fallback = fallbackStreams.find { it.first == 251 || it.first == 140 } ?: fallbackStreams.firstOrNull()
-                    if (fallback != null) {
-                        formatUrl = fallback.second
-                        usedClient = "NEWPIPE_FALLBACK"
-                    }
-                }
-                
-                formatUrl
-            }
-            if (streamUrl != null) {
-                android.util.Log.d("MusicPlayer", "Playing stream: $streamUrl")
-                
-                val mediaItem = MediaItem.Builder()
-                    .setMediaId(videoId)
-                    .setUri(Uri.parse(streamUrl))
-                    .build()
-                    
-                controller?.setMediaItem(mediaItem)
-                controller?.prepare()
-                controller?.play()
-            }
-        }
+    fun playOnlineSong(videoId: String, title: String? = null, artist: String? = null, artUrl: String? = null) {
+        android.util.Log.d("MusicPlayer", "Playing stream instantly: yt://$videoId")
+        
+        val metadata = androidx.media3.common.MediaMetadata.Builder().apply {
+            title?.let { setTitle(it) }
+            artist?.let { setArtist(it) }
+            artUrl?.let { setArtworkUri(Uri.parse(it)) }
+        }.build()
+        
+        val mediaItem = MediaItem.Builder()
+            .setMediaId(videoId)
+            .setUri(Uri.parse("yt://$videoId"))
+            .setMediaMetadata(metadata)
+            .build()
+            
+        controller?.setMediaItem(mediaItem)
+        controller?.prepare()
+        controller?.play()
     }
 
     fun togglePlayPause() {
         if (controller?.isPlaying == true) {
-            controller?.pause()
+            pause()
         } else {
             controller?.play()
         }
+    }
+
+    fun pause() {
+        controller?.pause()
     }
 
     fun seekTo(position: Long) {
@@ -271,6 +141,159 @@ class MusicPlayer(private val context: Context) {
         stopPolling()
         controllerFuture?.let {
             MediaController.releaseFuture(it)
+        }
+    }
+
+    companion object {
+        private val songUrlCache = java.util.concurrent.ConcurrentHashMap<String, Pair<String, Long>>()
+
+        fun clearCache(videoId: String) {
+            songUrlCache.remove(videoId)
+        }
+
+        suspend fun resolveUrl(videoId: String): String? = withContext(Dispatchers.IO) {
+            // Check cache
+            songUrlCache[videoId]?.takeIf { it.second > System.currentTimeMillis() }?.let {
+                return@withContext it.first
+            }
+
+            if (YouTube.cookie == null && YouTube.visitorData == null) {
+                try { YouTube.visitorData = YouTube.visitorData().getOrNull() } catch (e: Exception) {}
+            }
+
+            var formatUrl: String? = null
+            var usedClient = "ANDROID"
+            
+            kotlinx.coroutines.coroutineScope {
+                val clientsToTry = listOf(
+                    com.echo.innertube.models.YouTubeClient.IOS,
+                    com.echo.innertube.models.YouTubeClient.WEB_REMIX,
+                    com.echo.innertube.models.YouTubeClient.ANDROID_VR_NO_AUTH,
+                    com.echo.innertube.models.YouTubeClient.TVHTML5_SIMPLY_EMBEDDED_PLAYER
+                )
+                
+                val httpClient = okhttp3.OkHttpClient.Builder()
+                    .proxy(YouTube.proxy)
+                    .connectTimeout(3, java.util.concurrent.TimeUnit.SECONDS)
+                    .readTimeout(3, java.util.concurrent.TimeUnit.SECONDS)
+                    .build()
+                    
+                val channel = kotlinx.coroutines.channels.Channel<Pair<String, String>?>(clientsToTry.size + 1)
+                
+                // Job 1: NewPipe Extraction
+                launch(Dispatchers.IO) {
+                    try {
+                        val fallbackStreams = YouTube.getNewPipeStreamUrls(videoId)
+                        val fallback = fallbackStreams.find { it.first == 251 || it.first == 140 } ?: fallbackStreams.firstOrNull()
+                        if (fallback != null) {
+                            android.util.Log.d("MusicPlayer", "Fast playback using NEWPIPE")
+                            channel.trySend(Pair(fallback.second, "ANDROID"))
+                            return@launch
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("MusicPlayer", "NewPipe fallback failed: ${e.message}")
+                    }
+                    channel.trySend(null)
+                }
+                
+                val jobs = clientsToTry.map { client ->
+                        launch(Dispatchers.IO) {
+                            try {
+                                val signatureTimestamp = if (client.useSignatureTimestamp) com.echo.innertube.NewPipeUtils.getSignatureTimestamp(videoId).getOrNull() else null
+                                val playerResponse = YouTube.player(videoId, null, client, signatureTimestamp).getOrNull()
+                                
+                                val responseToUse = try {
+                                    if (playerResponse != null) YouTube.newPipePlayer(videoId, playerResponse) ?: playerResponse else null
+                                } catch (e: Exception) {
+                                    playerResponse
+                                }
+                                
+                                val formats = responseToUse?.streamingData?.adaptiveFormats ?: emptyList()
+                                val format = formats.findLast { it.itag == 251 || it.itag == 140 } ?: formats.find { it.mimeType.startsWith("audio/") }
+                                
+                                if (format != null) {
+                                    val candidateUrl = try { 
+                                        com.echo.innertube.NewPipeUtils.getStreamUrl(format, videoId).getOrNull() ?: throw Exception("NewPipe failed to extract")
+                                    } catch (e: Exception) { 
+                                        if (client == com.echo.innertube.models.YouTubeClient.TVHTML5_SIMPLY_EMBEDDED_PLAYER || 
+                                            client == com.echo.innertube.models.YouTubeClient.ANDROID_VR_NO_AUTH) {
+                                            format.url
+                                        } else {
+                                            null
+                                        }
+                                    }
+                                    if (candidateUrl != null) {
+                                        val testUrl = if (candidateUrl.contains("c=")) candidateUrl else candidateUrl + (if (candidateUrl.contains("?")) "&" else "?") + "c=" + client.clientName
+                                        
+                                        val cName = client.clientName
+                                        val ua = when {
+                                            cName.equals("WEB_REMIX", ignoreCase = true) || cName.equals("WEB", ignoreCase = true) || cName.equals("WEB_CREATOR", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.USER_AGENT_WEB
+                                            cName.equals("TVHTML5", ignoreCase = true) || cName.contains("TVHTML5_SIMPLY", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.TVHTML5.userAgent
+                                            cName.startsWith("IOS", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.IOS.userAgent
+                                            cName.startsWith("ANDROID_VR", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.ANDROID_VR_NO_AUTH.userAgent
+                                            cName.startsWith("ANDROID", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.MOBILE.userAgent
+                                            else -> com.echo.innertube.models.YouTubeClient.ANDROID_VR_NO_AUTH.userAgent
+                                        }
+                                        
+                                        val requestBuilder = okhttp3.Request.Builder()
+                                            .head()
+                                            .url(testUrl)
+                                            .header("User-Agent", ua)
+                                        
+                                        val origin = when {
+                                            cName.equals("WEB_REMIX", ignoreCase = true) || cName.equals("WEB", ignoreCase = true) || cName.equals("WEB_CREATOR", ignoreCase = true) -> "https://music.youtube.com"
+                                            cName.equals("TVHTML5", ignoreCase = true) || cName.contains("TVHTML5_SIMPLY", ignoreCase = true) -> "https://www.youtube.com"
+                                            else -> null
+                                        }
+                                        val referer = when {
+                                            cName.equals("WEB_REMIX", ignoreCase = true) || cName.equals("WEB", ignoreCase = true) || cName.equals("WEB_CREATOR", ignoreCase = true) -> "https://music.youtube.com/"
+                                            cName.equals("TVHTML5", ignoreCase = true) || cName.contains("TVHTML5_SIMPLY", ignoreCase = true) -> "https://www.youtube.com/tv"
+                                            else -> null
+                                        }
+                                        if (origin != null) {
+                                            requestBuilder.header("Origin", origin)
+                                            requestBuilder.header("Referer", referer ?: "")
+                                        }
+                                        
+                                        if (!cName.contains("NO_AUTH", ignoreCase = true) && !cName.contains("TVHTML5_SIMPLY", ignoreCase = true)) {
+                                            YouTube.cookie?.let { requestBuilder.header("Cookie", it) }
+                                        }
+                                        
+                                        val response = httpClient.newCall(requestBuilder.build()).execute()
+                                        if (response.isSuccessful || response.code == 206) {
+                                            channel.trySend(Pair(candidateUrl, client.clientName))
+                                            return@launch
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                // Ignored
+                            }
+                            channel.trySend(null)
+                        }
+                    }
+                    
+                    for (i in 0..clientsToTry.size) {
+                        val result = channel.receive()
+                        if (result != null) {
+                            formatUrl = result.first
+                            usedClient = result.second
+                            jobs.forEach { it.cancel() }
+                            break
+                        }
+                    }
+                }
+            
+            if (formatUrl != null && !formatUrl!!.contains("c=")) {
+                formatUrl = formatUrl + (if (formatUrl!!.contains("?")) "&" else "?") + "c=" + usedClient
+            }
+            
+            if (formatUrl != null) {
+                // Cache for 6 hours
+                songUrlCache[videoId] = Pair(formatUrl!!, System.currentTimeMillis() + 6 * 60 * 60 * 1000L)
+            }
+            
+            formatUrl
         }
     }
 }

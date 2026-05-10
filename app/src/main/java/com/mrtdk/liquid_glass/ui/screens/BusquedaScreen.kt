@@ -60,48 +60,62 @@ fun loadCategories(context: android.content.Context): List<SearchCategory> {
     }
 }
 
+class BusquedaState {
+    var displayResults by mutableStateOf<List<Any>>(emptyList())
+    var isSearching by mutableStateOf(false)
+    var selectedTab by mutableIntStateOf(0)
+    var lastQuery by mutableStateOf("")
+}
+
 @Composable
 fun BusquedaScreen(
     innerPadding: PaddingValues,
     query: String,
     isSubmitted: Boolean,
+    state: BusquedaState = remember { BusquedaState() },
     onSongSelected: (PlayerState) -> Unit,
     onArtistSelected: (ArtistState) -> Unit = {},
-    onAlbumSelected: (AlbumState) -> Unit = {}
+    onAlbumSelected: (AlbumState) -> Unit = {},
+    onVideoSelected: (String) -> Unit = {},
+    onCategorySelected: (SearchCategory) -> Unit = {}
 ) {
     val context = LocalContext.current
-    var displayResults by remember { mutableStateOf<List<Any>>(emptyList()) }
-    var isSearching by remember { mutableStateOf(false) }
-    // 0=Top Results, 1=Artists, 2=Albums, 3=Songs
-    var selectedTab by remember { mutableIntStateOf(0) }
-
     val tabs = listOf("Top Results", "Artists", "Albums", "Songs")
 
     // Re-search whenever the query is submitted OR the tab changes
-    LaunchedEffect(query, selectedTab) {
+    LaunchedEffect(query, state.selectedTab) {
         if (query.length < 2) {
-            displayResults = emptyList()
+            state.displayResults = emptyList()
+            state.lastQuery = query
             return@LaunchedEffect
         }
-        isSearching = true
+        
+        // Skip fetch if query and tab are exactly the same as cached
+        if (state.lastQuery == query && state.displayResults.isNotEmpty() && !state.isSearching) {
+            return@LaunchedEffect
+        }
+        
+        state.isSearching = true
+        state.lastQuery = query
+        
         withContext(Dispatchers.IO) {
-            val filter = when (selectedTab) {
+            val filter = when (state.selectedTab) {
                 1 -> YouTube.SearchFilter.FILTER_ARTIST
                 2 -> YouTube.SearchFilter.FILTER_ALBUM
                 3 -> YouTube.SearchFilter.FILTER_SONG
                 else -> YouTube.SearchFilter.FILTER_SONG // Top Results
             }
             YouTube.search(query, filter).onSuccess { result ->
-                displayResults = when (selectedTab) {
+                state.displayResults = when (state.selectedTab) {
                     1 -> result.items.filterIsInstance<ArtistItem>().take(20)
                     2 -> result.items.filterIsInstance<AlbumItem>().take(20)
                     else -> result.items.filterIsInstance<SongItem>().take(20)
                 }
             }.onFailure {
-                displayResults = emptyList()
+                state.displayResults = emptyList()
             }
         }
-        isSearching = false
+        state.isSearching = false
     }
 
     val categories = remember { loadCategories(context) }
@@ -142,7 +156,7 @@ fun BusquedaScreen(
                             .aspectRatio(1.5f)
                             .clip(RoundedCornerShape(12.dp))
                             .background(Color.DarkGray)
-                            .clickable { }
+                            .clickable { onCategorySelected(category) }
                     ) {
                         AsyncImage(
                             model = ImageRequest.Builder(context)
@@ -190,7 +204,7 @@ fun BusquedaScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(tabs.size) { i ->
-                        val isSelected = i == selectedTab
+                        val isSelected = i == state.selectedTab
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(20.dp))
@@ -198,7 +212,7 @@ fun BusquedaScreen(
                                     if (isSelected) Color(0xFFE91E63)
                                     else Color.White.copy(alpha = 0.08f)
                                 )
-                                .clickable { selectedTab = i }
+                                .clickable { state.selectedTab = i }
                                 .padding(horizontal = 18.dp, vertical = 9.dp)
                         ) {
                             Text(
@@ -214,7 +228,7 @@ fun BusquedaScreen(
         }
 
         // Loading indicator
-        if (isSearching) {
+        if (state.isSearching) {
             item {
                 Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = Color(0xFFE91E63))
@@ -223,9 +237,9 @@ fun BusquedaScreen(
         }
 
         // Results list
-        if (displayResults.isNotEmpty()) {
-            items(displayResults.size) { index ->
-                val item = displayResults[index]
+        if (state.displayResults.isNotEmpty()) {
+            items(state.displayResults.size) { index ->
+                val item = state.displayResults[index]
 
                 when (item) {
                     is SongItem -> {
@@ -368,7 +382,7 @@ fun BusquedaScreen(
                     }
                 }
             }
-        } else if (!isSearching && query.isNotEmpty() && displayResults.isEmpty()) {
+        } else if (!state.isSearching && query.isNotEmpty() && state.displayResults.isEmpty()) {
             item {
                 Box(modifier = Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
                     Text("No hay resultados para \"$query\"", color = Color.Gray)

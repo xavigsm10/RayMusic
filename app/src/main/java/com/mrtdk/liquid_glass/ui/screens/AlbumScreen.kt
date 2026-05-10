@@ -12,7 +12,11 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.IosShare
+import androidx.compose.material.icons.filled.Check
 import com.mrtdk.glass.GlassBox
+import com.mrtdk.liquid_glass.data.ItemType
+import com.mrtdk.liquid_glass.data.LibraryItem
+import com.mrtdk.liquid_glass.data.LibraryManager
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -55,6 +59,8 @@ fun AlbumScreen(
     val context = LocalContext.current
     var tracks by remember { mutableStateOf<List<SongItem>>(emptyList()) }
     var dominantColor by remember { mutableStateOf(Color(0xFF1E1E1E)) }
+    val savedItems by LibraryManager.savedItems.collectAsState()
+    val isSaved = savedItems.any { it.id == albumState.id }
 
     val hdThumb = albumState.thumbnail
         ?.replace("=w226-h226", "=w720-h720")
@@ -317,10 +323,22 @@ fun AlbumScreen(
                         .size(44.dp)
                         .clip(CircleShape)
                         .background(contentColor.copy(alpha = 0.15f))
-                        .clickable { },
+                        .clickable { 
+                            if (isSaved) {
+                                LibraryManager.removeItem(albumState.id)
+                            } else {
+                                LibraryManager.saveItem(LibraryItem(
+                                    id = albumState.id,
+                                    title = albumState.title,
+                                    subtitle = albumState.artist,
+                                    thumbnail = hdThumb,
+                                    type = ItemType.ALBUM
+                                ))
+                            }
+                        },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Add, "Add", tint = contentColor, modifier = Modifier.size(20.dp))
+                    Icon(if (isSaved) Icons.Default.Check else Icons.Default.Add, "Add/Remove", tint = contentColor, modifier = Modifier.size(20.dp))
                 }
             }
         }

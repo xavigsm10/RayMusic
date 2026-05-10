@@ -90,6 +90,9 @@ class MusicService : MediaSessionService() {
                         builder.header("Origin", origin)
                         builder.header("Referer", referer ?: "")
                     }
+                    if (!c.contains("NO_AUTH", ignoreCase = true) && !c.contains("TVHTML5_SIMPLY", ignoreCase = true)) {
+                        YouTube.cookie?.let { builder.header("Cookie", it) }
+                    }
                     
                     chain.proceed(builder.build())
                 }
@@ -106,8 +109,24 @@ class MusicService : MediaSessionService() {
                 .build()
         )
 
+        val resolvingDataSourceFactory = androidx.media3.datasource.ResolvingDataSource.Factory(okHttpDataSourceFactory) { dataSpec ->
+            if (dataSpec.uri.scheme == "yt") {
+                val videoId = dataSpec.uri.host ?: dataSpec.uri.toString().removePrefix("yt://")
+                val streamUrl = kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
+                    com.mrtdk.liquid_glass.playback.MusicPlayer.resolveUrl(videoId)
+                }
+                if (streamUrl != null) {
+                    dataSpec.withUri(android.net.Uri.parse(streamUrl))
+                } else {
+                    dataSpec
+                }
+            } else {
+                dataSpec
+            }
+        }
+
         val mediaSourceFactory = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(this)
-            .setDataSourceFactory(okHttpDataSourceFactory)
+            .setDataSourceFactory(resolvingDataSourceFactory)
 
         player = ExoPlayer.Builder(this)
             .setMediaSourceFactory(mediaSourceFactory)
@@ -121,6 +140,20 @@ class MusicService : MediaSessionService() {
             .setHandleAudioBecomingNoisy(true)
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
+
+        player.addListener(object : androidx.media3.common.Player.Listener {
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                if (error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ||
+                    error.cause is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException) {
+                    val currentMediaId = player.currentMediaItem?.mediaId
+                    if (currentMediaId != null) {
+                        com.mrtdk.liquid_glass.playback.MusicPlayer.clearCache(currentMediaId)
+                        player.prepare()
+                        player.play()
+                    }
+                }
+            }
+        })
 
         val intent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(
