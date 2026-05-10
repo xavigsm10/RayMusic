@@ -43,67 +43,109 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 
+data class SimilarSection(val artistName: String, val items: List<com.echo.innertube.models.YTItem>)
+
+class InicioState {
+    var isLoaded by mutableStateOf(false)
+    var localSongs by mutableStateOf<List<Song>>(emptyList())
+    var homePage by mutableStateOf<com.echo.innertube.pages.HomePage?>(null)
+    var quickPickSongs by mutableStateOf<List<SongItem>>(emptyList())
+    var similarSections by mutableStateOf<List<SimilarSection>>(emptyList())
+    var seleccionesParaTi by mutableStateOf<List<SongItem>>(emptyList())
+    var seleccionesTitle by mutableStateOf<String?>(null)
+    var featuredSuggestions by mutableStateOf<List<com.echo.innertube.models.YTItem>>(emptyList())
+}
+
 @Composable
 fun InicioScreen(
     innerPadding: PaddingValues,
     playerState: PlayerState? = null,
+    state: InicioState = remember { InicioState() },
     onSongSelected: (PlayerState) -> Unit = {},
     onArtistSelected: (ArtistState) -> Unit = {},
-    onAlbumSelected: (AlbumState) -> Unit = {}
+    onAlbumSelected: (AlbumState) -> Unit = {},
+    onVideoSelected: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
-    var localSongs by remember { mutableStateOf<List<Song>>(emptyList()) }
-    var homePage by remember { mutableStateOf<com.echo.innertube.pages.HomePage?>(null) }
-
-    var quickPickSongs by remember { mutableStateOf<List<SongItem>>(emptyList()) }
-
-    // Multiple "Similar to" sections
-    data class SimilarSection(val artistName: String, val items: List<com.echo.innertube.models.YTItem>)
-    var similarSections by remember { mutableStateOf<List<SimilarSection>>(emptyList()) }
-
-    // "Selecciones para ti" songs
-    var seleccionesParaTi by remember { mutableStateOf<List<SongItem>>(emptyList()) }
-    var seleccionesTitle by remember { mutableStateOf<String?>(null) }
-    
-    // Sugerencias destacadas
-    var featuredSuggestions by remember { mutableStateOf<List<com.echo.innertube.models.YTItem>>(emptyList()) }
 
     // Recently played from LibraryManager
     val recentlyPlayed by LibraryManager.recentlyPlayed.collectAsState()
 
     // Initial load — local songs and youtube homepage (in parallel for speed)
     LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
-            // Run local scan and YouTube home in parallel
-            val localDeferred = async {
-                val scanner = LocalMediaScanner(context)
-                scanner.getLocalSongs()
-            }
-            val homeDeferred = async {
-                YouTube.home().getOrNull()
-            }
+        if (!state.isLoaded) {
+            withContext(Dispatchers.IO) {
+                // Run local scan and YouTube home in parallel
+                val localDeferred = async {
+                    val scanner = LocalMediaScanner(context)
+                    scanner.getLocalSongs()
+                }
+                val homeDeferred = async {
+                    YouTube.home().getOrNull()
+                }
 
-            localSongs = localDeferred.await()
-            val page = homeDeferred.await()
-            
-            if (page != null) {
-                homePage = page
-                // Only fetch 2 continuations initially for faster first paint
-                var current: com.echo.innertube.pages.HomePage = page
-                var fetched = 0
-                while (current.continuation != null && fetched < 2) {
-                    val cont = current.continuation ?: break
-                    val next = YouTube.home(continuation = cont).getOrNull()
-                    if (next != null) {
-                        current = next
-                        homePage = homePage?.copy(
-                            sections = (homePage?.sections ?: emptyList()) + next.sections,
-                            continuation = next.continuation
-                        )
-                        fetched++
-                    } else break
+                state.localSongs = localDeferred.await()
+                val page = homeDeferred.await()
+                
+                if (page != null) {
+                    state.homePage = page
+                    // Only fetch 2 continuations initially for faster first paint
+                    var current: com.echo.innertube.pages.HomePage = page
+                    var fetched = 0
+                    while (current.continuation != null && fetched < 2) {
+                        val cont = current.continuation ?: break
+                        val next = YouTube.home(continuation = cont).getOrNull()
+                        if (next != null) {
+                            current = next
+                            state.homePage = state.homePage?.copy(
+                                sections = (state.homePage?.sections ?: emptyList()) + next.sections,
+                                continuation = next.continuation
+                            )
+                            fetched++
+                        } else break
+                    }
+
+                    // Pre-calculate sections based on the fully fetched homePage
+                    val sects = state.homePage?.sections ?: emptyList()
+
+                    val similarList = mutableListOf<SimilarSection>()
+                    val suggestionsList = mutableListOf<com.echo.innertube.models.YTItem>()
+                    var seleccionesTitleTemp: String? = null
+                    var seleccionesListTemp: List<SongItem> = emptyList()
+                    var quickPicksTemp: List<SongItem> = emptyList()
+
+                    for (section in sects) {
+                        val title = section.title.lowercase()
+                        when {
+                            title.contains("vuelve a escuchar") || title.contains("listen again") || title.contains("vuelve a") -> {
+                                quickPicksTemp = section.items.filterIsInstance<SongItem>()
+                            }
+                            title.contains("similar a") || title.contains("similar to") -> {
+                                val artistMatch = Regex("similar a (.*)", RegexOption.IGNORE_CASE).find(section.title)
+                                    ?: Regex("similar to (.*)", RegexOption.IGNORE_CASE).find(section.title)
+                                val artistName = artistMatch?.groupValues?.get(1)?.trim() ?: "Artistas similares"
+                                similarList.add(SimilarSection(artistName, section.items))
+                            }
+                            title.contains("selecciones para ti") || title.contains("picks for you") || title.contains("mixes para ti") -> {
+                                if (seleccionesListTemp.isEmpty()) {
+                                    seleccionesListTemp = section.items.filterIsInstance<SongItem>()
+                                    seleccionesTitleTemp = section.title
+                                }
+                            }
+                            title.contains("recomendados") || title.contains("recommended") || title.contains("sugerencias destacadas") -> {
+                                suggestionsList.addAll(section.items)
+                            }
+                        }
+                    }
+
+                    state.similarSections = similarList
+                    state.seleccionesParaTi = seleccionesListTemp
+                    state.seleccionesTitle = seleccionesTitleTemp
+                    state.featuredSuggestions = suggestionsList
+                    state.quickPickSongs = quickPicksTemp
                 }
             }
+            state.isLoaded = true
         }
     }
 
@@ -170,15 +212,15 @@ fun InicioScreen(
                 }
             }
 
-            quickPickSongs = allQuickPicks.distinctBy { it.id }.shuffled().take(12)
-            seleccionesParaTi = allParaTi.distinctBy { it.id }.shuffled().take(10)
+            state.quickPickSongs = allQuickPicks.distinctBy { it.id }.shuffled().take(12)
+            state.seleccionesParaTi = allParaTi.distinctBy { it.id }.shuffled().take(10)
 
             if (results.isNotEmpty()) {
                 val primaryArtist = results.first().first
-                seleccionesTitle = if (primaryArtist.isNotEmpty() && primaryArtist != "Artistas") primaryArtist else "Mix para ti"
+                state.seleccionesTitle = if (primaryArtist.isNotEmpty() && primaryArtist != "Artistas") primaryArtist else "Mix para ti"
             }
 
-            featuredSuggestions = allSuggestions.distinctBy {
+            state.featuredSuggestions = allSuggestions.distinctBy {
                 when (it) {
                     is SongItem -> it.id
                     is com.echo.innertube.models.AlbumItem -> it.id
@@ -187,7 +229,7 @@ fun InicioScreen(
                 }
             }.shuffled().take(7)
 
-            similarSections = sections.distinctBy { it.artistName }.take(5)
+            state.similarSections = sections.distinctBy { it.artistName }.take(5)
         }
     }
 
@@ -214,8 +256,8 @@ fun InicioScreen(
         // ═══════════════════════════════════════════════════════════
         // FEATURED SUGGESTION CARDS — "Sugerencias destacadas para ti"
         // ═══════════════════════════════════════════════════════════
-        val displaySuggestions = if (featuredSuggestions.isNotEmpty()) featuredSuggestions 
-                                 else homePage?.sections?.firstOrNull()?.items ?: emptyList()
+        val displaySuggestions = if (state.featuredSuggestions.isNotEmpty()) state.featuredSuggestions 
+                                 else state.homePage?.sections?.firstOrNull()?.items ?: emptyList()
                                  
         if (displaySuggestions.isNotEmpty()) {
             item {
@@ -248,7 +290,7 @@ fun InicioScreen(
         // ═══════════════════════════════════════════════════════════
         // QUICK PICKS — "Selecciones rápidas"
         // ═══════════════════════════════════════════════════════════
-        if (quickPickSongs.isNotEmpty()) {
+        if (state.quickPickSongs.isNotEmpty()) {
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
@@ -261,8 +303,8 @@ fun InicioScreen(
                             .clip(RoundedCornerShape(20.dp))
                             .background(Color(0xFF2C2C2E))
                             .clickable {
-                                if (quickPickSongs.isNotEmpty()) {
-                                    val first = quickPickSongs.first()
+                                if (state.quickPickSongs.isNotEmpty()) {
+                                    val first = state.quickPickSongs.first()
                                     val hdThumb = upgradeThumbHD(first.thumbnail)
                                     onSongSelected(PlayerState(title = first.title, artist = first.artists.joinToString { it.name }, artUrl = hdThumb, videoId = first.id))
                                 }
@@ -283,9 +325,9 @@ fun InicioScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    val columns = quickPickSongs.chunked(3)
+                    val columns = state.quickPickSongs.chunked(3)
                     items(columns.size) { colIndex ->
-                        Column(modifier = Modifier.width(320.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Column(modifier = Modifier.width(340.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             columns[colIndex].forEach { song ->
                                 val hdThumb = upgradeThumb(song.thumbnail)
                                 Row(
@@ -305,11 +347,11 @@ fun InicioScreen(
                                         model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
                                         contentDescription = song.title,
                                         contentScale = ContentScale.Crop,
-                                        modifier = Modifier.size(64.dp).clip(RoundedCornerShape(8.dp))
+                                        modifier = Modifier.size(72.dp).clip(RoundedCornerShape(8.dp))
                                     )
                                     Spacer(modifier = Modifier.width(14.dp))
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(song.title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(song.title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                         Text(song.artists.joinToString { it.name }, color = Color.Gray, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     }
                                     Icon(Icons.Default.MoreVert, contentDescription = "More", tint = Color.Gray, modifier = Modifier.size(24.dp))
@@ -340,51 +382,43 @@ fun InicioScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    val columns = recentlyPlayed.take(20).chunked(2)
-                    items(columns.size) { colIndex ->
-                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                            columns[colIndex].forEach { item ->
-                                val hdThumb = upgradeThumb(item.thumbnail)
-                                Row(
-                                    modifier = Modifier
-                                        .width(340.dp)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .clickable {
-                                            if (item.type == ItemType.SONG) {
-                                                onSongSelected(PlayerState(
-                                                    title = item.title,
-                                                    artist = item.subtitle,
-                                                    artUrl = upgradeThumbHD(item.thumbnail),
-                                                    videoId = item.id
-                                                ))
-                                            } else {
-                                                onAlbumSelected(AlbumState(
-                                                    id = item.id,
-                                                    playlistId = item.id,
-                                                    title = item.title,
-                                                    artist = item.subtitle,
-                                                    thumbnail = item.thumbnail,
-                                                    year = null
-                                                ))
-                                            }
-                                        }
-                                        .padding(4.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    AsyncImage(
-                                        model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
-                                        contentDescription = item.title,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier.size(86.dp).clip(if (item.type == ItemType.ARTIST) CircleShape else RoundedCornerShape(10.dp))
-                                    )
-                                    Spacer(modifier = Modifier.width(16.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(item.title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(item.subtitle, color = Color.Gray, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    val itemsToDisplay = recentlyPlayed.take(20)
+                    items(itemsToDisplay.size) { index ->
+                        val item = itemsToDisplay[index]
+                        val hdThumb = upgradeThumb(item.thumbnail)
+                        val isCircle = item.type == ItemType.ARTIST
+                        Column(
+                            modifier = Modifier
+                                .width(180.dp)
+                                .clickable {
+                                    if (item.type == ItemType.SONG) {
+                                        onSongSelected(PlayerState(
+                                            title = item.title,
+                                            artist = item.subtitle,
+                                            artUrl = upgradeThumbHD(item.thumbnail),
+                                            videoId = item.id
+                                        ))
+                                    } else {
+                                        onAlbumSelected(AlbumState(
+                                            id = item.id,
+                                            playlistId = item.id,
+                                            title = item.title,
+                                            artist = item.subtitle,
+                                            thumbnail = item.thumbnail,
+                                            year = null
+                                        ))
                                     }
                                 }
-                            }
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                                contentDescription = item.title,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.size(180.dp).clip(if (isCircle) CircleShape else RoundedCornerShape(12.dp))
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(item.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(item.subtitle, color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
@@ -395,7 +429,7 @@ fun InicioScreen(
         // ═══════════════════════════════════════════════════════════
         // SIMILAR TO [ARTIST] — Multiple sections
         // ═══════════════════════════════════════════════════════════
-        similarSections.forEach { section ->
+        state.similarSections.forEach { section ->
             item {
                 Text("Similar a", color = Color.Gray, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 16.dp))
                 Row(
@@ -435,7 +469,7 @@ fun InicioScreen(
                         val isCircle = item is com.echo.innertube.models.ArtistItem
                         Column(
                             modifier = Modifier
-                                .width(160.dp)
+                                .width(180.dp)
                                 .clickable {
                                     when (item) {
                                         is com.echo.innertube.models.ArtistItem -> {
@@ -455,10 +489,10 @@ fun InicioScreen(
                                 model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
                                 contentDescription = title,
                                 contentScale = ContentScale.Crop,
-                                modifier = Modifier.size(160.dp).clip(if (isCircle) CircleShape else RoundedCornerShape(12.dp))
+                                modifier = Modifier.size(180.dp).clip(if (isCircle) CircleShape else RoundedCornerShape(12.dp))
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text(title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(subtitle, color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
@@ -472,27 +506,27 @@ fun InicioScreen(
         // ═══════════════════════════════════════════════════════════
         // Selecciones para ti (because you listened to...)
         // ═══════════════════════════════════════════════════════════
-        if (seleccionesParaTi.isNotEmpty() && seleccionesTitle != null) {
+        if (state.seleccionesParaTi.isNotEmpty() && state.seleccionesTitle != null) {
             item {
                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                     Text("Porque escuchaste a", color = Color.Gray, fontSize = 13.sp)
-                    Text(seleccionesTitle!!, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(state.seleccionesTitle!!, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    items(seleccionesParaTi.size) { index ->
-                        val song = seleccionesParaTi[index]
+                    items(state.seleccionesParaTi.size) { index ->
+                        val song = state.seleccionesParaTi[index]
                         val hdThumb = upgradeThumb(song.thumbnail)
                         Column(
-                            modifier = Modifier.width(160.dp).clickable {
+                            modifier = Modifier.width(180.dp).clickable {
                                 onSongSelected(PlayerState(title = song.title, artist = song.artists.joinToString { it.name }, artUrl = upgradeThumbHD(song.thumbnail), videoId = song.id))
                             }
                         ) {
                             Box(
-                                modifier = Modifier.size(160.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFF1C1C1E))
+                                modifier = Modifier.size(180.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFF1C1C1E))
                             ) {
                                 AsyncImage(
                                     model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
@@ -501,9 +535,9 @@ fun InicioScreen(
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(song.title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(song.artists.joinToString { it.name }, color = Color.Gray, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(song.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(song.artists.joinToString { it.name }, color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
@@ -514,17 +548,9 @@ fun InicioScreen(
         // ═══════════════════════════════════════════════════════════
         // YouTube Music Home Page Sections (skip first since we used it for featured)
         // ═══════════════════════════════════════════════════════════
-        if (homePage == null) {
-            item {
-                Text(
-                    text = "Cargando tus recomendaciones...",
-                    color = Color.Gray,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-            }
-        } else {
+        if (state.homePage != null) {
             // Skip first section since it's used for featured cards
-            homePage!!.sections.drop(1).forEach { section ->
+            state.homePage!!.sections.drop(1).forEach { section ->
                 if (section.items.isNotEmpty()) {
                     item {
                         SectionTitle(section.title, isDark = true, small = false)
@@ -592,15 +618,15 @@ fun InicioScreen(
 
                                 val hdThumb = upgradeThumb(thumbUrl)
 
-                                // Standard card (160dp for consistency with recently played)
+                                // Standard card (180dp for consistency with recently played)
                                 Column(
                                     modifier = Modifier
-                                        .width(160.dp)
+                                        .width(180.dp)
                                         .clickable(onClick = clickAction)
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .size(160.dp)
+                                            .size(180.dp)
                                             .clip(if (isCircle) CircleShape else RoundedCornerShape(12.dp))
                                             .background(Color(0xFF1C1C1E))
                                     ) {
@@ -611,9 +637,9 @@ fun InicioScreen(
                                             modifier = Modifier.fillMaxSize()
                                         )
                                     }
-                                    Spacer(modifier = Modifier.height(6.dp))
-                                    Text(titleStr, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text(subtitleStr, color = Color.Gray, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(titleStr, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(subtitleStr, color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                             }
                         }
@@ -682,8 +708,8 @@ private fun FeaturedSuggestionCard(
     // Single Box: image fills entire card, text overlays at the bottom
     Box(
         modifier = Modifier
-            .width(180.dp)
-            .height(280.dp)
+            .width(280.dp)
+            .height(380.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(Color(0xFF1C1C1E))
             .clickable(onClick = clickAction)
@@ -722,7 +748,7 @@ private fun FeaturedSuggestionCard(
             Text(
                 titleStr,
                 color = Color.White,
-                fontSize = 15.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -730,7 +756,7 @@ private fun FeaturedSuggestionCard(
             Text(
                 subtitleStr,
                 color = Color.White.copy(alpha = 0.7f),
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

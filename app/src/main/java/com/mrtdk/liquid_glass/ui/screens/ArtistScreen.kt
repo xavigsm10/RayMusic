@@ -62,7 +62,8 @@ fun ArtistScreen(
     onBack: () -> Unit,
     onSongSelected: (PlayerState) -> Unit,
     onAlbumSelected: (AlbumState) -> Unit,
-    onArtistSelected: (ArtistState) -> Unit = {}
+    onArtistSelected: (ArtistState) -> Unit = {},
+    onVideoSelected: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     var artistPage by remember { mutableStateOf<ArtistPage?>(null) }
@@ -339,7 +340,7 @@ fun ArtistScreen(
                     LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(videoItems.size) { idx ->
                             val v = videoItems[idx]
-                            ItemCard(context, v, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected)
+                            ItemCard(context, v, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, onVideoSelected = onVideoSelected, isVideo = true)
                         }
                     }
                 }
@@ -457,10 +458,15 @@ private fun ItemCard(
     onAlbumSelected: (AlbumState) -> Unit,
     onSongSelected: (PlayerState) -> Unit,
     onArtistSelected: (ArtistState) -> Unit = {},
-    fillWidth: Boolean = false
+    onVideoSelected: (String) -> Unit = {},
+    fillWidth: Boolean = false,
+    isVideo: Boolean = false
 ) {
-    val cardMod = if (fillWidth) Modifier.fillMaxWidth() else Modifier.width(180.dp)
-    val imgMod = if (fillWidth) Modifier.fillMaxWidth().aspectRatio(1f) else Modifier.size(180.dp)
+    val thumbnailHeight = if (isVideo) 128.dp else 180.dp
+    val thumbnailRatio = if (isVideo) 16f / 9f else 1f
+    
+    val cardMod = if (fillWidth) Modifier.fillMaxWidth() else Modifier.width(thumbnailHeight * thumbnailRatio)
+    val imgMod = if (fillWidth) Modifier.fillMaxWidth().aspectRatio(thumbnailRatio) else Modifier.width(thumbnailHeight * thumbnailRatio).height(thumbnailHeight)
 
     when (item) {
         is AlbumItem -> {
@@ -478,7 +484,13 @@ private fun ItemCard(
         }
         is SongItem -> {
             val hdThumb = item.thumbnail?.replace("=w226-h226", "=w540-h540")?.replace("=w120-h120", "=w540-h540")
-            Column(modifier = cardMod.clickable { onSongSelected(PlayerState(title = item.title, artist = item.artists.joinToString { it.name }, artUrl = item.thumbnail, videoId = item.id)) }) {
+            Column(modifier = cardMod.clickable { 
+                if (isVideo) {
+                    onVideoSelected(item.id)
+                } else {
+                    onSongSelected(PlayerState(title = item.title, artist = item.artists.joinToString { it.name }, artUrl = item.thumbnail, videoId = item.id)) 
+                }
+            }) {
                 Box(modifier = imgMod.clip(RoundedCornerShape(12.dp)).background(Color.DarkGray)) {
                     AsyncImage(model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(), contentDescription = item.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                 }

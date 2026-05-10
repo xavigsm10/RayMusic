@@ -32,52 +32,64 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.ChevronRight
+
+class NovedadesState {
+    var isLoaded by mutableStateOf(false)
+    var trendingSongs by mutableStateOf<List<SongItem>>(emptyList())
+    var newReleaseAlbums by mutableStateOf<List<AlbumItem>>(emptyList())
+    var featuredAlbums by mutableStateOf<List<AlbumItem>>(emptyList())
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NovedadesScreen(
     innerPadding: PaddingValues, 
+    state: NovedadesState = remember { NovedadesState() },
     onSongSelected: (PlayerState) -> Unit = {},
-    onAlbumSelected: (AlbumState) -> Unit = {}
+    onAlbumSelected: (AlbumState) -> Unit = {},
+    onVideoSelected: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
-    var trendingSongs by remember { mutableStateOf<List<SongItem>>(emptyList()) }
-    var newReleaseAlbums by remember { mutableStateOf<List<AlbumItem>>(emptyList()) }
-    var featuredAlbums by remember { mutableStateOf<List<AlbumItem>>(emptyList()) }
 
     LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
-            // Fetch charts for trending/top songs
-            YouTube.getChartsPage().onSuccess { chartsPage ->
-                val songs = chartsPage.sections
-                    .flatMap { it.items }
-                    .filterIsInstance<SongItem>()
-                    .take(20)
-                if (songs.isNotEmpty()) {
-                    trendingSongs = songs
+        if (!state.isLoaded) {
+            withContext(Dispatchers.IO) {
+                // Fetch charts for trending/top songs
+                YouTube.getChartsPage().onSuccess { chartsPage ->
+                    val songs = chartsPage.sections
+                        .flatMap { it.items }
+                        .filterIsInstance<SongItem>()
+                        .take(20)
+                    if (songs.isNotEmpty()) {
+                        state.trendingSongs = songs
+                    }
+                }
+
+                // Fetch explore page for new release albums
+                YouTube.explore().onSuccess { page ->
+                    val albums = page.newReleaseAlbums
+                    state.newReleaseAlbums = albums
+                    state.featuredAlbums = albums.take(6)
+                }
+
+                // Fallback: if charts didn't return songs, search for trending
+                if (state.trendingSongs.isEmpty()) {
+                    YouTube.search("trending music 2026", YouTube.SearchFilter.FILTER_SONG).onSuccess { result ->
+                        state.trendingSongs = result.items.filterIsInstance<SongItem>().take(20)
+                    }
                 }
             }
-
-            // Fetch explore page for new release albums
-            YouTube.explore().onSuccess { page ->
-                val albums = page.newReleaseAlbums
-                newReleaseAlbums = albums
-                featuredAlbums = albums.take(6)
-            }
-
-            // Fallback: if charts didn't return songs, search for trending
-            if (trendingSongs.isEmpty()) {
-                YouTube.search("trending music 2026", YouTube.SearchFilter.FILTER_SONG).onSuccess { result ->
-                    trendingSongs = result.items.filterIsInstance<SongItem>().take(20)
-                }
-            }
+            state.isLoaded = true
         }
     }
 
     // Auto-scrolling pager
-    val pagerState = rememberPagerState(pageCount = { featuredAlbums.size.coerceAtLeast(1) })
-    LaunchedEffect(pagerState, featuredAlbums.size) {
-        if (featuredAlbums.size <= 1) return@LaunchedEffect
-        while (true) { delay(4500); pagerState.animateScrollToPage((pagerState.currentPage + 1) % featuredAlbums.size) }
+    val pagerState = rememberPagerState(pageCount = { state.featuredAlbums.size.coerceAtLeast(1) })
+    LaunchedEffect(pagerState, state.featuredAlbums.size) {
+        if (state.featuredAlbums.size <= 1) return@LaunchedEffect
+        while (true) { delay(4500); pagerState.animateScrollToPage((pagerState.currentPage + 1) % state.featuredAlbums.size) }
     }
 
     LazyColumn(
@@ -89,18 +101,14 @@ fun NovedadesScreen(
             Text("Novedades", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (featuredAlbums.isEmpty()) {
-                Box(modifier = Modifier.fillMaxWidth().height(280.dp), contentAlignment = Alignment.Center) {
-                    Text("Cargando novedades...", color = Color.Gray)
-                }
-            } else {
+            if (state.featuredAlbums.isNotEmpty()) {
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier.fillMaxWidth().height(320.dp),
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     pageSpacing = 12.dp
                 ) { page ->
-                    val album = featuredAlbums[page]
+                    val album = state.featuredAlbums[page]
                     val hdThumb = album.thumbnail?.replace("=w226-h226", "=w720-h720")?.replace("=w120-h120", "=w720-h720")
                     val artistText = album.artists?.joinToString { it.name } ?: "Varios"
 
@@ -135,7 +143,7 @@ fun NovedadesScreen(
                 // Dot indicators
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                    repeat(featuredAlbums.size) { i ->
+                    repeat(state.featuredAlbums.size) { i ->
                         Box(modifier = Modifier.padding(horizontal = 3.dp).size(if (pagerState.currentPage == i) 8.dp else 6.dp).clip(CircleShape)
                             .background(if (pagerState.currentPage == i) Color.White else Color.White.copy(alpha = 0.3f)))
                     }
@@ -144,62 +152,8 @@ fun NovedadesScreen(
             }
         }
 
-        // ── LATEST SONGS (Trending/Charts — real popular songs) ──────────
-        if (trendingSongs.isNotEmpty()) {
-            item {
-                Text("Latest Songs", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-                Spacer(modifier = Modifier.height(4.dp))
-            }
-
-            val chunkedSongs = trendingSongs.chunked(2)
-            items(chunkedSongs.size) { idx ->
-                val rowSongs = chunkedSongs[idx]
-                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    rowSongs.forEachIndexed { songIdx, s ->
-                        val songThumb = s.thumbnail?.replace("=w226-h226", "=w200-h200")?.replace("=w120-h120", "=w200-h200")
-                        val durationText = s.duration?.let {
-                            val totalSec = it / 1000
-                            val min = totalSec / 60
-                            val sec = totalSec % 60
-                            "%d:%02d".format(min, sec)
-                        } ?: ""
-
-                        Row(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable {
-                                    onSongSelected(PlayerState(title = s.title, artist = s.artists.joinToString { it.name }, artUrl = songThumb, videoId = s.id))
-                                }
-                                .padding(vertical = 8.dp)
-                                .padding(end = if (songIdx == 0) 8.dp else 0.dp, start = if (songIdx == 1) 8.dp else 0.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(modifier = Modifier.size(48.dp).clip(RoundedCornerShape(6.dp)).background(Color(0xFF1C1C1E))) {
-                                AsyncImage(model = ImageRequest.Builder(context).data(songThumb).crossfade(true).build(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                            }
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(s.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(s.artists.joinToString { it.name }, color = Color.Gray, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            }
-                            if (durationText.isNotEmpty()) {
-                                Text(durationText, color = Color.Gray, fontSize = 12.sp, modifier = Modifier.padding(start = 4.dp))
-                            }
-                        }
-                    }
-                    if (rowSongs.size == 1) {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
-                }
-                // Subtle divider below the row, but not after the last one
-                if (idx < chunkedSongs.lastIndex) {
-                    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(0.5.dp).background(Color.White.copy(alpha = 0.06f)))
-                }
-            }
-        }
-
         // ── NEW RELEASES (Album carousel) ──────────────────
-        if (newReleaseAlbums.size > 6) {
+        if (state.newReleaseAlbums.size > 6) {
             item {
                 Spacer(modifier = Modifier.height(28.dp))
                 Text("New Releases", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
@@ -207,7 +161,7 @@ fun NovedadesScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    val remaining = newReleaseAlbums.drop(6)
+                    val remaining = state.newReleaseAlbums.drop(6)
                     items(remaining.size) { idx ->
                         val album = remaining[idx]
                         val hdThumb = album.thumbnail?.replace("=w226-h226", "=w540-h540")?.replace("=w120-h120", "=w540-h540")
@@ -220,6 +174,66 @@ fun NovedadesScreen(
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(album.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(album.artists?.joinToString { it.name } ?: "", color = Color.Gray, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── CANCIONES DEL MOMENTO (Trending/Charts) ──────────
+        if (state.trendingSongs.isNotEmpty()) {
+            item {
+                Spacer(modifier = Modifier.height(32.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Text("Canciones del momento", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(28.dp).padding(start = 4.dp))
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    val columns = state.trendingSongs.chunked(4)
+                    items(columns.size) { colIndex ->
+                        Column(
+                            modifier = Modifier.width(320.dp)
+                        ) {
+                            columns[colIndex].forEachIndexed { index, s ->
+                                val songThumb = s.thumbnail?.replace("=w226-h226", "=w200-h200")?.replace("=w120-h120", "=w200-h200")
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            onSongSelected(PlayerState(title = s.title, artist = s.artists.joinToString { it.name }, artUrl = songThumb, videoId = s.id))
+                                        }
+                                        .padding(vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(modifier = Modifier.size(48.dp).clip(RoundedCornerShape(6.dp)).background(Color(0xFF1C1C1E))) {
+                                        AsyncImage(model = ImageRequest.Builder(context).data(songThumb).crossfade(true).build(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                    }
+                                    Spacer(modifier = Modifier.width(14.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(s.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            if (s.explicit) {
+                                                Box(modifier = Modifier.padding(start = 4.dp).clip(RoundedCornerShape(4.dp)).background(Color.Gray.copy(alpha=0.3f)).padding(horizontal = 4.dp, vertical = 2.dp)) {
+                                                    Text("E", color = Color.LightGray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                                }
+                                            }
+                                        }
+                                        Text(s.artists.joinToString { it.name }, color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    }
+                                    androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.MoreVert, contentDescription = "More", tint = Color.Gray, modifier = Modifier.padding(start = 8.dp).size(20.dp))
+                                }
+                                
+                                // Subtle divider below the row, but not after the last one in the column
+                                if (index < columns[colIndex].lastIndex) {
+                                    Box(modifier = Modifier.fillMaxWidth().height(0.5.dp).background(Color.White.copy(alpha = 0.15f)))
+                                }
+                            }
                         }
                     }
                 }

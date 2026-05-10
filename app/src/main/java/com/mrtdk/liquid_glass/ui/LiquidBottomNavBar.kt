@@ -39,10 +39,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 
 val tabs = listOf(
-    "Inicio" to Icons.Default.Home,
-    "Novedades" to Icons.Default.GridView,
-    "Radio" to Icons.Default.Podcasts, // iOS radio tower approximation
-    "Biblioteca" to Icons.Default.LibraryMusic
+    "Inicio" to R.drawable.nav_inicio,
+    "Novedades" to R.drawable.nav_novedades,
+    "Radio" to R.drawable.nav_radio,
+    "Biblioteca" to R.drawable.nav_biblioteca
 )
 
 @Composable
@@ -120,7 +120,8 @@ fun LiquidBottomNavBar(
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = "Buscar",
-                            tint = contentColor
+                            tint = contentColor,
+                            modifier = Modifier.size(32.dp)
                         )
                     }
                 } else {
@@ -128,7 +129,7 @@ fun LiquidBottomNavBar(
                         imageVector = Icons.Default.Search,
                         contentDescription = "Buscar",
                         tint = Color.White,
-                        modifier = Modifier.padding(start = 24.dp, end = 12.dp)
+                        modifier = Modifier.padding(start = 24.dp, end = 12.dp).size(32.dp)
                     )
                     BasicTextField(
                         value = searchQuery,
@@ -150,7 +151,6 @@ fun LiquidBottomNavBar(
                     )
                     IconButton(onClick = {
                         onSearchQueryChange("")
-                        onTabSelected(0)
                     }) {
                         Icon(
                             imageVector = Icons.Default.Close,
@@ -298,7 +298,7 @@ fun MainTabs(
                     val isSelected = selectedIndex == index
                     val selectedTint = Color(0xFFFA243C)
                     Icon(
-                        imageVector = pair.second,
+                        painter = painterResource(id = pair.second),
                         contentDescription = pair.first,
                         tint = if (isSelected) selectedTint else contentColor.copy(alpha = 0.5f),
                         modifier = Modifier.size(28.dp)
