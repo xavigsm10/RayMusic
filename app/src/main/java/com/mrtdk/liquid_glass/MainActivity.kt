@@ -219,8 +219,12 @@ class MainActivity : ComponentActivity() {
                     var queueEndpoint by remember { mutableStateOf<com.echo.innertube.models.WatchEndpoint?>(null) }
                     val songHistory = remember { androidx.compose.runtime.mutableStateListOf<PlayerState>() }
 
-                    LaunchedEffect(playerState?.videoId) {
+                    LaunchedEffect(playerState?.videoId, playerState?.isExclusiveQueue) {
                         val vid = playerState?.videoId ?: return@LaunchedEffect
+                        if (playerState?.isExclusiveQueue == true) {
+                            upNextSongs = emptyList()
+                            return@LaunchedEffect
+                        }
                         if (upNextSongs.isEmpty() || queueSeedVideoId != vid) {
                             queueSeedVideoId = vid
                             withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -257,14 +261,16 @@ class MainActivity : ComponentActivity() {
                         if (playerState != null && playerState!!.queue.isNotEmpty()) {
                             val next = playerState!!.queue.first()
                             songHistory.add(playerState!!)
+                            queueSeedVideoId = next.videoId
                             playSong(PlayerState(
                                 title = next.title,
                                 artist = next.artist,
                                 artUrl = next.artUrl,
                                 videoId = next.videoId,
-                                queue = playerState!!.queue.drop(1)
+                                queue = playerState!!.queue.drop(1),
+                                isExclusiveQueue = playerState!!.isExclusiveQueue
                             ))
-                        } else if (upNextSongs.isNotEmpty()) {
+                        } else if (playerState?.isExclusiveQueue != true && upNextSongs.isNotEmpty()) {
                             val next = upNextSongs.first()
                             songHistory.add(playerState!!)
                             val upgradedArt = next.thumbnail?.let {
@@ -273,11 +279,13 @@ class MainActivity : ComponentActivity() {
                                 else it
                             } ?: next.thumbnail
                             upNextSongs = upNextSongs.drop(1)
+                            queueSeedVideoId = next.id
                             playSong(PlayerState(
                                 title = next.title,
                                 artist = next.artists.joinToString { it.name },
                                 artUrl = upgradedArt,
-                                videoId = next.id
+                                videoId = next.id,
+                                isExclusiveQueue = false
                             ))
                         }
                     }
@@ -442,7 +450,8 @@ class MainActivity : ComponentActivity() {
                                                     innerPadding = innerPadding, 
                                                     onSongSelected = playSong,
                                                     onPlaylistSelected = { playlistDetail = it },
-                                                    onArtistSelected = { artistDetail = it }
+                                                    onArtistSelected = { artistDetail = it },
+                                                    onAlbumSelected = { albumDetail = it }
                                                 )
                                                 4 -> BusquedaScreen(
                                                     innerPadding = innerPadding,
@@ -537,6 +546,8 @@ class MainActivity : ComponentActivity() {
                                                                 artistDetail = null
                                                                 albumDetail = null
                                                                 playlistDetail = null
+                                                                categoryDetail = null
+                                                                videoDetail = null
                                                                 selectedIndex = newIndex
                                                                 if (newIndex != 4) {
                                                                     searchQuery = ""
@@ -547,8 +558,20 @@ class MainActivity : ComponentActivity() {
                                                             onSearchQueryChange = { 
                                                                 searchQuery = it 
                                                                 isSearchSubmitted = false
+                                                                artistDetail = null
+                                                                albumDetail = null
+                                                                playlistDetail = null
+                                                                categoryDetail = null
+                                                                videoDetail = null
                                                             },
-                                                            onSearchSubmit = { isSearchSubmitted = true }
+                                                            onSearchSubmit = { 
+                                                                isSearchSubmitted = true
+                                                                artistDetail = null
+                                                                albumDetail = null
+                                                                playlistDetail = null
+                                                                categoryDetail = null
+                                                                videoDetail = null
+                                                            }
                                                         )
                                                     }
                                                 }

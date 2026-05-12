@@ -1,5 +1,8 @@
 package com.mrtdk.liquid_glass.ui.components
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,11 +14,18 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.res.painterResource
 import com.mrtdk.liquid_glass.R
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
@@ -26,6 +36,7 @@ import coil.request.ImageRequest
 import com.mrtdk.glass.GlassBox
 import com.mrtdk.glass.GlassBoxScope
 import com.mrtdk.liquid_glass.ui.screens.PlayerState
+import kotlinx.coroutines.launch
 
 @Composable
 fun GlassBoxScope.MiniPlayer(
@@ -41,11 +52,49 @@ fun GlassBoxScope.MiniPlayer(
     if (playerState == null) return
 
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    // Landing animation: triggers when full player closes (hideImage: true -> false)
+    var previousHideImage by remember { mutableStateOf(hideImage) }
+    val landingTranslateY = remember { Animatable(0f) }
+    val landingScale = remember { Animatable(1f) }
+
+    LaunchedEffect(hideImage) {
+        if (previousHideImage && !hideImage) {
+            // Full player just closed — animate the mini player "landing" with bounce
+            launch {
+                landingTranslateY.snapTo(-60f)
+                landingTranslateY.animateTo(
+                    targetValue = 0f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessLow
+                    )
+                )
+            }
+            launch {
+                landingScale.snapTo(0.80f)
+                landingScale.animateTo(
+                    targetValue = 1f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessLow
+                    )
+                )
+            }
+        }
+        previousHideImage = hideImage
+    }
 
     GlassBox(
         modifier = modifier
             .fillMaxWidth()
             .height(56.dp)
+            .graphicsLayer {
+                translationY = landingTranslateY.value
+                scaleX = landingScale.value
+                scaleY = landingScale.value
+            }
             .clip(CircleShape)
             .clickable { onClick() },
         shape = CircleShape,

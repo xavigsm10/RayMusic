@@ -47,7 +47,8 @@ fun BibliotecaScreen(
     innerPadding: PaddingValues,
     onSongSelected: (com.mrtdk.liquid_glass.ui.screens.PlayerState) -> Unit = {},
     onArtistSelected: (com.mrtdk.liquid_glass.ui.screens.ArtistState) -> Unit = {},
-    onPlaylistSelected: (com.mrtdk.liquid_glass.data.Playlist) -> Unit = {}
+    onPlaylistSelected: (com.mrtdk.liquid_glass.data.Playlist) -> Unit = {},
+    onAlbumSelected: (com.mrtdk.liquid_glass.ui.screens.AlbumState) -> Unit = {}
 ) {
     val context = LocalContext.current
     val menuItems = listOf(
@@ -116,23 +117,38 @@ fun BibliotecaScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    if (item.type == ItemType.SONG) {
-                                        onSongSelected(
-                                            com.mrtdk.liquid_glass.ui.screens.PlayerState(
-                                                title = item.title,
-                                                artist = item.subtitle,
-                                                artUrl = item.thumbnail,
-                                                videoId = item.id
+                                    when (item.type) {
+                                        ItemType.SONG -> {
+                                            onSongSelected(
+                                                com.mrtdk.liquid_glass.ui.screens.PlayerState(
+                                                    title = item.title,
+                                                    artist = item.subtitle,
+                                                    artUrl = item.thumbnail,
+                                                    videoId = item.id
+                                                )
                                             )
-                                        )
-                                    } else if (item.type == ItemType.ARTIST) {
-                                        onArtistSelected(
-                                            com.mrtdk.liquid_glass.ui.screens.ArtistState(
-                                                id = item.id,
-                                                name = item.title,
-                                                thumbnail = item.thumbnail
+                                        }
+                                        ItemType.ARTIST -> {
+                                            onArtistSelected(
+                                                com.mrtdk.liquid_glass.ui.screens.ArtistState(
+                                                    id = item.id,
+                                                    name = item.title,
+                                                    thumbnail = item.thumbnail
+                                                )
                                             )
-                                        )
+                                        }
+                                        ItemType.ALBUM -> {
+                                            onAlbumSelected(
+                                                com.mrtdk.liquid_glass.ui.screens.AlbumState(
+                                                    id = item.id,
+                                                    playlistId = item.id,
+                                                    title = item.title,
+                                                    artist = item.subtitle,
+                                                    thumbnail = item.thumbnail
+                                                )
+                                            )
+                                        }
+                                        else -> {}
                                     }
                                 }
                         ) {
@@ -308,23 +324,38 @@ fun BibliotecaScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            if (item.type == ItemType.SONG) {
-                                onSongSelected(
-                                    com.mrtdk.liquid_glass.ui.screens.PlayerState(
-                                        title = item.title,
-                                        artist = item.subtitle,
-                                        artUrl = item.thumbnail,
-                                        videoId = item.id
+                            when (item.type) {
+                                ItemType.SONG -> {
+                                    onSongSelected(
+                                        com.mrtdk.liquid_glass.ui.screens.PlayerState(
+                                            title = item.title,
+                                            artist = item.subtitle,
+                                            artUrl = item.thumbnail,
+                                            videoId = item.id
+                                        )
                                     )
-                                )
-                            } else if (item.type == ItemType.ARTIST) {
-                                onArtistSelected(
-                                    com.mrtdk.liquid_glass.ui.screens.ArtistState(
-                                        id = item.id,
-                                        name = item.title,
-                                        thumbnail = item.thumbnail
+                                }
+                                ItemType.ARTIST -> {
+                                    onArtistSelected(
+                                        com.mrtdk.liquid_glass.ui.screens.ArtistState(
+                                            id = item.id,
+                                            name = item.title,
+                                            thumbnail = item.thumbnail
+                                        )
                                     )
-                                )
+                                }
+                                ItemType.ALBUM -> {
+                                    onAlbumSelected(
+                                        com.mrtdk.liquid_glass.ui.screens.AlbumState(
+                                            id = item.id,
+                                            playlistId = item.id,
+                                            title = item.title,
+                                            artist = item.subtitle,
+                                            thumbnail = item.thumbnail
+                                        )
+                                    )
+                                }
+                                else -> {}
                             }
                         }
                 ) {

@@ -296,7 +296,8 @@ fun AlbumScreen(
                                         artist = s.artists.joinToString { it.name },
                                         artUrl = hdThumb,
                                         videoId = s.id,
-                                        queue = albumQueue
+                                        queue = albumQueue,
+                                        isExclusiveQueue = true
                                     )
                                 )
                             }
@@ -375,7 +376,8 @@ fun AlbumScreen(
                                 artist = song.artists.joinToString { it.name },
                                 artUrl = hdThumb,
                                 videoId = song.id,
-                                queue = albumQueue
+                                queue = albumQueue,
+                                isExclusiveQueue = true
                             )
                         )
                     }

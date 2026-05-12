@@ -617,11 +617,20 @@ fun PlaylistDetailScreen(
                         .clickable {
                             if (playlist.items.isNotEmpty()) {
                                 val first = playlist.items.first()
-                                // Use playlist cover as the art for the player
+                                val remainingQueue = playlist.items.drop(1).filter { it.type == com.mrtdk.liquid_glass.data.ItemType.SONG }.map { t ->
+                                    com.mrtdk.liquid_glass.ui.screens.QueueItem(
+                                        title = t.title,
+                                        artist = t.subtitle,
+                                        artUrl = playlistCoverForPlayer ?: t.thumbnail,
+                                        videoId = t.id
+                                    )
+                                }
                                 onSongSelected(com.mrtdk.liquid_glass.ui.screens.PlayerState(
                                     first.title, first.subtitle, 
                                     playlistCoverForPlayer ?: first.thumbnail, 
-                                    first.id
+                                    first.id,
+                                    queue = remainingQueue,
+                                    isExclusiveQueue = true
                                 ))
                             }
                         },
@@ -678,7 +687,8 @@ fun PlaylistDetailScreen(
                                 track.title, track.subtitle, 
                                 playlistCoverForPlayer ?: track.thumbnail, 
                                 track.id,
-                                queue = remainingQueue
+                                queue = remainingQueue,
+                                isExclusiveQueue = true
                             ))
                         }
                     }
