@@ -82,7 +82,8 @@ data class PlayerState(
     val videoId: String? = null,
     val contentUri: Uri? = null,
     val duration: Long = 0L,
-    val queue: List<QueueItem> = emptyList()
+    val queue: List<QueueItem> = emptyList(),
+    val isExclusiveQueue: Boolean = false
 )
 
 data class QueueItem(
@@ -115,8 +116,9 @@ fun PlayerScreen(
 ) {
     AnimatedVisibility(
         visible = isVisible,
-        enter = slideInVertically(initialOffsetY = { it }),
-        exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(150))
+        enter = androidx.compose.animation.slideInVertically(initialOffsetY = { it }, animationSpec = androidx.compose.animation.core.tween(350)) + 
+               androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(250)),
+        exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(180))
     ) {
         if (playerState == null) return@AnimatedVisibility
 
@@ -439,7 +441,8 @@ fun PlayerScreen(
                                               artist = qItem.artist,
                                               artUrl = qItem.artUrl,
                                               videoId = qItem.videoId,
-                                              queue = remaining
+                                              queue = remaining,
+                                              isExclusiveQueue = playerState.isExclusiveQueue
                                           ))
                                       }) {
                                           AsyncImage(model = ImageRequest.Builder(context).data(qItem.artUrl).crossfade(true).build(), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp)))
@@ -473,7 +476,8 @@ fun PlayerScreen(
                                           title = song.title,
                                           artist = song.artists.joinToString { it.name },
                                           artUrl = upgradedArt,
-                                          videoId = song.id
+                                          videoId = song.id,
+                                          isExclusiveQueue = playerState.isExclusiveQueue
                                       ))
                                   }) {
                                       AsyncImage(model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp)))

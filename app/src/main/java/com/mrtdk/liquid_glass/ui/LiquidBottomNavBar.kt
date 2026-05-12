@@ -57,10 +57,20 @@ fun LiquidBottomNavBar(
     tintColor: Color = Color.White.copy(alpha = 0.15f),
     contentColor: Color = Color.White
 ) {
+    val imeBottom = androidx.compose.foundation.layout.WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current)
+    val isKeyboardOpen = imeBottom > 0
+
     val isSearchActive = selectedIndex == 4
-    val mainWeight by animateFloatAsState(if (isSearchActive) 0.001f else 1f, animationSpec = tween(400))
-    val searchWeight by animateFloatAsState(if (isSearchActive) 1f else 0.001f, animationSpec = tween(400))
-    val searchWidth by androidx.compose.animation.core.animateDpAsState(if (isSearchActive) 0.dp else 72.dp, animationSpec = tween(400))
+    val mainWeight by animateFloatAsState(if (isSearchActive) 0.0001f else 1f, animationSpec = tween(400))
+    val searchWeight by animateFloatAsState(if (isSearchActive) 1f else 0.0001f, animationSpec = tween(400))
+    
+    val searchWidth by androidx.compose.animation.core.animateDpAsState(if (!isSearchActive) 56.dp else 0.dp, animationSpec = tween(400))
+    val homeWidth by androidx.compose.animation.core.animateDpAsState(if (isSearchActive && !isKeyboardOpen) 56.dp else 0.dp, animationSpec = tween(400))
+    val xWidth by androidx.compose.animation.core.animateDpAsState(if (isSearchActive && isKeyboardOpen) 56.dp else 0.dp, animationSpec = tween(400))
+
+    val spacingMainSearch by androidx.compose.animation.core.animateDpAsState(if (!isSearchActive && mainWeight > 0.01f) 12.dp else 0.dp, animationSpec = tween(400))
+    val spacingHomeSearch by androidx.compose.animation.core.animateDpAsState(if (isSearchActive && !isKeyboardOpen) 12.dp else 0.dp, animationSpec = tween(400))
+    val spacingSearchX by androidx.compose.animation.core.animateDpAsState(if (isSearchActive && isKeyboardOpen) 12.dp else 0.dp, animationSpec = tween(400))
 
     val focusRequester = remember { FocusRequester() }
 
@@ -75,7 +85,7 @@ fun LiquidBottomNavBar(
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
             .height(72.dp),
-        horizontalArrangement = Arrangement.spacedBy(if (isSearchActive) 0.dp else 12.dp)
+        verticalAlignment = Alignment.CenterVertically
     ) {
         // Main Pill
         if (mainWeight > 0.01f) {
@@ -93,13 +103,42 @@ fun LiquidBottomNavBar(
             ) {
                 MainTabs(glassScope, selectedIndex, onTabSelected, contentColor, tintColor)
             }
+            Spacer(modifier = Modifier.width(spacingMainSearch))
+        }
+
+        // Home Pill
+        if (homeWidth > 0.5.dp) {
+            glassScope.GlassBox(
+                modifier = Modifier
+                    .width(homeWidth)
+                    .height(56.dp),
+                shape = CircleShape,
+                blur = 0.8f,
+                centerDistortion = 0.2f,
+                scale = 0.02f,
+                warpEdges = 0.6f,
+                tint = tintColor,
+                elevation = 8.dp
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize().clickable { onTabSelected(0) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = androidx.compose.ui.res.painterResource(id = com.mrtdk.liquid_glass.R.drawable.nav_inicio),
+                        contentDescription = "Inicio",
+                        tint = contentColor,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(spacingHomeSearch))
         }
 
         // Search Pill
+        val searchModifier = if (isSearchActive) Modifier.weight(searchWeight) else Modifier.width(searchWidth)
         glassScope.GlassBox(
-            modifier = Modifier
-                .then(if (isSearchActive) Modifier.weight(searchWeight) else Modifier.width(searchWidth))
-                .fillMaxHeight(),
+            modifier = searchModifier.height(56.dp),
             shape = CircleShape,
             blur = 0.8f,
             centerDistortion = 0.2f,
@@ -113,30 +152,35 @@ fun LiquidBottomNavBar(
                     .fillMaxSize()
                     .clickable { if (!isSearchActive) onTabSelected(4) },
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = if (!isSearchActive) Arrangement.Center else Arrangement.Start
             ) {
                 if (!isSearchActive) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Buscar",
-                            tint = contentColor,
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Buscar",
+                        tint = contentColor,
+                        modifier = Modifier.size(24.dp)
+                    )
                 } else {
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = "Buscar",
                         tint = Color.White,
-                        modifier = Modifier.padding(start = 24.dp, end = 12.dp).size(32.dp)
+                        modifier = Modifier
+                            .padding(start = 20.dp, end = 12.dp)
+                            .size(24.dp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { onTabSelected(4) }
                     )
                     BasicTextField(
                         value = searchQuery,
                         onValueChange = onSearchQueryChange,
                         modifier = Modifier
                             .weight(1f)
-                            .focusRequester(focusRequester),
+                            .focusRequester(focusRequester)
+                            .padding(end = 16.dp),
                         textStyle = TextStyle(color = contentColor, fontSize = 16.sp),
                         cursorBrush = SolidColor(contentColor),
                         singleLine = true,
@@ -149,15 +193,41 @@ fun LiquidBottomNavBar(
                             innerTextField()
                         }
                     )
-                    IconButton(onClick = {
-                        onSearchQueryChange("")
-                    }) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Cerrar",
-                            tint = contentColor
-                        )
-                    }
+                }
+            }
+        }
+
+        // Close Pill (X)
+        if (xWidth > 0.5.dp) {
+            Spacer(modifier = Modifier.width(spacingSearchX))
+            glassScope.GlassBox(
+                modifier = Modifier
+                    .width(xWidth)
+                    .height(56.dp),
+                shape = CircleShape,
+                blur = 0.8f,
+                centerDistortion = 0.2f,
+                scale = 0.02f,
+                warpEdges = 0.6f,
+                tint = Color.White.copy(alpha = 0.15f),
+                elevation = 8.dp
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize().clickable { 
+                        if (searchQuery.isNotEmpty()) {
+                            onSearchQueryChange("")
+                        } else {
+                            onTabSelected(0)
+                        }
+                    },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Cerrar",
+                        tint = contentColor,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
         }
@@ -239,47 +309,22 @@ fun MainTabs(
                 .then(dampedDragAnimation.modifier)
         )
 
-        // Indicator Bubble — pure liquid glass that refracts icons behind it
-        
+        // Flat Stadium Indicator
         Box(
             Modifier
                 .graphicsLayer {
-                    val currentTabX = dampedDragAnimation.value * tabWidth
-                    translationX = currentTabX
-
-                    var scaleX = dampedDragAnimation.scaleX
-                    var scaleY = dampedDragAnimation.scaleY
-                    val velocity = dampedDragAnimation.velocity / 10f
-
-                    scaleX /= 1f - (velocity * 0.75f).coerceIn(-0.2f, 0.2f)
-                    scaleY *= 1f - (velocity * 0.25f).coerceIn(-0.2f, 0.2f)
-
-                    this.scaleX = scaleX
-                    this.scaleY = scaleY
+                    translationX = dampedDragAnimation.value * tabWidth
                 }
                 .fillMaxHeight()
                 .width(with(density) { tabWidth.toDp() })
-                .padding(2.dp)
         ) {
-            glassScope.GlassBox(
+            Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .clip(CircleShape),
-                shape = CircleShape,
-                blur = 0.8f,
-                centerDistortion = 0.2f,
-                scale = 0.02f,
-                warpEdges = 0.6f,
-                tint = tintColor.copy(alpha = 0.4f),
-                elevation = 4.dp
-            ) {
-                // Subtle inner tint — glass refraction does the rest
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(contentColor.copy(alpha = 0.05f))
-                )
-            }
+                    .align(Alignment.Center)
+                    .width(64.dp)
+                    .height(56.dp)
+                    .background(contentColor.copy(alpha = 0.1f), CircleShape)
+            )
         }
 
         // Tabs
