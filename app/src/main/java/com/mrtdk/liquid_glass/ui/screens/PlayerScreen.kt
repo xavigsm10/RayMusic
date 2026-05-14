@@ -116,8 +116,10 @@ fun PlayerScreen(
 ) {
     AnimatedVisibility(
         visible = isVisible,
-        enter = androidx.compose.animation.slideInVertically(initialOffsetY = { it }, animationSpec = androidx.compose.animation.core.tween(350)) + 
-               androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(250)),
+        enter = androidx.compose.animation.slideInVertically(
+               initialOffsetY = { it },
+               animationSpec = androidx.compose.animation.core.tween(380, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+           ) + androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(250)),
         exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(180))
     ) {
         if (playerState == null) return@AnimatedVisibility
@@ -418,7 +420,7 @@ fun PlayerScreen(
                           }
                            if (playerState != null && playerState.queue.isNotEmpty()) {
                                Text(text = "Siguiente en Album/Playlist", color=contentColor, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top=32.dp, start=24.dp, end=24.dp, bottom=16.dp))
-                           } else {
+                           } else if (playerState?.isExclusiveQueue != true) {
                                 Column(modifier = Modifier.padding(top=32.dp, start=24.dp, end=24.dp, bottom=16.dp)) {
                                     Text(text = "Continue Playing", color=contentColor, fontSize=18.sp, fontWeight=FontWeight.Bold)
                                     Text(text = "AutoPlaying similar music", color=contentColor.copy(alpha=0.7f), fontSize=14.sp)
@@ -455,7 +457,7 @@ fun PlayerScreen(
                                       }
                                   }
                               }
-                              items(upNextSongs.size) { i ->
+                              if (playerState?.isExclusiveQueue != true) items(upNextSongs.size) { i ->
                                   val song = upNextSongs[i]
                                   // Upgrade thumbnail to HD for display
                                   val hdThumb = song.thumbnail?.let {

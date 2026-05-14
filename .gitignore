@@ -14,3 +14,8 @@
 .cxx
 local.properties
 
+
+# Files excluded
+download_images.py
+biblioteca.png
+radio.png
