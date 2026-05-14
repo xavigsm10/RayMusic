@@ -21,3 +21,9 @@ StreamXBot/
 expo-liquid-glass-native/
 Echo-Music/
 glass/
+img/
+
+# Files excluded
+download_images.py
+biblioteca.png
+radio.png

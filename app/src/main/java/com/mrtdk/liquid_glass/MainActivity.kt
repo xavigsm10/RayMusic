@@ -324,29 +324,29 @@ class MainActivity : ComponentActivity() {
                                                 (targetState.album != null && initialState.album == null) || 
                                                 (targetState.artist != null && initialState.artist == null) ||
                                                 (targetState.category != null && initialState.category == null)) {
-                                                // Forward (Slide in from right) — fast, snappy transition
+                                                // Forward — iOS slide from right
                                                 androidx.compose.animation.slideInHorizontally(
-                                                    animationSpec = androidx.compose.animation.core.tween(250, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                                                    animationSpec = androidx.compose.animation.core.tween(350, easing = androidx.compose.animation.core.FastOutSlowInEasing)
                                                 ) { width -> width } + androidx.compose.animation.fadeIn(
-                                                    animationSpec = androidx.compose.animation.core.tween(200)
+                                                    animationSpec = androidx.compose.animation.core.tween(250)
                                                 ) togetherWith androidx.compose.animation.slideOutHorizontally(
-                                                    animationSpec = androidx.compose.animation.core.tween(250, easing = androidx.compose.animation.core.FastOutSlowInEasing)
-                                                ) { width -> -width / 4 } + androidx.compose.animation.fadeOut(
-                                                    animationSpec = androidx.compose.animation.core.tween(150)
+                                                    animationSpec = androidx.compose.animation.core.tween(350, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                                                ) { width -> -width / 3 } + androidx.compose.animation.fadeOut(
+                                                    animationSpec = androidx.compose.animation.core.tween(200)
                                                 )
                                             } else if ((initialState.playlist != null && targetState.playlist == null) || 
                                                      (initialState.album != null && targetState.album == null) || 
                                                      (initialState.artist != null && targetState.artist == null) ||
                                                      (initialState.category != null && targetState.category == null)) {
-                                                // Backward (Slide out to right) — fast, snappy transition
+                                                // Backward — iOS slide to right
                                                 androidx.compose.animation.slideInHorizontally(
-                                                    animationSpec = androidx.compose.animation.core.tween(250, easing = androidx.compose.animation.core.FastOutSlowInEasing)
-                                                ) { width -> -width / 4 } + androidx.compose.animation.fadeIn(
-                                                    animationSpec = androidx.compose.animation.core.tween(200)
+                                                    animationSpec = androidx.compose.animation.core.tween(350, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                                                ) { width -> -width / 3 } + androidx.compose.animation.fadeIn(
+                                                    animationSpec = androidx.compose.animation.core.tween(250)
                                                 ) togetherWith androidx.compose.animation.slideOutHorizontally(
-                                                    animationSpec = androidx.compose.animation.core.tween(250, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                                                    animationSpec = androidx.compose.animation.core.tween(350, easing = androidx.compose.animation.core.FastOutSlowInEasing)
                                                 ) { width -> width } + androidx.compose.animation.fadeOut(
-                                                    animationSpec = androidx.compose.animation.core.tween(150)
+                                                    animationSpec = androidx.compose.animation.core.tween(200)
                                                 )
                                             } else {
                                                 // Tab switch (Fast crossfade)

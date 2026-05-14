@@ -65,6 +65,7 @@ class BusquedaState {
     var isSearching by mutableStateOf(false)
     var selectedTab by mutableIntStateOf(0)
     var lastQuery by mutableStateOf("")
+    var lastTab by mutableIntStateOf(-1)
 }
 
 @Composable
@@ -90,29 +91,43 @@ fun BusquedaScreen(
             return@LaunchedEffect
         }
         
-        // Skip fetch if query and tab are exactly the same as cached
-        if (state.lastQuery == query && state.displayResults.isNotEmpty() && !state.isSearching) {
+        // Skip fetch if query AND tab are exactly the same as cached
+        if (state.lastQuery == query && state.lastTab == state.selectedTab && state.displayResults.isNotEmpty() && !state.isSearching) {
             return@LaunchedEffect
         }
         
         state.isSearching = true
         state.lastQuery = query
+        state.lastTab = state.selectedTab
         
         withContext(Dispatchers.IO) {
-            val filter = when (state.selectedTab) {
-                1 -> YouTube.SearchFilter.FILTER_ARTIST
-                2 -> YouTube.SearchFilter.FILTER_ALBUM
-                3 -> YouTube.SearchFilter.FILTER_SONG
-                else -> YouTube.SearchFilter.FILTER_SONG // Top Results
-            }
-            YouTube.search(query, filter).onSuccess { result ->
-                state.displayResults = when (state.selectedTab) {
-                    1 -> result.items.filterIsInstance<ArtistItem>().take(20)
-                    2 -> result.items.filterIsInstance<AlbumItem>().take(20)
-                    else -> result.items.filterIsInstance<SongItem>().take(20)
+            if (state.selectedTab == 0) {
+                // Top Results: search for songs and show mixed results
+                YouTube.search(query, YouTube.SearchFilter.FILTER_SONG).onSuccess { result ->
+                    val songs = result.items.filterIsInstance<SongItem>().take(10)
+                    // Also search for artists and albums in parallel
+                    val artists = try { YouTube.search(query, YouTube.SearchFilter.FILTER_ARTIST).getOrNull()?.items?.filterIsInstance<ArtistItem>()?.take(3) ?: emptyList() } catch (_: Exception) { emptyList() }
+                    val albums = try { YouTube.search(query, YouTube.SearchFilter.FILTER_ALBUM).getOrNull()?.items?.filterIsInstance<AlbumItem>()?.take(3) ?: emptyList() } catch (_: Exception) { emptyList() }
+                    state.displayResults = artists + albums + songs
+                }.onFailure {
+                    state.displayResults = emptyList()
                 }
-            }.onFailure {
-                state.displayResults = emptyList()
+            } else {
+                val filter = when (state.selectedTab) {
+                    1 -> YouTube.SearchFilter.FILTER_ARTIST
+                    2 -> YouTube.SearchFilter.FILTER_ALBUM
+                    3 -> YouTube.SearchFilter.FILTER_SONG
+                    else -> YouTube.SearchFilter.FILTER_SONG
+                }
+                YouTube.search(query, filter).onSuccess { result ->
+                    state.displayResults = when (state.selectedTab) {
+                        1 -> result.items.filterIsInstance<ArtistItem>().take(20)
+                        2 -> result.items.filterIsInstance<AlbumItem>().take(20)
+                        else -> result.items.filterIsInstance<SongItem>().take(20)
+                    }
+                }.onFailure {
+                    state.displayResults = emptyList()
+                }
             }
         }
         state.isSearching = false
