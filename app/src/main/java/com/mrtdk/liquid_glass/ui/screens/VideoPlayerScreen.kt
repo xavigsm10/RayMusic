@@ -8,7 +8,11 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import com.mrtdk.glass.GlassBox
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -16,9 +20,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -290,41 +297,228 @@ fun VideoPlayerScreen(
         }
     }
 
+    // Track player state for custom controls
+    var isPlaying by remember { mutableStateOf(true) }
+    var currentPosition by remember { mutableStateOf(0L) }
+    var duration by remember { mutableStateOf(0L) }
+    var showControls by remember { mutableStateOf(true) }
+
+    // Auto-hide controls after 3 seconds
+    LaunchedEffect(showControls) {
+        if (showControls && !isLoading && errorMessage == null) {
+            kotlinx.coroutines.delay(4000)
+            showControls = false
+        }
+    }
+
+    // Update position periodically
+    LaunchedEffect(isPlaying) {
+        while (true) {
+            currentPosition = exoPlayer.currentPosition.coerceAtLeast(0L)
+            duration = exoPlayer.duration.coerceAtLeast(0L)
+            isPlaying = exoPlayer.isPlaying
+            kotlinx.coroutines.delay(500)
+        }
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(Color.Black)
     ) {
-        // Video Player
+        // Video Player — no default controller
         AndroidView(
             factory = { ctx ->
                 PlayerView(ctx).apply {
                     player = exoPlayer
-                    useController = true
+                    useController = false
                     layoutParams = FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT
                     )
                 }
             },
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { showControls = !showControls }
         )
 
-        // Back button
-        IconButton(
-            onClick = onBack,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(16.dp)
-                .background(
-                    color = Color.Black.copy(alpha = 0.5f),
-                    shape = MaterialTheme.shapes.small
-                )
+        // Custom Liquid Glass controls overlay
+        androidx.compose.animation.AnimatedVisibility(
+            visible = showControls && !isLoading && errorMessage == null,
+            enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(250)),
+            exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(250)),
+            modifier = Modifier.fillMaxSize()
         ) {
-            Icon(
-                imageVector = Icons.Default.ArrowBack,
-                contentDescription = "Back",
-                tint = Color.White
+            com.mrtdk.glass.GlassContainer(
+                modifier = Modifier.fillMaxSize(),
+                content = {
+                    // Semi-transparent scrim
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.25f))
+                    )
+                },
+                glassContent = {
+                    val scope = this
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        // ── Back button (top-left) ──
+                        scope.GlassBox(
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(16.dp)
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .clickable { onBack() },
+                            shape = CircleShape,
+                            tint = Color.White.copy(alpha = 0.2f),
+                            blur = 0.8f,
+                            centerDistortion = 0.1f,
+                            scale = 0.02f,
+                            warpEdges = 0.4f,
+                            elevation = 4.dp
+                        ) {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(24.dp))
+                            }
+                        }
+
+                        // ── Center playback controls ──
+                        Row(
+                            modifier = Modifier.align(Alignment.Center),
+                            horizontalArrangement = Arrangement.spacedBy(32.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Previous / Rewind 10s
+                            scope.GlassBox(
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .clip(CircleShape)
+                                    .clickable {
+                                        exoPlayer.seekTo((exoPlayer.currentPosition - 10000).coerceAtLeast(0))
+                                        showControls = true
+                                    },
+                                shape = CircleShape,
+                                tint = Color.White.copy(alpha = 0.15f),
+                                blur = 0.8f,
+                                centerDistortion = 0.15f,
+                                scale = 0.02f,
+                                warpEdges = 0.5f,
+                                elevation = 6.dp
+                            ) {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        painter = painterResource(id = com.mrtdk.liquid_glass.R.drawable.previous),
+                                        contentDescription = "Rewind",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                }
+                            }
+
+                            // Play / Pause
+                            scope.GlassBox(
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .clip(CircleShape)
+                                    .clickable {
+                                        if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
+                                        isPlaying = !isPlaying
+                                        showControls = true
+                                    },
+                                shape = CircleShape,
+                                tint = Color.White.copy(alpha = 0.2f),
+                                blur = 0.8f,
+                                centerDistortion = 0.2f,
+                                scale = 0.02f,
+                                warpEdges = 0.6f,
+                                elevation = 8.dp
+                            ) {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        painter = painterResource(
+                                            id = if (isPlaying) com.mrtdk.liquid_glass.R.drawable.pause
+                                            else com.mrtdk.liquid_glass.R.drawable.resume
+                                        ),
+                                        contentDescription = if (isPlaying) "Pause" else "Play",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(44.dp)
+                                    )
+                                }
+                            }
+
+                            // Forward 10s
+                            scope.GlassBox(
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .clip(CircleShape)
+                                    .clickable {
+                                        exoPlayer.seekTo((exoPlayer.currentPosition + 10000).coerceAtMost(exoPlayer.duration))
+                                        showControls = true
+                                    },
+                                shape = CircleShape,
+                                tint = Color.White.copy(alpha = 0.15f),
+                                blur = 0.8f,
+                                centerDistortion = 0.15f,
+                                scale = 0.02f,
+                                warpEdges = 0.5f,
+                                elevation = 6.dp
+                            ) {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        painter = painterResource(id = com.mrtdk.liquid_glass.R.drawable.forward),
+                                        contentDescription = "Forward",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        // ── Bottom seek bar ──
+                        if (duration > 0) {
+                            Column(
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 24.dp, vertical = 16.dp)
+                            ) {
+                                Slider(
+                                    value = if (duration > 0) currentPosition.toFloat() / duration.toFloat() else 0f,
+                                    onValueChange = { fraction ->
+                                        exoPlayer.seekTo((fraction * duration).toLong())
+                                        showControls = true
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = Color.White,
+                                        activeTrackColor = Color.White,
+                                        inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                                    )
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        formatVideoDuration(currentPosition),
+                                        color = Color.White.copy(alpha = 0.8f),
+                                        fontSize = 12.sp
+                                    )
+                                    Text(
+                                        formatVideoDuration(duration),
+                                        color = Color.White.copy(alpha = 0.8f),
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             )
         }
 
@@ -379,4 +573,13 @@ fun VideoPlayerScreen(
             }
         }
     }
+}
+
+private fun formatVideoDuration(ms: Long): String {
+    val totalSeconds = ms / 1000
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    return if (hours > 0) "%d:%02d:%02d".format(hours, minutes, seconds)
+    else "%d:%02d".format(minutes, seconds)
 }

@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.MoreVert
@@ -74,6 +75,11 @@ fun ArtistScreen(
     var showAllAlbumsOverlay by remember { mutableStateOf(false) }
     var allAlbumsSection by remember { mutableStateOf<ArtistSection?>(null) }
     var isDescriptionExpanded by remember { mutableStateOf(false) }
+    // Generic "show all" overlay for videos / remaining sections
+    var showAllSectionOverlay by remember { mutableStateOf(false) }
+    var allSectionData by remember { mutableStateOf<ArtistSection?>(null) }
+    var allSectionTitle by remember { mutableStateOf("") }
+    var allSectionIsVideo by remember { mutableStateOf(false) }
 
     val artistThumb = artistPage?.artist?.thumbnail ?: artistState.thumbnail
     val hdThumb = artistThumb?.let { url ->
@@ -155,6 +161,14 @@ fun ArtistScreen(
     val playlistsSection = sections.find { it.title.contains("playlist", true) || it.title.contains("lista", true) }
     val fansSection = sections.find { it.title.contains("fans", true) || it.title.contains("like", true) || it.title.contains("gust", true) || it.title.contains("related", true) || it.title.contains("similar", true) }
 
+    // Handle back for overlays
+    androidx.activity.compose.BackHandler(enabled = showAllAlbumsOverlay || showAllSectionOverlay) {
+        when {
+            showAllSectionOverlay -> showAllSectionOverlay = false
+            showAllAlbumsOverlay -> showAllAlbumsOverlay = false
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         // Main content
         LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -223,19 +237,33 @@ fun ArtistScreen(
                             }
                         }
                     }
-                    // Back button floating on top of image
-                    Box(
+                    // Back button floating on top of image — GlassBox pill
+                    com.mrtdk.glass.GlassContainer(
                         modifier = Modifier
                             .statusBarsPadding()
                             .padding(horizontal = 16.dp, vertical = 12.dp)
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.4f))
-                            .clickable { onBack() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(22.dp))
-                    }
+                            .size(48.dp),
+                        content = {
+                            Box(modifier = Modifier.fillMaxSize())
+                        },
+                        glassContent = {
+                            val scope = this
+                            scope.GlassBox(
+                                modifier = Modifier.fillMaxSize().clip(CircleShape).clickable { onBack() },
+                                shape = CircleShape,
+                                tint = dominantColor.copy(alpha = 0.35f),
+                                blur = 0.8f,
+                                centerDistortion = 0.2f,
+                                scale = 0.02f,
+                                warpEdges = 0.6f,
+                                elevation = 8.dp
+                            ) {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.ArrowBackIosNew, "Back", tint = Color.White)
+                                }
+                            }
+                        }
+                    )
                 }
             }
 
@@ -336,7 +364,26 @@ fun ArtistScreen(
                 val videoItems = videosSection.items.filterIsInstance<SongItem>()
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Videos", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("Videos", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        if (videoItems.size > 4 || videosSection.moreEndpoint != null) {
+                            val coroutineScope = rememberCoroutineScope()
+                            Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = 0.12f)).clickable {
+                                allSectionTitle = "Videos"
+                                allSectionIsVideo = true
+                                allSectionData = videosSection
+                                showAllSectionOverlay = true
+                                if (videosSection.moreEndpoint != null) {
+                                    coroutineScope.launch(Dispatchers.IO) {
+                                        val result = YouTube.artistItems(videosSection.moreEndpoint!!).getOrNull()
+                                        if (result != null) allSectionData = allSectionData?.copy(items = result.items)
+                                    }
+                                }
+                            }.padding(horizontal = 12.dp, vertical = 6.dp)) {
+                                Text("Ver todo", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                            }
+                        }
+                    }
                     LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(videoItems.size) { idx ->
                             val v = videoItems[idx]
@@ -399,11 +446,31 @@ fun ArtistScreen(
 
             // Also show any remaining sections not matched above
             sections.filter { it != topSongsSection && it != albumsSection && it != singlesSection && it != videosSection && it != featuredSection && it != playlistsSection && it != fansSection }.forEach { section ->
+                val isVideoSection = section.title.contains("video", true) || section.title.contains("vídeo", true) || section.title.contains("presentacion", true) || section.title.contains("live", true) || section.title.contains("vivo", true) || section.title.contains("concierto", true)
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(section.title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text(section.title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        if (section.items.size > 4 || section.moreEndpoint != null) {
+                            val coroutineScope = rememberCoroutineScope()
+                            Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = 0.12f)).clickable {
+                                allSectionTitle = section.title
+                                allSectionIsVideo = isVideoSection
+                                allSectionData = section
+                                showAllSectionOverlay = true
+                                if (section.moreEndpoint != null) {
+                                    coroutineScope.launch(Dispatchers.IO) {
+                                        val result = YouTube.artistItems(section.moreEndpoint!!).getOrNull()
+                                        if (result != null) allSectionData = allSectionData?.copy(items = result.items)
+                                    }
+                                }
+                            }.padding(horizontal = 12.dp, vertical = 6.dp)) {
+                                Text("Ver todo", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                            }
+                        }
+                    }
                     LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(section.items.size) { idx -> ItemCard(context, section.items[idx], artistState.name, onAlbumSelected, onSongSelected, onArtistSelected) }
+                        items(section.items.size) { idx -> ItemCard(context, section.items[idx], artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, onVideoSelected = onVideoSelected, isVideo = isVideoSection) }
                     }
                 }
             }
@@ -441,6 +508,60 @@ fun ArtistScreen(
                             if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
                         }
                         Spacer(modifier = Modifier.height(16.dp))
+                    }
+                    item { Spacer(modifier = Modifier.height(80.dp)) }
+                }
+            }
+        }
+
+        // ── GENERIC SECTION OVERLAY PAGE ────────────────
+        if (showAllSectionOverlay && allSectionData != null) {
+            val overlayItems = allSectionData!!.items
+            Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    item { Spacer(modifier = Modifier.statusBarsPadding().height(16.dp)) }
+                    item {
+                        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.12f)).clickable { showAllSectionOverlay = false }, contentAlignment = Alignment.Center) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(22.dp))
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text(allSectionTitle, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                    if (allSectionIsVideo) {
+                        // Video items — 2 column grid with 16:9 aspect ratio
+                        val rows = overlayItems.chunked(2)
+                        items(rows.size) { rowIdx ->
+                            val row = rows[rowIdx]
+                            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                row.forEach { item ->
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        ItemCard(context, item, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, onVideoSelected = onVideoSelected, fillWidth = true, isVideo = true)
+                                    }
+                                }
+                                if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                    } else {
+                        // Non-video items — 2 column grid (square)
+                        val filteredAlbums = overlayItems.filterIsInstance<AlbumItem>()
+                        val itemsToShow = if (filteredAlbums.isNotEmpty()) filteredAlbums else overlayItems
+                        val rows = itemsToShow.chunked(2)
+                        items(rows.size) { rowIdx ->
+                            val row = rows[rowIdx]
+                            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                row.forEach { item ->
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        ItemCard(context, item, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, fillWidth = true)
+                                    }
+                                }
+                                if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
                     }
                     item { Spacer(modifier = Modifier.height(80.dp)) }
                 }
