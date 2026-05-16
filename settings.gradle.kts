@@ -24,3 +24,4 @@ rootProject.name = "liquid-glass-compose"
 include(":app")
 include(":glass")
 include(":innertube")
+include(":shazamkit")
