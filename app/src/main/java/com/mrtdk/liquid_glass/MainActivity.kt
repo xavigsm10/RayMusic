@@ -219,42 +219,49 @@ class MainActivity : ComponentActivity() {
                     var queueEndpoint by remember { mutableStateOf<com.echo.innertube.models.WatchEndpoint?>(null) }
                     val songHistory = remember { androidx.compose.runtime.mutableStateListOf<PlayerState>() }
 
-                    LaunchedEffect(playerState?.videoId, playerState?.isExclusiveQueue) {
-                        val vid = playerState?.videoId ?: return@LaunchedEffect
-                        if (playerState?.isExclusiveQueue == true) {
-                            upNextSongs = emptyList()
-                            return@LaunchedEffect
-                        }
-                        if (upNextSongs.isEmpty() || queueSeedVideoId != vid) {
-                            queueSeedVideoId = vid
-                            withContext(kotlinx.coroutines.Dispatchers.IO) {
-                                val endpoint = com.echo.innertube.models.WatchEndpoint(videoId = vid)
-                                com.echo.innertube.YouTube.next(endpoint).onSuccess { nextResult ->
-                                    queueEndpoint = nextResult.endpoint
-                                    queueContinuation = nextResult.continuation
-                                    val items = nextResult.items
-                                    val nextItems = if (items.isNotEmpty() && items.first().id == vid) items.drop(1) else items
-                                    upNextSongs = nextItems
+                    LaunchedEffect(Unit) {
+                        androidx.compose.runtime.snapshotFlow { 
+                            Pair(playerState?.videoId, playerState?.isExclusiveQueue)
+                        }.collect { (vid, isExclusive) ->
+                            if (vid == null) return@collect
+                            if (isExclusive == true) {
+                                upNextSongs = emptyList()
+                                return@collect
+                            }
+                            if (upNextSongs.isEmpty() || queueSeedVideoId != vid) {
+                                queueSeedVideoId = vid
+                                withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                    val endpoint = com.echo.innertube.models.WatchEndpoint(videoId = vid)
+                                    com.echo.innertube.YouTube.next(endpoint).onSuccess { nextResult ->
+                                        queueEndpoint = nextResult.endpoint
+                                        queueContinuation = nextResult.continuation
+                                        val items = nextResult.items
+                                        val nextItems = if (items.isNotEmpty() && items.first().id == vid) items.drop(1) else items
+                                        upNextSongs = nextItems
+                                    }
                                 }
                             }
                         }
                     }
                     
                     // Refetch more songs when queue gets low for infinite playback
-                    LaunchedEffect(upNextSongs.size) {
-                        if (upNextSongs.size <= 3 && queueEndpoint != null && queueContinuation != null) {
-                            withContext(kotlinx.coroutines.Dispatchers.IO) {
-                                com.echo.innertube.YouTube.next(queueEndpoint!!, queueContinuation).onSuccess { nextResult ->
-                                    queueEndpoint = nextResult.endpoint
-                                    queueContinuation = nextResult.continuation
-                                    val existingIds = upNextSongs.map { it.id }.toSet()
-                                    val newSongs = nextResult.items.filter { it.id !in existingIds }
-                                    if (newSongs.isNotEmpty()) {
-                                        upNextSongs = upNextSongs + newSongs
+                    LaunchedEffect(Unit) {
+                        androidx.compose.runtime.snapshotFlow { upNextSongs.size }
+                            .collect { size ->
+                                if (size in 1..3 && queueEndpoint != null && queueContinuation != null) {
+                                    withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                        com.echo.innertube.YouTube.next(queueEndpoint!!, queueContinuation).onSuccess { nextResult ->
+                                            queueEndpoint = nextResult.endpoint
+                                            queueContinuation = nextResult.continuation
+                                            val existingIds = upNextSongs.map { it.id }.toSet()
+                                            val newSongs = nextResult.items.filter { it.id !in existingIds }
+                                            if (newSongs.isNotEmpty()) {
+                                                upNextSongs = upNextSongs + newSongs
+                                            }
+                                        }
                                     }
                                 }
                             }
-                        }
                     }
 
                     val skipNextFun: () -> Unit = {
@@ -298,10 +305,14 @@ class MainActivity : ComponentActivity() {
                     }
 
                     // Auto-play next song when current song ends
-                    val songEndedCount by musicPlayer!!.songEnded.collectAsState()
-                    LaunchedEffect(songEndedCount) {
-                        if (songEndedCount > 0 && playerState != null) {
-                            skipNextFun()
+                    val currentSkipNextFun by androidx.compose.runtime.rememberUpdatedState(skipNextFun)
+                    val currentPlayerState by androidx.compose.runtime.rememberUpdatedState(playerState)
+
+                    LaunchedEffect(Unit) {
+                        musicPlayer!!.songEnded.collect { count ->
+                            if (count > 0 && currentPlayerState != null) {
+                                currentSkipNextFun()
+                            }
                         }
                     }
 

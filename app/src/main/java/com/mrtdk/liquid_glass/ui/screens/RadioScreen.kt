@@ -25,7 +25,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import iad1tya.echo.music.shazamkit.Shazam
+import iad1tya.echo.music.shazamkit.ShazamSignatureGenerator
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import android.media.AudioFormat
+import android.media.AudioRecord
+import android.media.MediaRecorder
 
 @Composable
 fun RadioScreen(
@@ -70,12 +79,42 @@ fun RadioScreen(
         label = "alpha"
     )
 
-    val speechLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        isListening = false
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
-            val spokenText = result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
-            if (!spokenText.isNullOrBlank()) {
-                onSearchResult(spokenText)
+    val scope = rememberCoroutineScope()
+    var resultText by remember { mutableStateOf<String?>(null) }
+    var isProcessing by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isListening) {
+        if (isListening) {
+            resultText = null
+            try {
+                val samples = withContext(Dispatchers.IO) {
+                    recordMicPcm16Mono(sampleRateHz = 16000, recordMs = 4200L).first
+                }
+                isProcessing = true
+                val signature = withContext(Dispatchers.Default) {
+                    ShazamSignatureGenerator().apply { feedPcm16Mono(samples) }.nextSignatureOrNull()
+                }
+                if (signature != null) {
+                    val result = withContext(Dispatchers.IO) {
+                        Shazam.recognize(signature.uri, signature.sampleDurationMs)
+                    }
+                    result.fold(
+                        onSuccess = { res ->
+                            resultText = "${res.title} - ${res.artist}"
+                            // Provide a small delay so user can read the result before navigating
+                            delay(1000)
+                            onSearchResult("${res.title} ${res.artist}")
+                        },
+                        onFailure = { resultText = "No se encontraron coincidencias" }
+                    )
+                } else {
+                    resultText = "No se pudo generar la firma"
+                }
+            } catch (e: Exception) {
+                resultText = "Error al escuchar"
+            } finally {
+                isListening = false
+                isProcessing = false
             }
         }
     }
@@ -121,14 +160,9 @@ fun RadioScreen(
                             if (!hasPermission) {
                                 permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                             } else {
-                                val intent = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                                    putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                                    putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Canta o di el nombre de la canción")
-                                }
-                                try {
-                                    speechLauncher.launch(intent)
+                                if (!isListening && !isProcessing) {
                                     isListening = true
-                                } catch (e: Exception) {}
+                                }
                             }
                         },
                     contentAlignment = Alignment.Center
@@ -145,7 +179,12 @@ fun RadioScreen(
             Spacer(modifier = Modifier.height(48.dp))
             
             Text(
-                text = if (isListening) "Escuchando..." else "Toca para identificar música",
+                text = when {
+                    isProcessing -> "Buscando coincidencias..."
+                    isListening -> "Escuchando..."
+                    resultText != null -> resultText!!
+                    else -> "Toca para identificar música"
+                },
                 color = Color.White,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
@@ -159,5 +198,47 @@ fun RadioScreen(
                 textAlign = TextAlign.Center
             )
         }
+    }
+}
+
+private suspend fun recordMicPcm16Mono(
+    sampleRateHz: Int,
+    recordMs: Long,
+): Pair<ShortArray, Int> = withContext(Dispatchers.IO) {
+    val channel = AudioFormat.CHANNEL_IN_MONO
+    val encoding = AudioFormat.ENCODING_PCM_16BIT
+    val minBuffer = AudioRecord.getMinBufferSize(sampleRateHz, channel, encoding).coerceAtLeast(4096)
+    val record = AudioRecord(
+        MediaRecorder.AudioSource.MIC,
+        sampleRateHz,
+        channel,
+        encoding,
+        minBuffer,
+    )
+
+    val totalSamples = ((recordMs / 1000.0) * sampleRateHz).toInt().coerceAtLeast(sampleRateHz)
+    val output = ShortArray(totalSamples)
+    val buffer = ShortArray(minBuffer / 2)
+
+    try {
+        record.startRecording()
+
+        var written = 0
+        while (written < output.size && isActive) {
+            val read = record.read(buffer, 0, minOf(buffer.size, output.size - written))
+            if (read > 0) {
+                System.arraycopy(buffer, 0, output, written, read)
+                written += read
+            }
+        }
+
+        if (written <= 0) {
+            ShortArray(0) to sampleRateHz
+        } else {
+            output.copyOf(written) to sampleRateHz
+        }
+    } finally {
+        runCatching { record.stop() }
+        runCatching { record.release() }
     }
 }
