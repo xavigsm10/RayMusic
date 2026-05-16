@@ -71,7 +71,17 @@ fun CategoriaScreen(
                 YouTube.search(category.name, YouTube.SearchFilter.FILTER_FEATURED_PLAYLIST).getOrNull()?.items?.filterIsInstance<PlaylistItem>()?.take(16) ?: emptyList()
             }
             val d2 = async {
-                YouTube.search(category.name, YouTube.SearchFilter.FILTER_ALBUM).getOrNull()?.items?.filterIsInstance<AlbumItem>()?.take(16) ?: emptyList()
+                val rawAlbums = YouTube.search(category.name, YouTube.SearchFilter.FILTER_ALBUM).getOrNull()?.items?.filterIsInstance<AlbumItem>() ?: emptyList()
+                rawAlbums.filter { a ->
+                    val titleLower = a.title.lowercase()
+                    val artistText = a.artists?.joinToString { it.name }?.lowercase() ?: ""
+                    val isMix = titleLower.contains("mix") || titleLower.contains("compilation") ||
+                        titleLower.contains("playlist") || titleLower.contains("mashup") ||
+                        titleLower.contains("medley") || titleLower.contains("recopilación")
+                    val isGenericArtist = artistText.contains("various") || artistText.contains("varios") ||
+                        artistText.contains("topic") || artistText.isEmpty() || artistText.contains("mix")
+                    !isMix && !isGenericArtist
+                }.take(16)
             }
             val d3 = async {
                 YouTube.search(category.name, YouTube.SearchFilter.FILTER_SONG).getOrNull()?.items?.filterIsInstance<SongItem>()?.take(24) ?: emptyList()
@@ -228,7 +238,7 @@ fun CategoriaScreen(
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.height(340.dp)
+                        modifier = Modifier.height(460.dp)
                     ) {
                         items(state.playlists) { item ->
                             Column(
@@ -364,7 +374,7 @@ fun CategoriaScreen(
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.height(340.dp)
+                        modifier = Modifier.height(460.dp)
                     ) {
                         items(state.albums) { item ->
                             Column(

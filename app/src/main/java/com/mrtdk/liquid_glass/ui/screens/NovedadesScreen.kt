@@ -65,12 +65,16 @@ fun NovedadesScreen(
                     // Exclude mixes, compilations, and generic entries
                     val isMix = titleLower.contains("mix") || titleLower.contains("compilation") ||
                         titleLower.contains("playlist") || titleLower.contains("mashup") ||
-                        titleLower.contains("medley") || titleLower.contains("recopilación")
+                        titleLower.contains("medley") || titleLower.contains("recopilación") ||
+                        titleLower.contains("album") || titleLower.contains("álbum") ||
+                        titleLower.contains("completo")
                     val isGenericArtist = artistText.contains("various") || artistText.contains("varios") ||
-                        artistText.contains("topic") || s.artists.isEmpty()
+                        artistText.contains("topic") || s.artists.isEmpty() || artistText.contains("mix")
                     // Must have at least one artist with a browseId (real YTM artist page)
                     val hasRealArtist = s.artists.any { it.id != null }
-                    !isMix && !isGenericArtist && hasRealArtist
+                    val duration = s.duration
+                    val isNormalDuration = duration == null || duration < 600 // max 10 mins
+                    !isMix && !isGenericArtist && hasRealArtist && isNormalDuration
                 }
 
                 // Fetch charts for trending/top songs from known artists
