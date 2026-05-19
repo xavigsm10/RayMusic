@@ -152,22 +152,83 @@ fun PlayerScreen(
         var showNewPlaylistDialog by remember { mutableStateOf(false) }
         
         var swipeDirection by remember { mutableIntStateOf(1) }
-        val hdArtUrl = remember(playerState?.artUrl) {
+        val hdArtUrl = remember(playerState?.artUrl, playerState?.title, playerState?.artist) {
+            val title = playerState?.title ?: ""
+            val artist = playerState?.artist ?: ""
             val url = playerState?.artUrl
-            if (url is String) {
-                when {
-                    url.contains("=w") || url.contains("=s") -> {
-                        val index = url.indexOf("=w").takeIf { it != -1 } ?: url.indexOf("=s")
-                        url.substring(0, index) + "=w1200-h1200-l90-rj"
+            val urlString = url?.toString() ?: ""
+
+            // Check if it is already a local asset url passed from AlbumScreen
+            val isLocalArt = urlString.startsWith("file:///android_asset/")
+
+            // If not already local, check by track list and artist
+            val isMichaelBiopicTrack = !isLocalArt && (
+                (artist.contains("Michael Jackson", ignoreCase = true) || artist.contains("Jackson 5", ignoreCase = true) || artist.contains("Jacksons", ignoreCase = true)) &&
+                (title.equals("I'll Be There", ignoreCase = true) ||
+                 title.equals("Never Can Say Goodbye", ignoreCase = true) ||
+                 title.equals("Who's Lovin' You", ignoreCase = true) ||
+                 title.contains("I Want You Back", ignoreCase = true) ||
+                 title.equals("Ben", ignoreCase = true) ||
+                 title.equals("Don't Stop 'Til You Get Enough", ignoreCase = true) ||
+                 title.equals("Workin' Day and Night", ignoreCase = true) ||
+                 title.equals("Bad", ignoreCase = true))
+            )
+
+            val isThrillerTrack = !isLocalArt && (
+                artist.contains("Michael Jackson", ignoreCase = true) &&
+                (title.equals("Wanna Be Startin' Somethin'", ignoreCase = true) ||
+                 title.equals("Baby Be Mine", ignoreCase = true) ||
+                 title.equals("The Girl Is Mine", ignoreCase = true) ||
+                 title.equals("Thriller", ignoreCase = true) ||
+                 title.equals("Beat It", ignoreCase = true) ||
+                 title.equals("Billie Jean", ignoreCase = true) ||
+                 title.equals("Human Nature", ignoreCase = true) ||
+                 title.equals("P.Y.T. (Pretty Young Thing)", ignoreCase = true) ||
+                 title.equals("The Lady in My Life", ignoreCase = true))
+            )
+
+            val isAfterHoursTrack = !isLocalArt && (
+                artist.contains("The Weeknd", ignoreCase = true) &&
+                (title.equals("Alone Again", ignoreCase = true) ||
+                 title.equals("Too Late", ignoreCase = true) ||
+                 title.equals("Hardest to Love", ignoreCase = true) ||
+                 title.equals("Scared to Live", ignoreCase = true) ||
+                 title.equals("Snowchild", ignoreCase = true) ||
+                 title.equals("Escape from LA", ignoreCase = true) ||
+                 title.equals("Heartless", ignoreCase = true) ||
+                 title.equals("Faith", ignoreCase = true) ||
+                 title.equals("Blinding Lights", ignoreCase = true) ||
+                 title.equals("In Your Eyes", ignoreCase = true) ||
+                 title.equals("Save Your Tears", ignoreCase = true) ||
+                 title.equals("Repeat After Me (Interlude)", ignoreCase = true) ||
+                 title.equals("After Hours", ignoreCase = true) ||
+                 title.equals("Until I Bleed Out", ignoreCase = true) ||
+                 title.equals("Nothing Compares", ignoreCase = true) ||
+                 title.equals("Missed You", ignoreCase = true) ||
+                 title.equals("Final Lullaby", ignoreCase = true))
+            )
+
+            when {
+                isLocalArt -> url
+                isMichaelBiopicTrack -> "file:///android_asset/img/imagenes con movimiento/michael_songs_from_the_motion_picture_artwork_square.webp"
+                isThrillerTrack -> "file:///android_asset/img/imagenes con movimiento/thriller_artwork_square.webp"
+                isAfterHoursTrack -> "file:///android_asset/img/imagenes con movimiento/after_hours_artwork_square.webp"
+                url is String -> {
+                    when {
+                        url.contains("=w") || url.contains("=s") -> {
+                            val index = url.indexOf("=w").takeIf { it != -1 } ?: url.indexOf("=s")
+                            url.substring(0, index) + "=w1200-h1200-l90-rj"
+                        }
+                        url.contains("ytimg.com/vi/") -> url
+                            .replace("hqdefault", "maxresdefault")
+                            .replace("mqdefault", "maxresdefault")
+                            .replace("sddefault", "maxresdefault")
+                            .replace("default", "maxresdefault")
+                        else -> url
                     }
-                    url.contains("ytimg.com/vi/") -> url
-                        .replace("hqdefault", "maxresdefault")
-                        .replace("mqdefault", "maxresdefault")
-                        .replace("sddefault", "maxresdefault")
-                        .replace("default", "maxresdefault")
-                    else -> url
                 }
-            } else url
+                else -> url
+            }
         }
 
         var dominantColor by remember { mutableStateOf(Color(0xFF1E1E1E)) }
@@ -259,6 +320,18 @@ fun PlayerScreen(
 
         val isLightBackground = dominantColor.luminance() > 0.6f
         val contentColor = if (isLightBackground) Color(0xFF1E1E1E) else Color.White
+
+        val animatedImageLoader = remember(context) {
+            coil.ImageLoader.Builder(context)
+                .components {
+                    if (android.os.Build.VERSION.SDK_INT >= 28) {
+                        add(coil.decode.ImageDecoderDecoder.Factory())
+                    } else {
+                        add(coil.decode.GifDecoder.Factory())
+                    }
+                }
+                .build()
+        }
 
         val savedItems by LibraryManager.savedItems.collectAsState()
         val isSaved = savedItems.any { it.id == playerState?.videoId }
@@ -371,6 +444,7 @@ fun PlayerScreen(
                         .data(hdArtUrl)
                         .crossfade(true)
                         .build(),
+                    imageLoader = animatedImageLoader,
                     contentDescription = "Album Art",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
