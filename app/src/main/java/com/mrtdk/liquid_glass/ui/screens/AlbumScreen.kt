@@ -65,9 +65,27 @@ fun AlbumScreen(
     val savedItems by LibraryManager.savedItems.collectAsState()
     val isSaved = savedItems.any { it.id == albumState.id }
 
-    val hdThumb = albumState.thumbnail
-        ?.replace("=w226-h226", "=w720-h720")
-        ?.replace("=w120-h120", "=w720-h720")
+    val isMichaelAlbum = albumState.title.equals("Michael: Songs From the Motion Picture", ignoreCase = true)
+
+    val hdThumb = if (isMichaelAlbum) {
+        "file:///android_asset/img/imagenes con movimiento/michael_songs_from_the_motion_picture_artwork_square.webp"
+    } else {
+        albumState.thumbnail
+            ?.replace("=w226-h226", "=w720-h720")
+            ?.replace("=w120-h120", "=w720-h720")
+    }
+
+    val animatedImageLoader = remember(context) {
+        coil.ImageLoader.Builder(context)
+            .components {
+                if (android.os.Build.VERSION.SDK_INT >= 28) {
+                    add(coil.decode.ImageDecoderDecoder.Factory())
+                } else {
+                    add(coil.decode.GifDecoder.Factory())
+                }
+            }
+            .build()
+    }
 
     // Extract dominant colour
     LaunchedEffect(hdThumb) {
@@ -147,6 +165,7 @@ fun AlbumScreen(
                     AsyncImage(
                         model = ImageRequest.Builder(context)
                             .data(hdThumb).crossfade(true).build(),
+                        imageLoader = animatedImageLoader,
                         contentDescription = albumState.title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()

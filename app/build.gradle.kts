@@ -81,6 +81,7 @@ dependencies {
     
     // Image loading
     implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("io.coil-kt:coil-gif:2.6.0")
     implementation("androidx.palette:palette-ktx:1.0.0")
     // Romaji translation
     implementation("com.atilika.kuromoji:kuromoji-ipadic:0.9.0")
