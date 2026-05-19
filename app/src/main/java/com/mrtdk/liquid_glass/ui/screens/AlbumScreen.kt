@@ -66,11 +66,16 @@ fun AlbumScreen(
     val isSaved = savedItems.any { it.id == albumState.id }
 
     val isMichaelAlbum = albumState.title.equals("Michael: Songs From the Motion Picture", ignoreCase = true)
+    val isThrillerAlbum = albumState.title.equals("Thriller", ignoreCase = true) || 
+                          (albumState.title.contains("Thriller", ignoreCase = true) && albumState.artist.contains("Michael Jackson", ignoreCase = true))
+    val isAfterHoursAlbum = albumState.title.equals("After Hours", ignoreCase = true) ||
+                            (albumState.title.contains("After Hours", ignoreCase = true) && albumState.artist.contains("The Weeknd", ignoreCase = true))
 
-    val hdThumb = if (isMichaelAlbum) {
-        "file:///android_asset/img/imagenes con movimiento/michael_songs_from_the_motion_picture_artwork_square.webp"
-    } else {
-        albumState.thumbnail
+    val hdThumb = when {
+        isMichaelAlbum -> "file:///android_asset/img/imagenes con movimiento/michael_songs_from_the_motion_picture_artwork_square.webp"
+        isThrillerAlbum -> "file:///android_asset/img/imagenes con movimiento/thriller_artwork_square.webp"
+        isAfterHoursAlbum -> "file:///android_asset/img/imagenes con movimiento/after_hours_artwork_square.webp"
+        else -> albumState.thumbnail
             ?.replace("=w226-h226", "=w720-h720")
             ?.replace("=w120-h120", "=w720-h720")
     }
