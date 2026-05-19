@@ -35,6 +35,12 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.AllInclusive
 import androidx.compose.material.icons.filled.ToggleOn
+import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.ToggleOff
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -57,6 +63,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -112,7 +119,11 @@ fun PlayerScreen(
     onSeek: (Long) -> Unit,
     onVolumeChange: (Float) -> Unit,
     onArtistSelected: (com.mrtdk.liquid_glass.ui.screens.ArtistState) -> Unit = {},
-    onSongSelected: (PlayerState) -> Unit = {}
+    onSongSelected: (PlayerState) -> Unit = {},
+    shuffleModeEnabled: Boolean = false,
+    repeatMode: Int = androidx.media3.common.Player.REPEAT_MODE_OFF,
+    onToggleShuffle: () -> Unit = {},
+    onToggleRepeat: () -> Unit = {}
 ) {
     AnimatedVisibility(
         visible = isVisible,
@@ -125,7 +136,11 @@ fun PlayerScreen(
         if (playerState == null) return@AnimatedVisibility
 
         val context = LocalContext.current
-        var volumePosition by remember { mutableFloatStateOf(0.7f) }
+        val audioManager = remember { context.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager }
+        val maxVolume = remember { audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC).toFloat() }
+        var volumePosition by remember { 
+            mutableFloatStateOf(audioManager.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) / maxVolume)
+        }
         val progress = if (duration > 0) currentPosition.toFloat() / duration.toFloat() else 0f
         var offsetY by remember { mutableFloatStateOf(0f) }
         var showQueue by remember { mutableStateOf(false) }
@@ -141,10 +156,15 @@ fun PlayerScreen(
             val url = playerState?.artUrl
             if (url is String) {
                 when {
-                    url.contains("=w") -> url.substringBefore("=w") + "=w1200-h1200-l90-rj"
+                    url.contains("=w") || url.contains("=s") -> {
+                        val index = url.indexOf("=w").takeIf { it != -1 } ?: url.indexOf("=s")
+                        url.substring(0, index) + "=w1200-h1200-l90-rj"
+                    }
                     url.contains("ytimg.com/vi/") -> url
                         .replace("hqdefault", "maxresdefault")
                         .replace("mqdefault", "maxresdefault")
+                        .replace("sddefault", "maxresdefault")
+                        .replace("default", "maxresdefault")
                     else -> url
                 }
             } else url
@@ -212,8 +232,16 @@ fun PlayerScreen(
                         }
                     if (bitmap != null) {
                         try {
-                            val colorInt = bitmap.getPixel(bitmap.width / 2, bitmap.height - 1)
-                            dominantColor = Color(colorInt)
+                            var r = 0L; var g = 0L; var b = 0L
+                            val y = bitmap.height - 1
+                            val w = bitmap.width
+                            for (x in 0 until w) {
+                                val pixel = bitmap.getPixel(x, y)
+                                r += android.graphics.Color.red(pixel)
+                                g += android.graphics.Color.green(pixel)
+                                b += android.graphics.Color.blue(pixel)
+                            }
+                            dominantColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
                         } catch (e: Exception) { }
                     }
                 }
@@ -314,7 +342,7 @@ fun PlayerScreen(
             val imgWidthTarget = if (isOverlayActive) lyricsImageSize 
                 else androidx.compose.ui.unit.lerp(maxWidth, 40.dp, dragProgress)
             val imgHeightTarget = if (isOverlayActive) lyricsImageSize 
-                else androidx.compose.ui.unit.lerp(maxWidth / 0.92f, 40.dp, dragProgress)
+                else androidx.compose.ui.unit.lerp(maxWidth * 1.15f, 40.dp, dragProgress)
                 
             val imgOffsetXTarget = if (isOverlayActive) 24.dp 
                 else androidx.compose.ui.unit.lerp(0.dp, targetOffsetX, dragProgress)
@@ -347,14 +375,17 @@ fun PlayerScreen(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
+                
+                // MÁSCARA DE FUNDIDO (EL PASO CLAVE)
                 if (!isOverlayActive) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(
                                 Brush.verticalGradient(
-                                    0.85f to Color.Transparent,
-                                    1f to dominantColor.copy(alpha = contentAlpha)
+                                    0.0f to Color.Transparent,
+                                    0.5f to Color.Transparent,
+                                    1.0f to dominantColor
                                 )
                             )
                     )
@@ -402,23 +433,108 @@ fun PlayerScreen(
                            })
                       }
                       
-                      if (showQueue) {
-                          Spacer(modifier = Modifier.height(24.dp))
-                          Row(modifier = Modifier.fillMaxWidth().padding(start = 124.dp, end = 24.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                               Box(modifier = Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(50)).background(contentColor.copy(alpha=0.15f)).clickable{}, contentAlignment=Alignment.Center) {
-                                   Icon(painterResource(id = R.drawable.shuffle), "Shuffle", tint=contentColor.copy(alpha=0.5f), modifier=Modifier.size(20.dp))
-                               }
-                               Box(modifier = Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(50)).background(contentColor.copy(alpha=0.15f)).clickable{}, contentAlignment=Alignment.Center) {
-                                   Icon(painterResource(id = R.drawable.repeat), "Repeat", tint=contentColor.copy(alpha=0.5f), modifier=Modifier.size(20.dp))
-                               }
-                               Box(modifier = Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(50)).background(contentColor.copy(alpha=0.8f)).clickable{}, contentAlignment=Alignment.Center) {
-                                   Icon(Icons.Default.AllInclusive, "Autoplay", tint=if (contentColor == Color.White) Color.Black else Color.White, modifier=Modifier.size(20.dp))
-                               }
-                               Box(modifier = Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(50)).background(contentColor.copy(alpha=0.8f)).clickable{}, contentAlignment=Alignment.Center) {
-                                   Icon(Icons.Default.ToggleOn, "Toggle", tint=if (contentColor == Color.White) Color.Black else Color.White, modifier=Modifier.size(24.dp))
-                               }
-                          }
-                           if (playerState != null && playerState.queue.isNotEmpty()) {
+                                                                    if (showQueue) {
+                            Spacer(modifier = Modifier.height(44.dp))
+                            
+                            val shuffleInteraction = remember { MutableInteractionSource() }
+                            val isShuffleActive = shuffleModeEnabled
+                            val isShufflePressed by shuffleInteraction.collectIsPressedAsState()
+                            val shuffleScale by animateFloatAsState(targetValue = if (isShufflePressed) 0.85f else 1.0f, label = "shuffleScale")
+                            val shuffleBgColor by animateColorAsState(targetValue = if (isShuffleActive) Color(0xFFFA243C) else contentColor.copy(alpha=0.15f), label = "shuffleBg")
+                            val shuffleIconColor by animateColorAsState(targetValue = if (isShuffleActive) Color.White else contentColor.copy(alpha=0.5f), label = "shuffleIcon")
+
+                            val repeatInteraction = remember { MutableInteractionSource() }
+                            val isRepeatActive = repeatMode != androidx.media3.common.Player.REPEAT_MODE_OFF
+                            val isRepeatPressed by repeatInteraction.collectIsPressedAsState()
+                            val repeatScale by animateFloatAsState(targetValue = if (isRepeatPressed) 0.85f else 1.0f, label = "repeatScale")
+                            val repeatBgColor by animateColorAsState(targetValue = if (isRepeatActive) Color(0xFFFA243C) else contentColor.copy(alpha=0.15f), label = "repeatBg")
+                            val repeatIconColor by animateColorAsState(targetValue = if (isRepeatActive) Color.White else contentColor.copy(alpha=0.5f), label = "repeatIcon")
+
+                            val autoplayInteraction = remember { MutableInteractionSource() }
+                            val isAutoplayActive = !playerState.isExclusiveQueue
+                            val isAutoplayPressed by autoplayInteraction.collectIsPressedAsState()
+                            val autoplayScale by animateFloatAsState(targetValue = if (isAutoplayPressed) 0.85f else 1.0f, label = "autoplayScale")
+                            val autoplayBgColor by animateColorAsState(targetValue = if (isAutoplayActive) Color(0xFFFA243C) else contentColor.copy(alpha=0.15f), label = "autoplayBg")
+                            val autoplayIconColor by animateColorAsState(targetValue = if (isAutoplayActive) Color.White else contentColor.copy(alpha=0.5f), label = "autoplayIcon")
+
+                            val romajiInteraction = remember { MutableInteractionSource() }
+                            val isRomajiActive = isRomajiEnabled
+                            val isRomajiPressed by romajiInteraction.collectIsPressedAsState()
+                            val romajiScale by animateFloatAsState(targetValue = if (isRomajiPressed) 0.85f else 1.0f, label = "romajiScale")
+                            val romajiBgColor by animateColorAsState(targetValue = if (isRomajiActive) Color(0xFFFA243C) else contentColor.copy(alpha=0.15f), label = "romajiBg")
+                            val romajiIconColor by animateColorAsState(targetValue = if (isRomajiActive) Color.White else contentColor.copy(alpha=0.5f), label = "romajiIcon")
+
+                            Row(modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .graphicsLayer(scaleX = shuffleScale, scaleY = shuffleScale)
+                                        .height(40.dp)
+                                        .clip(RoundedCornerShape(50))
+                                        .background(shuffleBgColor)
+                                        .clickable(
+                                            interactionSource = shuffleInteraction,
+                                            indication = null,
+                                            onClick = onToggleShuffle
+                                        ),
+                                    contentAlignment=Alignment.Center
+                                ) {
+                                    Icon(painterResource(id = R.drawable.shuffle), "Shuffle", tint=shuffleIconColor, modifier=Modifier.size(20.dp))
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .graphicsLayer(scaleX = repeatScale, scaleY = repeatScale)
+                                        .height(40.dp)
+                                        .clip(RoundedCornerShape(50))
+                                        .background(repeatBgColor)
+                                        .clickable(
+                                            interactionSource = repeatInteraction,
+                                            indication = null,
+                                            onClick = onToggleRepeat
+                                        ),
+                                    contentAlignment=Alignment.Center
+                                ) {
+                                    Icon(if (repeatMode == androidx.media3.common.Player.REPEAT_MODE_ONE) Icons.Default.RepeatOne else Icons.Default.Repeat, "Repeat", tint=repeatIconColor, modifier=Modifier.size(20.dp))
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .graphicsLayer(scaleX = autoplayScale, scaleY = autoplayScale)
+                                        .height(40.dp)
+                                        .clip(RoundedCornerShape(50))
+                                        .background(autoplayBgColor)
+                                        .clickable(
+                                            interactionSource = autoplayInteraction,
+                                            indication = null,
+                                            onClick = {
+                                                onSongSelected(playerState.copy(isExclusiveQueue = !playerState.isExclusiveQueue))
+                                            }
+                                        ),
+                                    contentAlignment=Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.AllInclusive, "Autoplay", tint=autoplayIconColor, modifier=Modifier.size(20.dp))
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .graphicsLayer(scaleX = romajiScale, scaleY = romajiScale)
+                                        .height(40.dp)
+                                        .clip(RoundedCornerShape(50))
+                                        .background(romajiBgColor)
+                                        .clickable(
+                                            interactionSource = romajiInteraction,
+                                            indication = null,
+                                            onClick = {
+                                                isRomajiEnabled = !isRomajiEnabled
+                                            }
+                                        ),
+                                    contentAlignment=Alignment.Center
+                                ) {
+                                    Icon(if (isRomajiActive) Icons.Default.ToggleOn else Icons.Default.ToggleOff, "Toggle", tint=romajiIconColor, modifier=Modifier.size(24.dp))
+                                }
+                            }
+                            if (playerState != null && playerState.queue.isNotEmpty()) {
                                Text(text = "Siguiente en Album/Playlist", color=contentColor, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top=32.dp, start=24.dp, end=24.dp, bottom=16.dp))
                            } else if (playerState?.isExclusiveQueue != true) {
                                 Column(modifier = Modifier.padding(top=32.dp, start=24.dp, end=24.dp, bottom=16.dp)) {
@@ -430,23 +546,30 @@ fun PlayerScreen(
                           LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                               // 1. Manual Queue Section (Album/Playlist)
                               if (playerState != null && playerState.queue.isNotEmpty()) {
-                                  items(playerState.queue.size) { index ->
-                                      val qItem = playerState.queue[index]
-                                      Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable {
-                                          swipeDirection = 1
-                                          val selectedItem = playerState.queue[index]
-                                          val remaining = playerState.queue.drop(index + 1)
-                                          val historyToAdd = playerState.queue.take(index).map { q -> PlayerState(q.title, q.artist, q.artUrl, q.videoId) }
-                                          // Note: history modification should ideally be handled by parent, but we do onSongSelected
-                                          onSongSelected(PlayerState(
-                                              title = qItem.title,
-                                              artist = qItem.artist,
-                                              artUrl = qItem.artUrl,
-                                              videoId = qItem.videoId,
-                                              queue = remaining,
-                                              isExclusiveQueue = playerState.isExclusiveQueue
-                                          ))
-                                      }) {
+                                   items(playerState.queue.size) { index ->
+                                       val qItem = playerState.queue[index]
+                                       val upgradedArt = qItem.artUrl?.let {
+                                           val itStr = it.toString()
+                                           if (itStr.contains("=w") || itStr.contains("=s")) {
+                                               val idx = itStr.indexOf("=w").takeIf { j -> j != -1 } ?: itStr.indexOf("=s")
+                                               itStr.substring(0, idx) + "=w1200-h1200-l90-rj"
+                                           } else if (itStr.contains("ytimg.com/vi/")) {
+                                               itStr.replace("hqdefault", "maxresdefault").replace("mqdefault", "maxresdefault").replace("sddefault", "maxresdefault").replace("default", "maxresdefault")
+                                           } else it
+                                       } ?: qItem.artUrl
+                                       
+                                       Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable {
+                                           swipeDirection = 1
+                                           val remaining = playerState.queue.drop(index + 1)
+                                           onSongSelected(PlayerState(
+                                               title = qItem.title,
+                                               artist = qItem.artist,
+                                               artUrl = upgradedArt,
+                                               videoId = qItem.videoId,
+                                               queue = remaining,
+                                               isExclusiveQueue = playerState.isExclusiveQueue
+                                           ))
+                                       }) {
                                           AsyncImage(model = ImageRequest.Builder(context).data(qItem.artUrl).crossfade(true).build(), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp)))
                                           Spacer(modifier = Modifier.width(12.dp))
                                           Column(modifier = Modifier.weight(1f)) {
@@ -459,12 +582,14 @@ fun PlayerScreen(
                               }
                               if (playerState?.isExclusiveQueue != true) items(upNextSongs.size) { i ->
                                   val song = upNextSongs[i]
-                                  // Upgrade thumbnail to HD for display
                                   val hdThumb = song.thumbnail?.let {
-                                      if (it.contains("=w")) it.substringBefore("=w") + "=w540-h540-l90-rj"
-                                      else if (it.contains("ytimg.com/vi/")) it.replace("hqdefault", "maxresdefault").replace("mqdefault", "maxresdefault")
-                                      else it
-                                  } ?: song.thumbnail
+                                       if (it.contains("=w") || it.contains("=s")) {
+                                           val idx = it.indexOf("=w").takeIf { j -> j != -1 } ?: it.indexOf("=s")
+                                           it.substring(0, idx) + "=w540-h540-l90-rj"
+                                       }
+                                       else if (it.contains("ytimg.com/vi/")) it.replace("hqdefault", "maxresdefault").replace("mqdefault", "maxresdefault")
+                                       else it
+                                   } ?: song.thumbnail
                                   Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable {
                                       swipeDirection = 1
                                       val upgradedArt = song.thumbnail?.let {
@@ -648,14 +773,12 @@ fun PlayerScreen(
                                   .padding(horizontal = 24.dp)
                                   .padding(top = 40.dp) // difuminado padding
                           ) {
-                              Slider(
+                              AppleMusicSlider(
                                   value = progress, onValueChange = { onSeek((it * duration).toLong()) },
-                                  modifier = Modifier.fillMaxWidth().height(16.dp),
-                                  colors = SliderDefaults.colors(
-                                      thumbColor = Color.Transparent,
-                                      activeTrackColor = contentColor.copy(alpha = 0.9f),
-                                      inactiveTrackColor = contentColor.copy(alpha = 0.3f)
-                                  )
+                                  modifier = Modifier.fillMaxWidth().height(24.dp),
+                                  activeColor = contentColor,
+                                  inactiveColor = contentColor.copy(alpha = 0.3f),
+                                  barHeightDp = 6.dp
                               )
                               Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                   Text(formatDuration(currentPosition), color = contentColor.copy(alpha = 0.6f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
@@ -788,14 +911,12 @@ fun PlayerScreen(
                       
                       Spacer(modifier = Modifier.height(24.dp))
                       
-                      Slider(
+                      AppleMusicSlider(
                           value = progress, onValueChange = { onSeek((it * duration).toLong()) },
-                          modifier = Modifier.fillMaxWidth().height(16.dp),
-                          colors = SliderDefaults.colors(
-                              thumbColor = Color.Transparent,
-                              activeTrackColor = contentColor.copy(alpha = 0.9f),
-                              inactiveTrackColor = contentColor.copy(alpha = 0.3f)
-                          )
+                          modifier = Modifier.fillMaxWidth().height(24.dp),
+                          activeColor = contentColor,
+                          inactiveColor = contentColor.copy(alpha = 0.3f),
+                          barHeightDp = 6.dp
                       )
                       Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                           Text(formatDuration(currentPosition), color = contentColor.copy(alpha = 0.6f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
@@ -813,7 +934,11 @@ fun PlayerScreen(
                               progress = progress, currentPosition = currentPosition, duration = duration,
                               isPlaying = isPlaying, contentColor = contentColor, volumePosition = volumePosition,
                               showLyrics = showLyrics, showQueue = showQueue,
-                              onSeek = onSeek, onTogglePlayPause = onTogglePlayPause, onVolumeChange = { v -> volumePosition = v; onVolumeChange(v) },
+                              onSeek = onSeek, onTogglePlayPause = onTogglePlayPause, onVolumeChange = { v -> 
+                                  volumePosition = v
+                                  audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, (v * maxVolume).toInt(), 0)
+                                  onVolumeChange(v) 
+                              },
                               onToggleLyrics = { showLyrics = !showLyrics; showQueue = false }, onToggleQueue = { showQueue = !showQueue; showLyrics = false },
                               includeVolumeAndIcons = true,
                               includeProgress = false,
@@ -1091,14 +1216,12 @@ fun PlayerBottomControls(
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
         if (includeProgress) {
-            Slider(
+            AppleMusicSlider(
                 value = progress, onValueChange = { onSeek((it * duration).toLong()) },
-                modifier = Modifier.fillMaxWidth().height(16.dp),
-                colors = SliderDefaults.colors(
-                    thumbColor = Color.Transparent,
-                    activeTrackColor = contentColor.copy(alpha = 0.9f),
-                    inactiveTrackColor = contentColor.copy(alpha = 0.3f)
-                )
+                modifier = Modifier.fillMaxWidth().height(24.dp),
+                activeColor = contentColor,
+                inactiveColor = contentColor.copy(alpha = 0.3f),
+                barHeightDp = 6.dp
             )
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(formatDuration(currentPosition), color = contentColor.copy(alpha = 0.6f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
@@ -1142,10 +1265,12 @@ fun PlayerBottomControls(
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(16.dp))
-                Slider(
+                AppleMusicSlider(
                     value = volumePosition, onValueChange = { onVolumeChange(it) },
-                    modifier = Modifier.weight(1f).height(16.dp),
-                    colors = SliderDefaults.colors(thumbColor = contentColor, activeTrackColor = contentColor.copy(alpha = 0.9f), inactiveTrackColor = contentColor.copy(alpha = 0.2f))
+                    modifier = Modifier.weight(1f).height(24.dp),
+                    activeColor = contentColor,
+                    inactiveColor = contentColor.copy(alpha = 0.2f),
+                    barHeightDp = 6.dp
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Icon(
@@ -1234,5 +1359,81 @@ fun AnimatedSkipButton(
                 .size(52.dp)
                 .graphicsLayer { scaleX = scale; scaleY = scale }
         )
+    }
+}
+
+@Composable
+fun AppleMusicSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+    activeColor: Color = Color.White,
+    inactiveColor: Color = Color.White.copy(alpha = 0.3f),
+    barHeightDp: androidx.compose.ui.unit.Dp = 6.dp
+) {
+    var isDragging by remember { mutableStateOf(false) }
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isDragging) 1.5f else 1f,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 150, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+        label = "slider_scale"
+    )
+    var sliderWidth by remember { mutableFloatStateOf(0f) }
+
+    Box(
+        modifier = modifier
+            .graphicsLayer {
+                scaleY = scale
+            }
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val down = awaitFirstDown()
+                        isDragging = true
+                        if (sliderWidth > 0) {
+                            onValueChange((down.position.x / sliderWidth).coerceIn(0f, 1f))
+                        }
+                        down.consume()
+                        
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val dragEvent = event.changes.firstOrNull()
+                            if (dragEvent != null && dragEvent.pressed) {
+                                if (sliderWidth > 0) {
+                                    onValueChange((dragEvent.position.x / sliderWidth).coerceIn(0f, 1f))
+                                }
+                                dragEvent.consume()
+                            } else {
+                                break
+                            }
+                        }
+                        isDragging = false
+                    }
+                }
+            }
+            .onSizeChanged { sliderWidth = it.width.toFloat() }
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val height = size.height
+            val width = size.width
+            val barHeight = barHeightDp.toPx()
+            val cornerRadius = androidx.compose.ui.geometry.CornerRadius(barHeight / 2, barHeight / 2)
+            val centerY = height / 2 - barHeight / 2
+
+            // Inactive track
+            drawRoundRect(
+                color = inactiveColor,
+                topLeft = Offset(0f, centerY),
+                size = Size(width, barHeight),
+                cornerRadius = cornerRadius
+            )
+
+            // Active track
+            drawRoundRect(
+                color = activeColor,
+                topLeft = Offset(0f, centerY),
+                size = Size(width * value, barHeight),
+                cornerRadius = cornerRadius
+            )
+        }
     }
 }

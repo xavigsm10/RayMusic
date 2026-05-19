@@ -32,11 +32,12 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import com.mrtdk.liquid_glass.data.LibraryManager
 import com.mrtdk.liquid_glass.ui.components.SongGridItem
 import com.mrtdk.liquid_glass.ui.components.PlaylistContextMenuOverlay
-
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.ArrowCircleDown
 import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.platform.LocalUriHandler
@@ -78,6 +79,7 @@ fun BibliotecaScreen(
     
     var contextMenuPlaylist by remember { mutableStateOf<com.mrtdk.liquid_glass.data.Playlist?>(null) }
     var showSettings by remember { mutableStateOf(false) }
+    var updateReleaseInfo by remember { mutableStateOf<com.mrtdk.liquid_glass.utils.Updater.ReleaseInfo?>(null) }
 
     LaunchedEffect(Unit) {
         val scanner = LocalMediaScanner(context)
@@ -120,39 +122,105 @@ fun BibliotecaScreen(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
                 )
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
                         .background(Color(0xFF1C1C1E))
-                        .clickable {
-                            checkForUpdates(context)
-                        }
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        Text(
-                            text = "Buscar actualizaciones",
-                            color = Color.White,
-                            fontSize = 16.sp
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Versión actual: 0.5.3",
-                            color = Color.Gray,
-                            fontSize = 14.sp
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                Toast.makeText(context, "Buscando actualizaciones...", Toast.LENGTH_SHORT).show()
+                                com.mrtdk.liquid_glass.utils.Updater.checkUpdate { info ->
+                                    CoroutineScope(Dispatchers.Main).launch {
+                                        if (info != null) {
+                                            updateReleaseInfo = info
+                                        } else {
+                                            Toast.makeText(context, "Ya tienes la última versión", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
+                            }
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "Buscar actualizaciones",
+                                color = Color.White,
+                                fontSize = 16.sp
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Versión actual: 0.5.3",
+                                color = Color.Gray,
+                                fontSize = 14.sp
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.ArrowForwardIos,
+                            contentDescription = null,
+                            tint = Color.Gray,
+                            modifier = Modifier.size(16.dp)
                         )
                     }
-                    Icon(
-                        imageVector = Icons.Default.ArrowForwardIos,
-                        contentDescription = null,
-                        tint = Color.Gray,
-                        modifier = Modifier.size(16.dp)
+                    
+                    androidx.compose.material3.Divider(
+                        modifier = Modifier.padding(start = 16.dp),
+                        color = Color.DarkGray.copy(alpha = 0.5f),
+                        thickness = 0.5.dp
                     )
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                uriHandler.openUri("https://github.com/xavigsm10/RayMusic")
+                            }
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                painter = androidx.compose.ui.res.painterResource(id = com.mrtdk.liquid_glass.R.drawable.ic_github),
+                                contentDescription = "GitHub",
+                                tint = Color.White,
+                                modifier = Modifier.size(32.dp).padding(end = 12.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = "Repositorio de la aplicación",
+                                    color = Color.White,
+                                    fontSize = 16.sp
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Ver el código fuente en GitHub",
+                                    color = Color.Gray,
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                        Icon(
+                            imageVector = Icons.Default.ArrowForwardIos,
+                            contentDescription = null,
+                            tint = Color.Gray,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
+        }
+        
+        updateReleaseInfo?.let { info ->
+            com.mrtdk.liquid_glass.ui.components.UpdateDialog(
+                releaseInfo = info,
+                onDismiss = { updateReleaseInfo = null }
+            )
         }
         return
     }
@@ -499,71 +567,4 @@ fun BibliotecaScreen(
     }
     }
     PlaylistContextMenuOverlay(playlist = contextMenuPlaylist, onDismiss = { contextMenuPlaylist = null })
-}
-
-fun checkForUpdates(context: android.content.Context) {
-    Toast.makeText(context, "Buscando actualizaciones...", Toast.LENGTH_SHORT).show()
-    CoroutineScope(Dispatchers.IO).launch {
-        try {
-            val url = URL("https://api.github.com/repos/xavigsm10/RayMusic/releases/latest")
-            val connection = url.openConnection() as HttpURLConnection
-            connection.requestMethod = "GET"
-            connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
-            
-            if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-                val response = connection.inputStream.bufferedReader().readText()
-                val jsonObject = JSONObject(response)
-                val tagName = jsonObject.getString("tag_name")
-                val assets = jsonObject.getJSONArray("assets")
-                var downloadUrl: String? = null
-                
-                for (i in 0 until assets.length()) {
-                    val asset = assets.getJSONObject(i)
-                    if (asset.getString("name").endsWith(".apk")) {
-                        downloadUrl = asset.getString("browser_download_url")
-                        break
-                    }
-                }
-                
-                withContext(Dispatchers.Main) {
-                    if (downloadUrl != null) {
-                        val currentVersion = "0.5.3"
-                        if (tagName.replace("v", "") != currentVersion) {
-                            downloadApk(context, downloadUrl, tagName)
-                        } else {
-                            Toast.makeText(context, "Ya tienes la última versión ($currentVersion)", Toast.LENGTH_SHORT).show()
-                        }
-                    } else {
-                        Toast.makeText(context, "No se encontró el APK en la última versión", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            } else {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Error al buscar actualizaciones", Toast.LENGTH_SHORT).show()
-                }
-            }
-        } catch (e: Exception) {
-            withContext(Dispatchers.Main) {
-                Toast.makeText(context, "Error de red: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-}
-
-fun downloadApk(context: android.content.Context, url: String, version: String) {
-    try {
-        val request = DownloadManager.Request(Uri.parse(url))
-            .setTitle("RayMusic $version")
-            .setDescription("Descargando actualización...")
-            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "RayMusic_$version.apk")
-            .setAllowedOverMetered(true)
-            .setAllowedOverRoaming(true)
-        
-        val downloadManager = context.getSystemService(android.content.Context.DOWNLOAD_SERVICE) as DownloadManager
-        downloadManager.enqueue(request)
-        Toast.makeText(context, "Descargando actualización...", Toast.LENGTH_SHORT).show()
-    } catch (e: Exception) {
-        Toast.makeText(context, "Error al iniciar descarga: ${e.message}", Toast.LENGTH_SHORT).show()
-    }
 }
