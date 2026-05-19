@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -299,19 +300,69 @@ fun ArtistScreen(
 
             // ── TOP SONGS ──────────────────────────────────
             if (topSongsSection != null) {
-                val songs = topSongsSection.items.filterIsInstance<SongItem>()
+                val songs = topSongsSection.items.filterIsInstance<SongItem>().take(10)
                 item { Text("Top songs", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) }
-                items(songs.take(5).size) { i ->
-                    val song = songs[i]
-                    Row(modifier = Modifier.fillMaxWidth().background(Color.Black).clickable { onSongSelected(PlayerState(title = song.title, artist = song.artists.joinToString { it.name }, artUrl = song.thumbnail, videoId = song.id)) }.padding(horizontal = 20.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("${i + 1}", color = Color.Gray, fontSize = 16.sp, modifier = Modifier.width(28.dp))
-                        AsyncImage(model = ImageRequest.Builder(context).data(song.thumbnail).crossfade(true).build(), contentDescription = song.title, contentScale = ContentScale.Crop, modifier = Modifier.size(48.dp).clip(RoundedCornerShape(6.dp)))
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(song.title, color = Color.White, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(song.artists.joinToString { it.name }, color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                item {
+                    val chunkedSongs = songs.chunked(4)
+                    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+                    val colWidth = minOf(screenWidth - 40.dp, 340.dp)
+                    
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(start = 20.dp, end = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(chunkedSongs.size) { colIndex ->
+                            val columnSongs = chunkedSongs[colIndex]
+                            Column(
+                                modifier = Modifier
+                                    .width(colWidth)
+                                    .wrapContentHeight()
+                            ) {
+                                columnSongs.forEachIndexed { itemIndex, song ->
+                                    val overallIndex = colIndex * 4 + itemIndex
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                val upgradedArt = upgradeArtToHD(song.thumbnail)
+                                                val artistQueue = songs.drop(overallIndex + 1).map { t ->
+                                                    QueueItem(
+                                                        title = t.title,
+                                                        artist = t.artists.joinToString { it.name },
+                                                        artUrl = upgradeArtToHD(t.thumbnail),
+                                                        videoId = t.id
+                                                    )
+                                                }
+                                                onSongSelected(PlayerState(
+                                                    title = song.title,
+                                                    artist = song.artists.joinToString { it.name },
+                                                    artUrl = upgradedArt,
+                                                    videoId = song.id,
+                                                    queue = artistQueue,
+                                                    isExclusiveQueue = true
+                                                ))
+                                            }
+                                            .padding(vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text("${overallIndex + 1}", color = Color.Gray, fontSize = 16.sp, modifier = Modifier.width(28.dp))
+                                        AsyncImage(
+                                            model = ImageRequest.Builder(context).data(song.thumbnail).crossfade(true).build(),
+                                            contentDescription = song.title,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(6.dp))
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(song.title, color = Color.White, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            Text(song.artists.joinToString { it.name }, color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        }
+                                        IconButton(onClick = { }) { Icon(Icons.Default.MoreVert, null, tint = Color.Gray) }
+                                    }
+                                }
+                            }
                         }
-                        IconButton(onClick = { }) { Icon(Icons.Default.MoreVert, null, tint = Color.Gray) }
                     }
                 }
             }
@@ -644,5 +695,18 @@ private fun ItemCard(
             }
         }
         else -> {}
+    }
+}
+
+private fun upgradeArtToHD(url: String?): String? {
+    return url?.let {
+        when {
+            it.contains("=w") || it.contains("=s") -> {
+                val idx = it.indexOf("=w").takeIf { i -> i != -1 } ?: it.indexOf("=s")
+                it.substring(0, idx) + "=w1200-h1200-l90-rj"
+            }
+            it.contains("ytimg.com/vi/") -> it.replace("hqdefault", "maxresdefault").replace("mqdefault", "maxresdefault")
+            else -> it
+        }
     }
 }

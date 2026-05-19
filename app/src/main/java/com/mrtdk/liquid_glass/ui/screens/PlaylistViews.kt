@@ -480,7 +480,16 @@ fun PlaylistDetailScreen(
                         drawable.draw(canvas)
                     }
                 try {
-                    val sampledColor = Color(bitmap.getPixel(bitmap.width / 2, bitmap.height - 1))
+                    var r = 0L; var g = 0L; var b = 0L
+                    val y = bitmap.height - 1
+                    val w = bitmap.width
+                    for (x in 0 until w) {
+                        val pixel = bitmap.getPixel(x, y)
+                        r += android.graphics.Color.red(pixel)
+                        g += android.graphics.Color.green(pixel)
+                        b += android.graphics.Color.blue(pixel)
+                    }
+                    val sampledColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
                     dominantColor = sampledColor
                     contentColor = if (sampledColor.luminance() > 0.5f) Color.Black else Color.White
                 } catch (e: Exception) {}
@@ -501,7 +510,7 @@ fun PlaylistDetailScreen(
             GlassContainer(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1f),
+                    .aspectRatio(1f / 1.15f),
                 content = {
                     if (coverUrl != null) {
                         AsyncImage(
