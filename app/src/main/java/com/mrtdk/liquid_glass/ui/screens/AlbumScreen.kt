@@ -27,7 +27,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.res.painterResource
+import com.mrtdk.liquid_glass.R
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -85,7 +88,16 @@ fun AlbumScreen(
                         drawable.draw(c)
                     }
                 try {
-                    dominantColor = Color(bmp.getPixel(bmp.width / 2, bmp.height - 1))
+                    var r = 0L; var g = 0L; var b = 0L
+                    val y = bmp.height - 1
+                    val w = bmp.width
+                    for (x in 0 until w) {
+                        val pixel = bmp.getPixel(x, y)
+                        r += android.graphics.Color.red(pixel)
+                        g += android.graphics.Color.green(pixel)
+                        b += android.graphics.Color.blue(pixel)
+                    }
+                    dominantColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
                 } catch (e: Exception) { }
             }
         }
@@ -130,7 +142,7 @@ fun AlbumScreen(
             com.mrtdk.glass.GlassContainer(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1f),
+                    .aspectRatio(1f / 1.15f),
                 content = {
                     AsyncImage(
                         model = ImageRequest.Builder(context)
@@ -147,7 +159,6 @@ fun AlbumScreen(
                                 Brush.verticalGradient(
                                     0.0f to Color.Transparent,
                                     0.75f to Color.Transparent,
-                                    0.9f to dominantColor.copy(alpha = 0.5f),
                                     1.0f to dominantColor
                                 )
                             )
@@ -214,7 +225,6 @@ fun AlbumScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(dominantColor)
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -224,7 +234,8 @@ fun AlbumScreen(
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -234,14 +245,13 @@ fun AlbumScreen(
                     fontWeight = FontWeight.Medium
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = buildString {
-                        if (albumState.year != null) append("${albumState.year} · ")
-                        append("🎵 Dolby Atmos · 🔊 Lossless")
-                    },
-                    color = contentColor.copy(alpha = 0.5f),
-                    fontSize = 12.sp
-                )
+                if (albumState.year != null) {
+                    Text(
+                        text = albumState.year.toString(),
+                        color = contentColor.copy(alpha = 0.5f),
+                        fontSize = 12.sp
+                    )
+                }
             }
         }
 
@@ -250,7 +260,6 @@ fun AlbumScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(dominantColor)
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -261,16 +270,38 @@ fun AlbumScreen(
                         .size(44.dp)
                         .clip(CircleShape)
                         .background(contentColor.copy(alpha = 0.15f))
-                        .clickable { },
+                        .clickable {
+                            if (tracks.isNotEmpty()) {
+                                val shuffledTracks = tracks.shuffled()
+                                val s = shuffledTracks.first()
+                                val albumQueue = shuffledTracks.drop(1).map { t ->
+                                    QueueItem(
+                                        title = t.title,
+                                        artist = t.artists.joinToString { it.name },
+                                        artUrl = hdThumb,
+                                        videoId = t.id
+                                    )
+                                }
+                                onSongSelected(
+                                    PlayerState(
+                                        title = s.title,
+                                        artist = s.artists.joinToString { it.name },
+                                        artUrl = hdThumb,
+                                        videoId = s.id,
+                                        queue = albumQueue,
+                                        isExclusiveQueue = true
+                                    )
+                                )
+                            }
+                        },
                     contentAlignment = Alignment.Center
                 ) {
-                    Canvas(modifier = Modifier.size(20.dp)) {
-                        val w = size.width; val h = size.height
-                        drawLine(contentColor, androidx.compose.ui.geometry.Offset(0f, 0f),
-                            androidx.compose.ui.geometry.Offset(w, h), strokeWidth = 2.5f)
-                        drawLine(contentColor, androidx.compose.ui.geometry.Offset(w, 0f),
-                            androidx.compose.ui.geometry.Offset(0f, h), strokeWidth = 2.5f)
-                    }
+                    Icon(
+                        painter = painterResource(id = R.drawable.shuffle),
+                        contentDescription = "Shuffle",
+                        tint = contentColor,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
 
                 // ▶ Play button
@@ -312,9 +343,9 @@ fun AlbumScreen(
                             drawPath(Path().apply {
                                 moveTo(0f, 0f); lineTo(size.width, size.height / 2f)
                                 lineTo(0f, size.height); close()
-                            }, if (isLightBackground) Color.White else Color.Black)
+                            }, dominantColor)
                         }
-                        Text("Play", color = if (isLightBackground) Color.White else Color.Black, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Play", color = dominantColor, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
 

@@ -18,6 +18,31 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("keystore/release.keystore")
+            storePassword = System.getenv("STORE_PASSWORD")
+            keyAlias = System.getenv("KEY_ALIAS")
+            keyPassword = System.getenv("KEY_PASSWORD")
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+            signingConfig = signingConfigs.getByName("release")
+        }
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -56,6 +81,7 @@ dependencies {
     
     // Image loading
     implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("androidx.palette:palette-ktx:1.0.0")
     // Romaji translation
     implementation("com.atilika.kuromoji:kuromoji-ipadic:0.9.0")
     implementation("com.anyascii:anyascii:0.3.2")

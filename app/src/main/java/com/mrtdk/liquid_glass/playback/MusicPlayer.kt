@@ -40,6 +40,12 @@ class MusicPlayer(private val context: Context) {
     private val _songEnded = MutableStateFlow(0)
     val songEnded: StateFlow<Int> = _songEnded
 
+    private val _shuffleModeEnabled = MutableStateFlow(false)
+    val shuffleModeEnabled: StateFlow<Boolean> = _shuffleModeEnabled
+
+    private val _repeatMode = MutableStateFlow(Player.REPEAT_MODE_OFF)
+    val repeatMode: StateFlow<Int> = _repeatMode
+
     init {
         val sessionToken = SessionToken(context, ComponentName(context, MusicService::class.java))
         controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
@@ -67,10 +73,20 @@ class MusicPlayer(private val context: Context) {
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                     _duration.value = controller?.duration ?: 0L
                 }
+
+                override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+                    _shuffleModeEnabled.value = shuffleModeEnabled
+                }
+
+                override fun onRepeatModeChanged(repeatMode: Int) {
+                    _repeatMode.value = repeatMode
+                }
             })
             // Initial state
             _isPlaying.value = controller?.isPlaying ?: false
             _duration.value = controller?.duration ?: 0L
+            _shuffleModeEnabled.value = controller?.shuffleModeEnabled ?: false
+            _repeatMode.value = controller?.repeatMode ?: Player.REPEAT_MODE_OFF
             if (_isPlaying.value) startPolling()
         }, MoreExecutors.directExecutor())
     }
@@ -116,6 +132,28 @@ class MusicPlayer(private val context: Context) {
         controller?.play()
     }
 
+    fun playOnlineSongs(songs: List<MediaItem>, startIndex: Int = 0) {
+        controller?.setMediaItems(songs, startIndex, 0L)
+        controller?.prepare()
+        controller?.play()
+    }
+
+    fun addOnlineSongToQueue(videoId: String, title: String? = null, artist: String? = null, artUrl: String? = null) {
+        val metadata = androidx.media3.common.MediaMetadata.Builder().apply {
+            title?.let { setTitle(it) }
+            artist?.let { setArtist(it) }
+            artUrl?.let { setArtworkUri(Uri.parse(it)) }
+        }.build()
+        
+        val mediaItem = MediaItem.Builder()
+            .setMediaId(videoId)
+            .setUri(Uri.parse("yt://$videoId"))
+            .setMediaMetadata(metadata)
+            .build()
+            
+        controller?.addMediaItem(mediaItem)
+    }
+
     fun togglePlayPause() {
         if (controller?.isPlaying == true) {
             pause()
@@ -135,6 +173,14 @@ class MusicPlayer(private val context: Context) {
 
     fun setVolume(volume: Float) {
         controller?.volume = volume
+    }
+
+    fun setShuffleModeEnabled(enabled: Boolean) {
+        controller?.shuffleModeEnabled = enabled
+    }
+
+    fun setRepeatMode(repeatMode: Int) {
+        controller?.repeatMode = repeatMode
     }
 
     fun release() {

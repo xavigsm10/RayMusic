@@ -1,5 +1,11 @@
 package com.mrtdk.liquid_glass.ui.screens
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
+import coil.Coil
+import coil.request.SuccessResult
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -198,7 +204,7 @@ fun InicioScreen(
                 allParaTi.addAll(relatedPage.songs.drop(6).take(5))
 
                 val availableSongs = relatedPage.songs.drop(11)
-                allSuggestions.addAll(availableSongs.take(4))
+                allSuggestions.addAll(availableSongs.take(8))
 
                 // Primary similar section for this seed
                 val primaryItems = mutableListOf<com.echo.innertube.models.YTItem>()
@@ -227,7 +233,7 @@ fun InicioScreen(
                     is com.echo.innertube.models.ArtistItem -> it.id
                     else -> it.toString()
                 }
-            }.shuffled().take(7)
+            }.shuffled().take(15)
 
             state.similarSections = sections.distinctBy { it.artistName }.take(5)
         }
@@ -272,7 +278,7 @@ fun InicioScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    items(displaySuggestions.take(7).size) { index ->
+                    items(displaySuggestions.take(15).size) { index ->
                         val itm = displaySuggestions[index]
                         FeaturedSuggestionCard(
                             context = context,
@@ -323,40 +329,32 @@ fun InicioScreen(
             item {
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(20.dp)
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    val columns = state.quickPickSongs.chunked(3)
-                    items(columns.size) { colIndex ->
-                        Column(modifier = Modifier.width(340.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            columns[colIndex].forEach { song ->
-                                val hdThumb = upgradeThumb(song.thumbnail)
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            onSongSelected(PlayerState(
-                                                title = song.title,
-                                                artist = song.artists.joinToString { it.name },
-                                                artUrl = upgradeThumbHD(song.thumbnail),
-                                                videoId = song.id
-                                            ))
-                                        },
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    AsyncImage(
-                                        model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
-                                        contentDescription = song.title,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier.size(72.dp).clip(RoundedCornerShape(8.dp))
-                                    )
-                                    Spacer(modifier = Modifier.width(14.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(song.title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        Text(song.artists.joinToString { it.name }, color = Color.Gray, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    }
-                                    Icon(Icons.Default.MoreVert, contentDescription = "More", tint = Color.Gray, modifier = Modifier.size(24.dp))
+                    items(state.quickPickSongs.size) { index ->
+                        val song = state.quickPickSongs[index]
+                        val hdThumb = upgradeThumb(song.thumbnail)
+                        Column(
+                            modifier = Modifier
+                                .width(180.dp)
+                                .clickable {
+                                    onSongSelected(PlayerState(
+                                        title = song.title,
+                                        artist = song.artists.joinToString { it.name },
+                                        artUrl = upgradeThumbHD(song.thumbnail),
+                                        videoId = song.id
+                                    ))
                                 }
-                            }
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                                contentDescription = song.title,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.size(180.dp).clip(RoundedCornerShape(12.dp))
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(song.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(song.artists.joinToString { it.name }, color = Color.Gray, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
@@ -704,59 +702,105 @@ private fun FeaturedSuggestionCard(
     }
 
     val hdThumb = upgradeThumb(thumbUrl)
+    var dominantColor by remember { mutableStateOf(Color(0xFF1C1C1E)) }
 
-    // Single Box: image fills entire card, text overlays at the bottom
-    Box(
+    LaunchedEffect(hdThumb) {
+        if (hdThumb != null) {
+            val request = ImageRequest.Builder(context)
+                .data(hdThumb)
+                .allowHardware(false)
+                .size(150)
+                .build()
+            val result = Coil.imageLoader(context).execute(request)
+            if (result is SuccessResult) {
+                val drawable = result.drawable
+                val bitmap = (drawable as? BitmapDrawable)?.bitmap
+                    ?: Bitmap.createBitmap(
+                        drawable.intrinsicWidth.coerceAtLeast(1),
+                        drawable.intrinsicHeight.coerceAtLeast(1),
+                        Bitmap.Config.ARGB_8888
+                    ).also {
+                        val canvas = Canvas(it)
+                        drawable.setBounds(0, 0, canvas.width, canvas.height)
+                        drawable.draw(canvas)
+                    }
+                
+                try {
+                    var r = 0L; var g = 0L; var b = 0L
+                    val y = bitmap.height - 1
+                    val w = bitmap.width
+                    for (x in 0 until w) {
+                        val pixel = bitmap.getPixel(x, y)
+                        r += android.graphics.Color.red(pixel)
+                        g += android.graphics.Color.green(pixel)
+                        b += android.graphics.Color.blue(pixel)
+                    }
+                    dominantColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
+                } catch (e: Exception) { }
+            }
+        }
+    }
+
+    // Card container
+    Column(
         modifier = Modifier
             .width(280.dp)
             .height(380.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF1C1C1E))
+            .clip(RoundedCornerShape(20.dp))
+            .background(dominantColor)
             .clickable(onClick = clickAction)
     ) {
-        // Layer 1: Full-bleed album art
-        AsyncImage(
-            model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
-            contentDescription = titleStr,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
-
-        // Layer 2: Bottom gradient overlay (transparent → dark)
+        // Image Layer: full-width, top-aligned image with bottom fade
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.55f)
-                .align(Alignment.BottomCenter)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.Black.copy(alpha = 0.75f),
-                            Color.Black.copy(alpha = 0.92f)
+                .height(270.dp)
+        ) {
+            AsyncImage(
+                model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                contentDescription = titleStr,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+
+            // Premium fade-out to dominant color at the bottom of the image
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(90.dp)
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                dominantColor
+                            )
                         )
                     )
-                )
-        )
+            )
+        }
 
-        // Layer 3: Text floating over the gradient
+        // Text Content
         Column(
             modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(horizontal = 14.dp, vertical = 14.dp)
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(horizontal = 18.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.Center
         ) {
             Text(
                 titleStr,
                 color = Color.White,
-                fontSize = 16.sp,
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 subtitleStr,
                 color = Color.White.copy(alpha = 0.7f),
-                fontSize = 13.sp,
+                fontSize = 14.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -768,7 +812,10 @@ private fun FeaturedSuggestionCard(
 private fun upgradeThumb(url: String?): String? {
     return url?.let {
         when {
-            it.contains("=w") -> it.substringBefore("=w") + "=w540-h540-l90-rj"
+            it.contains("=w") || it.contains("=s") -> {
+                val idx = it.indexOf("=w").takeIf { i -> i != -1 } ?: it.indexOf("=s")
+                it.substring(0, idx) + "=w540-h540-l90-rj"
+            }
             it.contains("ytimg.com/vi/") -> it.replace("hqdefault", "maxresdefault").replace("mqdefault", "maxresdefault")
             else -> it
         }
@@ -778,7 +825,10 @@ private fun upgradeThumb(url: String?): String? {
 private fun upgradeThumbHD(url: String?): String? {
     return url?.let {
         when {
-            it.contains("=w") -> it.substringBefore("=w") + "=w1200-h1200-l90-rj"
+            it.contains("=w") || it.contains("=s") -> {
+                val idx = it.indexOf("=w").takeIf { i -> i != -1 } ?: it.indexOf("=s")
+                it.substring(0, idx) + "=w1200-h1200-l90-rj"
+            }
             it.contains("ytimg.com/vi/") -> it.replace("hqdefault", "maxresdefault").replace("mqdefault", "maxresdefault")
             else -> it
         }

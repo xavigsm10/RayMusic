@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -112,6 +113,17 @@ class MainActivity : ComponentActivity() {
                     
                     var searchQuery by remember { mutableStateOf("") }
                     var isSearchSubmitted by remember { mutableStateOf(false) }
+                    
+                    var updateReleaseInfo by remember { mutableStateOf<com.mrtdk.liquid_glass.utils.Updater.ReleaseInfo?>(null) }
+                    LaunchedEffect(Unit) {
+                        com.mrtdk.liquid_glass.utils.Updater.checkUpdate { info ->
+                            if (info != null) {
+                                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                                    updateReleaseInfo = info
+                                }
+                            }
+                        }
+                    }
 
                     // Persistent states for tabs
                     val inicioState = remember { com.mrtdk.liquid_glass.ui.screens.InicioState() }
@@ -152,7 +164,10 @@ class MainActivity : ComponentActivity() {
                         if (url != null) {
                             val hdUrl = if (url is String) {
                                 when {
-                                    url.contains("=w") -> url.substringBefore("=w") + "=w300-h300-rj"
+                                    url.contains("=w") || url.contains("=s") -> {
+                                        val idx = url.indexOf("=w").takeIf { j -> j != -1 } ?: url.indexOf("=s")
+                                        url.substring(0, idx) + "=w300-h300-rj"
+                                    }
                                     url.contains("ytimg.com/vi/") -> url.replace("hqdefault", "mqdefault")
                                     else -> url
                                 }
@@ -183,6 +198,8 @@ class MainActivity : ComponentActivity() {
                     val isPlaying by musicPlayer!!.isPlaying.collectAsState()
                     val currentPosition by musicPlayer!!.currentPosition.collectAsState()
                     val duration by musicPlayer!!.duration.collectAsState()
+                    val shuffleModeEnabled by musicPlayer!!.shuffleModeEnabled.collectAsState()
+                    val repeatMode by musicPlayer!!.repeatMode.collectAsState()
 
                     var isBottomBarCollapsed by remember { mutableStateOf(false) }
 
@@ -281,7 +298,10 @@ class MainActivity : ComponentActivity() {
                             val next = upNextSongs.first()
                             songHistory.add(playerState!!)
                             val upgradedArt = next.thumbnail?.let {
-                                if (it.contains("=w")) it.substringBefore("=w") + "=w1200-h1200-l90-rj"
+                                if (it.contains("=w") || it.contains("=s")) {
+                                    val idx = it.indexOf("=w").takeIf { j -> j != -1 } ?: it.indexOf("=s")
+                                    it.substring(0, idx) + "=w1200-h1200-l90-rj"
+                                }
                                 else if (it.contains("ytimg.com/vi/")) it.replace("hqdefault", "maxresdefault").replace("mqdefault", "maxresdefault")
                                 else it
                             } ?: next.thumbnail
@@ -689,9 +709,28 @@ class MainActivity : ComponentActivity() {
                                     showPlayer = false
                                     artistDetail = artist
                                 },
-                                onSongSelected = playSong
+                                onSongSelected = playSong,
+                                shuffleModeEnabled = shuffleModeEnabled,
+                                repeatMode = repeatMode,
+                                onToggleShuffle = { musicPlayer?.setShuffleModeEnabled(!shuffleModeEnabled) },
+                                onToggleRepeat = {
+                                    val nextMode = when (repeatMode) {
+                                        androidx.media3.common.Player.REPEAT_MODE_OFF -> androidx.media3.common.Player.REPEAT_MODE_ALL
+                                        androidx.media3.common.Player.REPEAT_MODE_ALL -> androidx.media3.common.Player.REPEAT_MODE_ONE
+                                        androidx.media3.common.Player.REPEAT_MODE_ONE -> androidx.media3.common.Player.REPEAT_MODE_OFF
+                                        else -> androidx.media3.common.Player.REPEAT_MODE_OFF
+                                    }
+                                    musicPlayer?.setRepeatMode(nextMode)
+                                }
                             )
                         }
+                    }
+                    
+                    updateReleaseInfo?.let { info ->
+                        com.mrtdk.liquid_glass.ui.components.UpdateDialog(
+                            releaseInfo = info,
+                            onDismiss = { updateReleaseInfo = null }
+                        )
                     }
                 }
             }
