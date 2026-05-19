@@ -154,8 +154,8 @@ fun BibliotecaScreen(
                                 fontSize = 16.sp
                             )
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Versión actual: 0.5.3",
+                             Text(
+                                text = "Versión actual: ${com.mrtdk.liquid_glass.BuildConfig.VERSION_NAME}",
                                 color = Color.Gray,
                                 fontSize = 14.sp
                             )
