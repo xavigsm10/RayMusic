@@ -250,7 +250,7 @@ fun InicioScreen(
     ) {
         item {
             Text(
-                text = "Home",
+                text = "Inicio",
                 color = Color.White,
                 fontSize = 34.sp,
                 fontWeight = FontWeight.Bold,
@@ -788,9 +788,13 @@ private fun FeaturedSuggestionCard(
                 .padding(horizontal = 18.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.Center
         ) {
+            val isLightBackground = dominantColor.luminance() > 0.5f
+            val titleColor = if (isLightBackground) Color(0xFF1C1C1E) else Color.White
+            val subtitleColor = if (isLightBackground) Color(0xFF5E5E62) else Color.White.copy(alpha = 0.7f)
+
             Text(
                 titleStr,
-                color = Color.White,
+                color = titleColor,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
@@ -799,7 +803,7 @@ private fun FeaturedSuggestionCard(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 subtitleStr,
-                color = Color.White.copy(alpha = 0.7f),
+                color = subtitleColor,
                 fontSize = 14.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
