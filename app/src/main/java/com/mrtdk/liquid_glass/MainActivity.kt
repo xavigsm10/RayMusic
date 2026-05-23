@@ -102,9 +102,32 @@ class MainActivity : ComponentActivity() {
                     var selectedIndex by remember { mutableIntStateOf(0) }
                     var playerState by remember { mutableStateOf<PlayerState?>(null) }
                     var showPlayer by remember { mutableStateOf(false) }
+                    var upNextSongs by remember { mutableStateOf<List<com.echo.innertube.models.SongItem>>(emptyList()) }
+                    var queueSeedVideoId by remember { mutableStateOf<String?>(null) }
+                    var queueContinuation by remember { mutableStateOf<String?>(null) }
+                    var queueEndpoint by remember { mutableStateOf<com.echo.innertube.models.WatchEndpoint?>(null) }
+                    val songHistory = remember { androidx.compose.runtime.mutableStateListOf<PlayerState>() }
 
                     LaunchedEffect(Unit) {
-                        playerState = com.mrtdk.liquid_glass.data.LibraryManager.getLastPlayerState()
+                        val lastState = com.mrtdk.liquid_glass.data.LibraryManager.getLastPlayerState()
+                        playerState = lastState
+                        com.mrtdk.liquid_glass.playback.PlaybackQueue.currentSong = lastState
+                        if (lastState != null) {
+                            com.mrtdk.liquid_glass.playback.PlaybackQueue.queue = lastState.queue
+                            com.mrtdk.liquid_glass.playback.PlaybackQueue.isExclusiveQueue = lastState.isExclusiveQueue
+                        }
+
+                        com.mrtdk.liquid_glass.playback.PlaybackQueue.onCurrentSongChanged = { newSong ->
+                            playerState = newSong
+                        }
+                        com.mrtdk.liquid_glass.playback.PlaybackQueue.onQueueChanged = {
+                            upNextSongs = com.mrtdk.liquid_glass.playback.PlaybackQueue.upNextSongs
+                            queueSeedVideoId = com.mrtdk.liquid_glass.playback.PlaybackQueue.queueSeedVideoId
+                            queueContinuation = com.mrtdk.liquid_glass.playback.PlaybackQueue.queueContinuation
+                            queueEndpoint = com.mrtdk.liquid_glass.playback.PlaybackQueue.queueEndpoint
+                            songHistory.clear()
+                            songHistory.addAll(com.mrtdk.liquid_glass.playback.PlaybackQueue.songHistory)
+                        }
                     }
 
                     LaunchedEffect(playerState) {
@@ -216,6 +239,26 @@ class MainActivity : ComponentActivity() {
                     val playSong: (PlayerState) -> Unit = { state ->
                         playerState = state
                         showPlayer = true
+                        
+                        // Reset autoplay recommendation queue and continuation details
+                        upNextSongs = emptyList()
+                        queueSeedVideoId = state.videoId
+                        queueContinuation = null
+                        queueEndpoint = null
+                        
+                        com.mrtdk.liquid_glass.playback.PlaybackQueue.currentSong = state
+                        com.mrtdk.liquid_glass.playback.PlaybackQueue.queue = state.queue
+                        com.mrtdk.liquid_glass.playback.PlaybackQueue.isExclusiveQueue = state.isExclusiveQueue
+                        com.mrtdk.liquid_glass.playback.PlaybackQueue.upNextSongs = emptyList()
+                        com.mrtdk.liquid_glass.playback.PlaybackQueue.queueSeedVideoId = state.videoId
+                        com.mrtdk.liquid_glass.playback.PlaybackQueue.queueContinuation = null
+                        com.mrtdk.liquid_glass.playback.PlaybackQueue.queueEndpoint = null
+                        com.mrtdk.liquid_glass.playback.PlaybackQueue.songHistory.clear()
+                        com.mrtdk.liquid_glass.playback.PlaybackQueue.songHistory.addAll(songHistory)
+                        songHistory.clear()
+
+                        com.mrtdk.liquid_glass.playback.PlaybackQueue.onQueueChanged?.invoke()
+
                         // Track recently played
                         LibraryManager.addRecentlyPlayed(
                             com.mrtdk.liquid_glass.data.LibraryItem(
@@ -230,12 +273,6 @@ class MainActivity : ComponentActivity() {
                         else if (state.videoId != null) musicPlayer?.playOnlineSong(state.videoId, state.title, state.artist, state.artUrl?.toString())
                     }
 
-                    var upNextSongs by remember { mutableStateOf<List<com.echo.innertube.models.SongItem>>(emptyList()) }
-                    var queueSeedVideoId by remember { mutableStateOf<String?>(null) }
-                    var queueContinuation by remember { mutableStateOf<String?>(null) }
-                    var queueEndpoint by remember { mutableStateOf<com.echo.innertube.models.WatchEndpoint?>(null) }
-                    val songHistory = remember { androidx.compose.runtime.mutableStateListOf<PlayerState>() }
-
                     LaunchedEffect(Unit) {
                         androidx.compose.runtime.snapshotFlow { 
                             Pair(playerState?.videoId, playerState?.isExclusiveQueue)
@@ -243,18 +280,25 @@ class MainActivity : ComponentActivity() {
                             if (vid == null) return@collect
                             if (isExclusive == true) {
                                 upNextSongs = emptyList()
+                                com.mrtdk.liquid_glass.playback.PlaybackQueue.upNextSongs = emptyList()
+                                com.mrtdk.liquid_glass.playback.PlaybackQueue.onQueueChanged?.invoke()
                                 return@collect
                             }
-                            if (upNextSongs.isEmpty() || queueSeedVideoId != vid) {
+                            if (upNextSongs.isEmpty()) {
                                 queueSeedVideoId = vid
+                                com.mrtdk.liquid_glass.playback.PlaybackQueue.queueSeedVideoId = vid
                                 withContext(kotlinx.coroutines.Dispatchers.IO) {
                                     val endpoint = com.echo.innertube.models.WatchEndpoint(videoId = vid)
                                     com.echo.innertube.YouTube.next(endpoint).onSuccess { nextResult ->
                                         queueEndpoint = nextResult.endpoint
+                                        com.mrtdk.liquid_glass.playback.PlaybackQueue.queueEndpoint = nextResult.endpoint
                                         queueContinuation = nextResult.continuation
+                                        com.mrtdk.liquid_glass.playback.PlaybackQueue.queueContinuation = nextResult.continuation
                                         val items = nextResult.items
                                         val nextItems = if (items.isNotEmpty() && items.first().id == vid) items.drop(1) else items
                                         upNextSongs = nextItems
+                                        com.mrtdk.liquid_glass.playback.PlaybackQueue.upNextSongs = nextItems
+                                        com.mrtdk.liquid_glass.playback.PlaybackQueue.onQueueChanged?.invoke()
                                     }
                                 }
                             }
@@ -269,11 +313,16 @@ class MainActivity : ComponentActivity() {
                                     withContext(kotlinx.coroutines.Dispatchers.IO) {
                                         com.echo.innertube.YouTube.next(queueEndpoint!!, queueContinuation).onSuccess { nextResult ->
                                             queueEndpoint = nextResult.endpoint
+                                            com.mrtdk.liquid_glass.playback.PlaybackQueue.queueEndpoint = nextResult.endpoint
                                             queueContinuation = nextResult.continuation
+                                            com.mrtdk.liquid_glass.playback.PlaybackQueue.queueContinuation = nextResult.continuation
                                             val existingIds = upNextSongs.map { it.id }.toSet()
                                             val newSongs = nextResult.items.filter { it.id !in existingIds }
                                             if (newSongs.isNotEmpty()) {
-                                                upNextSongs = upNextSongs + newSongs
+                                                val updatedList = upNextSongs + newSongs
+                                                upNextSongs = updatedList
+                                                com.mrtdk.liquid_glass.playback.PlaybackQueue.upNextSongs = updatedList
+                                                com.mrtdk.liquid_glass.playback.PlaybackQueue.onQueueChanged?.invoke()
                                             }
                                         }
                                     }
@@ -282,57 +331,18 @@ class MainActivity : ComponentActivity() {
                     }
 
                     val skipNextFun: () -> Unit = {
-                        if (playerState != null && playerState!!.queue.isNotEmpty()) {
-                            val next = playerState!!.queue.first()
-                            songHistory.add(playerState!!)
-                            queueSeedVideoId = next.videoId
-                            playSong(PlayerState(
-                                title = next.title,
-                                artist = next.artist,
-                                artUrl = next.artUrl,
-                                videoId = next.videoId,
-                                queue = playerState!!.queue.drop(1),
-                                isExclusiveQueue = playerState!!.isExclusiveQueue
-                            ))
-                        } else if (playerState?.isExclusiveQueue != true && upNextSongs.isNotEmpty()) {
-                            val next = upNextSongs.first()
-                            songHistory.add(playerState!!)
-                            val upgradedArt = next.thumbnail?.let {
-                                if (it.contains("=w") || it.contains("=s")) {
-                                    val idx = it.indexOf("=w").takeIf { j -> j != -1 } ?: it.indexOf("=s")
-                                    it.substring(0, idx) + "=w1200-h1200-l90-rj"
-                                }
-                                else if (it.contains("ytimg.com/vi/")) it.replace("hqdefault", "maxresdefault").replace("mqdefault", "maxresdefault")
-                                else it
-                            } ?: next.thumbnail
-                            upNextSongs = upNextSongs.drop(1)
-                            queueSeedVideoId = next.id
-                            playSong(PlayerState(
-                                title = next.title,
-                                artist = next.artists.joinToString { it.name },
-                                artUrl = upgradedArt,
-                                videoId = next.id,
-                                isExclusiveQueue = false
-                            ))
+                        val nextState = com.mrtdk.liquid_glass.playback.PlaybackQueue.getNextSongAndAdvance()
+                        if (nextState != null) {
+                            if (nextState.contentUri != null) musicPlayer?.playLocalSong(nextState.contentUri)
+                            else if (nextState.videoId != null) musicPlayer?.playOnlineSong(nextState.videoId, nextState.title, nextState.artist, nextState.artUrl?.toString())
                         }
                     }
 
                     val skipPreviousFun: () -> Unit = {
-                        if (songHistory.isNotEmpty()) {
-                            val prev = songHistory.removeLast()
-                            playSong(prev)
-                        }
-                    }
-
-                    // Auto-play next song when current song ends
-                    val currentSkipNextFun by androidx.compose.runtime.rememberUpdatedState(skipNextFun)
-                    val currentPlayerState by androidx.compose.runtime.rememberUpdatedState(playerState)
-
-                    LaunchedEffect(Unit) {
-                        musicPlayer!!.songEnded.collect { count ->
-                            if (count > 0 && currentPlayerState != null) {
-                                currentSkipNextFun()
-                            }
+                        val prevState = com.mrtdk.liquid_glass.playback.PlaybackQueue.getPreviousSongAndGoBack()
+                        if (prevState != null) {
+                            if (prevState.contentUri != null) musicPlayer?.playLocalSong(prevState.contentUri)
+                            else if (prevState.videoId != null) musicPlayer?.playOnlineSong(prevState.videoId, prevState.title, prevState.artist, prevState.artUrl?.toString())
                         }
                     }
 
@@ -689,7 +699,10 @@ class MainActivity : ComponentActivity() {
                                 duration = duration,
                                 isBottomBarCollapsed = isBottomBarCollapsed,
                                 upNextSongs = upNextSongs,
-                                onUpNextSongsChange = { upNextSongs = it },
+                                onUpNextSongsChange = { 
+                                    upNextSongs = it 
+                                    com.mrtdk.liquid_glass.playback.PlaybackQueue.upNextSongs = it
+                                },
                                 songHistory = songHistory,
                                 onSkipNext = skipNextFun,
                                 onSkipPrevious = skipPreviousFun,
