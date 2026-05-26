@@ -187,4 +187,18 @@ object LibraryManager {
         }
         return null
     }
+
+    fun getAppLanguage(context: Context): String {
+        if (!::prefs.isInitialized) {
+            init(context)
+        }
+        return prefs.getString("app_language", "SYSTEM_DEFAULT") ?: "SYSTEM_DEFAULT"
+    }
+
+    fun saveAppLanguage(context: Context, lang: String) {
+        if (!::prefs.isInitialized) {
+            init(context)
+        }
+        prefs.edit().putString("app_language", lang).apply()
+    }
 }

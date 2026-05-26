@@ -18,6 +18,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.stringResource
+import com.mrtdk.liquid_glass.R
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -81,7 +83,12 @@ fun BusquedaScreen(
     onCategorySelected: (SearchCategory) -> Unit = {}
 ) {
     val context = LocalContext.current
-    val tabs = listOf("Top Results", "Artists", "Albums", "Songs")
+    val tabNames = listOf(
+        stringResource(R.string.search_tab_top),
+        stringResource(R.string.search_tab_artists),
+        stringResource(R.string.search_tab_albums),
+        stringResource(R.string.search_tab_songs)
+    )
 
     // Re-search whenever the query is submitted OR the tab changes
     LaunchedEffect(query, state.selectedTab) {
@@ -152,7 +159,7 @@ fun BusquedaScreen(
                     .padding(horizontal = 16.dp, vertical = 24.dp)
             ) {
                 Text(
-                    text = "Buscar",
+                    text = stringResource(R.string.search_action),
                     color = Color.White,
                     fontSize = 34.sp,
                     fontWeight = FontWeight.Bold
@@ -218,7 +225,7 @@ fun BusquedaScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(tabs.size) { i ->
+                    items(tabNames.size) { i ->
                         val isSelected = i == state.selectedTab
                         Box(
                             modifier = Modifier
@@ -231,7 +238,7 @@ fun BusquedaScreen(
                                 .padding(horizontal = 18.dp, vertical = 9.dp)
                         ) {
                             Text(
-                                text = tabs[i],
+                                text = tabNames[i],
                                 color = if (isSelected) Color.White else Color.LightGray,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                 fontSize = 15.sp
@@ -300,7 +307,7 @@ fun BusquedaScreen(
                                 Text(item.title, color = Color.White, fontSize = 15.sp,
                                     fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Text(
-                                    "Song · ${item.artists.joinToString { it.name }}",
+                                    "${stringResource(R.string.search_type_song)} · ${item.artists.joinToString { it.name }}",
                                     color = Color.Gray, fontSize = 13.sp,
                                     maxLines = 1, overflow = TextOverflow.Ellipsis
                                 )
@@ -344,7 +351,7 @@ fun BusquedaScreen(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(item.title, color = Color.White, fontSize = 15.sp,
                                     fontWeight = FontWeight.Medium, maxLines = 1)
-                                Text("Artist", color = Color.Gray, fontSize = 13.sp)
+                                Text(stringResource(R.string.search_type_artist), color = Color.Gray, fontSize = 13.sp)
                             }
                             IconButton(onClick = { }) {
                                 Icon(Icons.Default.MoreVert, null, tint = Color.Gray)
@@ -388,7 +395,7 @@ fun BusquedaScreen(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(item.title, color = Color.White, fontSize = 15.sp,
                                     fontWeight = FontWeight.Medium, maxLines = 1)
-                                Text("Album · ${item.year ?: ""}", color = Color.Gray, fontSize = 13.sp)
+                                Text("${stringResource(R.string.search_type_album)} · ${item.year ?: ""}", color = Color.Gray, fontSize = 13.sp)
                             }
                             IconButton(onClick = { }) {
                                 Icon(Icons.Default.MoreVert, null, tint = Color.Gray)
@@ -400,7 +407,7 @@ fun BusquedaScreen(
         } else if (!state.isSearching && query.isNotEmpty() && state.displayResults.isEmpty()) {
             item {
                 Box(modifier = Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
-                    Text("No hay resultados para \"$query\"", color = Color.Gray)
+                    Text(stringResource(R.string.no_resultados_para, query), color = Color.Gray)
                 }
             }
         }

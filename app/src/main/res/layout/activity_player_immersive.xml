@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black"
+    tools:context=".ui.screens.PlayerImmersiveActivity">
+
+    <!-- CAPA 0: Fondo Absoluto (Imagen borrosa) -->
+    <ImageView
+        android:id="@+id/imgBackground"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:contentDescription="@null"
+        tools:src="@tools:sample/backgrounds/scenic" />
+
+    <!-- CAPA 1: Overlay Oscuro Sólido (Sin gradientes, 65% de opacidad) -->
+    <View
+        android:id="@+id/bgOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#A6000000" />
+
+    <!-- Línea guía horizontal al 50% para dividir la pantalla en dos mitades -->
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guidelineHalf"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.50" />
+
+    <!-- CAPA 2: Imagen Principal Nítida (Posicionada en la mitad superior) -->
+    <ImageView
+        android:id="@+id/imgCover"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginHorizontal="48dp"
+        android:layout_marginTop="64dp"
+        android:layout_marginBottom="24dp"
+        android:scaleType="centerCrop"
+        android:contentDescription="Album Art"
+        app:layout_constraintDimensionRatio="1:1"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/guidelineHalf"
+        tools:src="@tools:sample/avatars" />
+
+    <!-- CAPA 3: Contenedor de Controles (Fondo totalmente transparente en la mitad inferior) -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/controlsContainer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:background="@android:color/transparent"
+        android:paddingHorizontal="32dp"
+        android:paddingBottom="48dp"
+        app:layout_constraintTop_toBottomOf="@id/guidelineHalf"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Title of the song (Texto blanco sobre fondo transparente) -->
+        <TextView
+            android:id="@+id/txtSongTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@android:color/white"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:gravity="start"
+            android:ellipsize="end"
+            android:maxLines="1"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:text="Song Title Placeholder" />
+
+        <!-- Artist name (Texto blanco semi-transparente) -->
+        <TextView
+            android:id="@+id/txtSongArtist"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#CCFFFFFF"
+            android:textSize="18sp"
+            android:gravity="start"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:layout_marginTop="4dp"
+            app:layout_constraintTop_toBottomOf="@id/txtSongTitle"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:text="Artist Name Placeholder" />
+
+        <!-- SeekBar (Controlador de reproducción con tintes blancos) -->
+        <SeekBar
+            android:id="@+id/seekBarProgress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:paddingStart="0dp"
+            android:paddingEnd="0dp"
+            android:splitTrack="false"
+            android:progressTint="@android:color/white"
+            android:thumbTint="@android:color/white"
+            android:progressBackgroundTint="#44FFFFFF"
+            app:layout_constraintTop_toBottomOf="@id/txtSongArtist"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:progress="30" />
+
+        <!-- Tiempo de reproducción actual -->
+        <TextView
+            android:id="@+id/txtCurrentTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#AAFFFFFF"
+            android:textSize="12sp"
+            android:layout_marginTop="8dp"
+            app:layout_constraintTop_toBottomOf="@id/seekBarProgress"
+            app:layout_constraintStart_toStartOf="parent"
+            tools:text="1:24" />
+
+        <!-- Tiempo de duración total -->
+        <TextView
+            android:id="@+id/txtTotalTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#AAFFFFFF"
+            android:textSize="12sp"
+            android:layout_marginTop="8dp"
+            app:layout_constraintTop_toBottomOf="@id/seekBarProgress"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:text="3:45" />
+
+        <!-- Controles de reproducción principales (Previous, Play/Pause, Next) -->
+        <LinearLayout
+            android:id="@+id/layoutPlaybackControls"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:layout_marginTop="24dp"
+            android:background="@android:color/transparent"
+            app:layout_constraintTop_toBottomOf="@id/txtCurrentTime"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <!-- Botón de Anterior -->
+            <ImageButton
+                android:id="@+id/btnPrevious"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/previous"
+                android:contentDescription="Previous track"
+                app:tint="@android:color/white" />
+
+            <Spacer
+                android:layout_width="32dp"
+                android:layout_height="wrap_content" />
+
+            <!-- Botón de Reproducir/Pausar -->
+            <ImageButton
+                android:id="@+id/btnPlayPause"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/resume"
+                android:scaleType="fitCenter"
+                android:padding="8dp"
+                android:contentDescription="Play or Pause"
+                app:tint="@android:color/white" />
+
+            <Spacer
+                android:layout_width="32dp"
+                android:layout_height="wrap_content" />
+
+            <!-- Botón de Siguiente -->
+            <ImageButton
+                android:id="@+id/btnNext"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/forward"
+                android:contentDescription="Next track"
+                app:tint="@android:color/white" />
+
+        </LinearLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

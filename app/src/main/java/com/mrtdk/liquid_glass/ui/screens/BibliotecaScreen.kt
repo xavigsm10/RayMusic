@@ -40,6 +40,8 @@ import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.ArrowCircleDown
 import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Check
+import com.mrtdk.liquid_glass.R
 import androidx.compose.ui.platform.LocalUriHandler
 import com.mrtdk.liquid_glass.data.ItemType
 import kotlinx.coroutines.CoroutineScope
@@ -53,6 +55,13 @@ import android.app.DownloadManager
 import android.net.Uri
 import android.os.Environment
 import android.widget.Toast
+import androidx.compose.ui.res.stringResource
+import android.os.Build
+import android.content.Intent
+import android.provider.Settings
+import androidx.activity.ComponentActivity
+import com.mrtdk.liquid_glass.utils.LocaleUtils
+import androidx.compose.ui.window.Dialog
 
 @Composable
 fun BibliotecaScreen(
@@ -79,7 +88,9 @@ fun BibliotecaScreen(
     
     var contextMenuPlaylist by remember { mutableStateOf<com.mrtdk.liquid_glass.data.Playlist?>(null) }
     var showSettings by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
     var updateReleaseInfo by remember { mutableStateOf<com.mrtdk.liquid_glass.utils.Updater.ReleaseInfo?>(null) }
+    var selectedCategoryKey by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         val scanner = LocalMediaScanner(context)
@@ -99,10 +110,10 @@ fun BibliotecaScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 androidx.compose.material3.IconButton(onClick = { showSettings = false }) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = Color(0xFFFA243C))
+                    Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back_action), tint = Color(0xFFFA243C))
                 }
                 Text(
-                    text = "Ajustes",
+                    text = stringResource(R.string.ajustes),
                     color = Color.White,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
@@ -116,7 +127,7 @@ fun BibliotecaScreen(
                     .padding(horizontal = 16.dp)
             ) {
                 Text(
-                    text = "ACERCA DE",
+                    text = stringResource(R.string.idioma_app_section),
                     color = Color.Gray,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
@@ -132,15 +143,13 @@ fun BibliotecaScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                Toast.makeText(context, "Buscando actualizaciones...", Toast.LENGTH_SHORT).show()
-                                com.mrtdk.liquid_glass.utils.Updater.checkUpdate { info ->
-                                    CoroutineScope(Dispatchers.Main).launch {
-                                        if (info != null) {
-                                            updateReleaseInfo = info
-                                        } else {
-                                            Toast.makeText(context, "Ya tienes la última versión", Toast.LENGTH_SHORT).show()
-                                        }
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    val intent = Intent(Settings.ACTION_APP_LOCALE_SETTINGS).apply {
+                                        data = Uri.parse("package:${context.packageName}")
                                     }
+                                    context.startActivity(intent)
+                                } else {
+                                    showLanguageDialog = true
                                 }
                             }
                             .padding(16.dp),
@@ -149,13 +158,74 @@ fun BibliotecaScreen(
                     ) {
                         Column {
                             Text(
-                                text = "Buscar actualizaciones",
+                                text = stringResource(R.string.idioma_app),
+                                color = Color.White,
+                                fontSize = 16.sp
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            val currentLang = LibraryManager.getAppLanguage(context)
+                            val currentLangName = when (currentLang) {
+                                "es" -> "Español"
+                                "en" -> "English"
+                                else -> stringResource(R.string.predeterminado_sistema)
+                            }
+                            Text(
+                                text = currentLangName,
+                                color = Color.Gray,
+                                fontSize = 14.sp
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.ArrowForwardIos,
+                            contentDescription = null,
+                            tint = Color.Gray,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
+                    text = stringResource(R.string.acerca_de),
+                    color = Color.Gray,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
+                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFF1C1C1E))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                Toast.makeText(context, context.getString(R.string.buscando_actualizaciones), Toast.LENGTH_SHORT).show()
+                                com.mrtdk.liquid_glass.utils.Updater.checkUpdate { info ->
+                                    CoroutineScope(Dispatchers.Main).launch {
+                                        if (info != null) {
+                                            updateReleaseInfo = info
+                                        } else {
+                                            Toast.makeText(context, context.getString(R.string.ultima_version_ok), Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
+                             }
+                             .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = stringResource(R.string.buscar_actualizaciones),
                                 color = Color.White,
                                 fontSize = 16.sp
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                              Text(
-                                text = "Versión actual: ${com.mrtdk.liquid_glass.BuildConfig.VERSION_NAME}",
+                                text = stringResource(R.string.version_actual, com.mrtdk.liquid_glass.BuildConfig.VERSION_NAME),
                                 color = Color.Gray,
                                 fontSize = 14.sp
                             )
@@ -193,13 +263,13 @@ fun BibliotecaScreen(
                             )
                             Column {
                                 Text(
-                                    text = "Repositorio de la aplicación",
+                                    text = stringResource(R.string.repositorio_app),
                                     color = Color.White,
                                     fontSize = 16.sp
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "Ver el código fuente en GitHub",
+                                    text = stringResource(R.string.ver_codigo_github),
                                     color = Color.Gray,
                                     fontSize = 14.sp
                                 )
@@ -216,6 +286,88 @@ fun BibliotecaScreen(
             }
         }
         
+        if (showLanguageDialog) {
+            Dialog(
+                onDismissRequest = { showLanguageDialog = false }
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(280.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Color(0xFF1E1E1E))
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Text(
+                            text = stringResource(R.string.language_dialog_title),
+                            color = Color.White,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
+                        val options = listOf(
+                            LocaleUtils.SYSTEM_DEFAULT to stringResource(R.string.predeterminado_sistema),
+                            "es" to "Español",
+                            "en" to "English"
+                        )
+                        val currentLang = LibraryManager.getAppLanguage(context)
+                        
+                        options.forEach { (code, name) ->
+                            val isSelected = currentLang == code
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        LibraryManager.saveAppLanguage(context, code)
+                                        LocaleUtils.applyLocale(context)
+                                        showLanguageDialog = false
+                                        (context as? ComponentActivity)?.recreate()
+                                    }
+                                    .padding(horizontal = 24.dp, vertical = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = name,
+                                    color = if (isSelected) Color(0xFFFA243C) else Color.White,
+                                    fontSize = 15.sp,
+                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                                )
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = Color(0xFFFA243C),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                            Divider(color = Color(0xFF333333), thickness = 0.5.dp)
+                        }
+                        
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp)
+                                .clickable { showLanguageDialog = false },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = stringResource(R.string.cancelar),
+                                color = Color.Gray,
+                                fontSize = 17.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         updateReleaseInfo?.let { info ->
             com.mrtdk.liquid_glass.ui.components.UpdateDialog(
                 releaseInfo = info,
@@ -232,13 +384,13 @@ fun BibliotecaScreen(
                 .background(Color.Black)
                 .padding(top = innerPadding.calculateTopPadding(), bottom = innerPadding.calculateBottomPadding() + 120.dp)
         ) {
-            if (selectedCategoryName != "Playlists") {
+            if (selectedCategoryKey != "Playlists") {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     androidx.compose.material3.IconButton(onClick = { showCategoryDetail = false }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver", tint = Color(0xFFFA243C))
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back_action), tint = Color(0xFFFA243C))
                     }
                     Text(
                         text = selectedCategoryName,
@@ -249,7 +401,7 @@ fun BibliotecaScreen(
                     )
                 }
             }
-            if (selectedCategoryName == "Playlists") {
+            if (selectedCategoryKey == "Playlists") {
                 PlaylistsListScreen(
                     onBack = { showCategoryDetail = false },
                     onPlaylistSelected = { pl -> onPlaylistSelected(pl) },
@@ -429,13 +581,22 @@ fun BibliotecaScreen(
         item(span = { GridItemSpan(2) }) {
             Column {
                 menuItems.forEachIndexed { index, item ->
+                    val labelText = when (item.first) {
+                        "Playlists" -> stringResource(R.string.playlists)
+                        "Artistas" -> stringResource(R.string.artistas)
+                        "Álbumes" -> stringResource(R.string.albumes)
+                        "Canciones" -> stringResource(R.string.canciones)
+                        "Descargados" -> stringResource(R.string.descargados)
+                        else -> item.first
+                    }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { 
                                 if (item.second != null || item.first == "Playlists") {
                                     selectedCategory = item.second
-                                    selectedCategoryName = item.first
+                                    selectedCategoryName = labelText
+                                    selectedCategoryKey = item.first
                                     showCategoryDetail = true
                                 }
                             }
@@ -452,7 +613,7 @@ fun BibliotecaScreen(
                             )
                             Spacer(modifier = Modifier.width(16.dp))
                             Text(
-                                text = item.first,
+                                text = labelText,
                                 color = Color.White,
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Normal
@@ -474,7 +635,7 @@ fun BibliotecaScreen(
         
         item(span = { GridItemSpan(2) }) {
             Text(
-                text = "Añadido recientemente",
+                text = stringResource(R.string.recently_added),
                 color = Color.White,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,

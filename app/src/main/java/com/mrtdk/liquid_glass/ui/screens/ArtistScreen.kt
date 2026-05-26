@@ -21,6 +21,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.ui.res.stringResource
+import com.mrtdk.liquid_glass.R
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -230,10 +232,10 @@ fun ArtistScreen(
                                 )
                                 if (!isDescriptionExpanded) {
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text("Ver más", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { isDescriptionExpanded = true })
+                                    Text(stringResource(R.string.ver_mas), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { isDescriptionExpanded = true })
                                 } else {
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text("Ocultar", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { isDescriptionExpanded = false })
+                                    Text(stringResource(R.string.ocultar), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { isDescriptionExpanded = false })
                                 }
                             }
                         }
@@ -279,7 +281,7 @@ fun ArtistScreen(
                     }, contentAlignment = Alignment.Center) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Canvas(modifier = Modifier.size(16.dp)) { drawPath(Path().apply { moveTo(0f, 0f); lineTo(size.width, size.height / 2f); lineTo(0f, size.height); close() }, Color.Black) }
-                            Text("Reproducir", color = Color.Black, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.reproducir), color = Color.Black, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                     val isSaved = savedItems.any { it.id == artistState.id }
@@ -301,7 +303,7 @@ fun ArtistScreen(
             // ── TOP SONGS ──────────────────────────────────
             if (topSongsSection != null) {
                 val songs = topSongsSection.items.filterIsInstance<SongItem>().take(10)
-                item { Text("Top songs", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) }
+                item { Text(stringResource(R.string.top_songs), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) }
                 item {
                     val chunkedSongs = songs.chunked(4)
                     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
@@ -373,7 +375,7 @@ fun ArtistScreen(
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("Álbumes", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.albumes), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                         if (albumItems.size > 4 || albumsSection.moreEndpoint != null) {
                             val coroutineScope = rememberCoroutineScope()
                             Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = 0.12f)).clickable {
@@ -388,7 +390,7 @@ fun ArtistScreen(
                                     }
                                 }
                             }.padding(horizontal = 12.dp, vertical = 6.dp)) {
-                                Text("Ver todo", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                                Text(stringResource(R.string.ver_todo), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                             }
                         }
                     }
@@ -403,7 +405,7 @@ fun ArtistScreen(
                 val singleItems = singlesSection.items.filterIsInstance<AlbumItem>()
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Sencillos y EP", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+                    Text(stringResource(R.string.sencillos_y_ep), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
                     LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(singleItems.size) { idx -> ItemCard(context, singleItems[idx], artistState.name, onAlbumSelected, onSongSelected, onArtistSelected) }
                     }
@@ -416,7 +418,7 @@ fun ArtistScreen(
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("Videos", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.videos), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                         if (videoItems.size > 4 || videosSection.moreEndpoint != null) {
                             val coroutineScope = rememberCoroutineScope()
                             Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = 0.12f)).clickable {
@@ -431,7 +433,7 @@ fun ArtistScreen(
                                     }
                                 }
                             }.padding(horizontal = 12.dp, vertical = 6.dp)) {
-                                Text("Ver todo", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                                Text(stringResource(R.string.ver_todo), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                             }
                         }
                     }
@@ -449,7 +451,7 @@ fun ArtistScreen(
                 val featuredItems = featuredSection.items.filterIsInstance<AlbumItem>()
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Destacado en", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+                    Text(stringResource(R.string.destacado_en), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
                     LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(featuredItems.size) { idx -> ItemCard(context, featuredItems[idx], artistState.name, onAlbumSelected, onSongSelected, onArtistSelected) }
                     }
@@ -461,7 +463,7 @@ fun ArtistScreen(
                 val plItems = playlistsSection.items.filterIsInstance<PlaylistItem>()
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Playlists", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+                    Text(stringResource(R.string.playlists), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
                     LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(plItems.size) { idx ->
                             val pl = plItems[idx]
@@ -477,7 +479,7 @@ fun ArtistScreen(
                 if (relatedArtists.isNotEmpty()) {
                     item {
                         Spacer(modifier = Modifier.height(24.dp))
-                        Text("Puede que también te guste", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+                        Text(stringResource(R.string.puede_gustar), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
                         LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                             items(relatedArtists.size) { idx ->
                                 val ra = relatedArtists[idx]
@@ -516,7 +518,7 @@ fun ArtistScreen(
                                     }
                                 }
                             }.padding(horizontal = 12.dp, vertical = 6.dp)) {
-                                Text("Ver todo", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                                Text(stringResource(R.string.ver_todo), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                             }
                         }
                     }
@@ -542,7 +544,7 @@ fun ArtistScreen(
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(22.dp))
                             }
                             Spacer(modifier = Modifier.width(16.dp))
-                            Text("Álbumes", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.albumes), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                     }
@@ -681,7 +683,7 @@ private fun ItemCard(
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(item.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(item.author?.name ?: "Playlist", color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(item.author?.name ?: stringResource(R.string.playlists), color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         is ArtistItem -> {

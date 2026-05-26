@@ -35,8 +35,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import androidx.compose.ui.res.stringResource
 import com.mrtdk.glass.GlassContainer
 import com.mrtdk.glass.GlassBox
+import com.mrtdk.liquid_glass.R
 import com.mrtdk.liquid_glass.data.LibraryManager
 import com.mrtdk.liquid_glass.data.Playlist
 import kotlinx.coroutines.launch
@@ -90,7 +92,7 @@ fun PlaylistsListScreen(
                                     modifier = Modifier.background(Color(0xFF2C2C2E))
                                 ) {
                                     DropdownMenuItem(
-                                        text = { Text("Create New Playlist", color = Color.White) },
+                                        text = { Text(stringResource(R.string.create_new_playlist), color = Color.White) },
                                         leadingIcon = { Icon(Icons.Default.Add, contentDescription = null, tint = Color.White) },
                                         onClick = { 
                                             showCreateOptions = false
@@ -98,7 +100,7 @@ fun PlaylistsListScreen(
                                         }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Create New Folder", color = Color.White) },
+                                        text = { Text(stringResource(R.string.create_new_folder), color = Color.White) },
                                         leadingIcon = { Icon(Icons.Default.CreateNewFolder, contentDescription = null, tint = Color.White) },
                                         onClick = { showCreateOptions = false }
                                     )
@@ -117,7 +119,7 @@ fun PlaylistsListScreen(
 
             item {
                 Text(
-                    text = "Playlists",
+                    text = stringResource(R.string.playlists),
                     color = Color.White,
                     fontSize = 34.sp,
                     fontWeight = FontWeight.Bold,
@@ -145,7 +147,7 @@ fun PlaylistsListScreen(
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
-                        text = "Favorite Songs",
+                        text = stringResource(R.string.favorite_songs),
                         color = Color.White,
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Medium,
@@ -195,7 +197,7 @@ fun PlaylistsListScreen(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = if (pl.items.isNotEmpty()) "${pl.items.size} canciones" else "Empty", // Simulated curator "Andrew Lambrou" or count
+                            text = if (pl.items.isNotEmpty()) stringResource(R.string.num_canciones, pl.items.size) else stringResource(R.string.num_canciones, 0), // Simulated curator "Andrew Lambrou" or count
                             color = Color.Gray,
                             fontSize = 14.sp,
                             maxLines = 1,
@@ -268,7 +270,7 @@ fun CreatePlaylistModal(onDismiss: () -> Unit) {
                 IconButton(onClick = onDismiss) {
                     Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White)
                 }
-                Text("New Playlist", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.new_playlist_title), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 
                 IconButton(
                     onClick = {
@@ -362,7 +364,7 @@ fun CreatePlaylistModal(onDismiss: () -> Unit) {
                                     .background(Color.Black.copy(alpha = 0.6f))
                                     .padding(horizontal = 10.dp, vertical = 4.dp)
                             ) {
-                                Text("Pinch & drag to position", color = Color.White, fontSize = 10.sp)
+                                Text(stringResource(R.string.pinch_drag_position), color = Color.White, fontSize = 10.sp)
                             }
                         }
                     }
@@ -381,12 +383,12 @@ fun CreatePlaylistModal(onDismiss: () -> Unit) {
                     modifier = Modifier.background(Color(0xFF2C2C2E))
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Take Photo", color = Color.White) },
+                        text = { Text(stringResource(R.string.take_photo), color = Color.White) },
                         leadingIcon = { Icon(Icons.Default.CameraAlt, contentDescription = null, tint = Color.White) },
                         onClick = { showPhotoOptions = false }
                     )
                     DropdownMenuItem(
-                        text = { Text("Choose Photo", color = Color.White) },
+                        text = { Text(stringResource(R.string.choose_photo), color = Color.White) },
                         leadingIcon = { Icon(Icons.Default.PhotoLibrary, contentDescription = null, tint = Color.White) },
                         onClick = {
                             showPhotoOptions = false
@@ -394,7 +396,7 @@ fun CreatePlaylistModal(onDismiss: () -> Unit) {
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Choose File", color = Color.White) },
+                        text = { Text(stringResource(R.string.choose_file), color = Color.White) },
                         leadingIcon = { Icon(Icons.Default.Folder, contentDescription = null, tint = Color.White) },
                         onClick = { showPhotoOptions = false }
                     )
@@ -411,7 +413,7 @@ fun CreatePlaylistModal(onDismiss: () -> Unit) {
             TextField(
                 value = title,
                 onValueChange = { title = it },
-                placeholder = { Text("Playlist Title", color = Color.Gray, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center) },
+                placeholder = { Text(stringResource(R.string.playlist_title_placeholder), color = Color.Gray, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center) },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,
@@ -433,7 +435,7 @@ fun CreatePlaylistModal(onDismiss: () -> Unit) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Show on My Profile and in Search", color = Color.White, fontSize = 14.sp)
+                    Text(stringResource(R.string.show_profile_search), color = Color.White, fontSize = 14.sp)
                     Switch(
                         checked = showInProfile,
                         onCheckedChange = { showInProfile = it },
@@ -603,7 +605,7 @@ fun PlaylistDetailScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.AccountCircle, contentDescription = null, tint = contentColor, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = "My Playlist", color = contentColor.copy(alpha = 0.8f), fontSize = 14.sp)
+                    Text(text = stringResource(R.string.my_playlist_subtitle), color = contentColor.copy(alpha = 0.8f), fontSize = 14.sp)
                     Icon(Icons.Default.ChevronRight, contentDescription = null, tint = contentColor.copy(alpha = 0.8f), modifier = Modifier.size(16.dp))
                 }
             }
@@ -648,7 +650,7 @@ fun PlaylistDetailScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = contentColor)
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Play", color = contentColor, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                        Text(stringResource(R.string.play_label), color = contentColor, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
                     }
                 }
                 
@@ -664,7 +666,7 @@ fun PlaylistDetailScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Shuffle, contentDescription = "Shuffle", tint = contentColor, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Shuffle", color = contentColor, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                        Text(stringResource(R.string.shuffle_label), color = contentColor, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
                     }
                 }
             }
