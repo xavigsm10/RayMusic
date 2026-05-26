@@ -12,6 +12,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.stringResource
+import com.mrtdk.liquid_glass.R
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -139,7 +141,7 @@ fun NovedadesScreen(
     ) {
         // ── FEATURED ALBUMS CAROUSEL (big cards with text overlay at top) ──
         item {
-            Text("Novedades", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+            Text(stringResource(R.string.nav_novedades), color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
             Spacer(modifier = Modifier.height(8.dp))
 
             if (state.featuredAlbums.isNotEmpty()) {
@@ -197,7 +199,7 @@ fun NovedadesScreen(
         if (state.featuredNewSongs.isNotEmpty()) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text("Canciones nuevas destacadas", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.canciones_nuevas_destacadas), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                     androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(28.dp).padding(start = 4.dp))
                 }
                 Spacer(modifier = Modifier.height(4.dp))
@@ -226,7 +228,7 @@ fun NovedadesScreen(
         if (state.newReleaseAlbums.size > 6) {
             item {
                 Spacer(modifier = Modifier.height(28.dp))
-                Text("New Releases", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                Text(stringResource(R.string.nav_novedades), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -263,7 +265,7 @@ fun NovedadesScreen(
             item {
                 Spacer(modifier = Modifier.height(32.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text("Canciones del momento", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.canciones_momento), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                     androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(28.dp).padding(start = 4.dp))
                 }
                 Spacer(modifier = Modifier.height(4.dp))
@@ -293,7 +295,7 @@ fun NovedadesScreen(
             item {
                 Spacer(modifier = Modifier.height(32.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text("Toda la gente está escuchando...", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.toda_gente_escuchando), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
 

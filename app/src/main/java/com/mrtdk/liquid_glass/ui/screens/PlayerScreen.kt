@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import com.mrtdk.liquid_glass.R
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Search
@@ -120,6 +121,7 @@ fun PlayerScreen(
     onVolumeChange: (Float) -> Unit,
     onArtistSelected: (com.mrtdk.liquid_glass.ui.screens.ArtistState) -> Unit = {},
     onSongSelected: (PlayerState) -> Unit = {},
+    onSongSelectedFromQueue: (PlayerState) -> Unit = {},
     shuffleModeEnabled: Boolean = false,
     repeatMode: Int = androidx.media3.common.Player.REPEAT_MODE_OFF,
     onToggleShuffle: () -> Unit = {},
@@ -556,14 +558,14 @@ fun PlayerScreen(
                                     Icon(if (isRomajiActive) Icons.Default.ToggleOn else Icons.Default.ToggleOff, "Toggle", tint=romajiIconColor, modifier=Modifier.size(24.dp))
                                 }
                             }
-                            if (playerState != null && playerState.queue.isNotEmpty()) {
-                               Text(text = "Siguiente en Album/Playlist", color=contentColor, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top=32.dp, start=24.dp, end=24.dp, bottom=16.dp))
-                           } else if (playerState?.isExclusiveQueue != true) {
-                                Column(modifier = Modifier.padding(top=32.dp, start=24.dp, end=24.dp, bottom=16.dp)) {
-                                    Text(text = "Continue Playing", color=contentColor, fontSize=18.sp, fontWeight=FontWeight.Bold)
-                                    Text(text = "AutoPlaying similar music", color=contentColor.copy(alpha=0.7f), fontSize=14.sp)
-                                }
-                            }
+                             if (playerState != null && playerState.queue.isNotEmpty()) {
+                               Text(text = stringResource(R.string.siguiente_en_album_playlist), color=contentColor, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top=32.dp, start=24.dp, end=24.dp, bottom=16.dp))
+                            } else if (playerState?.isExclusiveQueue != true) {
+                                 Column(modifier = Modifier.padding(top=32.dp, start=24.dp, end=24.dp, bottom=16.dp)) {
+                                     Text(text = stringResource(R.string.continue_playing), color=contentColor, fontSize=18.sp, fontWeight=FontWeight.Bold)
+                                     Text(text = stringResource(R.string.autoplaying_similar_music), color=contentColor.copy(alpha=0.7f), fontSize=14.sp)
+                                 }
+                             }
                           
                           LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                               // 1. Manual Queue Section (Album/Playlist)
@@ -583,7 +585,7 @@ fun PlayerScreen(
                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable {
                                            swipeDirection = 1
                                            val remaining = playerState.queue.drop(index + 1)
-                                           onSongSelected(PlayerState(
+                                           onSongSelectedFromQueue(PlayerState(
                                                title = qItem.title,
                                                artist = qItem.artist,
                                                artUrl = upgradedArt,
@@ -621,7 +623,7 @@ fun PlayerScreen(
                                       } ?: song.thumbnail
                                       // Remove clicked song and all before it from the queue
                                       onUpNextSongsChange(upNextSongs.drop(i + 1))
-                                      onSongSelected(PlayerState(
+                                      onSongSelectedFromQueue(PlayerState(
                                           title = song.title,
                                           artist = song.artists.joinToString { it.name },
                                           artUrl = upgradedArt,
@@ -980,7 +982,7 @@ fun PlayerScreen(
                     Row(modifier=Modifier.fillMaxWidth().clickable { showOptionsMenu=false; showPlaylistMenu=true }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
                         Icon(Icons.Default.Menu, contentDescription=null, tint=Color.White)
                         Spacer(modifier=Modifier.width(16.dp))
-                        Text("Añadir a playlist", color=Color.White, fontSize=16.sp)
+                        Text(stringResource(R.string.añadir_a_playlist), color=Color.White, fontSize=16.sp)
                     }
                     Spacer(modifier=Modifier.height(32.dp))
                 }
@@ -1018,7 +1020,7 @@ fun PlayerScreen(
                     }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
                         Icon(Icons.Default.Search, contentDescription=null, tint=Color.White)
                         Spacer(modifier=Modifier.width(16.dp))
-                        Text("Buscar letra en internet", color=Color.White, fontSize=16.sp)
+                        Text(stringResource(R.string.buscar_letra_internet), color=Color.White, fontSize=16.sp)
                     }
                     Spacer(modifier=Modifier.height(32.dp))
                 }
@@ -1056,7 +1058,7 @@ fun PlayerScreen(
                     androidx.compose.material3.Divider(color = Color.DarkGray)
                     Spacer(modifier=Modifier.height(8.dp))
                     Row(modifier=Modifier.fillMaxWidth().clickable { isRomajiEnabled = !isRomajiEnabled; showLyricsMenu=false }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
-                        Text(if (isRomajiEnabled) "Desactivar Romaji" else "Activar Romaji", color=Color.White, fontSize=16.sp)
+                        Text(if (isRomajiEnabled) stringResource(R.string.desactivar_romaji) else stringResource(R.string.activar_romaji), color=Color.White, fontSize=16.sp)
                     }
                     
                     Spacer(modifier=Modifier.height(16.dp))
@@ -1071,7 +1073,7 @@ fun PlayerScreen(
                     }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
                         Icon(Icons.Default.Search, contentDescription=null, tint=Color.White)
                         Spacer(modifier=Modifier.width(16.dp))
-                        Text("Buscar letra manualmente", color=Color.White, fontSize=16.sp)
+                        Text(stringResource(R.string.buscar_letra_manualmente), color=Color.White, fontSize=16.sp)
                     }
                     Spacer(modifier=Modifier.height(32.dp))
                 }
@@ -1083,13 +1085,13 @@ fun PlayerScreen(
             androidx.compose.material3.AlertDialog(
                 onDismissRequest = { showManualLyricsSearch = false },
                 containerColor = Color(0xFF1E1E1E),
-                title = { Text("Buscar letra", color = Color.White) },
+                title = { Text(stringResource(R.string.buscar_letra), color = Color.White) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         androidx.compose.material3.OutlinedTextField(
                             value = manualLyricsQueryTitle,
                             onValueChange = { manualLyricsQueryTitle = it },
-                            label = { Text("Título de la canción", color = Color.Gray) },
+                            label = { Text(stringResource(R.string.titulo_cancion), color = Color.Gray) },
                             singleLine = true,
                             colors = androidx.compose.material3.TextFieldDefaults.colors(
                                 focusedTextColor = Color.White, unfocusedTextColor = Color.White,
@@ -1099,7 +1101,7 @@ fun PlayerScreen(
                         androidx.compose.material3.OutlinedTextField(
                             value = manualLyricsQueryArtist,
                             onValueChange = { manualLyricsQueryArtist = it },
-                            label = { Text("Artista", color = Color.Gray) },
+                            label = { Text(stringResource(R.string.artista), color = Color.Gray) },
                             singleLine = true,
                             colors = androidx.compose.material3.TextFieldDefaults.colors(
                                 focusedTextColor = Color.White, unfocusedTextColor = Color.White,
@@ -1139,12 +1141,12 @@ fun PlayerScreen(
                             }
                         }
                     }) {
-                        Text("Buscar", color = Color(0xFFFA243C))
+                        Text(stringResource(R.string.search_action), color = Color(0xFFFA243C))
                     }
                 },
                 dismissButton = {
                     androidx.compose.material3.TextButton(onClick = { showManualLyricsSearch = false }) {
-                        Text("Cancelar", color = Color.Gray)
+                        Text(stringResource(R.string.cancelar), color = Color.Gray)
                     }
                 }
             )
@@ -1154,14 +1156,14 @@ fun PlayerScreen(
             ModalBottomSheet(onDismissRequest = { showPlaylistMenu = false }, containerColor = Color(0xFF1E1E1E)) {
                 val playlists by com.mrtdk.liquid_glass.data.LibraryManager.playlists.collectAsState()
                 Column(modifier = Modifier.padding(horizontal=16.dp, vertical=8.dp).fillMaxWidth()) {
-                    Text("Añadir a playlist", color=Color.White, fontSize=20.sp, fontWeight=FontWeight.Bold)
+                    Text(stringResource(R.string.añadir_a_playlist), color=Color.White, fontSize=20.sp, fontWeight=FontWeight.Bold)
                     Spacer(modifier=Modifier.height(16.dp))
                     Row(modifier=Modifier.fillMaxWidth().clickable { showPlaylistMenu=false; showNewPlaylistDialog=true }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
                         Box(modifier=Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(Color.DarkGray), contentAlignment=Alignment.Center) {
                             Icon(Icons.Default.Add, null, tint=Color.White)
                         }
                         Spacer(modifier=Modifier.width(16.dp))
-                        Text("Nueva playlist...", color=Color(0xFFFA243C), fontSize=16.sp)
+                        Text(stringResource(R.string.nueva_playlist_ellipsis), color=Color(0xFFFA243C), fontSize=16.sp)
                     }
                     
                     LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max=300.dp)) {
@@ -1179,7 +1181,7 @@ fun PlayerScreen(
                                 Spacer(modifier=Modifier.width(16.dp))
                                 Column {
                                     Text(pl.name, color=Color.White, fontSize=16.sp)
-                                    Text("${pl.items.size} canciones", color=Color.Gray, fontSize=14.sp)
+                                    Text(stringResource(R.string.num_canciones, pl.items.size), color=Color.Gray, fontSize=14.sp)
                                 }
                             }
                         }
@@ -1193,12 +1195,12 @@ fun PlayerScreen(
             var newPlaylistName by remember { mutableStateOf("") }
             AlertDialog(
                 onDismissRequest = { showNewPlaylistDialog = false },
-                title = { Text("Nueva playlist", color = Color.White) },
+                title = { Text(stringResource(R.string.nueva_playlist), color = Color.White) },
                 text = {
                     OutlinedTextField(
                         value = newPlaylistName,
                         onValueChange = { newPlaylistName = it },
-                        label = { Text("Nombre") },
+                        label = { Text(stringResource(R.string.nombre)) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor=Color.White, 
@@ -1214,10 +1216,10 @@ fun PlayerScreen(
                             com.mrtdk.liquid_glass.data.LibraryManager.createPlaylist(newPlaylistName)
                         }
                         showNewPlaylistDialog = false
-                    }) { Text("Crear", color = Color(0xFFFA243C)) }
+                    }) { Text(stringResource(R.string.crear), color = Color(0xFFFA243C)) }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showNewPlaylistDialog = false }) { Text("Cancelar", color = Color.Gray) }
+                    TextButton(onClick = { showNewPlaylistDialog = false }) { Text(stringResource(R.string.cancelar), color = Color.Gray) }
                 },
                 containerColor = Color(0xFF2C2C2C)
             )

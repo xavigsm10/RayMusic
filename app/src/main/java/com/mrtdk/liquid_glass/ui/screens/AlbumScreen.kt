@@ -26,12 +26,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.painterResource
 import com.mrtdk.liquid_glass.R
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -60,6 +64,7 @@ fun AlbumScreen(
     onSongSelected: (PlayerState) -> Unit
 ) {
     val context = LocalContext.current
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
     var tracks by remember { mutableStateOf<List<SongItem>>(emptyList()) }
     var dominantColor by remember { mutableStateOf(Color(0xFF1E1E1E)) }
     val savedItems by LibraryManager.savedItems.collectAsState()
@@ -70,6 +75,8 @@ fun AlbumScreen(
                           (albumState.title.contains("Thriller", ignoreCase = true) && albumState.artist.contains("Michael Jackson", ignoreCase = true))
     val isAfterHoursAlbum = albumState.title.equals("After Hours", ignoreCase = true) ||
                             (albumState.title.contains("After Hours", ignoreCase = true) && albumState.artist.contains("The Weeknd", ignoreCase = true))
+    val isAroundTheFurAlbum = albumState.title.equals("Around the Fur", ignoreCase = true) ||
+                              (albumState.title.contains("Around the Fur", ignoreCase = true) && albumState.artist.contains("Deftones", ignoreCase = true))
 
     val hdThumb = when {
         isMichaelAlbum -> "file:///android_asset/img/imagenes con movimiento/michael_songs_from_the_motion_picture_artwork_square.webp"
@@ -79,6 +86,22 @@ fun AlbumScreen(
             ?.replace("=w226-h226", "=w720-h720")
             ?.replace("=w120-h120", "=w720-h720")
     }
+
+    val headerArt = when {
+        isAfterHoursAlbum -> "file:///android_asset/fullartwork/after hours the weeknd.png"
+        isAroundTheFurAlbum -> "file:///android_asset/fullartwork/deftones around the fur.png"
+        else -> hdThumb
+    }
+
+    val songArtUrl = if (isAfterHoursAlbum || isAroundTheFurAlbum) headerArt else hdThumb
+
+    val albumHeightRatio = when {
+        isAroundTheFurAlbum -> 1.40f
+        isAfterHoursAlbum -> 1.62f
+        else -> 1.05f
+    }
+
+    val isVerticalAlbum = isAfterHoursAlbum || isAroundTheFurAlbum
 
     val animatedImageLoader = remember(context) {
         coil.ImageLoader.Builder(context)
@@ -93,10 +116,10 @@ fun AlbumScreen(
     }
 
     // Extract dominant colour
-    LaunchedEffect(hdThumb) {
-        if (!hdThumb.isNullOrBlank()) {
+    LaunchedEffect(headerArt) {
+        if (!headerArt.isNullOrBlank()) {
             val request = ImageRequest.Builder(context)
-                .data(hdThumb).allowHardware(false).size(200).build()
+                .data(headerArt).allowHardware(false).size(200).build()
             val result = coil.Coil.imageLoader(context).execute(request)
             if (result is coil.request.SuccessResult) {
                 val drawable = result.drawable
@@ -165,14 +188,15 @@ fun AlbumScreen(
             com.mrtdk.glass.GlassContainer(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1f / 1.15f),
+                    .aspectRatio(1f / albumHeightRatio),
                 content = {
                     AsyncImage(
                         model = ImageRequest.Builder(context)
-                            .data(hdThumb).crossfade(true).build(),
+                            .data(headerArt).crossfade(true).build(),
                         imageLoader = animatedImageLoader,
                         contentDescription = albumState.title,
                         contentScale = ContentScale.Crop,
+                        alignment = Alignment.TopCenter,
                         modifier = Modifier.fillMaxSize()
                     )
                     // Gradient: transparent → dominant color at bottom
@@ -187,6 +211,66 @@ fun AlbumScreen(
                                 )
                             )
                     )
+                    if (isVerticalAlbum) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.BottomCenter
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 20.dp)
+                                    .padding(horizontal = 20.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = albumState.title,
+                                    color = Color.White,
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    style = TextStyle(
+                                        shadow = Shadow(
+                                            color = Color.Black.copy(alpha = 0.8f),
+                                            offset = Offset(2f, 2f),
+                                            blurRadius = 4f
+                                        )
+                                    )
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = albumState.artist,
+                                    color = Color.White.copy(alpha = 0.8f),
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    style = TextStyle(
+                                        shadow = Shadow(
+                                            color = Color.Black.copy(alpha = 0.8f),
+                                            offset = Offset(2f, 2f),
+                                            blurRadius = 4f
+                                        )
+                                    )
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                if (albumState.year != null) {
+                                    Text(
+                                        text = albumState.year.toString(),
+                                        color = Color.White.copy(alpha = 0.6f),
+                                        fontSize = 12.sp,
+                                        style = TextStyle(
+                                            shadow = Shadow(
+                                                color = Color.Black.copy(alpha = 0.8f),
+                                                offset = Offset(2f, 2f),
+                                                blurRadius = 4f
+                                            )
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
                 },
                 glassContent = {
                     val scope = this
@@ -245,11 +329,12 @@ fun AlbumScreen(
         }
 
         // ── ALBUM INFO (on dominant color background) ──────────────
-        item {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
+        if (!isVerticalAlbum) {
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
@@ -278,6 +363,7 @@ fun AlbumScreen(
                 }
             }
         }
+    }
 
         // ── ACTION BUTTONS: shuffle | ▶ Play | + ──────────────────
         item {
@@ -302,7 +388,7 @@ fun AlbumScreen(
                                     QueueItem(
                                         title = t.title,
                                         artist = t.artists.joinToString { it.name },
-                                        artUrl = hdThumb,
+                                        artUrl = songArtUrl,
                                         videoId = t.id
                                     )
                                 }
@@ -310,7 +396,7 @@ fun AlbumScreen(
                                     PlayerState(
                                         title = s.title,
                                         artist = s.artists.joinToString { it.name },
-                                        artUrl = hdThumb,
+                                        artUrl = songArtUrl,
                                         videoId = s.id,
                                         queue = albumQueue,
                                         isExclusiveQueue = true
@@ -341,7 +427,7 @@ fun AlbumScreen(
                                     QueueItem(
                                         title = t.title,
                                         artist = t.artists.joinToString { it.name },
-                                        artUrl = hdThumb,
+                                        artUrl = songArtUrl,
                                         videoId = t.id
                                     )
                                 }
@@ -349,7 +435,7 @@ fun AlbumScreen(
                                     PlayerState(
                                         title = s.title,
                                         artist = s.artists.joinToString { it.name },
-                                        artUrl = hdThumb,
+                                        artUrl = songArtUrl,
                                         videoId = s.id,
                                         queue = albumQueue,
                                         isExclusiveQueue = true
@@ -421,7 +507,7 @@ fun AlbumScreen(
                             QueueItem(
                                 title = t.title,
                                 artist = t.artists.joinToString { it.name },
-                                artUrl = hdThumb,
+                                artUrl = songArtUrl,
                                 videoId = t.id
                             )
                         }
@@ -429,7 +515,7 @@ fun AlbumScreen(
                             PlayerState(
                                 title = song.title,
                                 artist = song.artists.joinToString { it.name },
-                                artUrl = hdThumb,
+                                artUrl = songArtUrl,
                                 videoId = song.id,
                                 queue = albumQueue,
                                 isExclusiveQueue = true

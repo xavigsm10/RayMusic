@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.res.painterResource
 import com.mrtdk.liquid_glass.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -126,7 +127,7 @@ fun LiquidBottomNavBar(
                 ) {
                     Icon(
                         painter = androidx.compose.ui.res.painterResource(id = com.mrtdk.liquid_glass.R.drawable.nav_inicio),
-                        contentDescription = "Inicio",
+                        contentDescription = stringResource(R.string.nav_inicio),
                         tint = contentColor,
                         modifier = Modifier.size(24.dp)
                     )
@@ -157,14 +158,14 @@ fun LiquidBottomNavBar(
                 if (!isSearchActive) {
                     Icon(
                         imageVector = Icons.Default.Search,
-                        contentDescription = "Buscar",
+                        contentDescription = stringResource(R.string.search_action),
                         tint = contentColor,
                         modifier = Modifier.size(24.dp)
                     )
                 } else {
                     Icon(
                         imageVector = Icons.Default.Search,
-                        contentDescription = "Buscar",
+                        contentDescription = stringResource(R.string.search_action),
                         tint = Color.White,
                         modifier = Modifier
                             .padding(start = 20.dp, end = 12.dp)
@@ -188,7 +189,7 @@ fun LiquidBottomNavBar(
                         keyboardActions = KeyboardActions(onSearch = { onSearchSubmit(searchQuery) }),
                         decorationBox = { innerTextField ->
                             if (searchQuery.isEmpty()) {
-                                Text("Buscar en RayMusic", color = contentColor.copy(alpha = 0.5f), fontSize = 16.sp)
+                                Text(stringResource(R.string.search_placeholder), color = contentColor.copy(alpha = 0.5f), fontSize = 16.sp)
                             }
                             innerTextField()
                         }
@@ -224,7 +225,7 @@ fun LiquidBottomNavBar(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Cerrar",
+                        contentDescription = stringResource(R.string.close_action),
                         tint = contentColor,
                         modifier = Modifier.size(24.dp)
                     )
@@ -333,6 +334,13 @@ fun MainTabs(
             verticalAlignment = Alignment.CenterVertically
         ) {
             tabs.forEachIndexed { index, pair ->
+                val tabText = when (index) {
+                    0 -> stringResource(R.string.nav_inicio)
+                    1 -> stringResource(R.string.nav_novedades)
+                    2 -> stringResource(R.string.nav_radio)
+                    3 -> stringResource(R.string.nav_biblioteca)
+                    else -> pair.first
+                }
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -344,13 +352,13 @@ fun MainTabs(
                     val selectedTint = Color(0xFFFA243C)
                     Icon(
                         painter = painterResource(id = pair.second),
-                        contentDescription = pair.first,
+                        contentDescription = tabText,
                         tint = if (isSelected) selectedTint else contentColor.copy(alpha = 0.5f),
                         modifier = Modifier.size(28.dp)
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = pair.first,
+                        text = tabText,
                         color = if (isSelected) selectedTint else contentColor.copy(alpha = 0.5f),
                         fontSize = 10.sp,
                         fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,

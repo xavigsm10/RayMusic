@@ -15,7 +15,7 @@ android {
         minSdk = 21
         targetSdk = 36
         versionCode = 1
-        versionName = "0.5.7"
+        versionName = "0.5.8"
     }
 
     signingConfigs {
@@ -41,6 +41,7 @@ android {
 
     buildFeatures {
         buildConfig = true
+        viewBinding = true
     }
 
     compileOptions {
@@ -89,6 +90,10 @@ dependencies {
     
     // Permissions
     implementation("com.google.accompanist:accompanist-permissions:0.35.0-alpha")
+
+    // XML Layout UI Dependencies
+    implementation("androidx.constraintlayout:constraintlayout:2.2.0")
+    implementation("com.google.android.material:material:1.12.0")
     
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)

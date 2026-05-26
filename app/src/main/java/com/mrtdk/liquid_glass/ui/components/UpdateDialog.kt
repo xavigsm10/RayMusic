@@ -17,6 +17,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.res.stringResource
+import com.mrtdk.liquid_glass.R
 import com.mrtdk.liquid_glass.utils.Updater
 import java.io.File
 
@@ -47,7 +49,7 @@ fun UpdateDialog(
             ) {
                 Spacer(modifier = Modifier.height(20.dp))
                 Text(
-                    text = "Actualización Disponible",
+                    text = stringResource(R.string.actualizacion_disponible),
                     color = Color.White,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -55,7 +57,7 @@ fun UpdateDialog(
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Se ha encontrado la versión ${releaseInfo.versionName}. ¿Deseas actualizar ahora?",
+                    text = stringResource(R.string.update_dialog_desc, releaseInfo.versionName),
                     color = Color.White.copy(alpha = 0.8f),
                     fontSize = 13.sp,
                     textAlign = TextAlign.Center,
@@ -65,7 +67,7 @@ fun UpdateDialog(
                 if (downloading) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Descargando: ${(progress * 100).toInt()}%",
+                        text = stringResource(R.string.descargando, (progress * 100).toInt()),
                         color = Color.Gray,
                         fontSize = 12.sp,
                         textAlign = TextAlign.Center
@@ -100,7 +102,7 @@ fun UpdateDialog(
                                 .clickable { onDismiss() },
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(text = "Cancelar", color = Color(0xFFFA243C), fontSize = 17.sp)
+                            Text(text = stringResource(R.string.cancelar), color = Color(0xFFFA243C), fontSize = 17.sp)
                         }
                         Box(modifier = Modifier.width(0.5.dp).fillMaxHeight().background(Color(0xFF333333)))
                         Box(
@@ -123,7 +125,7 @@ fun UpdateDialog(
                                 },
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(text = "Actualizar", color = Color(0xFFFA243C), fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                            Text(text = stringResource(R.string.actualizar), color = Color(0xFFFA243C), fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 } else if (downloading) {
@@ -133,7 +135,7 @@ fun UpdateDialog(
                             .height(44.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(text = "Descargando...", color = Color.Gray, fontSize = 17.sp)
+                        Text(text = stringResource(R.string.descargando_ellipsis), color = Color.Gray, fontSize = 17.sp)
                     }
                 } else {
                     Box(
@@ -145,7 +147,7 @@ fun UpdateDialog(
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(text = "Instalar", color = Color(0xFFFA243C), fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                        Text(text = stringResource(R.string.instalar), color = Color(0xFFFA243C), fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }

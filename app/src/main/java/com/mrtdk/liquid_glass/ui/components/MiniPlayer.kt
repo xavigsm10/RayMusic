@@ -5,6 +5,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,6 +46,8 @@ fun GlassBoxScope.MiniPlayer(
     isPlaying: Boolean,
     onTogglePlayPause: () -> Unit,
     onClick: () -> Unit,
+    onNext: () -> Unit,
+    onPrevious: () -> Unit,
     modifier: Modifier = Modifier,
     hideImage: Boolean = false,
     tintColor: Color = Color.White.copy(alpha = 0.15f),
@@ -86,6 +90,8 @@ fun GlassBoxScope.MiniPlayer(
         previousHideImage = hideImage
     }
 
+    val swipeOffsetX = remember { Animatable(0f) }
+
     GlassBox(
         modifier = modifier
             .fillMaxWidth()
@@ -96,7 +102,59 @@ fun GlassBoxScope.MiniPlayer(
                 scaleY = landingScale.value
             }
             .clip(CircleShape)
-            .clickable { onClick() },
+            .clickable { onClick() }
+            .pointerInput(Unit) {
+                val thresholdPx = 80.dp.toPx()
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        scope.launch {
+                            val currentValue = swipeOffsetX.value
+                            if (currentValue < -thresholdPx) {
+                                onNext()
+                                swipeOffsetX.snapTo(thresholdPx)
+                                swipeOffsetX.animateTo(
+                                    targetValue = 0f,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessLow
+                                    )
+                                )
+                            } else if (currentValue > thresholdPx) {
+                                onPrevious()
+                                swipeOffsetX.snapTo(-thresholdPx)
+                                swipeOffsetX.animateTo(
+                                    targetValue = 0f,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessLow
+                                    )
+                                )
+                            } else {
+                                swipeOffsetX.animateTo(
+                                    targetValue = 0f,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessLow
+                                    )
+                                )
+                            }
+                        }
+                    },
+                    onDragCancel = {
+                        scope.launch {
+                            swipeOffsetX.animateTo(0f)
+                        }
+                    },
+                    onHorizontalDrag = { change, dragAmount ->
+                        change.consume()
+                        scope.launch {
+                            val maxDrag = thresholdPx * 1.5f
+                            val newValue = (swipeOffsetX.value + dragAmount).coerceIn(-maxDrag, maxDrag)
+                            swipeOffsetX.snapTo(newValue)
+                        }
+                    }
+                )
+            },
         shape = CircleShape,
         blur = 0.8f,
         centerDistortion = 0.1f,
@@ -108,9 +166,58 @@ fun GlassBoxScope.MiniPlayer(
         Row(
             modifier = Modifier
                 .fillMaxSize()
+                .graphicsLayer {
+                    translationX = swipeOffsetX.value
+                    val thresholdPx = 80.dp.toPx()
+                    val progress = (Math.abs(swipeOffsetX.value) / thresholdPx).coerceIn(0f, 1f)
+                    alpha = 1f - (progress * 0.7f)
+                }
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val titleLower = playerState.title.lowercase()
+            val artistLower = playerState.artist.lowercase()
+            val isTheWeeknd = artistLower.contains("the weeknd")
+            val isDeftones = artistLower.contains("deftones")
+
+            val correctedUrl = when {
+                isTheWeeknd && (
+                    titleLower.contains("alone again") ||
+                    titleLower.contains("too late") ||
+                    titleLower.contains("hardest to love") ||
+                    titleLower.contains("scared to live") ||
+                    titleLower.contains("snowchild") ||
+                    titleLower.contains("escape from la") ||
+                    titleLower.contains("heartless") ||
+                    titleLower.contains("faith") ||
+                    titleLower.contains("blinding lights") ||
+                    titleLower.contains("in your eyes") ||
+                    titleLower.contains("save your tears") ||
+                    titleLower.contains("repeat after me") ||
+                    titleLower.contains("after hours") ||
+                    titleLower.contains("until i bleed out") ||
+                    titleLower.contains("nothing compares") ||
+                    titleLower.contains("missed you") ||
+                    titleLower.contains("final lullaby")
+                ) -> "file:///android_asset/fullartwork/after hours the weeknd.png"
+
+                isDeftones && (
+                    titleLower.contains("my own summer") ||
+                    titleLower.contains("lhabia") ||
+                    titleLower.contains("mascara") ||
+                    titleLower.contains("around the fur") ||
+                    titleLower.contains("rickets") ||
+                    titleLower.contains("be quiet and drive") ||
+                    titleLower.contains("lotion") ||
+                    titleLower.contains("dai the flu") ||
+                    titleLower.contains("headup") ||
+                    titleLower.contains("mx") ||
+                    titleLower.contains("damone")
+                ) -> "file:///android_asset/fullartwork/deftones around the fur.png"
+
+                else -> playerState.artUrl
+            }
+
             Box(
                 modifier = Modifier
                     .size(40.dp)
@@ -119,9 +226,9 @@ fun GlassBoxScope.MiniPlayer(
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(context)
-                        .data(playerState.artUrl)
-                        .crossfade(true)
-                        .build(),
+                    .data(correctedUrl)
+                    .crossfade(true)
+                    .build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize().alpha(if (hideImage) 0f else 1f)
@@ -154,12 +261,14 @@ fun GlassBoxScope.MiniPlayer(
             }
             
             Spacer(modifier = Modifier.width(8.dp))
-            Icon(
-                painter = painterResource(id = R.drawable.forward),
-                contentDescription = "Next",
-                tint = contentColor,
-                modifier = Modifier.size(24.dp)
-            )
+            IconButton(onClick = onNext, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    painter = painterResource(id = R.drawable.forward),
+                    contentDescription = "Next",
+                    tint = contentColor,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
             Spacer(modifier = Modifier.width(8.dp))
         }
     }

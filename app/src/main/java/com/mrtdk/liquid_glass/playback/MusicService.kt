@@ -48,6 +48,31 @@ class MusicService : MediaSessionService() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var wifiLock: android.net.wifi.WifiManager.WifiLock? = null
 
+    private fun playSongState(state: com.mrtdk.liquid_glass.ui.screens.PlayerState) {
+        if (state.contentUri != null) {
+            val mediaItem = androidx.media3.common.MediaItem.fromUri(state.contentUri)
+            player.setMediaItem(mediaItem)
+            player.prepare()
+            player.play()
+        } else if (state.videoId != null) {
+            val metadata = androidx.media3.common.MediaMetadata.Builder().apply {
+                setTitle(state.title)
+                setArtist(state.artist)
+                state.artUrl?.toString()?.let { setArtworkUri(android.net.Uri.parse(it)) }
+            }.build()
+            
+            val mediaItem = androidx.media3.common.MediaItem.Builder()
+                .setMediaId(state.videoId)
+                .setUri(android.net.Uri.parse("yt://${state.videoId}"))
+                .setMediaMetadata(metadata)
+                .build()
+            
+            player.setMediaItem(mediaItem)
+            player.prepare()
+            player.play()
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         
@@ -189,28 +214,7 @@ class MusicService : MediaSessionService() {
                 if (playbackState == androidx.media3.common.Player.STATE_ENDED) {
                     val nextState = com.mrtdk.liquid_glass.playback.PlaybackQueue.getNextSongAndAdvance(player.repeatMode)
                     if (nextState != null) {
-                        if (nextState.contentUri != null) {
-                            val mediaItem = androidx.media3.common.MediaItem.fromUri(nextState.contentUri)
-                            player.setMediaItem(mediaItem)
-                            player.prepare()
-                            player.play()
-                        } else if (nextState.videoId != null) {
-                            val metadata = androidx.media3.common.MediaMetadata.Builder().apply {
-                                setTitle(nextState.title)
-                                setArtist(nextState.artist)
-                                nextState.artUrl?.toString()?.let { setArtworkUri(android.net.Uri.parse(it)) }
-                            }.build()
-                            
-                            val mediaItem = androidx.media3.common.MediaItem.Builder()
-                                .setMediaId(nextState.videoId)
-                                .setUri(android.net.Uri.parse("yt://${nextState.videoId}"))
-                                .setMediaMetadata(metadata)
-                                .build()
-                            
-                            player.setMediaItem(mediaItem)
-                            player.prepare()
-                            player.play()
-                        }
+                        playSongState(nextState)
                     }
                 }
             }
@@ -254,7 +258,59 @@ class MusicService : MediaSessionService() {
             this, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        mediaSession = MediaSession.Builder(this, player)
+        val forwardingPlayer = object : androidx.media3.common.ForwardingPlayer(player) {
+            override fun getAvailableCommands(): Player.Commands {
+                return super.getAvailableCommands().buildUpon()
+                    .add(Player.COMMAND_SEEK_TO_NEXT)
+                    .add(Player.COMMAND_SEEK_TO_PREVIOUS)
+                    .add(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
+                    .add(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
+                    .build()
+            }
+
+            override fun isCommandAvailable(command: Int): Boolean {
+                return if (command == Player.COMMAND_SEEK_TO_NEXT || 
+                    command == Player.COMMAND_SEEK_TO_PREVIOUS ||
+                    command == Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM ||
+                    command == Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM) {
+                    true
+                } else {
+                    super.isCommandAvailable(command)
+                }
+            }
+
+            override fun hasNextMediaItem(): Boolean = true
+
+            override fun hasPreviousMediaItem(): Boolean = true
+
+            override fun seekToNext() {
+                seekToNextMediaItem()
+            }
+
+            override fun seekToPrevious() {
+                if (player.currentPosition > 3000) {
+                    player.seekTo(0)
+                } else {
+                    seekToPreviousMediaItem()
+                }
+            }
+
+            override fun seekToNextMediaItem() {
+                val nextState = com.mrtdk.liquid_glass.playback.PlaybackQueue.getNextSongAndAdvance(player.repeatMode)
+                if (nextState != null) {
+                    playSongState(nextState)
+                }
+            }
+
+            override fun seekToPreviousMediaItem() {
+                val prevState = com.mrtdk.liquid_glass.playback.PlaybackQueue.getPreviousSongAndGoBack()
+                if (prevState != null) {
+                    playSongState(prevState)
+                }
+            }
+        }
+
+        mediaSession = MediaSession.Builder(this, forwardingPlayer)
             .setSessionActivity(pendingIntent)
             .setCallback(object : MediaSession.Callback {
                 override fun onPlaybackResumption(
