@@ -20,6 +20,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.stringResource
+import com.mrtdk.liquid_glass.R
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -50,6 +52,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 
 data class SimilarSection(val artistName: String, val items: List<com.echo.innertube.models.YTItem>)
+data class PorqueEscuchasteSection(val artistName: String, val songs: List<SongItem>)
 
 class InicioState {
     var isLoaded by mutableStateOf(false)
@@ -57,9 +60,11 @@ class InicioState {
     var homePage by mutableStateOf<com.echo.innertube.pages.HomePage?>(null)
     var quickPickSongs by mutableStateOf<List<SongItem>>(emptyList())
     var similarSections by mutableStateOf<List<SimilarSection>>(emptyList())
+    var porqueEscuchasteSections by mutableStateOf<List<PorqueEscuchasteSection>>(emptyList())
     var seleccionesParaTi by mutableStateOf<List<SongItem>>(emptyList())
     var seleccionesTitle by mutableStateOf<String?>(null)
     var featuredSuggestions by mutableStateOf<List<com.echo.innertube.models.YTItem>>(emptyList())
+    var featuredPlaylists by mutableStateOf<List<com.echo.innertube.models.PlaylistItem>>(emptyList())
 }
 
 @Composable
@@ -119,9 +124,11 @@ fun InicioScreen(
                     var seleccionesTitleTemp: String? = null
                     var seleccionesListTemp: List<SongItem> = emptyList()
                     var quickPicksTemp: List<SongItem> = emptyList()
+                    val playlistList = mutableListOf<com.echo.innertube.models.PlaylistItem>()
 
                     for (section in sects) {
                         val title = section.title.lowercase()
+                        playlistList.addAll(section.items.filterIsInstance<com.echo.innertube.models.PlaylistItem>())
                         when {
                             title.contains("vuelve a escuchar") || title.contains("listen again") || title.contains("vuelve a") -> {
                                 quickPicksTemp = section.items.filterIsInstance<SongItem>()
@@ -149,6 +156,7 @@ fun InicioScreen(
                     state.seleccionesTitle = seleccionesTitleTemp
                     state.featuredSuggestions = suggestionsList
                     state.quickPickSongs = quickPicksTemp
+                    state.featuredPlaylists = playlistList.distinctBy { it.id }
                 }
             }
             state.isLoaded = true
@@ -161,13 +169,13 @@ fun InicioScreen(
     LaunchedEffect(recentlyPlayed) {
         val recentSongs = recentlyPlayed.filter { it.type == ItemType.SONG }
         if (recentSongs.isNotEmpty() && algorithmSeeds.isEmpty()) {
-            // First load: pick 3 diverse seeds from the top 15 recently played
-            algorithmSeeds = recentSongs.take(15).shuffled().take(3)
+            // First load: pick 5 diverse seeds from the top 20 recently played
+            algorithmSeeds = recentSongs.take(20).shuffled().take(5)
         } else if (recentSongs.isNotEmpty()) {
             // Update seeds when a new song is played to keep it fresh but mixed
             val latest = recentSongs.first()
             if (!algorithmSeeds.contains(latest)) {
-                algorithmSeeds = (listOf(latest) + algorithmSeeds.take(2))
+                algorithmSeeds = (listOf(latest) + algorithmSeeds.take(4))
             }
         }
     }
@@ -180,6 +188,8 @@ fun InicioScreen(
             val allParaTi = mutableListOf<SongItem>()
             val allSuggestions = mutableListOf<com.echo.innertube.models.YTItem>()
             val sections = mutableListOf<SimilarSection>()
+            val porqueEscuchasteList = mutableListOf<PorqueEscuchasteSection>()
+            val allPlaylists = mutableListOf<com.echo.innertube.models.PlaylistItem>()
 
             // Fetch related pages in parallel for a richer mix
             val deferreds = algorithmSeeds.map { song ->
@@ -202,6 +212,7 @@ fun InicioScreen(
             for ((seedArtist, relatedPage) in results) {
                 allQuickPicks.addAll(relatedPage.songs.take(6))
                 allParaTi.addAll(relatedPage.songs.drop(6).take(5))
+                allPlaylists.addAll(relatedPage.playlists)
 
                 val availableSongs = relatedPage.songs.drop(11)
                 allSuggestions.addAll(availableSongs.take(8))
@@ -216,10 +227,20 @@ fun InicioScreen(
                         items = primaryItems.shuffled()
                     ))
                 }
+
+                // Add a "Porque escuchaste a" section for this seed
+                val seedSongs = relatedPage.songs.take(8)
+                if (seedSongs.isNotEmpty() && seedArtist.isNotEmpty() && seedArtist != "Artistas") {
+                    porqueEscuchasteList.add(PorqueEscuchasteSection(
+                        artistName = seedArtist,
+                        songs = seedSongs
+                    ))
+                }
             }
 
             state.quickPickSongs = allQuickPicks.distinctBy { it.id }.shuffled().take(12)
             state.seleccionesParaTi = allParaTi.distinctBy { it.id }.shuffled().take(10)
+            state.porqueEscuchasteSections = porqueEscuchasteList.distinctBy { it.artistName }
 
             if (results.isNotEmpty()) {
                 val primaryArtist = results.first().first
@@ -235,7 +256,13 @@ fun InicioScreen(
                 }
             }.shuffled().take(15)
 
-            state.similarSections = sections.distinctBy { it.artistName }.take(5)
+            // Extract playlists from homePage
+            val homePlaylists = state.homePage?.sections?.flatMap { it.items.filterIsInstance<com.echo.innertube.models.PlaylistItem>() } ?: emptyList()
+            state.featuredPlaylists = (allPlaylists + homePlaylists).distinctBy { it.id }.shuffled().take(10)
+
+            // Merge similar sections from seeds and homePage
+            val currentSimilar = state.similarSections
+            state.similarSections = (sections + currentSimilar).distinctBy { it.artistName }.take(12)
         }
     }
 
@@ -250,7 +277,7 @@ fun InicioScreen(
     ) {
         item {
             Text(
-                text = "Inicio",
+                text = stringResource(R.string.nav_inicio),
                 color = Color.White,
                 fontSize = 34.sp,
                 fontWeight = FontWeight.Bold,
@@ -268,7 +295,7 @@ fun InicioScreen(
         if (displaySuggestions.isNotEmpty()) {
             item {
                 Text(
-                    text = "Sugerencias destacadas para ti",
+                    text = stringResource(R.string.sugerencias_destacadas),
                     color = Color.White,
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
@@ -293,6 +320,8 @@ fun InicioScreen(
             }
         }
 
+
+
         // ═══════════════════════════════════════════════════════════
         // QUICK PICKS — "Selecciones rápidas"
         // ═══════════════════════════════════════════════════════════
@@ -303,7 +332,7 @@ fun InicioScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Selecciones rápidas", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.selecciones_rapidas), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
@@ -320,7 +349,7 @@ fun InicioScreen(
                     ) {
                         Icon(Icons.Default.PlayArrow, contentDescription = "Play all", tint = Color.White, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Play all", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.play_all), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -373,7 +402,7 @@ fun InicioScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Sigue escuchando", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.sigue_escuchando), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 LazyRow(
@@ -425,89 +454,291 @@ fun InicioScreen(
         }
 
         // ═══════════════════════════════════════════════════════════
-        // SIMILAR TO [ARTIST] — Multiple sections
+        // SIMILAR TO [ARTIST] — Multiple sections (Playlist destacada dynamically embedded)
         // ═══════════════════════════════════════════════════════════
-        state.similarSections.forEach { section ->
+        val similarSections = state.similarSections
+        val showPlaylistDestacadaAfterIndex = if (similarSections.size >= 3) 2 else similarSections.size - 1
+
+        if (similarSections.isEmpty() && state.featuredPlaylists.isNotEmpty()) {
             item {
-                Text("Similar a", color = Color.Gray, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 16.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(section.artistName, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                    Icon(Icons.Default.ChevronRight, contentDescription = "More", tint = Color.Gray)
-                }
+                Text(
+                    text = stringResource(R.string.playlist_destacada),
+                    color = Color.White,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+                )
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    items(section.items.take(10).size) { index ->
-                        val item = section.items[index]
-                        val hdThumb = upgradeThumb(
-                            when (item) {
-                                is com.echo.innertube.models.ArtistItem -> item.thumbnail
-                                is com.echo.innertube.models.SongItem -> item.thumbnail
-                                is com.echo.innertube.models.AlbumItem -> item.thumbnail
-                                else -> null
-                            }
-                        )
-                        val title = when (item) {
-                            is com.echo.innertube.models.ArtistItem -> item.title
-                            is com.echo.innertube.models.SongItem -> item.title
-                            is com.echo.innertube.models.AlbumItem -> item.title
-                            else -> "Desconocido"
-                        }
-                        val subtitle = when (item) {
-                            is com.echo.innertube.models.ArtistItem -> "Artista"
-                            is com.echo.innertube.models.SongItem -> "Canción • ${item.artists.joinToString { it.name }}"
-                            is com.echo.innertube.models.AlbumItem -> "Álbum • ${item.year ?: ""}"
-                            else -> ""
-                        }
-                        val isCircle = item is com.echo.innertube.models.ArtistItem
+                    items(state.featuredPlaylists.size) { playlistIndex ->
+                        val playlist = state.featuredPlaylists[playlistIndex]
+                        val hdThumb = upgradeThumb(playlist.thumbnail)
+                        
                         Column(
                             modifier = Modifier
-                                .width(180.dp)
+                                .width(320.dp)
                                 .clickable {
-                                    when (item) {
-                                        is com.echo.innertube.models.ArtistItem -> {
-                                            onArtistSelected(com.mrtdk.liquid_glass.ui.screens.ArtistState(item.id, item.title, item.thumbnail))
-                                        }
-                                        is com.echo.innertube.models.SongItem -> {
-                                            onSongSelected(PlayerState(item.title, item.artists.joinToString { it.name }, item.thumbnail, item.id))
-                                        }
-                                        is com.echo.innertube.models.AlbumItem -> {
-                                            onAlbumSelected(com.mrtdk.liquid_glass.ui.screens.AlbumState(item.id, item.playlistId ?: item.id, item.title, item.artists?.joinToString { it.name } ?: "Varios", item.thumbnail, item.year as? Int))
-                                        }
-                                        else -> {}
-                                    }
+                                    onAlbumSelected(AlbumState(
+                                        id = playlist.id,
+                                        playlistId = playlist.id,
+                                        title = playlist.title,
+                                        artist = playlist.author?.name ?: "Playlist",
+                                        thumbnail = playlist.thumbnail,
+                                        year = null
+                                    ))
                                 }
                         ) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
-                                contentDescription = title,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.size(180.dp).clip(if (isCircle) CircleShape else RoundedCornerShape(12.dp))
+                            Text(
+                                text = stringResource(R.string.nos_encanta),
+                                color = Color(0xFFFA243C).copy(alpha = 0.9f),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(subtitle, color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(
+                                text = "\"${playlist.title}\"",
+                                color = Color.White,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(320.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(Color(0xFF1C1C1E))
+                            ) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                                    contentDescription = playlist.title,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            Brush.verticalGradient(
+                                                colors = listOf(
+                                                    Color.Transparent,
+                                                    Color.Black.copy(alpha = 0.4f)
+                                                ),
+                                                startY = 300f
+                                            )
+                                        )
+                                )
+                            }
                         }
                     }
                 }
                 Spacer(modifier = Modifier.height(32.dp))
+            }
+        } else {
+            similarSections.forEachIndexed { index, section ->
+                item {
+                    Text(stringResource(R.string.similar_a), color = Color.Gray, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(section.artistName, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.ChevronRight, contentDescription = "More", tint = Color.Gray)
+                    }
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        items(section.items.take(10).size) { idx ->
+                            val item = section.items[idx]
+                            val hdThumb = upgradeThumb(
+                                when (item) {
+                                    is com.echo.innertube.models.ArtistItem -> item.thumbnail
+                                    is com.echo.innertube.models.SongItem -> item.thumbnail
+                                    is com.echo.innertube.models.AlbumItem -> item.thumbnail
+                                    else -> null
+                                }
+                            )
+                            val title = when (item) {
+                                is com.echo.innertube.models.ArtistItem -> item.title
+                                is com.echo.innertube.models.SongItem -> item.title
+                                is com.echo.innertube.models.AlbumItem -> item.title
+                                else -> "Desconocido"
+                            }
+                            val subtitle = when (item) {
+                                is com.echo.innertube.models.ArtistItem -> "Artista"
+                                is com.echo.innertube.models.SongItem -> "Canción • ${item.artists.joinToString { it.name }}"
+                                is com.echo.innertube.models.AlbumItem -> "Álbum • ${item.year ?: ""}"
+                                else -> ""
+                            }
+                            val isCircle = item is com.echo.innertube.models.ArtistItem
+                            Column(
+                                modifier = Modifier
+                                    .width(180.dp)
+                                    .clickable {
+                                        when (item) {
+                                            is com.echo.innertube.models.ArtistItem -> {
+                                                onArtistSelected(com.mrtdk.liquid_glass.ui.screens.ArtistState(item.id, item.title, item.thumbnail))
+                                            }
+                                            is com.echo.innertube.models.SongItem -> {
+                                                onSongSelected(PlayerState(item.title, item.artists.joinToString { it.name }, item.thumbnail, item.id))
+                                            }
+                                            is com.echo.innertube.models.AlbumItem -> {
+                                                onAlbumSelected(com.mrtdk.liquid_glass.ui.screens.AlbumState(item.id, item.playlistId ?: item.id, item.title, item.artists?.joinToString { it.name } ?: "Varios", item.thumbnail, item.year as? Int))
+                                            }
+                                            else -> {}
+                                        }
+                                    }
+                            ) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                                    contentDescription = title,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.size(180.dp).clip(if (isCircle) CircleShape else RoundedCornerShape(12.dp))
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(subtitle, color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(32.dp))
+                }
+
+                if (index == showPlaylistDestacadaAfterIndex && state.featuredPlaylists.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = stringResource(R.string.playlist_destacada),
+                            color = Color.White,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+                        )
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            items(state.featuredPlaylists.size) { playlistIndex ->
+                                val playlist = state.featuredPlaylists[playlistIndex]
+                                val hdThumb = upgradeThumb(playlist.thumbnail)
+                                
+                                Column(
+                                    modifier = Modifier
+                                        .width(320.dp)
+                                        .clickable {
+                                            onAlbumSelected(AlbumState(
+                                                id = playlist.id,
+                                                playlistId = playlist.id,
+                                                title = playlist.title,
+                                                artist = playlist.author?.name ?: "Playlist",
+                                                thumbnail = playlist.thumbnail,
+                                                year = null
+                                            ))
+                                        }
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.nos_encanta),
+                                        color = Color(0xFFFA243C).copy(alpha = 0.9f),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "\"${playlist.title}\"",
+                                        color = Color.White,
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(320.dp)
+                                            .clip(RoundedCornerShape(16.dp))
+                                            .background(Color(0xFF1C1C1E))
+                                    ) {
+                                        AsyncImage(
+                                            model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                                            contentDescription = playlist.title,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(
+                                                    Brush.verticalGradient(
+                                                        colors = listOf(
+                                                            Color.Transparent,
+                                                            Color.Black.copy(alpha = 0.4f)
+                                                        ),
+                                                        startY = 300f
+                                                    )
+                                                )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(32.dp))
+                    }
+                }
             }
         }
 
         // (Old Escuchado Recientemente block removed in favor of Sigue escuchando)
 
         // ═══════════════════════════════════════════════════════════
-        // Selecciones para ti (because you listened to...)
+        // Secciones "Porque escuchaste a..." (Dynamic multiple sections)
         // ═══════════════════════════════════════════════════════════
-        if (state.seleccionesParaTi.isNotEmpty() && state.seleccionesTitle != null) {
+        if (state.porqueEscuchasteSections.isNotEmpty()) {
+            state.porqueEscuchasteSections.forEach { section ->
+                item {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        Text(stringResource(R.string.porque_escuchaste), color = Color.Gray, fontSize = 13.sp)
+                        Text(section.artistName, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        items(section.songs.size) { index ->
+                            val song = section.songs[index]
+                            val hdThumb = upgradeThumb(song.thumbnail)
+                            Column(
+                                modifier = Modifier.width(180.dp).clickable {
+                                    onSongSelected(PlayerState(title = song.title, artist = song.artists.joinToString { it.name }, artUrl = upgradeThumbHD(song.thumbnail), videoId = song.id))
+                                }
+                            ) {
+                                Box(
+                                    modifier = Modifier.size(180.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFF1C1C1E))
+                                ) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                                        contentDescription = song.title,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(song.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(song.artists.joinToString { it.name }, color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(32.dp))
+                }
+            }
+        } else if (state.seleccionesParaTi.isNotEmpty() && state.seleccionesTitle != null) {
             item {
                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Text("Porque escuchaste a", color = Color.Gray, fontSize = 13.sp)
+                    Text(stringResource(R.string.porque_escuchaste), color = Color.Gray, fontSize = 13.sp)
                     Text(state.seleccionesTitle!!, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Spacer(modifier = Modifier.height(12.dp))

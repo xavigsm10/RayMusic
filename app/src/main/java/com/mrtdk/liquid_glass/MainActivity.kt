@@ -45,6 +45,7 @@ import com.mrtdk.glass.GlassBox
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import com.mrtdk.liquid_glass.playback.MusicPlayer
 import com.mrtdk.liquid_glass.ui.LiquidBottomNavBar
 import com.mrtdk.liquid_glass.ui.components.MiniPlayer
@@ -69,6 +70,7 @@ class MainActivity : ComponentActivity() {
 
     @OptIn(ExperimentalPermissionsApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
+        com.mrtdk.liquid_glass.utils.LocaleUtils.applyLocale(this)
         super.onCreate(savedInstanceState)
         setTheme(R.style.Theme_Liquidglassuicomponent)
         enableEdgeToEdge()
@@ -91,10 +93,10 @@ class MainActivity : ComponentActivity() {
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("Se necesita permiso para leer tu música local", color = Color.White)
+                            Text(stringResource(R.string.permission_needed), color = Color.White)
                             Spacer(modifier = Modifier.height(16.dp))
                             Button(onClick = { permissionState.launchPermissionRequest() }) {
-                                Text("Conceder Permiso")
+                                Text(stringResource(R.string.grant_permission))
                             }
                         }
                     }
@@ -236,23 +238,31 @@ class MainActivity : ComponentActivity() {
                     }
 
                     // Helper to play a song
-                    val playSong: (PlayerState) -> Unit = { state ->
+                    val playSongInternal: (PlayerState, Boolean) -> Unit = { state, keepQueue ->
                         playerState = state
                         showPlayer = true
                         
-                        // Reset autoplay recommendation queue and continuation details
-                        upNextSongs = emptyList()
-                        queueSeedVideoId = state.videoId
-                        queueContinuation = null
-                        queueEndpoint = null
+                        if (!keepQueue) {
+                            // Reset autoplay recommendation queue and continuation details
+                            upNextSongs = emptyList()
+                            queueSeedVideoId = state.videoId
+                            queueContinuation = null
+                            queueEndpoint = null
+                            
+                            com.mrtdk.liquid_glass.playback.PlaybackQueue.upNextSongs = emptyList()
+                            com.mrtdk.liquid_glass.playback.PlaybackQueue.queueSeedVideoId = state.videoId
+                            com.mrtdk.liquid_glass.playback.PlaybackQueue.queueContinuation = null
+                            com.mrtdk.liquid_glass.playback.PlaybackQueue.queueEndpoint = null
+                        } else {
+                            // If keeping queue, seed video ID is still the new song
+                            queueSeedVideoId = state.videoId
+                            com.mrtdk.liquid_glass.playback.PlaybackQueue.queueSeedVideoId = state.videoId
+                        }
                         
                         com.mrtdk.liquid_glass.playback.PlaybackQueue.currentSong = state
                         com.mrtdk.liquid_glass.playback.PlaybackQueue.queue = state.queue
                         com.mrtdk.liquid_glass.playback.PlaybackQueue.isExclusiveQueue = state.isExclusiveQueue
-                        com.mrtdk.liquid_glass.playback.PlaybackQueue.upNextSongs = emptyList()
-                        com.mrtdk.liquid_glass.playback.PlaybackQueue.queueSeedVideoId = state.videoId
-                        com.mrtdk.liquid_glass.playback.PlaybackQueue.queueContinuation = null
-                        com.mrtdk.liquid_glass.playback.PlaybackQueue.queueEndpoint = null
+                        
                         com.mrtdk.liquid_glass.playback.PlaybackQueue.songHistory.clear()
                         com.mrtdk.liquid_glass.playback.PlaybackQueue.songHistory.addAll(songHistory)
                         songHistory.clear()
@@ -272,6 +282,9 @@ class MainActivity : ComponentActivity() {
                         if (state.contentUri != null) musicPlayer?.playLocalSong(state.contentUri)
                         else if (state.videoId != null) musicPlayer?.playOnlineSong(state.videoId, state.title, state.artist, state.artUrl?.toString())
                     }
+
+                    val playSong: (PlayerState) -> Unit = { state -> playSongInternal(state, false) }
+                    val playSongFromQueue: (PlayerState) -> Unit = { state -> playSongInternal(state, true) }
 
                     LaunchedEffect(Unit) {
                         androidx.compose.runtime.snapshotFlow { 
@@ -637,6 +650,8 @@ class MainActivity : ComponentActivity() {
                                                             }
                                                         },
                                                         onClick = { if (playerState != null) showPlayer = true },
+                                                        onNext = skipNextFun,
+                                                        onPrevious = skipPreviousFun,
                                                         modifier = Modifier.fillMaxWidth(),
                                                         hideImage = showPlayer,
                                                         tintColor = globalDominantColor.copy(alpha = 0.45f),
@@ -723,6 +738,7 @@ class MainActivity : ComponentActivity() {
                                     artistDetail = artist
                                 },
                                 onSongSelected = playSong,
+                                onSongSelectedFromQueue = playSongFromQueue,
                                 shuffleModeEnabled = shuffleModeEnabled,
                                 repeatMode = repeatMode,
                                 onToggleShuffle = { musicPlayer?.setShuffleModeEnabled(!shuffleModeEnabled) },
