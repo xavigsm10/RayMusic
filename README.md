@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/RELEASE-v1.1.0-blue?style=for-the-badge&logo=github" alt="Release">
+  <img src="https://img.shields.io/badge/RELEASE-v0.5.9-blue?style=for-the-badge&logo=github" alt="Release">
   <img src="https://img.shields.io/badge/LICENSE-Apache%202.0-blue?style=for-the-badge" alt="License">
   <img src="https://img.shields.io/badge/VIRUSTOTAL-SAFE-brightgreen?style=for-the-badge&logo=virustotal" alt="VirusTotal">
 </p>
