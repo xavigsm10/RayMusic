@@ -56,18 +56,13 @@ class PlayerImmersiveActivity : AppCompatActivity() {
     }
 
     /**
-     * Sets the cover art on both the main sharp ImageView and the blurred background ImageView.
-     * Applies RenderEffect.createBlurEffect with Shader.TileMode.MIRROR to the background on API 31+.
+     * Sets the cover art on the main sharp ImageView and feeds it to CustomReflectionView.
      *
      * @param cover The cover image source (e.g., URL String, Bitmap, Uri, or Resource ID)
      */
     private fun setCoverImage(cover: Any?) {
         if (cover == null) {
             binding.imgCover.setImageResource(R.drawable.albumspeakerlarge)
-            binding.imgBackground.setImageResource(R.drawable.albumspeakerlarge)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                binding.imgBackground.setRenderEffect(null)
-            }
             return
         }
 
@@ -76,44 +71,14 @@ class PlayerImmersiveActivity : AppCompatActivity() {
             crossfade(true)
             placeholder(R.drawable.albumspeakerlarge)
             error(R.drawable.albumspeakerlarge)
-        }
-
-        // 2. Load blurred artwork into the background ImageView
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // Android 12+ (API 31+): Apply 100f RenderEffect with MIRROR TileMode (hardware-accelerated)
-            binding.imgBackground.load(cover) {
-                crossfade(true)
-                placeholder(R.drawable.albumspeakerlarge)
-                error(R.drawable.albumspeakerlarge)
-                listener(
-                    onSuccess = { _, _ ->
-                        // Intense blur effect using Shader.TileMode.MIRROR
-                        val blurEffect = RenderEffect.createBlurEffect(
-                            100f, 
-                            100f, 
-                            Shader.TileMode.MIRROR
-                        )
-                        binding.imgBackground.setRenderEffect(blurEffect)
-                    },
-                    onError = { _, _ ->
-                        binding.imgBackground.setRenderEffect(null)
+            listener(
+                onSuccess = { _, result ->
+                    val bitmap = (result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                    if (bitmap != null) {
+                        binding.customReflection.setAlbumArt(bitmap)
                     }
-                )
-            }
-        } else {
-            // Android < 12 (API < 31): Apply custom BlurTransformation via Coil (RenderScript + downsampling)
-            binding.imgBackground.load(cover) {
-                crossfade(true)
-                placeholder(R.drawable.albumspeakerlarge)
-                error(R.drawable.albumspeakerlarge)
-                transformations(
-                    BlurTransformation(
-                        context = this@PlayerImmersiveActivity,
-                        radius = 25f,
-                        sampling = 4f
-                    )
-                )
-            }
+                }
+            )
         }
     }
 

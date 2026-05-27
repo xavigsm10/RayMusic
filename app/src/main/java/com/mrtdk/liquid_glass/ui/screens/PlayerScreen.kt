@@ -58,11 +58,18 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
-import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -221,12 +228,15 @@ fun PlayerScreen(
             }
         }
 
+        var coverBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+
         LaunchedEffect(hdArtUrl) {
+            coverBitmap = null
             if (hdArtUrl != null) {
                 val request = ImageRequest.Builder(context)
                     .data(hdArtUrl)
                     .allowHardware(false)
-                    .size(200)
+                    .size(300)
                     .build()
                 val result = coil.Coil.imageLoader(context).execute(request)
                 if (result is coil.request.SuccessResult) {
@@ -242,9 +252,10 @@ fun PlayerScreen(
                             drawable.draw(canvas)
                         }
                     if (bitmap != null) {
+                        coverBitmap = bitmap.asImageBitmap()
                         try {
                             var r = 0L; var g = 0L; var b = 0L
-                            val y = bitmap.height - 1
+                            val y = (bitmap.height * 0.80f).toInt().coerceIn(0, bitmap.height - 1)
                             val w = bitmap.width
                             for (x in 0 until w) {
                                 val pixel = bitmap.getPixel(x, y)
@@ -328,7 +339,24 @@ fun PlayerScreen(
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .background(dominantColor.copy(alpha = bgAlpha))
+                .background(Color.Black.copy(alpha = bgAlpha))
+                .drawWithContent {
+                    if (dragProgress == 0f) {
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    dominantColor.copy(alpha = 0.25f),
+                                    dominantColor.copy(alpha = 0.7f),
+                                    dominantColor
+                                ),
+                                startY = this.size.height * 0.55f,
+                                endY = this.size.height
+                            )
+                        )
+                    }
+                    drawContent()
+                }
                 .pointerInput(showLyrics, showQueue) {
                     if (!showLyrics && !showQueue) {
                         detectVerticalDragGestures(
@@ -379,7 +407,32 @@ fun PlayerScreen(
             val imageCornerTarget = if (isOverlayActive) 8.dp else cornerRadius
             val imgCorner by androidx.compose.animation.core.animateDpAsState(imageCornerTarget)
 
-            // THE MAIN IMAGE
+            // Capa 1: Reflejo Líquido Estirado 1D (Proyección vertical de la carátula)
+            val currentCoverBitmap = coverBitmap
+            if (currentCoverBitmap != null && !isOverlayActive && dragProgress == 0f) {
+                val overlapDp = imgHeight * 0.20f
+                // Caja del reflejo posicionada bajo la portada
+                Box(
+                    modifier = Modifier
+                        .offset(x = imgOffsetX, y = imgOffsetY + imgHeight - overlapDp) // Solapamiento dinámico de 20%
+                        .size(width = imgWidth, height = maxHeight - (imgOffsetY + imgHeight) + overlapDp)
+                        .blur(85.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+                ) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val sampleHeight = 5 // Altura de muestreo del borde
+                        drawImage(
+                            image = currentCoverBitmap,
+                            srcOffset = IntOffset(0, currentCoverBitmap.height - sampleHeight),
+                            srcSize = IntSize(currentCoverBitmap.width, sampleHeight),
+                            dstOffset = IntOffset.Zero,
+                            dstSize = IntSize(size.width.toInt(), size.height.toInt()),
+                            filterQuality = FilterQuality.Low
+                        )
+                    }
+                }
+            }
+
+            // THE MAIN IMAGE (Capa 3: Portada Principal)
             Box(
                 modifier = Modifier
                     .offset(x = imgOffsetX, y = imgOffsetY)
@@ -387,8 +440,32 @@ fun PlayerScreen(
                     .graphicsLayer {
                         shape = RoundedCornerShape(imgCorner.toPx())
                         clip = true
+                        // Apply offscreen strategy only when player is fully expanded and overlay is inactive
+                        compositingStrategy = if (!isOverlayActive && dragProgress == 0f) {
+                            CompositingStrategy.Offscreen
+                        } else {
+                            CompositingStrategy.Auto
+                        }
                     }
+                    .then(
+                        if (!isOverlayActive && dragProgress == 0f) {
+                            Modifier.drawWithContent {
+                                drawContent()
+                                drawRect(
+                                    brush = Brush.verticalGradient(
+                                        colorStops = arrayOf(
+                                            0f to Color.Black,
+                                            0.80f to Color.Black,
+                                            1f to Color.Transparent
+                                        )
+                                    ),
+                                    blendMode = BlendMode.DstIn
+                                )
+                            }
+                        } else Modifier
+                    )
             ) {
+                // Base sharp album cover
                 AsyncImage(
                     model = ImageRequest.Builder(context)
                         .data(hdArtUrl)
@@ -399,22 +476,10 @@ fun PlayerScreen(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
-                
-                // MÁSCARA DE FUNDIDO (EL PASO CLAVE)
-                if (!isOverlayActive) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.verticalGradient(
-                                    0.0f to Color.Transparent,
-                                    0.5f to Color.Transparent,
-                                    1.0f to dominantColor
-                                )
-                            )
-                    )
-                }
             }
+
+
+
 
             // LYRICS / QUEUE OVERLAY
             androidx.compose.animation.AnimatedVisibility(
@@ -787,16 +852,16 @@ fun PlayerScreen(
                        }
                       
                       Box(
-                          modifier = Modifier
-                              .fillMaxWidth()
-                              .background( Brush.verticalGradient(listOf(Color.Transparent, dominantColor.copy(alpha=0.8f), dominantColor, dominantColor)) )
-                      ) {
+                           modifier = Modifier
+                               .fillMaxWidth()
+                               .background( Brush.verticalGradient(listOf(Color.Transparent, dominantColor.copy(alpha=0.8f), dominantColor, dominantColor)) )
+                       ) {
                           Column(
-                              modifier = Modifier
-                                  .fillMaxWidth()
-                                  .padding(horizontal = 24.dp)
-                                  .padding(top = 40.dp) // difuminado padding
-                          ) {
+                               modifier = Modifier
+                                   .fillMaxWidth()
+                                   .padding(horizontal = 24.dp)
+                                   .padding(top = 40.dp) // difuminado padding
+                           ) {
                               AppleMusicSlider(
                                   value = progress, onValueChange = { onSeek((it * duration).toLong()) },
                                   modifier = Modifier.fillMaxWidth().height(24.dp),

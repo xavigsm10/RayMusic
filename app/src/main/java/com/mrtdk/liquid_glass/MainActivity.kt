@@ -80,30 +80,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             LiquidglassuicomponentTheme {
                 val context = LocalContext.current
-                val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    Manifest.permission.READ_MEDIA_AUDIO
-                } else {
-                    Manifest.permission.READ_EXTERNAL_STORAGE
+                var selectedIndex by remember { mutableIntStateOf(com.mrtdk.liquid_glass.data.LibraryManager.getLastTab()) }
+                LaunchedEffect(selectedIndex) {
+                    com.mrtdk.liquid_glass.data.LibraryManager.saveLastTab(selectedIndex)
                 }
-                val permissionState = rememberPermissionState(permission)
-
-                if (!permissionState.status.isGranted) {
-                    Box(
-                        modifier = Modifier.fillMaxSize().background(Color.Black),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(stringResource(R.string.permission_needed), color = Color.White)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Button(onClick = { permissionState.launchPermissionRequest() }) {
-                                Text(stringResource(R.string.grant_permission))
-                            }
-                        }
-                    }
-                } else {
-                    var selectedIndex by remember { mutableIntStateOf(0) }
-                    var playerState by remember { mutableStateOf<PlayerState?>(null) }
-                    var showPlayer by remember { mutableStateOf(false) }
+                var playerState by remember { mutableStateOf<PlayerState?>(null) }
+                var showPlayer by remember { mutableStateOf(false) }
                     var upNextSongs by remember { mutableStateOf<List<com.echo.innertube.models.SongItem>>(emptyList()) }
                     var queueSeedVideoId by remember { mutableStateOf<String?>(null) }
                     var queueContinuation by remember { mutableStateOf<String?>(null) }
@@ -761,7 +743,6 @@ class MainActivity : ComponentActivity() {
                             onDismiss = { updateReleaseInfo = null }
                         )
                     }
-                }
             }
         }
     }

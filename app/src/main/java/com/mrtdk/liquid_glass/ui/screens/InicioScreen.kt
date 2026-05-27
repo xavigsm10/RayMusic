@@ -39,9 +39,27 @@ import coil.request.ImageRequest
 import com.mrtdk.liquid_glass.data.LibraryManager
 import com.mrtdk.liquid_glass.data.LibraryItem
 import com.mrtdk.liquid_glass.data.ItemType
-import com.mrtdk.liquid_glass.data.LocalMediaScanner
 import com.mrtdk.liquid_glass.data.Song
 import com.echo.innertube.YouTube
+import org.json.JSONArray
+import org.json.JSONObject
+import com.echo.innertube.models.Artist
+import com.echo.innertube.models.Album
+import com.echo.innertube.models.PlaylistItem
+import com.echo.innertube.models.YTItem
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.BlurredEdgeTreatment
+import kotlinx.coroutines.coroutineScope
 import com.echo.innertube.models.ArtistItem
 import com.echo.innertube.models.SongItem
 import com.echo.innertube.models.WatchEndpoint
@@ -82,25 +100,32 @@ fun InicioScreen(
     // Recently played from LibraryManager
     val recentlyPlayed by LibraryManager.recentlyPlayed.collectAsState()
 
-    // Initial load — local songs and youtube homepage (in parallel for speed)
+    // Initial load — restore from cache first, then fetch youtube homepage in background
     LaunchedEffect(Unit) {
         if (!state.isLoaded) {
-            withContext(Dispatchers.IO) {
-                // Run local scan and YouTube home in parallel
-                val localDeferred = async {
-                    val scanner = LocalMediaScanner(context)
-                    scanner.getLocalSongs()
-                }
-                val homeDeferred = async {
-                    YouTube.home().getOrNull()
-                }
+            // Restore from cache immediately
+            val cachedSuggestionsStr = LibraryManager.getString("cache_featured_suggestions")
+            val cachedQuickPicksStr = LibraryManager.getString("cache_quick_picks")
+            val cachedSeleccionesStr = LibraryManager.getString("cache_selecciones")
+            val cachedPlaylistsStr = LibraryManager.getString("cache_playlists")
+            val cachedSimilarStr = LibraryManager.getString("cache_similar_sections")
+            val cachedTitle = LibraryManager.getString("cache_selecciones_title")
 
-                state.localSongs = localDeferred.await()
-                val page = homeDeferred.await()
-                
+            if (!cachedSuggestionsStr.isNullOrBlank()) {
+                state.featuredSuggestions = deserializeYTItemList(cachedSuggestionsStr)
+                state.quickPickSongs = deserializeYTItemList(cachedQuickPicksStr ?: "").filterIsInstance<SongItem>()
+                state.seleccionesParaTi = deserializeYTItemList(cachedSeleccionesStr ?: "").filterIsInstance<SongItem>()
+                state.featuredPlaylists = deserializeYTItemList(cachedPlaylistsStr ?: "").filterIsInstance<PlaylistItem>()
+                state.similarSections = deserializeSimilarSections(cachedSimilarStr ?: "")
+                state.seleccionesTitle = cachedTitle
+                state.isLoaded = true
+            }
+
+            withContext(Dispatchers.IO) {
+                val page = YouTube.home().getOrNull()
                 if (page != null) {
                     state.homePage = page
-                    // Only fetch 2 continuations initially for faster first paint
+                    // Fetch 2 continuations for richer data
                     var current: com.echo.innertube.pages.HomePage = page
                     var fetched = 0
                     while (current.continuation != null && fetched < 2) {
@@ -116,19 +141,17 @@ fun InicioScreen(
                         } else break
                     }
 
-                    // Pre-calculate sections based on the fully fetched homePage
                     val sects = state.homePage?.sections ?: emptyList()
-
                     val similarList = mutableListOf<SimilarSection>()
-                    val suggestionsList = mutableListOf<com.echo.innertube.models.YTItem>()
+                    val suggestionsList = mutableListOf<YTItem>()
                     var seleccionesTitleTemp: String? = null
                     var seleccionesListTemp: List<SongItem> = emptyList()
                     var quickPicksTemp: List<SongItem> = emptyList()
-                    val playlistList = mutableListOf<com.echo.innertube.models.PlaylistItem>()
+                    val playlistList = mutableListOf<PlaylistItem>()
 
                     for (section in sects) {
                         val title = section.title.lowercase()
-                        playlistList.addAll(section.items.filterIsInstance<com.echo.innertube.models.PlaylistItem>())
+                        playlistList.addAll(section.items.filterIsInstance<PlaylistItem>())
                         when {
                             title.contains("vuelve a escuchar") || title.contains("listen again") || title.contains("vuelve a") -> {
                                 quickPicksTemp = section.items.filterIsInstance<SongItem>()
@@ -151,15 +174,29 @@ fun InicioScreen(
                         }
                     }
 
-                    state.similarSections = similarList
-                    state.seleccionesParaTi = seleccionesListTemp
-                    state.seleccionesTitle = seleccionesTitleTemp
-                    state.featuredSuggestions = suggestionsList
-                    state.quickPickSongs = quickPicksTemp
-                    state.featuredPlaylists = playlistList.distinctBy { it.id }
+                    withContext(Dispatchers.Main) {
+                        state.similarSections = similarList
+                        state.seleccionesParaTi = seleccionesListTemp
+                        state.seleccionesTitle = seleccionesTitleTemp
+                        state.featuredSuggestions = suggestionsList
+                        state.quickPickSongs = quickPicksTemp
+                        state.featuredPlaylists = playlistList.distinctBy { it.id }
+                        state.isLoaded = true
+
+                        // Cache the loaded data
+                        LibraryManager.saveString("cache_featured_suggestions", serializeYTItemList(state.featuredSuggestions))
+                        LibraryManager.saveString("cache_quick_picks", serializeYTItemList(state.quickPickSongs))
+                        LibraryManager.saveString("cache_selecciones", serializeYTItemList(state.seleccionesParaTi))
+                        LibraryManager.saveString("cache_playlists", serializeYTItemList(state.featuredPlaylists))
+                        LibraryManager.saveString("cache_similar_sections", serializeSimilarSections(state.similarSections))
+                        LibraryManager.saveString("cache_selecciones_title", state.seleccionesTitle)
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        state.isLoaded = true
+                    }
                 }
             }
-            state.isLoaded = true
         }
     }
 
@@ -263,6 +300,14 @@ fun InicioScreen(
             // Merge similar sections from seeds and homePage
             val currentSimilar = state.similarSections
             state.similarSections = (sections + currentSimilar).distinctBy { it.artistName }.take(12)
+
+            // Cache the updated recommendations
+            LibraryManager.saveString("cache_featured_suggestions", serializeYTItemList(state.featuredSuggestions))
+            LibraryManager.saveString("cache_quick_picks", serializeYTItemList(state.quickPickSongs))
+            LibraryManager.saveString("cache_selecciones", serializeYTItemList(state.seleccionesParaTi))
+            LibraryManager.saveString("cache_playlists", serializeYTItemList(state.featuredPlaylists))
+            LibraryManager.saveString("cache_similar_sections", serializeSimilarSections(state.similarSections))
+            LibraryManager.saveString("cache_selecciones_title", state.seleccionesTitle)
         }
     }
 
@@ -934,6 +979,7 @@ private fun FeaturedSuggestionCard(
 
     val hdThumb = upgradeThumb(thumbUrl)
     var dominantColor by remember { mutableStateOf(Color(0xFF1C1C1E)) }
+    var coverBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
 
     LaunchedEffect(hdThumb) {
         if (hdThumb != null) {
@@ -956,6 +1002,7 @@ private fun FeaturedSuggestionCard(
                         drawable.draw(canvas)
                     }
                 
+                coverBitmap = bitmap.asImageBitmap()
                 try {
                     var r = 0L; var g = 0L; var b = 0L
                     val y = bitmap.height - 1
@@ -973,19 +1020,67 @@ private fun FeaturedSuggestionCard(
     }
 
     // Card container
-    Column(
+    Box(
         modifier = Modifier
             .width(280.dp)
             .height(380.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(dominantColor)
+            .background(Color.Black)
             .clickable(onClick = clickAction)
     ) {
-        // Image Layer: full-width, top-aligned image with bottom fade
+        // Capa 1: Reflejo Líquido Estirado 1D
+        val currentCoverBitmap = coverBitmap
+        if (currentCoverBitmap != null) {
+            val overlapDp = 270.dp * 0.20f // 54.dp
+            Box(
+                modifier = Modifier
+                    .offset(y = 270.dp - overlapDp) // Empieza a los 216.dp
+                    .size(width = 280.dp, height = 110.dp + overlapDp) // Altura es 164.dp
+                    .blur(45.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+            ) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val sampleHeight = 5
+                    drawImage(
+                        image = currentCoverBitmap,
+                        srcOffset = IntOffset(0, currentCoverBitmap.height - sampleHeight),
+                        srcSize = IntSize(currentCoverBitmap.width, sampleHeight),
+                        dstOffset = IntOffset.Zero,
+                        dstSize = IntSize(size.width.toInt(), size.height.toInt()),
+                        filterQuality = FilterQuality.Low
+                    )
+                }
+            }
+        } else {
+            // Fallback while loading
+            Box(
+                modifier = Modifier
+                    .offset(y = 270.dp)
+                    .size(width = 280.dp, height = 110.dp)
+                    .background(dominantColor)
+            )
+        }
+
+        // Capa 3: Portada Principal con fundido a transparente en la parte inferior
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(270.dp)
+                .align(Alignment.TopCenter)
+                .size(width = 280.dp, height = 270.dp)
+                .graphicsLayer {
+                    compositingStrategy = CompositingStrategy.Offscreen
+                }
+                .drawWithContent {
+                    drawContent()
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0f to Color.Black,
+                                0.80f to Color.Black,
+                                1f to Color.Transparent
+                            )
+                        ),
+                        blendMode = BlendMode.DstIn
+                    )
+                }
         ) {
             AsyncImage(
                 model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
@@ -993,29 +1088,14 @@ private fun FeaturedSuggestionCard(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
-
-            // Premium fade-out to dominant color at the bottom of the image
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(90.dp)
-                    .align(Alignment.BottomCenter)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                dominantColor
-                            )
-                        )
-                    )
-            )
         }
 
         // Text Content
         Column(
             modifier = Modifier
+                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .weight(1f)
+                .height(110.dp)
                 .padding(horizontal = 18.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.Center
         ) {
@@ -1079,4 +1159,149 @@ fun SectionTitle(title: String, isDark: Boolean = true, small: Boolean = false) 
         fontWeight = if (small) FontWeight.SemiBold else FontWeight.Bold,
         modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = if (small) 4.dp else 12.dp)
     )
+}
+
+private fun serializeYTItemList(list: List<YTItem>): String {
+    val array = JSONArray()
+    for (item in list) {
+        val obj = JSONObject()
+        when (item) {
+            is SongItem -> {
+                obj.put("type", "SongItem")
+                obj.put("id", item.id)
+                obj.put("title", item.title)
+                obj.put("thumbnail", item.thumbnail)
+                obj.put("explicit", item.explicit)
+                val artistsArray = JSONArray()
+                item.artists.forEach { artistsArray.put(it.name) }
+                obj.put("artists", artistsArray)
+            }
+            is com.echo.innertube.models.AlbumItem -> {
+                obj.put("type", "AlbumItem")
+                obj.put("browseId", item.browseId)
+                obj.put("playlistId", item.playlistId)
+                obj.put("title", item.title)
+                obj.put("thumbnail", item.thumbnail)
+                obj.put("year", item.year ?: -1)
+                val artistsArray = JSONArray()
+                item.artists?.forEach { artistsArray.put(it.name) }
+                obj.put("artists", artistsArray)
+            }
+            is com.echo.innertube.models.ArtistItem -> {
+                obj.put("type", "ArtistItem")
+                obj.put("id", item.id)
+                obj.put("title", item.title)
+                obj.put("thumbnail", item.thumbnail ?: "")
+            }
+            is PlaylistItem -> {
+                obj.put("type", "PlaylistItem")
+                obj.put("id", item.id)
+                obj.put("title", item.title)
+                obj.put("thumbnail", item.thumbnail ?: "")
+                obj.put("author", item.author?.name ?: "")
+            }
+            else -> {}
+        }
+        array.put(obj)
+    }
+    return array.toString()
+}
+
+private fun deserializeYTItemList(jsonStr: String): List<YTItem> {
+    if (jsonStr.isBlank()) return emptyList()
+    val list = mutableListOf<YTItem>()
+    try {
+        val array = JSONArray(jsonStr)
+        for (i in 0 until array.length()) {
+            val obj = array.getJSONObject(i)
+            val type = obj.getString("type")
+            when (type) {
+                "SongItem" -> {
+                    val artistsList = mutableListOf<Artist>()
+                    val artistsArray = obj.getJSONArray("artists")
+                    for (j in 0 until artistsArray.length()) {
+                        artistsList.add(Artist(artistsArray.getString(j), null))
+                    }
+                    list.add(SongItem(
+                        id = obj.getString("id"),
+                        title = obj.getString("title"),
+                        artists = artistsList,
+                        thumbnail = obj.getString("thumbnail"),
+                        explicit = obj.optBoolean("explicit", false)
+                    ))
+                }
+                "AlbumItem" -> {
+                    val artistsList = mutableListOf<Artist>()
+                    if (obj.has("artists")) {
+                        val artistsArray = obj.getJSONArray("artists")
+                        for (j in 0 until artistsArray.length()) {
+                            artistsList.add(Artist(artistsArray.getString(j), null))
+                        }
+                    }
+                    val yr = obj.optInt("year", -1)
+                    list.add(com.echo.innertube.models.AlbumItem(
+                        browseId = obj.getString("browseId"),
+                        playlistId = obj.getString("playlistId"),
+                        title = obj.getString("title"),
+                        artists = if (artistsList.isEmpty()) null else artistsList,
+                        year = if (yr == -1) null else yr,
+                        thumbnail = obj.getString("thumbnail")
+                    ))
+                }
+                "ArtistItem" -> {
+                    list.add(com.echo.innertube.models.ArtistItem(
+                        id = obj.getString("id"),
+                        title = obj.getString("title"),
+                        thumbnail = obj.optString("thumbnail").takeIf { it.isNotBlank() },
+                        shuffleEndpoint = null,
+                        radioEndpoint = null
+                    ))
+                }
+                "PlaylistItem" -> {
+                    val authorName = obj.optString("author")
+                    list.add(PlaylistItem(
+                        id = obj.getString("id"),
+                        title = obj.getString("title"),
+                        author = if (authorName.isNullOrBlank()) null else Artist(authorName, null),
+                        songCountText = null,
+                        thumbnail = obj.optString("thumbnail").takeIf { it.isNotBlank() },
+                        playEndpoint = null,
+                        shuffleEndpoint = null,
+                        radioEndpoint = null
+                    ))
+                }
+            }
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+    return list
+}
+
+private fun serializeSimilarSections(list: List<SimilarSection>): String {
+    val array = JSONArray()
+    for (sec in list) {
+        val obj = JSONObject()
+        obj.put("artistName", sec.artistName)
+        obj.put("items", serializeYTItemList(sec.items))
+        array.put(obj)
+    }
+    return array.toString()
+}
+
+private fun deserializeSimilarSections(jsonStr: String): List<SimilarSection> {
+    if (jsonStr.isBlank()) return emptyList()
+    val list = mutableListOf<SimilarSection>()
+    try {
+        val array = JSONArray(jsonStr)
+        for (i in 0 until array.length()) {
+            val obj = array.getJSONObject(i)
+            val artistName = obj.getString("artistName")
+            val itemsJson = obj.getString("items")
+            list.add(SimilarSection(artistName, deserializeYTItemList(itemsJson)))
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+    return list
 }

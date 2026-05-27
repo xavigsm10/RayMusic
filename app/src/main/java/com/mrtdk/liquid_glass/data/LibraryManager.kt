@@ -201,4 +201,25 @@ object LibraryManager {
         }
         prefs.edit().putString("app_language", lang).apply()
     }
+
+    fun saveString(key: String, value: String?) {
+        if (value == null) {
+            prefs.edit().remove(key).apply()
+        } else {
+            prefs.edit().putString(key, value).apply()
+        }
+    }
+
+    fun getString(key: String, defaultValue: String? = null): String? {
+        return prefs.getString(key, defaultValue)
+    }
+
+    fun saveLastTab(index: Int) {
+        prefs.edit().putInt("last_tab_index", index).apply()
+    }
+
+    fun getLastTab(): Int {
+        if (!::prefs.isInitialized) return 0
+        return prefs.getInt("last_tab_index", 0)
+    }
 }
