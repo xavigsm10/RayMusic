@@ -8,21 +8,7 @@
     android:background="@android:color/black"
     tools:context=".ui.screens.PlayerImmersiveActivity">
 
-    <!-- CAPA 0: Fondo Absoluto (Imagen borrosa) -->
-    <ImageView
-        android:id="@+id/imgBackground"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:scaleType="centerCrop"
-        android:contentDescription="@null"
-        tools:src="@tools:sample/backgrounds/scenic" />
 
-    <!-- CAPA 1: Overlay Oscuro Sólido (Sin gradientes, 65% de opacidad) -->
-    <View
-        android:id="@+id/bgOverlay"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="#A6000000" />
 
     <!-- Línea guía horizontal al 50% para dividir la pantalla en dos mitades -->
     <androidx.constraintlayout.widget.Guideline
@@ -48,6 +34,16 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/guidelineHalf"
         tools:src="@tools:sample/avatars" />
+
+    <!-- Capa de Reflejo Líquido (Proyección del borde de la carátula) -->
+    <com.mrtdk.liquid_glass.ui.components.CustomReflectionView
+        android:id="@+id/customReflection"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintStart_toStartOf="@id/imgCover"
+        app:layout_constraintEnd_toEndOf="@id/imgCover"
+        app:layout_constraintTop_toBottomOf="@id/imgCover"
+        app:layout_constraintBottom_toBottomOf="parent" />
 
     <!-- CAPA 3: Contenedor de Controles (Fondo totalmente transparente en la mitad inferior) -->
     <androidx.constraintlayout.widget.ConstraintLayout
