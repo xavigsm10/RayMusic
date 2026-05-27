@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.mrtdk.liquid_glass.data.LocalMediaScanner
+// Removed LocalMediaScanner import
 import com.mrtdk.liquid_glass.data.Song
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -92,10 +92,7 @@ fun BibliotecaScreen(
     var updateReleaseInfo by remember { mutableStateOf<com.mrtdk.liquid_glass.utils.Updater.ReleaseInfo?>(null) }
     var selectedCategoryKey by remember { mutableStateOf("") }
 
-    LaunchedEffect(Unit) {
-        val scanner = LocalMediaScanner(context)
-        songs = scanner.getLocalSongs()
-    }
+    // Removed local songs scanning LaunchEffect
     
     if (showSettings) {
         val uriHandler = LocalUriHandler.current
