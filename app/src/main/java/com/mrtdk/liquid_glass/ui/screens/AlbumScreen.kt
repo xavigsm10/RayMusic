@@ -78,14 +78,9 @@ fun AlbumScreen(
     val isAroundTheFurAlbum = albumState.title.equals("Around the Fur", ignoreCase = true) ||
                               (albumState.title.contains("Around the Fur", ignoreCase = true) && albumState.artist.contains("Deftones", ignoreCase = true))
 
-    val hdThumb = when {
-        isMichaelAlbum -> "file:///android_asset/img/imagenes con movimiento/michael_songs_from_the_motion_picture_artwork_square.webp"
-        isThrillerAlbum -> "file:///android_asset/img/imagenes con movimiento/thriller_artwork_square.webp"
-        isAfterHoursAlbum -> "file:///android_asset/img/imagenes con movimiento/after_hours_artwork_square.webp"
-        else -> albumState.thumbnail
-            ?.replace("=w226-h226", "=w720-h720")
-            ?.replace("=w120-h120", "=w720-h720")
-    }
+    val hdThumb = albumState.thumbnail
+        ?.replace("=w226-h226", "=w720-h720")
+        ?.replace("=w120-h120", "=w720-h720")
 
     val headerArt = when {
         isAfterHoursAlbum -> "file:///android_asset/fullartwork/after hours the weeknd.png"
