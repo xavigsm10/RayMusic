@@ -38,11 +38,7 @@
   </a>
 </p>
 
-<p align="center">
-  <a href="https://github.com/xavigsm10/RayMusic">
-    <img src="https://img.shields.io/badge/GITHUB%20TRENDING-%231%20Repository%20Of%20The%20Day-orange?style=for-the-badge&logo=github" alt="GitHub Trending">
-  </a>
-</p>
+
 
 ---
 
