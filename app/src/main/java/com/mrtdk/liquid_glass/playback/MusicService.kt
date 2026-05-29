@@ -50,7 +50,15 @@ class MusicService : MediaSessionService() {
 
     private fun playSongState(state: com.mrtdk.liquid_glass.ui.screens.PlayerState) {
         if (state.contentUri != null) {
-            val mediaItem = androidx.media3.common.MediaItem.fromUri(state.contentUri)
+            val metadata = androidx.media3.common.MediaMetadata.Builder().apply {
+                setTitle(state.title)
+                setArtist(state.artist)
+                state.artUrl?.toString()?.let { setArtworkUri(android.net.Uri.parse(it)) }
+            }.build()
+            val mediaItem = androidx.media3.common.MediaItem.Builder()
+                .setUri(state.contentUri)
+                .setMediaMetadata(metadata)
+                .build()
             player.setMediaItem(mediaItem)
             player.prepare()
             player.play()
@@ -187,8 +195,10 @@ class MusicService : MediaSessionService() {
             }
         }
 
+        val defaultDataSourceFactory = androidx.media3.datasource.DefaultDataSource.Factory(this, resolvingDataSourceFactory)
+
         val mediaSourceFactory = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(this)
-            .setDataSourceFactory(resolvingDataSourceFactory)
+            .setDataSourceFactory(defaultDataSourceFactory)
 
         player = ExoPlayer.Builder(this)
             .setMediaSourceFactory(mediaSourceFactory)

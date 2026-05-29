@@ -1025,7 +1025,7 @@ private fun FeaturedSuggestionCard(
             .width(280.dp)
             .height(380.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(Color.Black)
+            .background(dominantColor)
             .clickable(onClick = clickAction)
     ) {
         // Capa 1: Reflejo Líquido Estirado 1D

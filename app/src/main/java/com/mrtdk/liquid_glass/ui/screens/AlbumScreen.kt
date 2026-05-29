@@ -61,7 +61,9 @@ data class AlbumState(
 fun AlbumScreen(
     albumState: AlbumState,
     onBack: () -> Unit,
-    onSongSelected: (PlayerState) -> Unit
+    onSongSelected: (PlayerState) -> Unit,
+    onDominantColorChanged: (Color) -> Unit = {},
+    isPaused: Boolean = false
 ) {
     val context = LocalContext.current
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
@@ -82,13 +84,8 @@ fun AlbumScreen(
         ?.replace("=w226-h226", "=w720-h720")
         ?.replace("=w120-h120", "=w720-h720")
 
-    val headerArt = when {
-        isAfterHoursAlbum -> "file:///android_asset/fullartwork/after hours the weeknd.png"
-        isAroundTheFurAlbum -> "file:///android_asset/fullartwork/deftones around the fur.png"
-        else -> hdThumb
-    }
-
-    val songArtUrl = if (isAfterHoursAlbum || isAroundTheFurAlbum) headerArt else hdThumb
+    val headerArt = hdThumb
+    val songArtUrl = hdThumb
 
     val albumHeightRatio = when {
         isAroundTheFurAlbum -> 1.40f
@@ -108,6 +105,49 @@ fun AlbumScreen(
                 }
             }
             .build()
+    }
+
+    var animatedArtworkUrl by remember(albumState.artist, albumState.title) {
+        mutableStateOf(com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.get(albumState.artist, albumState.title))
+    }
+
+    LaunchedEffect(albumState.artist, albumState.title) {
+        val artist = albumState.artist
+        val album = albumState.title
+        if (animatedArtworkUrl != null) return@LaunchedEffect
+        withContext(Dispatchers.IO) {
+            try {
+                val cleanArtist = com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.cleanTerm(artist)
+                val cleanAlbum = com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.cleanTerm(album)
+                val encodedArtist = java.net.URLEncoder.encode(cleanArtist, "UTF-8")
+                val encodedAlbum = java.net.URLEncoder.encode(cleanAlbum, "UTF-8")
+                val url = java.net.URL("https://artwork.m8tec.top/api/v1/artwork/search?artist=$encodedArtist&album=$encodedAlbum")
+                val conn = url.openConnection() as java.net.HttpURLConnection
+                conn.connectTimeout = 3000
+                conn.readTimeout = 3000
+                if (conn.responseCode == 200) {
+                    val text = conn.inputStream.bufferedReader().readText()
+                    val obj = org.json.JSONObject(text)
+                    val isVertical = album.contains("After Hours", ignoreCase = true) ||
+                            album.contains("Around the Fur", ignoreCase = true)
+                    val streamUrl = if (isVertical) {
+                        obj.optString("url_tall").takeIf { it.isNotBlank() } 
+                            ?: obj.optString("url").takeIf { it.isNotBlank() }
+                    } else {
+                        obj.optString("url").takeIf { it.isNotBlank() } 
+                            ?: obj.optString("url_tall").takeIf { it.isNotBlank() }
+                    }
+                    if (!streamUrl.isNullOrBlank()) {
+                        withContext(Dispatchers.Main) {
+                            animatedArtworkUrl = streamUrl
+                            com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.put(artist, album, streamUrl)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     // Extract dominant colour
@@ -138,7 +178,9 @@ fun AlbumScreen(
                         g += android.graphics.Color.green(pixel)
                         b += android.graphics.Color.blue(pixel)
                     }
-                    dominantColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
+                    val sampledColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
+                    dominantColor = sampledColor
+                    onDominantColorChanged(sampledColor)
                 } catch (e: Exception) { }
             }
         }
@@ -184,7 +226,9 @@ fun AlbumScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f / albumHeightRatio),
+                useShader = true,
                 content = {
+                    // Base sharp album cover (always drawn in background to prevent black flashes)
                     AsyncImage(
                         model = ImageRequest.Builder(context)
                             .data(headerArt).crossfade(true).build(),
@@ -194,6 +238,34 @@ fun AlbumScreen(
                         alignment = Alignment.TopCenter,
                         modifier = Modifier.fillMaxSize()
                     )
+
+                    var isVideoPlaying by remember(albumState.id) { mutableStateOf(false) }
+                    val currentAnimatedUrl = animatedArtworkUrl
+
+                    if (!currentAnimatedUrl.isNullOrBlank()) {
+                        com.mrtdk.liquid_glass.ui.components.AnimatedArtworkPlayer(
+                            videoUrl = currentAnimatedUrl,
+                            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (isVideoPlaying) 1f else 0f },
+                            isPaused = isPaused,
+                            onPlaybackStarted = { isVideoPlaying = true },
+                            onFrameCaptured = { frameBitmap ->
+                                try {
+                                    var r = 0L; var g = 0L; var b = 0L
+                                    val y = frameBitmap.height - 1
+                                    val w = frameBitmap.width
+                                    for (x in 0 until w) {
+                                        val pixel = frameBitmap.getPixel(x, y)
+                                        r += android.graphics.Color.red(pixel)
+                                        g += android.graphics.Color.green(pixel)
+                                        b += android.graphics.Color.blue(pixel)
+                                    }
+                                    val sampledColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
+                                    dominantColor = sampledColor
+                                    onDominantColorChanged(sampledColor)
+                                } catch (e: Exception) { }
+                            }
+                        )
+                    }
                     // Gradient: transparent → dominant color at bottom
                     Box(
                         modifier = Modifier
@@ -384,7 +456,8 @@ fun AlbumScreen(
                                         title = t.title,
                                         artist = t.artists.joinToString { it.name },
                                         artUrl = songArtUrl,
-                                        videoId = t.id
+                                        videoId = t.id,
+                                        album = albumState.title
                                     )
                                 }
                                 onSongSelected(
@@ -394,7 +467,8 @@ fun AlbumScreen(
                                         artUrl = songArtUrl,
                                         videoId = s.id,
                                         queue = albumQueue,
-                                        isExclusiveQueue = true
+                                        isExclusiveQueue = true,
+                                        album = albumState.title
                                     )
                                 )
                             }
@@ -423,7 +497,8 @@ fun AlbumScreen(
                                         title = t.title,
                                         artist = t.artists.joinToString { it.name },
                                         artUrl = songArtUrl,
-                                        videoId = t.id
+                                        videoId = t.id,
+                                        album = albumState.title
                                     )
                                 }
                                 onSongSelected(
@@ -433,7 +508,8 @@ fun AlbumScreen(
                                         artUrl = songArtUrl,
                                         videoId = s.id,
                                         queue = albumQueue,
-                                        isExclusiveQueue = true
+                                        isExclusiveQueue = true,
+                                        album = albumState.title
                                     )
                                 )
                             }
@@ -503,7 +579,8 @@ fun AlbumScreen(
                                 title = t.title,
                                 artist = t.artists.joinToString { it.name },
                                 artUrl = songArtUrl,
-                                videoId = t.id
+                                videoId = t.id,
+                                album = albumState.title
                             )
                         }
                         onSongSelected(
@@ -513,7 +590,8 @@ fun AlbumScreen(
                                 artUrl = songArtUrl,
                                 videoId = song.id,
                                 queue = albumQueue,
-                                isExclusiveQueue = true
+                                isExclusiveQueue = true,
+                                album = albumState.title
                             )
                         )
                     }
