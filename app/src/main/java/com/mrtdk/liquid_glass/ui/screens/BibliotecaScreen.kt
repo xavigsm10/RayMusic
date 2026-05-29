@@ -67,9 +67,12 @@ import androidx.compose.ui.window.Dialog
 fun BibliotecaScreen(
     innerPadding: PaddingValues,
     onSongSelected: (com.mrtdk.liquid_glass.ui.screens.PlayerState) -> Unit = {},
-    onArtistSelected: (com.mrtdk.liquid_glass.ui.screens.ArtistState) -> Unit = {},
     onPlaylistSelected: (com.mrtdk.liquid_glass.data.Playlist) -> Unit = {},
-    onAlbumSelected: (com.mrtdk.liquid_glass.ui.screens.AlbumState) -> Unit = {}
+    onArtistSelected: (com.mrtdk.liquid_glass.ui.screens.ArtistState) -> Unit = {},
+    onAlbumSelected: (com.mrtdk.liquid_glass.ui.screens.AlbumState) -> Unit = {},
+    initialCategoryKey: String? = null,
+    onCategoryConsumed: () -> Unit = {},
+    onGlassStyleChanged: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val menuItems = listOf(
@@ -82,6 +85,7 @@ fun BibliotecaScreen(
     var songs by remember { mutableStateOf<List<Song>>(emptyList()) }
     val savedItems by LibraryManager.savedItems.collectAsState()
     val playlists by LibraryManager.playlists.collectAsState()
+    val downloadedSongs by LibraryManager.downloadedSongs.collectAsState()
     var selectedCategory by remember { mutableStateOf<ItemType?>(null) }
     var showCategoryDetail by remember { mutableStateOf(false) }
     var selectedCategoryName by remember { mutableStateOf("") }
@@ -89,8 +93,20 @@ fun BibliotecaScreen(
     var contextMenuPlaylist by remember { mutableStateOf<com.mrtdk.liquid_glass.data.Playlist?>(null) }
     var showSettings by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
+    var showGlassStyleDialog by remember { mutableStateOf(false) }
     var updateReleaseInfo by remember { mutableStateOf<com.mrtdk.liquid_glass.utils.Updater.ReleaseInfo?>(null) }
     var selectedCategoryKey by remember { mutableStateOf("") }
+
+    val labelDescargados = stringResource(R.string.descargados)
+    LaunchedEffect(initialCategoryKey) {
+        if (initialCategoryKey == "Descargados") {
+            selectedCategory = null
+            selectedCategoryName = labelDescargados
+            selectedCategoryKey = "Descargados"
+            showCategoryDetail = true
+            onCategoryConsumed()
+        }
+    }
 
     // Removed local songs scanning LaunchEffect
     
@@ -168,6 +184,58 @@ fun BibliotecaScreen(
                             }
                             Text(
                                 text = currentLangName,
+                                color = Color.Gray,
+                                fontSize = 14.sp
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.ArrowForwardIos,
+                            contentDescription = null,
+                            tint = Color.Gray,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
+                    text = stringResource(R.string.apariencia),
+                    color = Color.Gray,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
+                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFF1C1C1E))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showGlassStyleDialog = true
+                            }
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = stringResource(R.string.liquid_glass),
+                                color = Color.White,
+                                fontSize = 16.sp
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            val currentStyle = LibraryManager.getGlassStyle()
+                            val currentStyleName = when (currentStyle) {
+                                "transparent" -> stringResource(R.string.vidrio_liquido_transparente)
+                                "semitransparent" -> stringResource(R.string.semitransparente)
+                                else -> stringResource(R.string.vidrio_liquido_transparente)
+                            }
+                            Text(
+                                text = currentStyleName,
                                 color = Color.Gray,
                                 fontSize = 14.sp
                             )
@@ -365,6 +433,87 @@ fun BibliotecaScreen(
             }
         }
 
+        if (showGlassStyleDialog) {
+            Dialog(
+                onDismissRequest = { showGlassStyleDialog = false }
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(280.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Color(0xFF1E1E1E))
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Text(
+                            text = stringResource(R.string.apariencia_dialog_title),
+                            color = Color.White,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
+                        val options = listOf(
+                            "transparent" to stringResource(R.string.vidrio_liquido_transparente),
+                            "semitransparent" to stringResource(R.string.semitransparente)
+                        )
+                        val currentStyle = LibraryManager.getGlassStyle()
+                        
+                        options.forEach { (styleKey, name) ->
+                            val isSelected = currentStyle == styleKey
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        LibraryManager.saveGlassStyle(styleKey)
+                                        onGlassStyleChanged(styleKey)
+                                        showGlassStyleDialog = false
+                                    }
+                                    .padding(horizontal = 24.dp, vertical = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = name,
+                                    color = if (isSelected) Color(0xFFFA243C) else Color.White,
+                                    fontSize = 15.sp,
+                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                                )
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = Color(0xFFFA243C),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                            Divider(color = Color(0xFF333333), thickness = 0.5.dp)
+                        }
+                        
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp)
+                                .clickable { showGlassStyleDialog = false },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = stringResource(R.string.cancelar),
+                                color = Color.Gray,
+                                fontSize = 17.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         updateReleaseInfo?.let { info ->
             com.mrtdk.liquid_glass.ui.components.UpdateDialog(
                 releaseInfo = info,
@@ -412,7 +561,11 @@ fun BibliotecaScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    val filteredItems = savedItems.filter { it.type == selectedCategory }
+                    val filteredItems = if (selectedCategoryKey == "Descargados") {
+                        downloadedSongs
+                    } else {
+                        savedItems.filter { it.type == selectedCategory }
+                    }
                     items(filteredItems.size) { i ->
                         val item = filteredItems[i]
                         Column(
@@ -426,7 +579,8 @@ fun BibliotecaScreen(
                                                     title = item.title,
                                                     artist = item.subtitle,
                                                     artUrl = item.thumbnail,
-                                                    videoId = item.id
+                                                    videoId = item.id,
+                                                    album = item.album
                                                 )
                                             )
                                         }
@@ -590,7 +744,7 @@ fun BibliotecaScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { 
-                                if (item.second != null || item.first == "Playlists") {
+                                if (item.second != null || item.first == "Playlists" || item.first == "Descargados") {
                                     selectedCategory = item.second
                                     selectedCategoryName = labelText
                                     selectedCategoryKey = item.first
@@ -654,7 +808,8 @@ fun BibliotecaScreen(
                                             title = item.title,
                                             artist = item.subtitle,
                                             artUrl = item.thumbnail,
-                                            videoId = item.id
+                                            videoId = item.id,
+                                            album = item.album
                                         )
                                     )
                                 }

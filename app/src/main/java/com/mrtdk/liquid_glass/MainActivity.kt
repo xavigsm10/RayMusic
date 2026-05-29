@@ -3,6 +3,7 @@ package com.mrtdk.liquid_glass
 import android.Manifest
 import android.os.Build
 import android.os.Bundle
+import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -43,6 +44,7 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.mrtdk.glass.GlassContainer
 import com.mrtdk.glass.GlassBox
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -67,6 +69,18 @@ import com.mrtdk.liquid_glass.ui.theme.LiquidglassuicomponentTheme
 
 class MainActivity : ComponentActivity() {
     private var musicPlayer: MusicPlayer? = null
+    private var navigateToDownloads by androidx.compose.runtime.mutableStateOf(false)
+    private var initialLibraryCategory by androidx.compose.runtime.mutableStateOf<String?>(null)
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val showDownloads = intent.getBooleanExtra("navigate_to_downloads", false)
+        if (showDownloads) {
+            navigateToDownloads = true
+            initialLibraryCategory = "Descargados"
+        }
+    }
 
     @OptIn(ExperimentalPermissionsApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -77,6 +91,12 @@ class MainActivity : ComponentActivity() {
         musicPlayer = MusicPlayer(this)
         com.mrtdk.liquid_glass.data.LibraryManager.init(applicationContext)
 
+        val showDownloads = intent.getBooleanExtra("navigate_to_downloads", false)
+        if (showDownloads) {
+            navigateToDownloads = true
+            initialLibraryCategory = "Descargados"
+        }
+
         setContent {
             LiquidglassuicomponentTheme {
                 val context = LocalContext.current
@@ -84,6 +104,13 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(selectedIndex) {
                     com.mrtdk.liquid_glass.data.LibraryManager.saveLastTab(selectedIndex)
                 }
+                LaunchedEffect(navigateToDownloads) {
+                    if (navigateToDownloads) {
+                        selectedIndex = 3
+                        navigateToDownloads = false
+                    }
+                }
+                var glassStyle by remember { mutableStateOf(LibraryManager.getGlassStyle()) }
                 var playerState by remember { mutableStateOf<PlayerState?>(null) }
                 var showPlayer by remember { mutableStateOf(false) }
                     var upNextSongs by remember { mutableStateOf<List<com.echo.innertube.models.SongItem>>(emptyList()) }
@@ -261,7 +288,7 @@ class MainActivity : ComponentActivity() {
                                 type = com.mrtdk.liquid_glass.data.ItemType.SONG
                             )
                         )
-                        if (state.contentUri != null) musicPlayer?.playLocalSong(state.contentUri)
+                        if (state.contentUri != null) musicPlayer?.playLocalSong(state.contentUri, state.title, state.artist, state.artUrl?.toString())
                         else if (state.videoId != null) musicPlayer?.playOnlineSong(state.videoId, state.title, state.artist, state.artUrl?.toString())
                     }
 
@@ -328,7 +355,7 @@ class MainActivity : ComponentActivity() {
                     val skipNextFun: () -> Unit = {
                         val nextState = com.mrtdk.liquid_glass.playback.PlaybackQueue.getNextSongAndAdvance()
                         if (nextState != null) {
-                            if (nextState.contentUri != null) musicPlayer?.playLocalSong(nextState.contentUri)
+                            if (nextState.contentUri != null) musicPlayer?.playLocalSong(nextState.contentUri, nextState.title, nextState.artist, nextState.artUrl?.toString())
                             else if (nextState.videoId != null) musicPlayer?.playOnlineSong(nextState.videoId, nextState.title, nextState.artist, nextState.artUrl?.toString())
                         }
                     }
@@ -336,19 +363,21 @@ class MainActivity : ComponentActivity() {
                     val skipPreviousFun: () -> Unit = {
                         val prevState = com.mrtdk.liquid_glass.playback.PlaybackQueue.getPreviousSongAndGoBack()
                         if (prevState != null) {
-                            if (prevState.contentUri != null) musicPlayer?.playLocalSong(prevState.contentUri)
+                            if (prevState.contentUri != null) musicPlayer?.playLocalSong(prevState.contentUri, prevState.title, prevState.artist, prevState.artUrl?.toString())
                             else if (prevState.videoId != null) musicPlayer?.playOnlineSong(prevState.videoId, prevState.title, prevState.artist, prevState.artUrl?.toString())
                         }
                     }
 
-                    Scaffold(
-                        modifier = Modifier.fillMaxSize(),
-                        containerColor = Color.Black
-                    ) { innerPadding ->
-                        Box(modifier = Modifier.fillMaxSize().background(Color.Black).nestedScroll(nestedScrollConnection)) {
-                            GlassContainer(
-                                modifier = Modifier.fillMaxSize().background(Color.Black),
-                                content = {                                     // Combine state to trigger AnimatedContent
+                    CompositionLocalProvider(com.mrtdk.glass.LocalGlassStyle provides glassStyle) {
+                        Scaffold(
+                            modifier = Modifier.fillMaxSize(),
+                            containerColor = Color.Black
+                        ) { innerPadding ->
+                            Box(modifier = Modifier.fillMaxSize().background(Color.Black).nestedScroll(nestedScrollConnection)) {
+                                GlassContainer(
+                                    modifier = Modifier.fillMaxSize().background(Color.Black),
+                                    useShader = (videoDetail == null),
+                                    content = {                                     // Combine state to trigger AnimatedContent
                                     data class NavState(val tab: Int, val playlist: Playlist?, val album: AlbumState?, val artist: ArtistState?, val videoId: String?, val category: com.mrtdk.liquid_glass.ui.screens.SearchCategory?)
                                     val currentNav = NavState(selectedIndex, playlistDetail, albumDetail, artistDetail, videoDetail, categoryDetail)
                                     
@@ -421,7 +450,11 @@ class MainActivity : ComponentActivity() {
                                             AlbumScreen(
                                                 albumState = state.album,
                                                 onBack = { albumDetail = null },
-                                                onSongSelected = playSong
+                                                onSongSelected = playSong,
+                                                onDominantColorChanged = { color ->
+                                                    globalDominantColor = color
+                                                },
+                                                isPaused = showPlayer
                                             )
                                         }
                                         state.artist != null -> {
@@ -487,7 +520,10 @@ class MainActivity : ComponentActivity() {
                                                     onSongSelected = playSong,
                                                     onPlaylistSelected = { playlistDetail = it },
                                                     onArtistSelected = { artistDetail = it },
-                                                    onAlbumSelected = { albumDetail = it }
+                                                    onAlbumSelected = { albumDetail = it },
+                                                    initialCategoryKey = initialLibraryCategory,
+                                                    onCategoryConsumed = { initialLibraryCategory = null },
+                                                    onGlassStyleChanged = { glassStyle = it }
                                                 )
                                                 4 -> BusquedaScreen(
                                                     innerPadding = innerPadding,
@@ -625,7 +661,7 @@ class MainActivity : ComponentActivity() {
                                                         onTogglePlayPause = { 
                                                             if (duration <= 0L && playerState != null) {
                                                                 val state = playerState!!
-                                                                if (state.contentUri != null) musicPlayer?.playLocalSong(state.contentUri)
+                                                                if (state.contentUri != null) musicPlayer?.playLocalSong(state.contentUri, state.title, state.artist, state.artUrl?.toString())
                                                                 else if (state.videoId != null) musicPlayer?.playOnlineSong(state.videoId, state.title, state.artist, state.artUrl?.toString())
                                                             } else {
                                                                 musicPlayer?.togglePlayPause() 
@@ -691,6 +727,9 @@ class MainActivity : ComponentActivity() {
                             PlayerScreen(
                                 playerState = playerState,
                                 isVisible = showPlayer,
+                                onDominantColorChanged = { color ->
+                                    globalDominantColor = color
+                                },
                                 isPlaying = isPlaying,
                                 currentPosition = currentPosition,
                                 duration = duration,
@@ -707,7 +746,7 @@ class MainActivity : ComponentActivity() {
                                 onTogglePlayPause = { 
                                     if (duration <= 0L && playerState != null) {
                                         val state = playerState!!
-                                        if (state.contentUri != null) musicPlayer?.playLocalSong(state.contentUri)
+                                        if (state.contentUri != null) musicPlayer?.playLocalSong(state.contentUri, state.title, state.artist, state.artUrl?.toString())
                                         else if (state.videoId != null) musicPlayer?.playOnlineSong(state.videoId, state.title, state.artist, state.artUrl?.toString())
                                     } else {
                                         musicPlayer?.togglePlayPause() 
@@ -736,6 +775,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     }
+                }
                     
                     updateReleaseInfo?.let { info ->
                         com.mrtdk.liquid_glass.ui.components.UpdateDialog(

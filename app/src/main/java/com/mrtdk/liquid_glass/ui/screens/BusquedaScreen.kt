@@ -281,7 +281,8 @@ fun BusquedaScreen(
                                             title = item.title,
                                             artist = item.artists.joinToString { it.name },
                                             artUrl = hdThumb,
-                                            videoId = item.id
+                                            videoId = item.id,
+                                            album = item.album?.name
                                         )
                                     )
                                 }

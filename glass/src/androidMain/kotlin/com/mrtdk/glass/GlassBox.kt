@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -35,6 +36,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import org.intellij.lang.annotations.Language
 import kotlin.random.Random
+
+val LocalGlassStyle = staticCompositionLocalOf { "transparent" }
 
 internal data class GlassElement(
     val id: String,
@@ -108,6 +111,51 @@ fun GlassBoxScope.GlassBox(
     content: @Composable BoxScope.() -> Unit = { },
 ) {
     val id = remember { Random.nextLong() }
+    val glassStyle = LocalGlassStyle.current
+    val density = LocalDensity.current
+
+    val adjustedTint = remember(tint, glassStyle) {
+        if (glassStyle == "semitransparente" || glassStyle == "semitransparent") {
+            val baseColor = if (tint == Color.Transparent) {
+                Color.White
+            } else {
+                Color(
+                    red = (tint.red * 0.3f + 0.7f).coerceIn(0f, 1f),
+                    green = (tint.green * 0.3f + 0.7f).coerceIn(0f, 1f),
+                    blue = (tint.blue * 0.3f + 0.7f).coerceIn(0f, 1f),
+                    alpha = 1f
+                )
+            }
+            baseColor.copy(alpha = 0.75f)
+        } else {
+            tint
+        }
+    }
+
+    val scopeImpl = (this as? GlassBoxScopeImpl)?.glassScope as? GlassScopeImpl
+    if (scopeImpl != null) {
+        val elementId = "glass_$id"
+        SideEffect {
+            val index = scopeImpl.elements.indexOfFirst { it.id == elementId }
+            if (index != -1) {
+                val existing = scopeImpl.elements[index]
+                val updated = existing.copy(
+                    scale = scale,
+                    blur = blur,
+                    centerDistortion = centerDistortion,
+                    elevation = with(density) { elevation.toPx() },
+                    tint = adjustedTint,
+                    darkness = darkness,
+                    warpEdges = warpEdges
+                )
+                if (!existing.equalsWithTolerance(updated)) {
+                    scopeImpl.elements[index] = updated
+                    scopeImpl.updateCounter++
+                }
+            }
+        }
+    }
+
     Box(
         modifier = modifier.glassBackground(
             id, 
@@ -116,7 +164,7 @@ fun GlassBoxScope.GlassBox(
             centerDistortion.coerceIn(0f, 1f), 
             shape, 
             elevation, 
-            tint, 
+            adjustedTint, 
             darkness.coerceIn(0f, 1f), 
             warpEdges.coerceIn(0f, 1f)
         ),
@@ -125,8 +173,8 @@ fun GlassBoxScope.GlassBox(
 }
 
 private class GlassBoxScopeImpl(
-    boxScope: BoxScope,
-    glassScope: GlassScope
+    val boxScope: BoxScope,
+    val glassScope: GlassScope
 ) : GlassBoxScope, BoxScope by boxScope,
     GlassScope by glassScope {
 
@@ -285,11 +333,12 @@ private class GlassScopeFallbackImpl(private val density: Density) : GlassScope 
 @Composable
 fun GlassContainer(
     modifier: Modifier = Modifier,
+    useShader: Boolean = true,
     content: @Composable () -> Unit,
     glassContent: @Composable GlassBoxScope.() -> Unit,
 ) {
-    // Check if AGSL is supported (Android 13+)
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+    // Check if AGSL is supported (Android 13+) and shader is enabled
+    if (useShader && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         GlassContainerWithShader(modifier, content, glassContent)
     } else {
         GlassContainerFallback(modifier, content, glassContent)

@@ -99,4 +99,9 @@
     <string name="my_playlist_subtitle">Mi playlist</string>
     <string name="play_label">Reproducir</string>
     <string name="shuffle_label">Aleatorio</string>
+    <string name="apariencia">Apariencia</string>
+    <string name="liquid_glass">Liquid Glass</string>
+    <string name="vidrio_liquido_transparente">Vidrio líquido transparente</string>
+    <string name="semitransparente">Semitransparente</string>
+    <string name="apariencia_dialog_title">Selecciona el estilo de Liquid Glass</string>
 </resources>

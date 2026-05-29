@@ -14,7 +14,8 @@ data class LibraryItem(
     val title: String,
     val subtitle: String,
     val thumbnail: String?,
-    val type: ItemType
+    val type: ItemType,
+    val album: String? = null
 )
 
 data class Playlist(
@@ -38,6 +39,17 @@ object LibraryManager {
     private val _recentlyPlayed = MutableStateFlow<List<LibraryItem>>(emptyList())
     val recentlyPlayed: StateFlow<List<LibraryItem>> = _recentlyPlayed
 
+    private val _downloadedSongs = MutableStateFlow<List<LibraryItem>>(emptyList())
+    val downloadedSongs: StateFlow<List<LibraryItem>> = _downloadedSongs
+
+    private fun parseItemType(value: String): ItemType? {
+        return try {
+            ItemType.valueOf(value)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     fun init(context: Context) {
         prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val saved = prefs.getString("saved_items", "") ?: ""
@@ -45,12 +57,15 @@ object LibraryManager {
             val items = saved.split("|||").mapNotNull { itemStr ->
                 val parts = itemStr.split("||")
                 if (parts.size >= 5) {
+                    val type = parseItemType(parts[4]) ?: return@mapNotNull null
+                    val albumVal = if (parts.size >= 6) parts[5].takeIf { it.isNotBlank() } else null
                     LibraryItem(
                         id = parts[0],
                         title = parts[1],
                         subtitle = parts[2],
                         thumbnail = parts[3].takeIf { it.isNotBlank() },
-                        type = ItemType.valueOf(parts[4])
+                        type = type,
+                        album = albumVal
                     )
                 } else null
             }
@@ -70,7 +85,9 @@ object LibraryManager {
                     val pItems = if (pItemsStr.isNotBlank()) pItemsStr.split("|||").mapNotNull { itemStr ->
                         val parts = itemStr.split("||")
                         if (parts.size >= 5) {
-                            LibraryItem(parts[0], parts[1], parts[2], parts[3].takeIf { it.isNotBlank() }, ItemType.valueOf(parts[4]))
+                            val type = parseItemType(parts[4]) ?: return@mapNotNull null
+                            val albumVal = if (parts.size >= 6) parts[5].takeIf { it.isNotBlank() } else null
+                            LibraryItem(parts[0], parts[1], parts[2], parts[3].takeIf { it.isNotBlank() }, type, albumVal)
                         } else null
                     } else emptyList()
                     Playlist(id, name, pItems, coverUrl, isPinned)
@@ -85,10 +102,26 @@ object LibraryManager {
             val items = savedRecent.split("|||").mapNotNull { itemStr ->
                 val parts = itemStr.split("||")
                 if (parts.size >= 5) {
-                    LibraryItem(parts[0], parts[1], parts[2], parts[3].takeIf { it.isNotBlank() }, ItemType.valueOf(parts[4]))
+                    val type = parseItemType(parts[4]) ?: return@mapNotNull null
+                    val albumVal = if (parts.size >= 6) parts[5].takeIf { it.isNotBlank() } else null
+                    LibraryItem(parts[0], parts[1], parts[2], parts[3].takeIf { it.isNotBlank() }, type, albumVal)
                 } else null
             }
             _recentlyPlayed.value = items
+        }
+
+        // Load downloaded songs
+        val savedDownloaded = prefs.getString("downloaded_songs", "") ?: ""
+        if (savedDownloaded.isNotEmpty()) {
+            val items = savedDownloaded.split("|||").mapNotNull { itemStr ->
+                val parts = itemStr.split("||")
+                if (parts.size >= 5) {
+                    val type = parseItemType(parts[4]) ?: return@mapNotNull null
+                    val albumVal = if (parts.size >= 6) parts[5].takeIf { it.isNotBlank() } else null
+                    LibraryItem(parts[0], parts[1], parts[2], parts[3].takeIf { it.isNotBlank() }, type, albumVal)
+                } else null
+            }
+            _downloadedSongs.value = items
         }
     }
 
@@ -99,6 +132,16 @@ object LibraryManager {
         saveToPrefs(newList)
     }
 
+    fun saveDownloadedSong(item: LibraryItem) {
+        if (_downloadedSongs.value.any { it.id == item.id }) return
+        val newList = listOf(item) + _downloadedSongs.value
+        _downloadedSongs.value = newList
+        val serialized = newList.joinToString("|||") { 
+            "${it.id}||${it.title}||${it.subtitle}||${it.thumbnail ?: ""}||${it.type.name}||${it.album ?: ""}" 
+        }
+        prefs.edit().putString("downloaded_songs", serialized).apply()
+    }
+
     fun removeItem(id: String) {
         val newList = _savedItems.value.filter { it.id != id }
         _savedItems.value = newList
@@ -107,7 +150,7 @@ object LibraryManager {
 
     private fun saveToPrefs(list: List<LibraryItem>) {
         val serialized = list.joinToString("|||") { 
-            "${it.id}||${it.title}||${it.subtitle}||${it.thumbnail ?: ""}||${it.type.name}" 
+            "${it.id}||${it.title}||${it.subtitle}||${it.thumbnail ?: ""}||${it.type.name}||${it.album ?: ""}" 
         }
         prefs.edit().putString("saved_items", serialized).apply()
     }
@@ -121,7 +164,7 @@ object LibraryManager {
 
     private fun saveRecentlyPlayedToPrefs(list: List<LibraryItem>) {
         val serialized = list.joinToString("|||") {
-            "${it.id}||${it.title}||${it.subtitle}||${it.thumbnail ?: ""}||${it.type.name}"
+            "${it.id}||${it.title}||${it.subtitle}||${it.thumbnail ?: ""}||${it.type.name}||${it.album ?: ""}"
         }
         prefs.edit().putString("recently_played", serialized).apply()
     }
@@ -157,7 +200,7 @@ object LibraryManager {
 
     private fun savePlaylistsToPrefs(list: List<Playlist>) {
         val serialized = list.joinToString("@@@") { pl ->
-            val itemsStr = pl.items.joinToString("|||") { "${it.id}||${it.title}||${it.subtitle}||${it.thumbnail ?: ""}||${it.type.name}" }
+            val itemsStr = pl.items.joinToString("|||") { "${it.id}||${it.title}||${it.subtitle}||${it.thumbnail ?: ""}||${it.type.name}||${it.album ?: ""}" }
             "${pl.id}@@${pl.name}@@$itemsStr@@${pl.coverUrl ?: ""}@@${pl.isPinned}"
         }
         prefs.edit().putString("playlists", serialized).apply()
@@ -221,5 +264,13 @@ object LibraryManager {
     fun getLastTab(): Int {
         if (!::prefs.isInitialized) return 0
         return prefs.getInt("last_tab_index", 0)
+    }
+
+    fun getGlassStyle(): String {
+        return prefs.getString("glass_style", "transparent") ?: "transparent"
+    }
+
+    fun saveGlassStyle(style: String) {
+        prefs.edit().putString("glass_style", style).apply()
     }
 }

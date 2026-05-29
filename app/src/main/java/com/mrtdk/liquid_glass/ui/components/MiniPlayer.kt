@@ -175,49 +175,6 @@ fun GlassBoxScope.MiniPlayer(
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val titleLower = playerState.title.lowercase()
-            val artistLower = playerState.artist.lowercase()
-            val isTheWeeknd = artistLower.contains("the weeknd")
-            val isDeftones = artistLower.contains("deftones")
-
-            val correctedUrl = when {
-                isTheWeeknd && (
-                    titleLower.contains("alone again") ||
-                    titleLower.contains("too late") ||
-                    titleLower.contains("hardest to love") ||
-                    titleLower.contains("scared to live") ||
-                    titleLower.contains("snowchild") ||
-                    titleLower.contains("escape from la") ||
-                    titleLower.contains("heartless") ||
-                    titleLower.contains("faith") ||
-                    titleLower.contains("blinding lights") ||
-                    titleLower.contains("in your eyes") ||
-                    titleLower.contains("save your tears") ||
-                    titleLower.contains("repeat after me") ||
-                    titleLower.contains("after hours") ||
-                    titleLower.contains("until i bleed out") ||
-                    titleLower.contains("nothing compares") ||
-                    titleLower.contains("missed you") ||
-                    titleLower.contains("final lullaby")
-                ) -> "file:///android_asset/fullartwork/after hours the weeknd.png"
-
-                isDeftones && (
-                    titleLower.contains("my own summer") ||
-                    titleLower.contains("lhabia") ||
-                    titleLower.contains("mascara") ||
-                    titleLower.contains("around the fur") ||
-                    titleLower.contains("rickets") ||
-                    titleLower.contains("be quiet and drive") ||
-                    titleLower.contains("lotion") ||
-                    titleLower.contains("dai the flu") ||
-                    titleLower.contains("headup") ||
-                    titleLower.contains("mx") ||
-                    titleLower.contains("damone")
-                ) -> "file:///android_asset/fullartwork/deftones around the fur.png"
-
-                else -> playerState.artUrl
-            }
-
             Box(
                 modifier = Modifier
                     .size(40.dp)
@@ -226,7 +183,7 @@ fun GlassBoxScope.MiniPlayer(
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(context)
-                    .data(correctedUrl)
+                    .data(playerState.artUrl)
                     .crossfade(true)
                     .build(),
                     contentDescription = null,
