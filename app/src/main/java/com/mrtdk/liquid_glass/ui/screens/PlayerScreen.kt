@@ -80,6 +80,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import android.app.DownloadManager
+import android.os.Environment
+import android.widget.Toast
+import kotlinx.coroutines.CoroutineScope
+import androidx.compose.material.icons.filled.ArrowDownward
 import kotlinx.coroutines.launch
 import com.mrtdk.liquid_glass.data.ItemType
 import com.mrtdk.liquid_glass.data.LibraryItem
@@ -98,14 +103,16 @@ data class PlayerState(
     val contentUri: Uri? = null,
     val duration: Long = 0L,
     val queue: List<QueueItem> = emptyList(),
-    val isExclusiveQueue: Boolean = false
+    val isExclusiveQueue: Boolean = false,
+    val album: String? = null
 )
 
 data class QueueItem(
     val title: String,
     val artist: String,
     val artUrl: Any?,
-    val videoId: String? = null
+    val videoId: String? = null,
+    val album: String? = null
 )
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
@@ -132,7 +139,8 @@ fun PlayerScreen(
     shuffleModeEnabled: Boolean = false,
     repeatMode: Int = androidx.media3.common.Player.REPEAT_MODE_OFF,
     onToggleShuffle: () -> Unit = {},
-    onToggleRepeat: () -> Unit = {}
+    onToggleRepeat: () -> Unit = {},
+    onDominantColorChanged: (Color) -> Unit = {}
 ) {
     AnimatedVisibility(
         visible = isVisible,
@@ -228,6 +236,92 @@ fun PlayerScreen(
             }
         }
 
+        var animatedArtworkUrl by remember(playerState?.artist, playerState?.album, playerState?.title) {
+            val artist = playerState?.artist
+            val album = playerState?.album
+            val title = playerState?.title
+            val cached = if (!artist.isNullOrBlank()) {
+                val cacheKey = if (!album.isNullOrBlank()) album else title
+                if (!cacheKey.isNullOrBlank()) {
+                    com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.get(artist, cacheKey)
+                } else null
+            } else null
+            mutableStateOf(cached)
+        }
+        var isVideoPlaying by remember { mutableStateOf(false) }
+
+        LaunchedEffect(playerState?.artist, playerState?.album, playerState?.title) {
+            val artist = playerState?.artist
+            val album = playerState?.album
+            val title = playerState?.title
+            isVideoPlaying = false
+            
+            if (artist.isNullOrBlank()) return@LaunchedEffect
+            if (animatedArtworkUrl != null) return@LaunchedEffect
+            
+            withContext(Dispatchers.IO) {
+                var foundUrl: String? = null
+                
+                // Try 1: Search using album name if available
+                if (!album.isNullOrBlank()) {
+                    try {
+                        val cleanArtist = com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.cleanTerm(artist)
+                        val cleanAlbum = com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.cleanTerm(album)
+                        val encodedArtist = java.net.URLEncoder.encode(cleanArtist, "UTF-8")
+                        val encodedAlbum = java.net.URLEncoder.encode(cleanAlbum, "UTF-8")
+                        val url = java.net.URL("https://artwork.m8tec.top/api/v1/artwork/search?artist=$encodedArtist&album=$encodedAlbum")
+                        val conn = url.openConnection() as java.net.HttpURLConnection
+                        conn.connectTimeout = 3000
+                        conn.readTimeout = 3000
+                        if (conn.responseCode == 200) {
+                            val text = conn.inputStream.bufferedReader().readText()
+                            val obj = org.json.JSONObject(text)
+                            val streamUrl = obj.optString("url").takeIf { it.isNotBlank() } 
+                                ?: obj.optString("url_tall").takeIf { it.isNotBlank() }
+                            if (!streamUrl.isNullOrBlank()) {
+                                foundUrl = streamUrl
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+                
+                // Try 2: Fallback or query using song title if not found yet
+                if (foundUrl == null && !title.isNullOrBlank()) {
+                    try {
+                        val cleanArtist = com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.cleanTerm(artist)
+                        val cleanTitle = com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.cleanTerm(title)
+                        val encodedArtist = java.net.URLEncoder.encode(cleanArtist, "UTF-8")
+                        val encodedTitle = java.net.URLEncoder.encode(cleanTitle, "UTF-8")
+                        val url = java.net.URL("https://artwork.m8tec.top/api/v1/artwork/search?artist=$encodedArtist&album=$encodedTitle")
+                        val conn = url.openConnection() as java.net.HttpURLConnection
+                        conn.connectTimeout = 3000
+                        conn.readTimeout = 3000
+                        if (conn.responseCode == 200) {
+                            val text = conn.inputStream.bufferedReader().readText()
+                            val obj = org.json.JSONObject(text)
+                            val streamUrl = obj.optString("url").takeIf { it.isNotBlank() } 
+                                ?: obj.optString("url_tall").takeIf { it.isNotBlank() }
+                            if (!streamUrl.isNullOrBlank()) {
+                                foundUrl = streamUrl
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+                
+                if (foundUrl != null) {
+                    withContext(Dispatchers.Main) {
+                        animatedArtworkUrl = foundUrl
+                        val cacheKeyAlbum = if (!album.isNullOrBlank()) album else title ?: ""
+                        com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.put(artist, cacheKeyAlbum, foundUrl!!)
+                    }
+                }
+            }
+        }
+
         var coverBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
 
         LaunchedEffect(hdArtUrl) {
@@ -263,7 +357,9 @@ fun PlayerScreen(
                                 g += android.graphics.Color.green(pixel)
                                 b += android.graphics.Color.blue(pixel)
                             }
-                            dominantColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
+                            val sampledColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
+                            dominantColor = sampledColor
+                            onDominantColorChanged(sampledColor)
                         } catch (e: Exception) { }
                     }
                 }
@@ -339,7 +435,7 @@ fun PlayerScreen(
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = bgAlpha))
+                .background(dominantColor.copy(alpha = bgAlpha))
                 .drawWithContent {
                     if (dragProgress == 0f) {
                         drawRect(
@@ -465,7 +561,7 @@ fun PlayerScreen(
                         } else Modifier
                     )
             ) {
-                // Base sharp album cover
+                // Base sharp album cover (always drawn in background during drag or before playback starts)
                 AsyncImage(
                     model = ImageRequest.Builder(context)
                         .data(hdArtUrl)
@@ -476,6 +572,40 @@ fun PlayerScreen(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
+
+                val currentAnimatedUrl = animatedArtworkUrl
+
+                if (!currentAnimatedUrl.isNullOrBlank() && (dragProgress == 0f || dragProgress == 1f)) {
+                    DisposableEffect(Unit) {
+                        onDispose {
+                            isVideoPlaying = false
+                        }
+                    }
+                    com.mrtdk.liquid_glass.ui.components.AnimatedArtworkPlayer(
+                        videoUrl = currentAnimatedUrl,
+                        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (isVideoPlaying) 1f else 0f },
+                        isPaused = false,
+                        enableFrameCapture = (dragProgress == 0f && !isOverlayActive),
+                        onPlaybackStarted = { isVideoPlaying = true },
+                        onFrameCaptured = { frameBitmap ->
+                            coverBitmap = frameBitmap.asImageBitmap()
+                            try {
+                                var r = 0L; var g = 0L; var b = 0L
+                                val y = frameBitmap.height - 1
+                                val w = frameBitmap.width
+                                for (x in 0 until w) {
+                                    val pixel = frameBitmap.getPixel(x, y)
+                                    r += android.graphics.Color.red(pixel)
+                                    g += android.graphics.Color.green(pixel)
+                                    b += android.graphics.Color.blue(pixel)
+                                }
+                                val sampledColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
+                                dominantColor = sampledColor
+                                onDominantColorChanged(sampledColor)
+                            } catch (e: Exception) { }
+                        }
+                    )
+                }
             }
 
 
@@ -1044,6 +1174,16 @@ fun PlayerScreen(
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(playerState?.title ?: "", color=Color.White, fontSize=20.sp, fontWeight=FontWeight.Bold)
                     Spacer(modifier=Modifier.height(16.dp))
+                    Row(modifier=Modifier.fillMaxWidth().clickable { 
+                        showOptionsMenu = false 
+                        if (playerState?.videoId != null) {
+                            downloadSong(context, playerState.videoId, playerState.title, playerState.artist, playerState.artUrl?.toString(), playerState.album)
+                        }
+                    }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
+                        Icon(Icons.Default.ArrowDownward, contentDescription=null, tint=Color.White)
+                        Spacer(modifier=Modifier.width(16.dp))
+                        Text("Descargar para modo offline", color=Color.White, fontSize=16.sp)
+                    }
                     Row(modifier=Modifier.fillMaxWidth().clickable { showOptionsMenu=false; showPlaylistMenu=true }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
                         Icon(Icons.Default.Menu, contentDescription=null, tint=Color.White)
                         Spacer(modifier=Modifier.width(16.dp))
@@ -1523,6 +1663,59 @@ fun AppleMusicSlider(
                 size = Size(width * value, barHeight),
                 cornerRadius = cornerRadius
             )
+        }
+    }
+}
+
+fun downloadSong(context: android.content.Context, videoId: String, title: String, artist: String, artUrl: String?, album: String? = null) {
+    val coroutineScope = CoroutineScope(Dispatchers.IO)
+    coroutineScope.launch {
+        withContext(Dispatchers.Main) {
+            Toast.makeText(context, "Obteniendo enlace de descarga...", Toast.LENGTH_SHORT).show()
+        }
+        val streamUrl = com.mrtdk.liquid_glass.playback.MusicPlayer.resolveUrl(videoId)
+        if (streamUrl != null) {
+            withContext(Dispatchers.Main) {
+                try {
+                    val uri = Uri.parse(streamUrl)
+                    val cleanTitle = title.replace(Regex("[\\\\/:*?\"<>|]"), "_")
+                    val cleanArtist = artist.replace(Regex("[\\\\/:*?\"<>|]"), "_")
+                    val filename = "${cleanArtist} - ${cleanTitle}.mp3"
+                    
+                    val request = DownloadManager.Request(uri)
+                        .setTitle("${artist} - ${title}")
+                        .setDescription("Descargando canción para el modo offline...")
+                        .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                        .setDestinationInExternalFilesDir(context, Environment.DIRECTORY_MUSIC, filename)
+                        .setAllowedOverMetered(true)
+                        .setAllowedOverRoaming(true)
+                        .setMimeType("audio/mpeg")
+                    
+                    val dm = context.getSystemService(android.content.Context.DOWNLOAD_SERVICE) as DownloadManager
+                    dm.enqueue(request)
+                    
+                    val fileUri = Uri.fromFile(java.io.File(context.getExternalFilesDir(Environment.DIRECTORY_MUSIC), filename))
+                    val libraryItem = LibraryItem(
+                        id = videoId,
+                        title = title,
+                        subtitle = artist,
+                        thumbnail = artUrl,
+                        type = ItemType.SONG,
+                        album = album
+                    )
+                    LibraryManager.saveDownloadedSong(libraryItem)
+                    
+                    LibraryManager.saveString("local_uri_$videoId", fileUri.toString())
+                    
+                    Toast.makeText(context, "Iniciando descarga: ${title}", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Error al descargar: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        } else {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "No se pudo obtener el enlace de descarga de YouTube", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 }

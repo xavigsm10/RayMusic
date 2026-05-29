@@ -105,8 +105,16 @@ class MusicPlayer(private val context: Context) {
         pollingJob?.cancel()
     }
 
-    fun playLocalSong(contentUri: Uri) {
-        val mediaItem = MediaItem.fromUri(contentUri)
+    fun playLocalSong(contentUri: Uri, title: String? = null, artist: String? = null, artUrl: String? = null) {
+        val metadata = androidx.media3.common.MediaMetadata.Builder().apply {
+            title?.let { setTitle(it) }
+            artist?.let { setArtist(it) }
+            artUrl?.let { setArtworkUri(Uri.parse(it)) }
+        }.build()
+        val mediaItem = MediaItem.Builder()
+            .setUri(contentUri)
+            .setMediaMetadata(metadata)
+            .build()
         controller?.setMediaItem(mediaItem)
         controller?.prepare()
         controller?.play()
@@ -114,6 +122,21 @@ class MusicPlayer(private val context: Context) {
 
     fun playOnlineSong(videoId: String, title: String? = null, artist: String? = null, artUrl: String? = null) {
         android.util.Log.d("MusicPlayer", "Playing stream instantly: yt://$videoId")
+        
+        val localUriStr = com.mrtdk.liquid_glass.data.LibraryManager.getString("local_uri_$videoId")
+        if (localUriStr != null) {
+            try {
+                val localUri = Uri.parse(localUriStr)
+                val file = java.io.File(localUri.path ?: "")
+                if (file.exists()) {
+                    android.util.Log.d("MusicPlayer", "Playing offline downloaded file: $localUriStr")
+                    playLocalSong(localUri, title, artist, artUrl)
+                    return
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("MusicPlayer", "Error checking offline file path", e)
+            }
+        }
         
         val metadata = androidx.media3.common.MediaMetadata.Builder().apply {
             title?.let { setTitle(it) }
