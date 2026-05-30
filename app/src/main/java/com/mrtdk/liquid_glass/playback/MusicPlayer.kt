@@ -206,6 +206,26 @@ class MusicPlayer(private val context: Context) {
         controller?.repeatMode = repeatMode
     }
 
+    fun reloadCurrentSong() {
+        val currentMediaItem = controller?.currentMediaItem ?: return
+        val currentPosition = controller?.currentPosition ?: 0L
+        val videoId = currentMediaItem.mediaId
+        
+        if (!videoId.isNullOrBlank()) {
+            clearCache(videoId)
+        }
+        
+        controller?.let { c ->
+            val wasPlaying = c.playWhenReady
+            c.setMediaItem(currentMediaItem)
+            c.seekTo(currentPosition)
+            c.prepare()
+            if (wasPlaying) {
+                c.play()
+            }
+        }
+    }
+
     fun release() {
         stopPolling()
         controllerFuture?.let {
@@ -221,6 +241,9 @@ class MusicPlayer(private val context: Context) {
         }
 
         suspend fun resolveUrl(videoId: String): String? = withContext(Dispatchers.IO) {
+            val quality = com.mrtdk.liquid_glass.data.LibraryManager.getString("audio_quality", "high") ?: "high"
+            val preferLow = quality == "low"
+
             // Check cache
             songUrlCache[videoId]?.takeIf { it.second > System.currentTimeMillis() }?.let {
                 return@withContext it.first
@@ -253,7 +276,23 @@ class MusicPlayer(private val context: Context) {
                 launch(Dispatchers.IO) {
                     try {
                         val fallbackStreams = YouTube.getNewPipeStreamUrls(videoId)
-                        val fallback = fallbackStreams.find { it.first == 251 || it.first == 140 } ?: fallbackStreams.firstOrNull()
+                        val sortedFallback = fallbackStreams.filter { it.first == 251 || it.first == 140 || it.first == 250 || it.first == 249 || it.first == 139 || it.first == 171 }
+                            .sortedBy { itag ->
+                                when (itag.first) {
+                                    139 -> 48
+                                    249 -> 50
+                                    250 -> 70
+                                    140 -> 128
+                                    171 -> 128
+                                    251 -> 160
+                                    else -> 128
+                                }
+                            }
+                        val fallback = if (preferLow) {
+                            sortedFallback.firstOrNull() ?: fallbackStreams.firstOrNull()
+                        } else {
+                            sortedFallback.lastOrNull() ?: fallbackStreams.firstOrNull()
+                        }
                         if (fallback != null) {
                             android.util.Log.d("MusicPlayer", "Fast playback using NEWPIPE")
                             channel.trySend(Pair(fallback.second, "ANDROID"))
@@ -278,7 +317,12 @@ class MusicPlayer(private val context: Context) {
                                 }
                                 
                                 val formats = responseToUse?.streamingData?.adaptiveFormats ?: emptyList()
-                                val format = formats.findLast { it.itag == 251 || it.itag == 140 } ?: formats.find { it.mimeType.startsWith("audio/") }
+                                val audioFormats = formats.filter { it.mimeType.startsWith("audio/") }
+                                val format = if (preferLow) {
+                                    audioFormats.minByOrNull { it.bitrate } ?: formats.find { it.mimeType.startsWith("audio/") }
+                                } else {
+                                    audioFormats.maxByOrNull { it.bitrate } ?: formats.find { it.mimeType.startsWith("audio/") }
+                                }
                                 
                                 if (format != null) {
                                     val candidateUrl = try { 
