@@ -48,6 +48,7 @@ import kotlinx.coroutines.launch
 fun PlaylistsListScreen(
     onBack: () -> Unit,
     onPlaylistSelected: (Playlist) -> Unit,
+    onSongSelected: (com.mrtdk.liquid_glass.ui.screens.PlayerState) -> Unit,
     paddingValues: PaddingValues = PaddingValues(0.dp)
 ) {
     val playlists by LibraryManager.playlists.collectAsState()
@@ -210,7 +211,11 @@ fun PlaylistsListScreen(
             }
         }
         
-        com.mrtdk.liquid_glass.ui.components.PlaylistContextMenuOverlay(playlist = contextMenuPlaylist, onDismiss = { contextMenuPlaylist = null })
+        com.mrtdk.liquid_glass.ui.components.PlaylistContextMenuOverlay(
+            playlist = contextMenuPlaylist,
+            onDismiss = { contextMenuPlaylist = null },
+            onSongSelected = onSongSelected
+        )
     }
 
     if (showCreateModal) {
@@ -559,7 +564,7 @@ fun PlaylistDetailScreen(
                             blur = 0.8f, centerDistortion = 0.2f, scale = 0.02f, warpEdges = 0.6f, elevation = 8.dp
                         ) {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.ArrowBackIosNew, contentDescription = "Back", tint = Color.White)
+                                Icon(Icons.Default.ArrowBackIosNew, contentDescription = "Back", tint = Color(0xFFFA243C))
                             }
                         }
                         

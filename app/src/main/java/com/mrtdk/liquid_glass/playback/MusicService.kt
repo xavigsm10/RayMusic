@@ -36,6 +36,7 @@ import com.mrtdk.liquid_glass.R
 class MusicService : MediaSessionService() {
     private var mediaSession: MediaSession? = null
     lateinit var player: ExoPlayer
+    private lateinit var eqProcessor: com.mrtdk.liquid_glass.playback.eq.CustomEqualizerAudioProcessor
 
     private val serviceJob = Job()
     private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
@@ -84,6 +85,11 @@ class MusicService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
         
+        com.mrtdk.liquid_glass.data.LibraryManager.init(applicationContext)
+        com.mrtdk.liquid_glass.playback.eq.EqualizerService.init(applicationContext)
+        eqProcessor = com.mrtdk.liquid_glass.playback.eq.CustomEqualizerAudioProcessor()
+        com.mrtdk.liquid_glass.playback.eq.EqualizerService.addAudioProcessor(eqProcessor)
+
         val okHttpDataSourceFactory = androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(
             OkHttpClient.Builder()
                 .proxy(YouTube.proxy)
@@ -200,7 +206,21 @@ class MusicService : MediaSessionService() {
         val mediaSourceFactory = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(this)
             .setDataSourceFactory(defaultDataSourceFactory)
 
-        player = ExoPlayer.Builder(this)
+        val renderersFactory = object : androidx.media3.exoplayer.DefaultRenderersFactory(this) {
+            override fun buildAudioSink(
+                context: Context,
+                enableFloatOutput: Boolean,
+                enableAudioTrackPlaybackParams: Boolean
+            ): androidx.media3.exoplayer.audio.AudioSink? {
+                return androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(context)
+                    .setAudioProcessors(arrayOf(eqProcessor))
+                    .setEnableFloatOutput(enableFloatOutput)
+                    .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+                    .build()
+            }
+        }
+
+        player = ExoPlayer.Builder(this, renderersFactory)
             .setMediaSourceFactory(mediaSourceFactory)
             .setAudioAttributes(
                 AudioAttributes.Builder()
@@ -382,6 +402,9 @@ class MusicService : MediaSessionService() {
         serviceJob.cancel()
         cancelIdleStop()
         releaseLocks()
+        if (::eqProcessor.isInitialized) {
+            com.mrtdk.liquid_glass.playback.eq.EqualizerService.removeAudioProcessor(eqProcessor)
+        }
         mediaSession?.run {
             player.release()
             release()

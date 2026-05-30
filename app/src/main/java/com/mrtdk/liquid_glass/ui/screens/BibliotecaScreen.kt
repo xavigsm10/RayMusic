@@ -32,7 +32,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import com.mrtdk.liquid_glass.data.LibraryManager
 import com.mrtdk.liquid_glass.ui.components.SongGridItem
 import com.mrtdk.liquid_glass.ui.components.PlaylistContextMenuOverlay
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.Mic
@@ -96,6 +96,8 @@ fun BibliotecaScreen(
     var showGlassStyleDialog by remember { mutableStateOf(false) }
     var updateReleaseInfo by remember { mutableStateOf<com.mrtdk.liquid_glass.utils.Updater.ReleaseInfo?>(null) }
     var selectedCategoryKey by remember { mutableStateOf("") }
+    var showEqualizer by remember { mutableStateOf(false) }
+    var showQualityDialog by remember { mutableStateOf(false) }
 
     val labelDescargados = stringResource(R.string.descargados)
     LaunchedEffect(initialCategoryKey) {
@@ -110,6 +112,11 @@ fun BibliotecaScreen(
 
     // Removed local songs scanning LaunchEffect
     
+    if (showEqualizer) {
+        RayEqualizerScreen(onBack = { showEqualizer = false })
+        return
+    }
+
     if (showSettings) {
         val uriHandler = LocalUriHandler.current
         Column(
@@ -123,7 +130,7 @@ fun BibliotecaScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 androidx.compose.material3.IconButton(onClick = { showSettings = false }) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back_action), tint = Color(0xFFFA243C))
+                    Icon(Icons.Default.ArrowBackIosNew, contentDescription = stringResource(R.string.back_action), tint = Color(0xFFFA243C))
                 }
                 Text(
                     text = stringResource(R.string.ajustes),
@@ -248,6 +255,96 @@ fun BibliotecaScreen(
                         )
                     }
                 }
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
+                    text = stringResource(R.string.audio_settings_section),
+                    color = Color.Gray,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
+                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFF1C1C1E))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showQualityDialog = true
+                            }
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = stringResource(R.string.audio_quality_label),
+                                color = Color.White,
+                                fontSize = 16.sp
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            val currentQuality = LibraryManager.getString("audio_quality", "high") ?: "high"
+                            val currentQualityName = when (currentQuality) {
+                                "low" -> stringResource(R.string.audio_quality_low)
+                                else -> stringResource(R.string.audio_quality_high)
+                            }
+                            Text(
+                                text = currentQualityName,
+                                color = Color.Gray,
+                                fontSize = 14.sp
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.ArrowForwardIos,
+                            contentDescription = null,
+                            tint = Color.Gray,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+
+                    Divider(
+                        modifier = Modifier.padding(start = 16.dp),
+                        color = Color.DarkGray.copy(alpha = 0.5f),
+                        thickness = 0.5.dp
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showEqualizer = true
+                            }
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            val isEs = LibraryManager.getAppLanguage(context).startsWith("es")
+                            Text(
+                                text = if (isEs) "Ecualizador" else "Equalizer",
+                                color = Color.White,
+                                fontSize = 16.sp
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = if (isEs) "Configurar ecualizador" else "Configure equalizer",
+                                color = Color.Gray,
+                                fontSize = 14.sp
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.ArrowForwardIos,
+                            contentDescription = null,
+                            tint = Color.Gray,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
@@ -514,6 +611,92 @@ fun BibliotecaScreen(
             }
         }
 
+        if (showQualityDialog) {
+            Dialog(
+                onDismissRequest = { showQualityDialog = false }
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(280.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Color(0xFF1E1E1E))
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Text(
+                            text = stringResource(R.string.audio_quality_dialog_title),
+                            color = Color.White,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
+                        val options = listOf(
+                            "low" to stringResource(R.string.audio_quality_low),
+                            "high" to stringResource(R.string.audio_quality_high)
+                        )
+                        val currentQuality = LibraryManager.getString("audio_quality", "high") ?: "high"
+                        
+                        options.forEach { (qualityKey, name) ->
+                            val isSelected = currentQuality == qualityKey
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        LibraryManager.saveString("audio_quality", qualityKey)
+                                        showQualityDialog = false
+                                        try {
+                                            val musicPlayer = com.mrtdk.liquid_glass.playback.MusicPlayer(context)
+                                            musicPlayer.reloadCurrentSong()
+                                        } catch (e: Exception) {
+                                            e.printStackTrace()
+                                        }
+                                    }
+                                    .padding(horizontal = 24.dp, vertical = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = name,
+                                    color = if (isSelected) Color(0xFFFA243C) else Color.White,
+                                    fontSize = 15.sp,
+                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                                )
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = Color(0xFFFA243C),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                            Divider(color = Color(0xFF333333), thickness = 0.5.dp)
+                        }
+                        
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp)
+                                .clickable { showQualityDialog = false },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = stringResource(R.string.cancelar),
+                                color = Color.Gray,
+                                fontSize = 17.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         updateReleaseInfo?.let { info ->
             com.mrtdk.liquid_glass.ui.components.UpdateDialog(
                 releaseInfo = info,
@@ -536,7 +719,7 @@ fun BibliotecaScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     androidx.compose.material3.IconButton(onClick = { showCategoryDetail = false }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back_action), tint = Color(0xFFFA243C))
+                        Icon(Icons.Default.ArrowBackIosNew, contentDescription = stringResource(R.string.back_action), tint = Color(0xFFFA243C))
                     }
                     Text(
                         text = selectedCategoryName,
@@ -551,6 +734,7 @@ fun BibliotecaScreen(
                 PlaylistsListScreen(
                     onBack = { showCategoryDetail = false },
                     onPlaylistSelected = { pl -> onPlaylistSelected(pl) },
+                    onSongSelected = onSongSelected,
                     paddingValues = innerPadding
                 )
             } else {
@@ -879,5 +1063,9 @@ fun BibliotecaScreen(
         }
     }
     }
-    PlaylistContextMenuOverlay(playlist = contextMenuPlaylist, onDismiss = { contextMenuPlaylist = null })
+    PlaylistContextMenuOverlay(
+        playlist = contextMenuPlaylist,
+        onDismiss = { contextMenuPlaylist = null },
+        onSongSelected = onSongSelected
+    )
 }

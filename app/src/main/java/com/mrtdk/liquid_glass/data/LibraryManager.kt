@@ -29,6 +29,7 @@ data class Playlist(
 object LibraryManager {
     private const val PREFS_NAME = "liquid_glass_library"
     private lateinit var prefs: SharedPreferences
+    private lateinit var context: Context
 
     private val _savedItems = MutableStateFlow<List<LibraryItem>>(emptyList())
     val savedItems: StateFlow<List<LibraryItem>> = _savedItems
@@ -51,6 +52,7 @@ object LibraryManager {
     }
 
     fun init(context: Context) {
+        this.context = context.applicationContext
         prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val saved = prefs.getString("saved_items", "") ?: ""
         if (saved.isNotEmpty()) {
@@ -169,9 +171,43 @@ object LibraryManager {
         prefs.edit().putString("recently_played", serialized).apply()
     }
 
+    fun savePlaylistCover(context: Context, playlistId: String, sourceUri: Uri): String? {
+        return try {
+            val coversDir = java.io.File(context.filesDir, "playlist_covers")
+            if (!coversDir.exists()) {
+                coversDir.mkdirs()
+            }
+            val targetFile = java.io.File(coversDir, "${playlistId}.jpg")
+            context.contentResolver.openInputStream(sourceUri)?.use { inputStream ->
+                java.io.FileOutputStream(targetFile).use { outputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            }
+            targetFile.absolutePath
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
     fun createPlaylist(name: String, coverUrl: String? = null) {
         val id = java.util.UUID.randomUUID().toString()
-        val newList = listOf(Playlist(id, name, emptyList(), coverUrl, false)) + _playlists.value
+        val finalCoverUrl = if (coverUrl != null && coverUrl.startsWith("content://")) {
+            savePlaylistCover(context, id, Uri.parse(coverUrl))
+        } else {
+            coverUrl
+        }
+        val newList = listOf(Playlist(id, name, emptyList(), finalCoverUrl, false)) + _playlists.value
+        _playlists.value = newList
+        savePlaylistsToPrefs(newList)
+    }
+
+    fun updatePlaylist(playlistId: String, name: String, coverUrl: String?) {
+        val newList = _playlists.value.map {
+            if (it.id == playlistId) {
+                it.copy(name = name, coverUrl = coverUrl)
+            } else it
+        }
         _playlists.value = newList
         savePlaylistsToPrefs(newList)
     }
@@ -184,6 +220,12 @@ object LibraryManager {
 
     fun deletePlaylist(playlistId: String) {
         val newList = _playlists.value.filter { it.id != playlistId }
+        _playlists.value = newList
+        savePlaylistsToPrefs(newList)
+    }
+
+    fun renamePlaylist(playlistId: String, newName: String) {
+        val newList = _playlists.value.map { if (it.id == playlistId) it.copy(name = newName) else it }
         _playlists.value = newList
         savePlaylistsToPrefs(newList)
     }

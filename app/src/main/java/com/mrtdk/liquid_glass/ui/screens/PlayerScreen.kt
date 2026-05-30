@@ -349,15 +349,21 @@ fun PlayerScreen(
                         coverBitmap = bitmap.asImageBitmap()
                         try {
                             var r = 0L; var g = 0L; var b = 0L
-                            val y = (bitmap.height * 0.80f).toInt().coerceIn(0, bitmap.height - 1)
+                            var totalPixels = 0
+                            // Sample multiple rows from 70% to 95% of the image for reliable color detection
+                            val sampleRows = listOf(0.70f, 0.75f, 0.80f, 0.85f, 0.90f, 0.95f)
                             val w = bitmap.width
-                            for (x in 0 until w) {
-                                val pixel = bitmap.getPixel(x, y)
-                                r += android.graphics.Color.red(pixel)
-                                g += android.graphics.Color.green(pixel)
-                                b += android.graphics.Color.blue(pixel)
+                            for (fraction in sampleRows) {
+                                val y = (bitmap.height * fraction).toInt().coerceIn(0, bitmap.height - 1)
+                                for (x in 0 until w) {
+                                    val pixel = bitmap.getPixel(x, y)
+                                    r += android.graphics.Color.red(pixel)
+                                    g += android.graphics.Color.green(pixel)
+                                    b += android.graphics.Color.blue(pixel)
+                                }
+                                totalPixels += w
                             }
-                            val sampledColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
+                            val sampledColor = Color((r / totalPixels).toInt(), (g / totalPixels).toInt(), (b / totalPixels).toInt())
                             dominantColor = sampledColor
                             onDominantColorChanged(sampledColor)
                         } catch (e: Exception) { }
@@ -375,8 +381,8 @@ fun PlayerScreen(
 
         val scrollState = rememberScrollState()
 
-        val isLightBackground = dominantColor.luminance() > 0.6f
-        val contentColor = if (isLightBackground) Color(0xFF1E1E1E) else Color.White
+        val isLightBackground = dominantColor.luminance() > 0.35f
+        val contentColor = if (isLightBackground) Color(0xFF1A1A1A) else Color.White
 
         val animatedImageLoader = remember(context) {
             coil.ImageLoader.Builder(context)
@@ -591,15 +597,20 @@ fun PlayerScreen(
                             coverBitmap = frameBitmap.asImageBitmap()
                             try {
                                 var r = 0L; var g = 0L; var b = 0L
-                                val y = frameBitmap.height - 1
+                                var totalPixels = 0
+                                val sampleRows = listOf(0.70f, 0.75f, 0.80f, 0.85f, 0.90f, 0.95f)
                                 val w = frameBitmap.width
-                                for (x in 0 until w) {
-                                    val pixel = frameBitmap.getPixel(x, y)
-                                    r += android.graphics.Color.red(pixel)
-                                    g += android.graphics.Color.green(pixel)
-                                    b += android.graphics.Color.blue(pixel)
+                                for (fraction in sampleRows) {
+                                    val y = (frameBitmap.height * fraction).toInt().coerceIn(0, frameBitmap.height - 1)
+                                    for (x in 0 until w) {
+                                        val pixel = frameBitmap.getPixel(x, y)
+                                        r += android.graphics.Color.red(pixel)
+                                        g += android.graphics.Color.green(pixel)
+                                        b += android.graphics.Color.blue(pixel)
+                                    }
+                                    totalPixels += w
                                 }
-                                val sampledColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
+                                val sampledColor = Color((r / totalPixels).toInt(), (g / totalPixels).toInt(), (b / totalPixels).toInt())
                                 dominantColor = sampledColor
                                 onDominantColorChanged(sampledColor)
                             } catch (e: Exception) { }
@@ -1562,7 +1573,7 @@ fun AnimatedSkipButton(
         modifier = Modifier
             .size(56.dp)
             .clip(CircleShape)
-            .background(Color.White.copy(alpha = bgAlpha))
+            .background(contentColor.copy(alpha = bgAlpha))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,

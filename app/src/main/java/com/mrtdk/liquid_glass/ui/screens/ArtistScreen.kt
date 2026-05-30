@@ -262,7 +262,7 @@ fun ArtistScreen(
                                 elevation = 8.dp
                             ) {
                                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Default.ArrowBackIosNew, "Back", tint = Color.White)
+                                    Icon(Icons.Default.ArrowBackIosNew, "Back", tint = Color(0xFFFA243C))
                                 }
                             }
                         }
@@ -541,7 +541,7 @@ fun ArtistScreen(
                     item {
                         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                             Box(modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.12f)).clickable { showAllAlbumsOverlay = false }, contentAlignment = Alignment.Center) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(22.dp))
+                                Icon(Icons.Default.ArrowBackIosNew, "Back", tint = Color(0xFFFA243C), modifier = Modifier.size(22.dp))
                             }
                             Spacer(modifier = Modifier.width(16.dp))
                             Text(stringResource(R.string.albumes), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
@@ -576,7 +576,7 @@ fun ArtistScreen(
                     item {
                         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                             Box(modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.12f)).clickable { showAllSectionOverlay = false }, contentAlignment = Alignment.Center) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(22.dp))
+                                Icon(Icons.Default.ArrowBackIosNew, "Back", tint = Color(0xFFFA243C), modifier = Modifier.size(22.dp))
                             }
                             Spacer(modifier = Modifier.width(16.dp))
                             Text(allSectionTitle, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)

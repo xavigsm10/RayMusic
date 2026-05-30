@@ -47,6 +47,14 @@ import com.echo.innertube.YouTube
 import com.echo.innertube.models.SongItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import android.widget.Toast
+import com.mrtdk.liquid_glass.ui.components.AppleMusicSongMenu
+import com.mrtdk.liquid_glass.ui.components.AppleMusicAlbumMenu
+import com.mrtdk.liquid_glass.ui.components.ContextMenuSong
+import com.mrtdk.liquid_glass.ui.components.ContextMenuAlbum
+import com.mrtdk.liquid_glass.playback.PlaybackQueue
+import com.mrtdk.liquid_glass.ui.screens.QueueItem
+import com.mrtdk.liquid_glass.ui.screens.PlayerState
 
 data class AlbumState(
     val id: String,        // browseId
@@ -62,10 +70,14 @@ fun AlbumScreen(
     albumState: AlbumState,
     onBack: () -> Unit,
     onSongSelected: (PlayerState) -> Unit,
+    onArtistSelected: (com.mrtdk.liquid_glass.ui.screens.ArtistState) -> Unit = {},
+    onAlbumSelected: (com.mrtdk.liquid_glass.ui.screens.AlbumState) -> Unit = {},
     onDominantColorChanged: (Color) -> Unit = {},
     isPaused: Boolean = false
 ) {
     val context = LocalContext.current
+    var activeSongForMenu by remember { mutableStateOf<ContextMenuSong?>(null) }
+    var showAlbumMenu by remember { mutableStateOf(false) }
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
     var tracks by remember { mutableStateOf<List<SongItem>>(emptyList()) }
     var dominantColor by remember { mutableStateOf(Color(0xFF1E1E1E)) }
@@ -212,14 +224,18 @@ fun AlbumScreen(
         }
     }
 
-    val isLightBackground = dominantColor.luminance() > 0.6f
+    val isLightBackground = dominantColor.luminance() > 0.5f
     val contentColor = if (isLightBackground) Color(0xFF1E1E1E) else Color.White
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(dominantColor)
-    ) {
+    com.mrtdk.glass.GlassContainer(
+        modifier = Modifier.fillMaxSize(),
+        useShader = true,
+        content = {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(dominantColor)
+            ) {
         // ── HERO: Album art with gradient overlay ──────────────────
         item {
             com.mrtdk.glass.GlassContainer(
@@ -360,7 +376,7 @@ fun AlbumScreen(
                             elevation = 8.dp
                         ) {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.ArrowBackIosNew, "Back", tint = Color.White)
+                                 Icon(Icons.Default.ArrowBackIosNew, "Back", tint = Color(0xFFFA243C))
                             }
                         }
                         scope.GlassBox(
@@ -387,7 +403,7 @@ fun AlbumScreen(
                                     }
                                     context.startActivity(android.content.Intent.createChooser(shareIntent, "Compartir"))
                                 })
-                                Icon(Icons.Default.MoreVert, "More", tint = Color.White, modifier = Modifier.size(24.dp).clickable { })
+                                Icon(Icons.Default.MoreVert, "More", tint = Color.White, modifier = Modifier.size(24.dp).clickable { showAlbumMenu = true })
                             }
                         }
                     }
@@ -438,15 +454,18 @@ fun AlbumScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val appleRed = Color(0xFFFA243C)
+                val darkTranslucent = Color.Black.copy(alpha = 0.35f)
+
                 // Shuffle button
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(48.dp)
                         .clip(CircleShape)
-                        .background(contentColor.copy(alpha = 0.15f))
+                        .background(darkTranslucent)
                         .clickable {
                             if (tracks.isNotEmpty()) {
                                 val shuffledTracks = tracks.shuffled()
@@ -478,8 +497,8 @@ fun AlbumScreen(
                     Icon(
                         painter = painterResource(id = R.drawable.shuffle),
                         contentDescription = "Shuffle",
-                        tint = contentColor,
-                        modifier = Modifier.size(20.dp)
+                        tint = Color.White,
+                        modifier = Modifier.size(22.dp)
                     )
                 }
 
@@ -487,9 +506,9 @@ fun AlbumScreen(
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .height(44.dp)
+                        .height(48.dp)
                         .clip(RoundedCornerShape(24.dp))
-                        .background(contentColor)
+                        .background(Color.White)
                         .clickable {
                             tracks.firstOrNull()?.let { s ->
                                 val albumQueue = tracks.drop(1).map { t ->
@@ -524,18 +543,18 @@ fun AlbumScreen(
                             drawPath(Path().apply {
                                 moveTo(0f, 0f); lineTo(size.width, size.height / 2f)
                                 lineTo(0f, size.height); close()
-                            }, dominantColor)
+                            }, appleRed)
                         }
-                        Text("Play", color = dominantColor, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Play", color = appleRed, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
 
                 // + button
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(48.dp)
                         .clip(CircleShape)
-                        .background(contentColor.copy(alpha = 0.15f))
+                        .background(darkTranslucent)
                         .clickable { 
                             if (isSaved) {
                                 LibraryManager.removeItem(albumState.id)
@@ -551,7 +570,12 @@ fun AlbumScreen(
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(if (isSaved) Icons.Default.Check else Icons.Default.Add, "Add/Remove", tint = contentColor, modifier = Modifier.size(20.dp))
+                    Icon(
+                        imageVector = if (isSaved) Icons.Default.Check else Icons.Default.Add,
+                        contentDescription = "Add/Remove",
+                        tint = Color.White,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
             }
         }
@@ -617,7 +641,17 @@ fun AlbumScreen(
                         )
                     }
                 }
-                IconButton(onClick = { }) {
+                IconButton(onClick = {
+                    val songArtistNames = song.artists.joinToString { it.name }
+                    activeSongForMenu = ContextMenuSong(
+                        id = song.id,
+                        title = song.title,
+                        artist = songArtistNames,
+                        thumbnail = songArtUrl,
+                        album = albumState.title,
+                        artistId = song.artists.firstOrNull()?.id
+                    )
+                }) {
                     Icon(Icons.Default.MoreVert, null, tint = contentColor.copy(alpha = 0.6f))
                 }
             }
@@ -632,4 +666,83 @@ fun AlbumScreen(
             Spacer(modifier = Modifier.height(120.dp))
         }
     }
+},
+glassContent = {
+    activeSongForMenu?.let { song ->
+        AppleMusicSongMenu(
+            song = song,
+            onDismiss = { activeSongForMenu = null },
+            onGoToArtist = {
+                val aId = song.artistId ?: song.artist
+                onArtistSelected(
+                    com.mrtdk.liquid_glass.ui.screens.ArtistState(
+                        id = aId,
+                        name = song.artist,
+                        thumbnail = null
+                    )
+                )
+            },
+            onGoToAlbum = null,
+            onSongSelected = onSongSelected
+        )
+    }
+
+    if (showAlbumMenu) {
+        AppleMusicAlbumMenu(
+            album = ContextMenuAlbum(
+                id = albumState.id,
+                playlistId = albumState.playlistId,
+                title = albumState.title,
+                artist = albumState.artist,
+                thumbnail = albumState.thumbnail,
+                year = albumState.year
+            ),
+            onDismiss = { showAlbumMenu = false },
+            onAddAlbumToQueue = {
+                if (tracks.isNotEmpty()) {
+                    val current = PlaybackQueue.currentSong
+                    val qItems = tracks.map { t ->
+                        QueueItem(
+                            title = t.title,
+                            artist = t.artists.joinToString { it.name },
+                            artUrl = songArtUrl,
+                            videoId = t.id,
+                            album = albumState.title
+                        )
+                    }
+                    if (current == null) {
+                        val s = tracks.first()
+                        onSongSelected(
+                            PlayerState(
+                                title = s.title,
+                                artist = s.artists.joinToString { it.name },
+                                artUrl = songArtUrl,
+                                videoId = s.id,
+                                queue = qItems.drop(1),
+                                isExclusiveQueue = true,
+                                album = albumState.title
+                            )
+                        )
+                    } else {
+                        PlaybackQueue.queue = PlaybackQueue.queue + qItems
+                        PlaybackQueue.onQueueChanged?.invoke()
+                        Toast.makeText(context, "Álbum añadido a la cola", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            },
+            onSaveAlbumToLibrary = {
+                LibraryManager.saveItem(
+                    LibraryItem(
+                        id = albumState.id,
+                        title = albumState.title,
+                        subtitle = albumState.artist,
+                        thumbnail = hdThumb,
+                        type = ItemType.ALBUM
+                    )
+                )
+                Toast.makeText(context, "Álbum guardado en la biblioteca", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+})
 }

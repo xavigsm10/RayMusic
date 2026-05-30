@@ -41,6 +41,19 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import java.io.InputStreamReader
+import android.widget.Toast
+import com.mrtdk.glass.GlassContainer
+import com.mrtdk.liquid_glass.ui.components.AppleMusicSongMenu
+import com.mrtdk.liquid_glass.ui.components.AppleMusicAlbumMenu
+import com.mrtdk.liquid_glass.ui.components.ContextMenuSong
+import com.mrtdk.liquid_glass.ui.components.ContextMenuAlbum
+import com.mrtdk.liquid_glass.playback.PlaybackQueue
+import kotlinx.coroutines.launch
+import com.mrtdk.liquid_glass.data.LibraryManager
+import com.mrtdk.liquid_glass.data.LibraryItem
+import com.mrtdk.liquid_glass.data.ItemType
+import com.mrtdk.liquid_glass.ui.screens.QueueItem
+import com.mrtdk.liquid_glass.ui.screens.PlayerState
 
 data class SearchCategory(val name: String, val imageUrl: String)
 
@@ -83,6 +96,8 @@ fun BusquedaScreen(
     onCategorySelected: (SearchCategory) -> Unit = {}
 ) {
     val context = LocalContext.current
+    var activeSongForMenu by remember { mutableStateOf<ContextMenuSong?>(null) }
+    var activeAlbumForMenu by remember { mutableStateOf<ContextMenuAlbum?>(null) }
     val tabNames = listOf(
         stringResource(R.string.search_tab_top),
         stringResource(R.string.search_tab_artists),
@@ -146,13 +161,17 @@ fun BusquedaScreen(
     val imeBottom = WindowInsets.ime.getBottom(density)
     val isKeyboardOpen = imeBottom > 0
 
-    if (query.isEmpty()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black)
-                .padding(innerPadding)
-        ) {
+    com.mrtdk.glass.GlassContainer(
+        modifier = Modifier.fillMaxSize(),
+        useShader = true,
+        content = {
+            if (query.isEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black)
+                        .padding(innerPadding)
+                ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -313,7 +332,17 @@ fun BusquedaScreen(
                                     maxLines = 1, overflow = TextOverflow.Ellipsis
                                 )
                             }
-                            IconButton(onClick = { }) {
+                            IconButton(onClick = {
+                                activeSongForMenu = ContextMenuSong(
+                                    id = item.id,
+                                    title = item.title,
+                                    artist = item.artists.joinToString { it.name },
+                                    thumbnail = hdThumb,
+                                    album = item.album?.name,
+                                    artistId = item.artists.firstOrNull()?.id,
+                                    albumId = item.album?.id
+                                )
+                            }) {
                                 Icon(Icons.Default.MoreVert, null, tint = Color.Gray)
                             }
                         }
@@ -398,7 +427,16 @@ fun BusquedaScreen(
                                     fontWeight = FontWeight.Medium, maxLines = 1)
                                 Text("${stringResource(R.string.search_type_album)} · ${item.year ?: ""}", color = Color.Gray, fontSize = 13.sp)
                             }
-                            IconButton(onClick = { }) {
+                            IconButton(onClick = {
+                                activeAlbumForMenu = ContextMenuAlbum(
+                                    id = item.browseId,
+                                    playlistId = item.playlistId,
+                                    title = item.title,
+                                    artist = item.artists?.joinToString { it.name } ?: "",
+                                    thumbnail = item.thumbnail,
+                                    year = item.year
+                                )
+                            }) {
                                 Icon(Icons.Default.MoreVert, null, tint = Color.Gray)
                             }
                         }
@@ -414,4 +452,103 @@ fun BusquedaScreen(
         }
     }
 }
+},
+glassContent = {
+    activeSongForMenu?.let { song ->
+        AppleMusicSongMenu(
+            song = song,
+            onDismiss = { activeSongForMenu = null },
+            onGoToArtist = {
+                song.artistId?.let { id ->
+                    onArtistSelected(
+                        ArtistState(
+                            id = id,
+                            name = song.artist,
+                            thumbnail = null
+                        )
+                    )
+                }
+            },
+            onGoToAlbum = {
+                song.albumId?.let { aId ->
+                    onAlbumSelected(
+                        AlbumState(
+                            id = aId,
+                            playlistId = aId,
+                            title = song.album ?: "",
+                            artist = song.artist,
+                            thumbnail = song.thumbnail
+                        )
+                    )
+                }
+            },
+            onSongSelected = onSongSelected
+        )
+    }
+
+    activeAlbumForMenu?.let { album ->
+        AppleMusicAlbumMenu(
+            album = album,
+            onDismiss = { activeAlbumForMenu = null },
+            onAddAlbumToQueue = {
+                val coroutineScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO)
+                coroutineScope.launch {
+                    val isAlbum = album.id.startsWith("MPREb") || album.id.startsWith("FEmusic")
+                    val albumTracks = if (isAlbum) {
+                        YouTube.album(album.id).getOrNull()?.songs
+                    } else {
+                        val pId = album.playlistId.ifEmpty { album.id }.removePrefix("VL")
+                        YouTube.playlist(pId).getOrNull()?.songs
+                    }
+                    withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        if (albumTracks.isNullOrEmpty()) {
+                            Toast.makeText(context, "No se pudieron obtener las canciones", Toast.LENGTH_SHORT).show()
+                        } else {
+                            val current = PlaybackQueue.currentSong
+                            val qItems = albumTracks.map { t ->
+                                QueueItem(
+                                    title = t.title,
+                                    artist = t.artists.joinToString { it.name },
+                                    artUrl = album.thumbnail,
+                                    videoId = t.id,
+                                    album = album.title
+                                )
+                            }
+                            if (current == null) {
+                                val s = albumTracks.first()
+                                onSongSelected(
+                                    PlayerState(
+                                        title = s.title,
+                                        artist = s.artists.joinToString { it.name },
+                                        artUrl = album.thumbnail,
+                                        videoId = s.id,
+                                        queue = qItems.drop(1),
+                                        isExclusiveQueue = true,
+                                        album = album.title
+                                    )
+                                )
+                            } else {
+                                PlaybackQueue.queue = PlaybackQueue.queue + qItems
+                                PlaybackQueue.onQueueChanged?.invoke()
+                                Toast.makeText(context, "Álbum añadido a la cola", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                }
+            },
+            onSaveAlbumToLibrary = {
+                LibraryManager.saveItem(
+                    LibraryItem(
+                        id = album.id,
+                        title = album.title,
+                        subtitle = album.artist,
+                        thumbnail = album.thumbnail,
+                        type = ItemType.ALBUM
+                    )
+                )
+                Toast.makeText(context, "Álbum guardado en la biblioteca", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+})
 }
