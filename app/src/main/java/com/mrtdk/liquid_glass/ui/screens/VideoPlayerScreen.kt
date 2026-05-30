@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import com.mrtdk.glass.GlassBox
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -383,7 +383,7 @@ fun VideoPlayerScreen(
                             elevation = 4.dp
                         ) {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(24.dp))
+                                Icon(Icons.Default.ArrowBackIosNew, "Back", tint = Color(0xFFFA243C), modifier = Modifier.size(24.dp))
                             }
                         }
 

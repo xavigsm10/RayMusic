@@ -451,6 +451,12 @@ class MainActivity : ComponentActivity() {
                                                 albumState = state.album,
                                                 onBack = { albumDetail = null },
                                                 onSongSelected = playSong,
+                                                onArtistSelected = { artist ->
+                                                    artistDetail = artist
+                                                },
+                                                onAlbumSelected = { album ->
+                                                    albumDetail = album
+                                                },
                                                 onDominantColorChanged = { color ->
                                                     globalDominantColor = color
                                                 },

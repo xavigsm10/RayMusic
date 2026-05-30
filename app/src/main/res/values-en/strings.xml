@@ -104,4 +104,9 @@
     <string name="vidrio_liquido_transparente">Transparent Liquid Glass</string>
     <string name="semitransparente">Semitransparent</string>
     <string name="apariencia_dialog_title">Select Liquid Glass Style</string>
+    <string name="audio_settings_section">AUDIO</string>
+    <string name="audio_quality_label">Audio Quality</string>
+    <string name="audio_quality_high">High (160 kbps Opus / 128 kbps AAC)</string>
+    <string name="audio_quality_low">Low (48 kbps AAC / 50 kbps Opus)</string>
+    <string name="audio_quality_dialog_title">Playback Quality</string>
 </resources>
