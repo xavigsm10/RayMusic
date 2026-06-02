@@ -135,6 +135,12 @@ fun GlassBoxScope.GlassBox(
     val scopeImpl = (this as? GlassBoxScopeImpl)?.glassScope as? GlassScopeImpl
     if (scopeImpl != null) {
         val elementId = "glass_$id"
+        DisposableEffect(elementId) {
+            onDispose {
+                scopeImpl.elements.removeAll { it.id == elementId }
+                scopeImpl.updateCounter++
+            }
+        }
         SideEffect {
             val index = scopeImpl.elements.indexOfFirst { it.id == elementId }
             if (index != -1) {

@@ -16,13 +16,37 @@ import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.MoreVert
-import com.mrtdk.glass.GlassBox // kept for potential future use
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.PlayArrow
+import com.mrtdk.liquid_glass.ui.components.LiquidButton
+import com.mrtdk.glass.GlassContainer
+import com.mrtdk.liquid_glass.ui.components.AppleMusicArtistMenu
+import com.kyant.shapes.Capsule
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import androidx.compose.ui.graphics.isSpecified
+import android.widget.Toast
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.ui.res.stringResource
 import com.mrtdk.liquid_glass.R
+import com.mrtdk.liquid_glass.ui.components.trackClickBounds
+import com.mrtdk.liquid_glass.ui.components.trackTapBounds
+import com.mrtdk.liquid_glass.ui.components.wiggleOnScroll
+import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,6 +87,7 @@ data class ArtistState(
 @Composable
 fun ArtistScreen(
     artistState: ArtistState,
+    innerPadding: PaddingValues,
     onBack: () -> Unit,
     onSongSelected: (PlayerState) -> Unit,
     onAlbumSelected: (AlbumState) -> Unit,
@@ -80,6 +105,7 @@ fun ArtistScreen(
     var isDescriptionExpanded by remember { mutableStateOf(false) }
     // Generic "show all" overlay for videos / remaining sections
     var showAllSectionOverlay by remember { mutableStateOf(false) }
+    var showArtistMenu by remember { mutableStateOf(false) }
     var allSectionData by remember { mutableStateOf<ArtistSection?>(null) }
     var allSectionTitle by remember { mutableStateOf("") }
     var allSectionIsVideo by remember { mutableStateOf(false) }
@@ -172,9 +198,23 @@ fun ArtistScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-        // Main content
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
+    val localBackdrop = rememberLayerBackdrop()
+
+    val listState = rememberLazyListState()
+
+    GlassContainer(
+        modifier = Modifier.fillMaxSize(),
+        useShader = true,
+        content = {
+            Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+                // Main content
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                bottom = innerPadding.calculateBottomPadding() + 180.dp
+            )
+        ) {
             // ── HERO ───────────────────────────────────────
             item {
                 Box(modifier = Modifier.fillMaxWidth()) {
@@ -184,6 +224,7 @@ fun ArtistScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .background(Color(0xFF111111))
+                            .layerBackdrop(localBackdrop)
                     ) {
                         AsyncImage(
                             model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
@@ -202,6 +243,45 @@ fun ArtistScreen(
                                     )
                                 )
                         )
+
+                        // Floating play button at the bottom-right of the artist image
+                        topSongsSection?.items?.filterIsInstance<SongItem>()?.firstOrNull()?.let { firstSong ->
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(end = 20.dp, bottom = 16.dp)
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFFA243C))
+                                    .clickable {
+                                        val remainingSongs = topSongsSection.items.filterIsInstance<SongItem>().drop(1)
+                                        val artistQueue = remainingSongs.map { t ->
+                                            QueueItem(
+                                                title = t.title,
+                                                artist = t.artists.joinToString { it.name },
+                                                artUrl = upgradeArtToHD(t.thumbnail),
+                                                videoId = t.id
+                                            )
+                                        }
+                                        onSongSelected(PlayerState(
+                                            title = firstSong.title,
+                                            artist = firstSong.artists.joinToString { it.name },
+                                            artUrl = upgradeArtToHD(firstSong.thumbnail),
+                                            videoId = firstSong.id,
+                                            queue = artistQueue,
+                                            isExclusiveQueue = true
+                                        ))
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = "Play",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp).padding(start = 2.dp)
+                                )
+                            }
+                        }
                     }
                         // Artist name and description BELOW image
                         Column(
@@ -240,60 +320,109 @@ fun ArtistScreen(
                             }
                         }
                     }
-                    // Back button floating on top of image — GlassBox pill
-                    com.mrtdk.glass.GlassContainer(
+                    LiquidButton(
+                        onClick = { onBack() },
                         modifier = Modifier
                             .statusBarsPadding()
                             .padding(horizontal = 16.dp, vertical = 12.dp)
                             .size(48.dp),
-                        content = {
-                            Box(modifier = Modifier.fillMaxSize())
-                        },
-                        glassContent = {
-                            val scope = this
-                            scope.GlassBox(
-                                modifier = Modifier.fillMaxSize().clip(CircleShape).clickable { onBack() },
-                                shape = CircleShape,
-                                tint = dominantColor.copy(alpha = 0.35f),
-                                blur = 0.8f,
-                                centerDistortion = 0.2f,
-                                scale = 0.02f,
-                                warpEdges = 0.6f,
-                                elevation = 8.dp
-                            ) {
-                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Default.ArrowBackIosNew, "Back", tint = Color(0xFFFA243C))
+                        backdrop = localBackdrop,
+                        tint = dominantColor.copy(alpha = 0.35f),
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBackIosNew,
+                            contentDescription = "Back",
+                            tint = Color.White,
+                            modifier = Modifier
+                                .size(24.dp)
+                                .align(Alignment.CenterVertically)
+                        )
+                    }
+
+                    // Capsule control pill floating on top of image — Top Right
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .statusBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                            .height(48.dp)
+                            .drawBackdrop(
+                                backdrop = localBackdrop,
+                                shape = { Capsule() },
+                                effects = {
+                                    vibrancy()
+                                    blur(2f.dp.toPx())
+                                    lens(12f.dp.toPx(), 24f.dp.toPx())
+                                },
+                                onDrawSurface = {
+                                    val tint = dominantColor.copy(alpha = 0.35f)
+                                    if (tint.isSpecified) {
+                                        drawRect(tint, blendMode = androidx.compose.ui.graphics.BlendMode.Hue)
+                                        drawRect(tint.copy(alpha = 0.75f))
+                                    }
                                 }
-                            }
+                            )
+                            .padding(horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Music note button
+                        IconButton(
+                            onClick = {
+                                Toast.makeText(context, "RayMusic", Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MusicNote,
+                                contentDescription = "Nota Musical",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
-                    )
+
+                        // Star button (Añadir a favoritos)
+                        val isSaved = savedItems.any { it.id == artistState.id }
+                        IconButton(
+                            onClick = {
+                                if (!isSaved) {
+                                    LibraryManager.saveItem(LibraryItem(id = artistState.id, title = artistState.name, subtitle = "Artist", thumbnail = artistThumb, type = ItemType.ARTIST))
+                                    Toast.makeText(context, context.getString(R.string.menu_artist_toast_added), Toast.LENGTH_SHORT).show()
+                                } else {
+                                    LibraryManager.removeItem(artistState.id)
+                                    Toast.makeText(context, context.getString(R.string.menu_artist_toast_removed), Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isSaved) Icons.Default.Star else Icons.Default.StarBorder,
+                                contentDescription = "Favorito",
+                                tint = if (isSaved) Color(0xFFFA243C) else Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        // 3-dots button (Menú)
+                        IconButton(
+                            onClick = {
+                                showArtistMenu = true
+                            },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MoreHoriz,
+                                contentDescription = "Menú",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
                 }
             }
 
-            // ── ACTION BUTTONS ─────────────────────────────
-            item {
-                Row(modifier = Modifier.fillMaxWidth().background(Color.Black).padding(horizontal = 20.dp, vertical = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(48.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.12f)).clickable { }, contentAlignment = Alignment.Center) {
-                        Canvas(modifier = Modifier.size(22.dp)) { drawLine(Color.White, androidx.compose.ui.geometry.Offset(0f, 0f), androidx.compose.ui.geometry.Offset(size.width, size.height), strokeWidth = 3f); drawLine(Color.White, androidx.compose.ui.geometry.Offset(size.width, 0f), androidx.compose.ui.geometry.Offset(0f, size.height), strokeWidth = 3f) }
-                    }
-                    Box(modifier = Modifier.weight(1f).height(48.dp).clip(RoundedCornerShape(26.dp)).background(Color.White).clickable {
-                        topSongsSection?.items?.filterIsInstance<SongItem>()?.firstOrNull()?.let { s -> onSongSelected(PlayerState(title = s.title, artist = s.artists.joinToString { it.name }, artUrl = s.thumbnail, videoId = s.id)) }
-                    }, contentAlignment = Alignment.Center) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Canvas(modifier = Modifier.size(16.dp)) { drawPath(Path().apply { moveTo(0f, 0f); lineTo(size.width, size.height / 2f); lineTo(0f, size.height); close() }, Color.Black) }
-                            Text(stringResource(R.string.reproducir), color = Color.Black, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                    val isSaved = savedItems.any { it.id == artistState.id }
-                    Box(modifier = Modifier.size(48.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.12f)).clickable {
-                        if (!isSaved) LibraryManager.saveItem(LibraryItem(id = artistState.id, title = artistState.name, subtitle = "Artist", thumbnail = artistThumb, type = ItemType.ARTIST))
-                        else LibraryManager.removeItem(artistState.id)
-                    }, contentAlignment = Alignment.Center) {
-                        val iconTint by animateColorAsState(if (isSaved) Color(0xFFFA243C) else Color.White, label = "")
-                        Icon(if (isSaved) Icons.Default.Check else Icons.Default.Add, "Add", tint = iconTint, modifier = Modifier.size(22.dp))
-                    }
-                }
-            }
+
 
             // ── LOADING ────────────────────────────────────
             if (isLoading) {
@@ -395,7 +524,7 @@ fun ArtistScreen(
                         }
                     }
                     LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(albumItems.take(8).size) { idx -> ItemCard(context, albumItems[idx], artistState.name, onAlbumSelected, onSongSelected, onArtistSelected) }
+                        items(albumItems.take(8).size) { idx -> ItemCard(context, albumItems[idx], artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, scrollState = listState) }
                     }
                 }
             }
@@ -407,7 +536,7 @@ fun ArtistScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(stringResource(R.string.sencillos_y_ep), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
                     LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(singleItems.size) { idx -> ItemCard(context, singleItems[idx], artistState.name, onAlbumSelected, onSongSelected, onArtistSelected) }
+                        items(singleItems.size) { idx -> ItemCard(context, singleItems[idx], artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, scrollState = listState) }
                     }
                 }
             }
@@ -440,7 +569,7 @@ fun ArtistScreen(
                     LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(videoItems.size) { idx ->
                             val v = videoItems[idx]
-                            ItemCard(context, v, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, onVideoSelected = onVideoSelected, isVideo = true)
+                            ItemCard(context, v, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, onVideoSelected = onVideoSelected, isVideo = true, scrollState = listState)
                         }
                     }
                 }
@@ -453,7 +582,7 @@ fun ArtistScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(stringResource(R.string.destacado_en), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
                     LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(featuredItems.size) { idx -> ItemCard(context, featuredItems[idx], artistState.name, onAlbumSelected, onSongSelected, onArtistSelected) }
+                        items(featuredItems.size) { idx -> ItemCard(context, featuredItems[idx], artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, scrollState = listState) }
                     }
                 }
             }
@@ -467,7 +596,7 @@ fun ArtistScreen(
                     LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(plItems.size) { idx ->
                             val pl = plItems[idx]
-                            ItemCard(context, pl, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected)
+                            ItemCard(context, pl, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, scrollState = listState)
                         }
                     }
                 }
@@ -523,7 +652,7 @@ fun ArtistScreen(
                         }
                     }
                     LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(section.items.size) { idx -> ItemCard(context, section.items[idx], artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, onVideoSelected = onVideoSelected, isVideo = isVideoSection) }
+                        items(section.items.size) { idx -> ItemCard(context, section.items[idx], artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, onVideoSelected = onVideoSelected, isVideo = isVideoSection, scrollState = listState) }
                     }
                 }
             }
@@ -555,7 +684,7 @@ fun ArtistScreen(
                         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             row.forEach { album ->
                                 Box(modifier = Modifier.weight(1f)) {
-                                    ItemCard(context, album, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, fillWidth = true)
+                                    ItemCard(context, album, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, fillWidth = true, scrollState = listState)
                                 }
                             }
                             if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
@@ -591,7 +720,7 @@ fun ArtistScreen(
                             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 row.forEach { item ->
                                     Box(modifier = Modifier.weight(1f)) {
-                                        ItemCard(context, item, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, onVideoSelected = onVideoSelected, fillWidth = true, isVideo = true)
+                                        ItemCard(context, item, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, onVideoSelected = onVideoSelected, fillWidth = true, isVideo = true, scrollState = listState)
                                     }
                                 }
                                 if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
@@ -608,7 +737,7 @@ fun ArtistScreen(
                             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 row.forEach { item ->
                                     Box(modifier = Modifier.weight(1f)) {
-                                        ItemCard(context, item, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, fillWidth = true)
+                                        ItemCard(context, item, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, fillWidth = true, scrollState = listState)
                                     }
                                 }
                                 if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
@@ -619,6 +748,21 @@ fun ArtistScreen(
                     item { Spacer(modifier = Modifier.height(80.dp)) }
                 }
             }
+        }
+        }
+    }
+) {
+        if (showArtistMenu) {
+            AppleMusicArtistMenu(
+                artistId = artistState.id,
+                artistName = artistState.name,
+                artistThumb = artistThumb,
+                backdrop = localBackdrop,
+                dominantColor = dominantColor,
+                onDismiss = { showArtistMenu = false },
+                onSongSelected = onSongSelected,
+                topSongs = topSongsSection?.items?.filterIsInstance<SongItem>() ?: emptyList()
+            )
         }
     }
 }
@@ -634,7 +778,8 @@ private fun ItemCard(
     onArtistSelected: (ArtistState) -> Unit = {},
     onVideoSelected: (String) -> Unit = {},
     fillWidth: Boolean = false,
-    isVideo: Boolean = false
+    isVideo: Boolean = false,
+    scrollState: androidx.compose.foundation.lazy.LazyListState? = null
 ) {
     val thumbnailHeight = if (isVideo) 128.dp else 180.dp
     val thumbnailRatio = if (isVideo) 16f / 9f else 1f
@@ -645,10 +790,20 @@ private fun ItemCard(
     when (item) {
         is AlbumItem -> {
             val hdThumb = item.thumbnail?.replace("=w226-h226", "=w540-h540")?.replace("=w120-h120", "=w540-h540")
-            Column(modifier = cardMod.clickable {
-                onAlbumSelected(AlbumState(id = item.id, playlistId = item.playlistId ?: item.id, title = item.title, artist = item.artists?.joinToString { it.name } ?: artistName, thumbnail = item.thumbnail, year = item.year as? Int ?: item.year?.toString()?.toIntOrNull()))
-            }) {
-                Box(modifier = imgMod.clip(RoundedCornerShape(12.dp)).background(Color.DarkGray)) {
+            var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+            Column(modifier = cardMod
+                .let { if (scrollState != null) it.wiggleOnScroll(item.id, lazyListState = scrollState) else it }
+                .clickable {
+                    SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                    SharedTransitionState.lastOpenedId = item.id
+                    onAlbumSelected(AlbumState(id = item.id, playlistId = item.playlistId ?: item.id, title = item.title, artist = item.artists?.joinToString { it.name } ?: artistName, thumbnail = item.thumbnail, year = item.year as? Int ?: item.year?.toString()?.toIntOrNull()))
+                }
+            ) {
+                Box(modifier = imgMod
+                    .onGloballyPositioned { imageCoords = it }
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.DarkGray)
+                ) {
                     AsyncImage(model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(), contentDescription = item.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -675,10 +830,20 @@ private fun ItemCard(
         }
         is PlaylistItem -> {
             val hdThumb = item.thumbnail?.replace("=w226-h226", "=w540-h540")?.replace("=w120-h120", "=w540-h540")
-            Column(modifier = cardMod.clickable {
-                onAlbumSelected(AlbumState(id = item.id, playlistId = item.id, title = item.title, artist = item.author?.name ?: artistName, thumbnail = item.thumbnail, year = null))
-            }) {
-                Box(modifier = imgMod.clip(RoundedCornerShape(12.dp)).background(Color.DarkGray)) {
+            var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+            Column(modifier = cardMod
+                .let { if (scrollState != null) it.wiggleOnScroll(item.id, lazyListState = scrollState) else it }
+                .clickable {
+                    SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                    SharedTransitionState.lastOpenedId = item.id
+                    onAlbumSelected(AlbumState(id = item.id, playlistId = item.id, title = item.title, artist = item.author?.name ?: artistName, thumbnail = item.thumbnail, year = null))
+                }
+            ) {
+                Box(modifier = imgMod
+                    .onGloballyPositioned { imageCoords = it }
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.DarkGray)
+                ) {
                     AsyncImage(model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(), contentDescription = item.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                 }
                 Spacer(modifier = Modifier.height(8.dp))
