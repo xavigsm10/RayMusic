@@ -26,6 +26,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import com.mrtdk.liquid_glass.ui.components.trackClickBounds
+import com.mrtdk.liquid_glass.ui.components.trackTapBounds
+import com.mrtdk.liquid_glass.ui.components.wiggleOnScroll
+import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -227,7 +235,9 @@ fun BusquedaScreen(
             }
         }
     } else {
+        val listState = rememberLazyListState()
         LazyColumn(
+        state = listState,
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black),
@@ -389,10 +399,14 @@ fun BusquedaScreen(
                         }
                     }
                     is AlbumItem -> {
+                        var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .wiggleOnScroll(item.browseId, lazyListState = listState)
                                 .clickable {
+                                    SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                    SharedTransitionState.lastOpenedId = item.browseId
                                     onAlbumSelected(
                                         AlbumState(
                                             id = item.browseId,
@@ -410,6 +424,7 @@ fun BusquedaScreen(
                             Box(
                                 modifier = Modifier
                                     .size(56.dp)
+                                    .onGloballyPositioned { imageCoords = it }
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(Color.DarkGray)
                             ) {
@@ -471,6 +486,8 @@ glassContent = {
             },
             onGoToAlbum = {
                 song.albumId?.let { aId ->
+                    SharedTransitionState.lastOpenedId = aId
+                    SharedTransitionState.lastClickBounds = null
                     onAlbumSelected(
                         AlbumState(
                             id = aId,

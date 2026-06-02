@@ -35,13 +35,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.mrtdk.glass.GlassBox
-import com.mrtdk.glass.GlassBoxScope
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import com.kyant.shapes.Capsule
+import com.mrtdk.liquid_glass.ui.components.LocalBackdrop
 import com.mrtdk.liquid_glass.ui.screens.PlayerState
 import kotlinx.coroutines.launch
 
 @Composable
-fun GlassBoxScope.MiniPlayer(
+fun MiniPlayer(
     playerState: PlayerState?,
     isPlaying: Boolean,
     onTogglePlayPause: () -> Unit,
@@ -91,8 +95,9 @@ fun GlassBoxScope.MiniPlayer(
     }
 
     val swipeOffsetX = remember { Animatable(0f) }
+    val backdrop = LocalBackdrop.current
 
-    GlassBox(
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .height(56.dp)
@@ -101,7 +106,17 @@ fun GlassBoxScope.MiniPlayer(
                 scaleX = landingScale.value
                 scaleY = landingScale.value
             }
-            .clip(CircleShape)
+            .drawBackdrop(
+                backdrop = backdrop,
+                shape = { Capsule() },
+                effects = {
+                    vibrancy()
+                    blur(8f.dp.toPx())
+                    lens(24f.dp.toPx(), 24f.dp.toPx())
+                },
+                onDrawSurface = { drawRect(tintColor) }
+            )
+            .clip(Capsule())
             .clickable { onClick() }
             .pointerInput(Unit) {
                 val thresholdPx = 80.dp.toPx()
@@ -154,14 +169,7 @@ fun GlassBoxScope.MiniPlayer(
                         }
                     }
                 )
-            },
-        shape = CircleShape,
-        blur = 0.8f,
-        centerDistortion = 0.1f,
-        scale = 0.02f,
-        warpEdges = 0.4f,
-        tint = tintColor,
-        elevation = 8.dp
+            }
     ) {
         Row(
             modifier = Modifier

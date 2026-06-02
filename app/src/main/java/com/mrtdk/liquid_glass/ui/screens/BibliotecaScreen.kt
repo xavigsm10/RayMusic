@@ -42,6 +42,11 @@ import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Check
 import com.mrtdk.liquid_glass.R
+import com.mrtdk.liquid_glass.ui.components.trackClickBounds
+import com.mrtdk.liquid_glass.ui.components.trackTapBounds
+import com.mrtdk.liquid_glass.ui.components.wiggleOnScroll
+import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.ui.platform.LocalUriHandler
 import com.mrtdk.liquid_glass.data.ItemType
 import kotlinx.coroutines.CoroutineScope
@@ -72,9 +77,12 @@ fun BibliotecaScreen(
     onAlbumSelected: (com.mrtdk.liquid_glass.ui.screens.AlbumState) -> Unit = {},
     initialCategoryKey: String? = null,
     onCategoryConsumed: () -> Unit = {},
-    onGlassStyleChanged: (String) -> Unit = {}
+    onGlassStyleChanged: (String) -> Unit = {},
+    onFavoriteSongsSelected: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    val mainGridState = rememberLazyGridState()
+    val categoryGridState = rememberLazyGridState()
     val menuItems = listOf(
         Triple("Playlists", null, Icons.Default.QueueMusic),
         Triple("Artistas", ItemType.ARTIST, Icons.Default.Mic),
@@ -735,10 +743,12 @@ fun BibliotecaScreen(
                     onBack = { showCategoryDetail = false },
                     onPlaylistSelected = { pl -> onPlaylistSelected(pl) },
                     onSongSelected = onSongSelected,
+                    onFavoriteSongsSelected = onFavoriteSongsSelected,
                     paddingValues = innerPadding
                 )
             } else {
                 LazyVerticalGrid(
+                    state = categoryGridState,
                     columns = GridCells.Fixed(2),
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
@@ -755,7 +765,9 @@ fun BibliotecaScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable {
+                                .wiggleOnScroll(item.id, categoryGridState)
+                                .trackClickBounds {
+                                    SharedTransitionState.lastOpenedId = item.id
                                     when (item.type) {
                                         ItemType.SONG -> {
                                             onSongSelected(
@@ -835,6 +847,7 @@ fun BibliotecaScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyVerticalGrid(
+            state = mainGridState,
             columns = GridCells.Fixed(2),
             modifier = Modifier
                 .fillMaxSize()
@@ -873,7 +886,9 @@ fun BibliotecaScreen(
         val pinnedPlaylists = playlists.filter { it.isPinned }
         if (pinnedPlaylists.isNotEmpty()) {
             item(span = { GridItemSpan(2) }) {
+                val pinnedRowState = androidx.compose.foundation.lazy.rememberLazyListState()
                 androidx.compose.foundation.lazy.LazyRow(
+                    state = pinnedRowState,
                     modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
@@ -882,12 +897,14 @@ fun BibliotecaScreen(
                         Column(
                             modifier = Modifier
                                 .width(160.dp)
-                                .pointerInput(pl) {
-                                    detectTapGestures(
-                                        onTap = { onPlaylistSelected(pl) },
-                                        onLongPress = { contextMenuPlaylist = pl }
-                                    )
-                                },
+                                .wiggleOnScroll(pl.id, lazyListState = pinnedRowState)
+                                .trackTapBounds(
+                                    onTap = {
+                                        SharedTransitionState.lastOpenedId = pl.id
+                                        onPlaylistSelected(pl)
+                                    },
+                                    onLongPress = { contextMenuPlaylist = pl }
+                                ),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Box(
@@ -984,7 +1001,9 @@ fun BibliotecaScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable {
+                        .wiggleOnScroll(item.id, mainGridState)
+                        .trackClickBounds {
+                            SharedTransitionState.lastOpenedId = item.id
                             when (item.type) {
                                 ItemType.SONG -> {
                                     onSongSelected(

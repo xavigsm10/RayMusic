@@ -28,6 +28,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import com.mrtdk.liquid_glass.ui.components.trackClickBounds
+import com.mrtdk.liquid_glass.ui.components.trackTapBounds
+import com.mrtdk.liquid_glass.ui.components.wiggleOnScroll
+import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -128,10 +135,11 @@ fun CategoriaScreen(
                 CircularProgressIndicator(color = Color(0xFFE91E63))
             }
         } else {
+            val verticalScrollState = rememberScrollState()
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(verticalScrollState)
                     .padding(bottom = 180.dp)
             ) {
                 // ── CAROUSEL DESTACADO (Hero Carousel) ──────────
@@ -241,10 +249,14 @@ fun CategoriaScreen(
                         modifier = Modifier.height(460.dp)
                     ) {
                         items(state.playlists) { item ->
+                            var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
                             Column(
                                 modifier = Modifier
                                     .width(160.dp)
+                                    .wiggleOnScroll(item.id, customScrollState = verticalScrollState)
                                     .clickable {
+                                        SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                        SharedTransitionState.lastOpenedId = item.id
                                         onPlaylistSelected(
                                             AlbumState(
                                                 id = item.id,
@@ -264,6 +276,7 @@ fun CategoriaScreen(
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier
                                         .size(160.dp)
+                                        .onGloballyPositioned { imageCoords = it }
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(Color.DarkGray)
                                 )
@@ -377,10 +390,14 @@ fun CategoriaScreen(
                         modifier = Modifier.height(460.dp)
                     ) {
                         items(state.albums) { item ->
+                            var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
                             Column(
                                 modifier = Modifier
                                     .width(160.dp)
+                                    .wiggleOnScroll(item.browseId, customScrollState = verticalScrollState)
                                     .clickable {
+                                        SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                        SharedTransitionState.lastOpenedId = item.browseId
                                         onAlbumSelected(
                                             AlbumState(
                                                 id = item.browseId,
@@ -401,6 +418,7 @@ fun CategoriaScreen(
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier
                                         .size(160.dp)
+                                        .onGloballyPositioned { imageCoords = it }
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(Color.DarkGray)
                                 )

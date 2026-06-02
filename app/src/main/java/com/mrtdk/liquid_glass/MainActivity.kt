@@ -51,9 +51,18 @@ import androidx.compose.ui.res.stringResource
 import com.mrtdk.liquid_glass.playback.MusicPlayer
 import com.mrtdk.liquid_glass.ui.LiquidBottomNavBar
 import com.mrtdk.liquid_glass.ui.components.MiniPlayer
+import com.mrtdk.liquid_glass.ui.components.LocalBackdrop
+import com.mrtdk.liquid_glass.ui.components.SharedElementTransitionContainer
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
 import com.mrtdk.liquid_glass.ui.screens.AlbumScreen
 import com.mrtdk.liquid_glass.ui.screens.AlbumState
 import com.mrtdk.liquid_glass.ui.screens.PlaylistDetailScreen
+import com.mrtdk.liquid_glass.ui.screens.FavoriteSongsScreen
 import com.mrtdk.liquid_glass.data.Playlist
 import com.mrtdk.liquid_glass.data.LibraryManager
 import com.mrtdk.liquid_glass.ui.screens.ArtistScreen
@@ -170,13 +179,15 @@ class MainActivity : ComponentActivity() {
                     var playlistDetail by remember { mutableStateOf<Playlist?>(null) }
                     var videoDetail by remember { mutableStateOf<String?>(null) }
                     var categoryDetail by remember { mutableStateOf<com.mrtdk.liquid_glass.ui.screens.SearchCategory?>(null) }
+                    var showFavoriteSongs by remember { mutableStateOf(false) }
 
                     // Handle system back navigation
                     androidx.activity.compose.BackHandler(
-                        enabled = showPlayer || videoDetail != null || playlistDetail != null || albumDetail != null || artistDetail != null || categoryDetail != null || (selectedIndex == 4 && isSearchSubmitted) || selectedIndex != 0
+                        enabled = showPlayer || videoDetail != null || playlistDetail != null || albumDetail != null || artistDetail != null || categoryDetail != null || showFavoriteSongs || (selectedIndex == 4 && isSearchSubmitted) || selectedIndex != 0
                     ) {
                         when {
                             showPlayer -> showPlayer = false
+                            showFavoriteSongs -> showFavoriteSongs = false
                             videoDetail != null -> videoDetail = null
                             playlistDetail != null -> playlistDetail = null
                             albumDetail != null -> albumDetail = null
@@ -220,11 +231,13 @@ class MainActivity : ComponentActivity() {
                                 try {
                                     val sampledColor = Color(bitmap.getPixel(bitmap.width / 2, bitmap.height - 1))
                                     globalDominantColor = sampledColor
+                                    LibraryManager.currentDominantColor.value = sampledColor
                                     contentTintColor = Color.White
                                 } catch (e: Exception) { }
                             }
                         } else {
                             globalDominantColor = Color.White.copy(alpha = 0.15f)
+                            LibraryManager.currentDominantColor.value = Color.White.copy(alpha = 0.15f)
                             contentTintColor = Color.White
                         }
                     }
@@ -374,131 +387,28 @@ class MainActivity : ComponentActivity() {
                             containerColor = Color.Black
                         ) { innerPadding ->
                             Box(modifier = Modifier.fillMaxSize().background(Color.Black).nestedScroll(nestedScrollConnection)) {
+                                val mainBackdrop = rememberLayerBackdrop()
                                 GlassContainer(
                                     modifier = Modifier.fillMaxSize().background(Color.Black),
                                     useShader = (videoDetail == null),
-                                    content = {                                     // Combine state to trigger AnimatedContent
-                                    data class NavState(val tab: Int, val playlist: Playlist?, val album: AlbumState?, val artist: ArtistState?, val videoId: String?, val category: com.mrtdk.liquid_glass.ui.screens.SearchCategory?)
-                                    val currentNav = NavState(selectedIndex, playlistDetail, albumDetail, artistDetail, videoDetail, categoryDetail)
-                                    
-                                    androidx.compose.animation.AnimatedContent(
-                                        targetState = currentNav,
-                                        modifier = Modifier.fillMaxSize().background(Color.Black),
-                                        transitionSpec = {
-                                            if ((targetState.playlist != null && initialState.playlist == null) || 
-                                                (targetState.album != null && initialState.album == null) || 
-                                                (targetState.artist != null && initialState.artist == null) ||
-                                                (targetState.category != null && initialState.category == null)) {
-                                                // Forward — iOS slide from right
-                                                androidx.compose.animation.slideInHorizontally(
-                                                    animationSpec = androidx.compose.animation.core.tween(350, easing = androidx.compose.animation.core.FastOutSlowInEasing)
-                                                ) { width -> width } + androidx.compose.animation.fadeIn(
-                                                    animationSpec = androidx.compose.animation.core.tween(250)
-                                                ) togetherWith androidx.compose.animation.slideOutHorizontally(
-                                                    animationSpec = androidx.compose.animation.core.tween(350, easing = androidx.compose.animation.core.FastOutSlowInEasing)
-                                                ) { width -> -width / 3 } + androidx.compose.animation.fadeOut(
-                                                    animationSpec = androidx.compose.animation.core.tween(200)
-                                                )
-                                            } else if ((initialState.playlist != null && targetState.playlist == null) || 
-                                                     (initialState.album != null && targetState.album == null) || 
-                                                     (initialState.artist != null && targetState.artist == null) ||
-                                                     (initialState.category != null && targetState.category == null)) {
-                                                // Backward — iOS slide to right
-                                                androidx.compose.animation.slideInHorizontally(
-                                                    animationSpec = androidx.compose.animation.core.tween(350, easing = androidx.compose.animation.core.FastOutSlowInEasing)
-                                                ) { width -> -width / 3 } + androidx.compose.animation.fadeIn(
-                                                    animationSpec = androidx.compose.animation.core.tween(250)
-                                                ) togetherWith androidx.compose.animation.slideOutHorizontally(
-                                                    animationSpec = androidx.compose.animation.core.tween(350, easing = androidx.compose.animation.core.FastOutSlowInEasing)
-                                                ) { width -> width } + androidx.compose.animation.fadeOut(
-                                                    animationSpec = androidx.compose.animation.core.tween(200)
-                                                )
-                                            } else {
-                                                // Tab switch (Fast crossfade)
+                                    content = {
+                                    // Only tab index is tracked in AnimatedContent
+                                    // Album, playlist, artist, category, video are overlays using SharedElementTransitionContainer or direct overlays
+                                    Box(modifier = Modifier.fillMaxSize().layerBackdrop(mainBackdrop)) {
+                                        androidx.compose.animation.AnimatedContent(
+                                            targetState = selectedIndex,
+                                            modifier = Modifier.fillMaxSize().background(Color.Black),
+                                            transitionSpec = {
+                                                // Fast crossfade for tab switches
                                                 androidx.compose.animation.fadeIn(
                                                     animationSpec = androidx.compose.animation.core.tween(150)
                                                 ) togetherWith androidx.compose.animation.fadeOut(
                                                     animationSpec = androidx.compose.animation.core.tween(150)
                                                 )
-                                            }
-                                        },
-                                        label = "ios_page_transition"
-                                    ) { state ->
-                                        when {
-                                            state.videoId != null -> {
-                                                VideoPlayerScreen(
-                                                    videoId = state.videoId,
-                                                    onBack = { 
-                                                        videoDetail = null
-                                                        // Resume music if it was playing? 
-                                                        // For now just stop video.
-                                                    }
-                                                )
-                                            }
-                                            state.playlist != null -> {
-                                            PlaylistDetailScreen(
-                                                playlist = state.playlist,
-                                                onBack = { playlistDetail = null },
-                                                onSongSelected = playSong,
-                                                onArtistSelected = {
-                                                    playlistDetail = null // Close playlist to show artist screen? No, actually just show the screen! But artistDetail and playlistDetail are mutually exclusive in `NavState`? Wait! Let's check `NavState`.
-                                                    artistDetail = it
-                                                }
-                                            )
-                                        }
-                                        state.album != null -> {
-                                            AlbumScreen(
-                                                albumState = state.album,
-                                                onBack = { albumDetail = null },
-                                                onSongSelected = playSong,
-                                                onArtistSelected = { artist ->
-                                                    artistDetail = artist
-                                                },
-                                                onAlbumSelected = { album ->
-                                                    albumDetail = album
-                                                },
-                                                onDominantColorChanged = { color ->
-                                                    globalDominantColor = color
-                                                },
-                                                isPaused = showPlayer
-                                            )
-                                        }
-                                        state.artist != null -> {
-                                            ArtistScreen(
-                                                artistState = state.artist,
-                                                onBack = { artistDetail = null },
-                                                onSongSelected = playSong,
-                                                onAlbumSelected = { album ->
-                                                    albumDetail = album
-                                                },
-                                                onArtistSelected = { artist ->
-                                                    artistDetail = artist
-                                                },
-                                                onVideoSelected = { videoId ->
-                                                    musicPlayer?.pause()
-                                                    videoDetail = videoId
-                                                }
-                                            )
-                                        }
-                                        state.category != null -> {
-                                            com.mrtdk.liquid_glass.ui.screens.CategoriaScreen(
-                                                category = state.category,
-                                                innerPadding = innerPadding,
-                                                onBack = { categoryDetail = null },
-                                                onSongSelected = playSong,
-                                                onAlbumSelected = { album ->
-                                                    albumDetail = album
-                                                },
-                                                onPlaylistSelected = { playlist ->
-                                                    albumDetail = playlist
-                                                },
-                                                onArtistSelected = { artist ->
-                                                    artistDetail = artist
-                                                }
-                                            )
-                                        }
-                                        else -> {
-                                            when (state.tab) {
+                                            },
+                                            label = "ios_page_transition"
+                                        ) { tabIndex ->
+                                            when (tabIndex) {
                                                 0 -> InicioScreen(
                                                     innerPadding = innerPadding,
                                                     playerState = playerState,
@@ -529,7 +439,8 @@ class MainActivity : ComponentActivity() {
                                                     onAlbumSelected = { albumDetail = it },
                                                     initialCategoryKey = initialLibraryCategory,
                                                     onCategoryConsumed = { initialLibraryCategory = null },
-                                                    onGlassStyleChanged = { glassStyle = it }
+                                                    onGlassStyleChanged = { glassStyle = it },
+                                                    onFavoriteSongsSelected = { showFavoriteSongs = true }
                                                 )
                                                 4 -> BusquedaScreen(
                                                     innerPadding = innerPadding,
@@ -537,37 +448,48 @@ class MainActivity : ComponentActivity() {
                                                     isSubmitted = isSearchSubmitted,
                                                     state = busquedaState,
                                                     onSongSelected = playSong,
-                                                    onArtistSelected = { artist ->
-                                                        artistDetail = artist
-                                                    },
-                                                    onAlbumSelected = { album ->
-                                                        albumDetail = album
-                                                    },
+                                                    onArtistSelected = { artist -> artistDetail = artist },
+                                                    onAlbumSelected = { album -> albumDetail = album },
                                                     onVideoSelected = { videoId ->
                                                         musicPlayer?.pause()
                                                         videoDetail = videoId
                                                     },
-                                                    onCategorySelected = { category ->
-                                                        categoryDetail = category
-                                                    }
+                                                    onCategorySelected = { category -> categoryDetail = category }
                                                 )
                                                 2 -> com.mrtdk.liquid_glass.ui.screens.RadioScreen(
                                                     innerPadding = innerPadding,
                                                     onSearchResult = { recognizedText ->
                                                         searchQuery = recognizedText
                                                         isSearchSubmitted = true
-                                                        selectedIndex = 4 // Navigate to search screen
+                                                        selectedIndex = 4
                                                     }
                                                 )
                                                 else -> DemoBackground(innerPadding)
                                             }
                                         }
+
+                                        if (artistDetail != null) {
+                                            SharedElementTransitionContainer(onBack = { artistDetail = null }) { _, _ ->
+                                                ArtistScreen(
+                                                    artistState = artistDetail!!,
+                                                    innerPadding = innerPadding,
+                                                    onBack = { artistDetail = null },
+                                                    onSongSelected = playSong,
+                                                    onAlbumSelected = { album -> albumDetail = album },
+                                                    onArtistSelected = { artist -> artistDetail = artist },
+                                                    onVideoSelected = { videoId ->
+                                                        musicPlayer?.pause()
+                                                        videoDetail = videoId
+                                                    }
+                                                )
+                                            }
+                                        }
                                     }
-                                    }
-                                },
-                                glassContent = {
+                                    },
+                                    glassContent = {
                                     if (videoDetail == null) {
                                         val scope = this
+                                        CompositionLocalProvider(LocalBackdrop provides mainBackdrop) {
                                         val imeBottom = androidx.compose.foundation.layout.WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current)
                                         val isKeyboardOpen = imeBottom > 0
                                         Box(
@@ -616,7 +538,6 @@ class MainActivity : ComponentActivity() {
                                                             .graphicsLayer { alpha = navBarAlpha }
                                                     ) {
                                                         LiquidBottomNavBar(
-                                                            glassScope = scope,
                                                             selectedIndex = selectedIndex,
                                                             tintColor = globalDominantColor.copy(alpha = 0.35f),
                                                             contentColor = contentTintColor,
@@ -661,7 +582,7 @@ class MainActivity : ComponentActivity() {
                                                         .align(Alignment.BottomCenter)
                                                         .padding(start = mpPadStart, end = mpPadEnd, bottom = mpPadBottom)
                                                 ) {
-                                                    scope.MiniPlayer(
+                                                    MiniPlayer(
                                                         playerState = playerState,
                                                         isPlaying = isPlaying,
                                                         onTogglePlayPause = { 
@@ -696,40 +617,128 @@ class MainActivity : ComponentActivity() {
                                                         horizontalArrangement = Arrangement.SpaceBetween,
                                                         verticalAlignment = Alignment.CenterVertically
                                                     ) {
-                                                        scope.GlassBox(
-                                                            modifier = Modifier.size(56.dp).clickable { 
-                                                                isBottomBarCollapsed = false
-                                                            },
-                                                            shape = CircleShape,
-                                                            tint = globalDominantColor.copy(alpha = 0.35f),
-                                                            blur = 0.8f, centerDistortion = 0.1f, scale = 0.02f, warpEdges = 0.4f, elevation = 4.dp
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .size(56.dp)
+                                                                .drawBackdrop(
+                                                                    backdrop = mainBackdrop,
+                                                                    shape = { CircleShape },
+                                                                    effects = {
+                                                                        vibrancy()
+                                                                        blur(8f.dp.toPx())
+                                                                        lens(24f.dp.toPx(), 24f.dp.toPx())
+                                                                    },
+                                                                    onDrawSurface = { drawRect(globalDominantColor.copy(alpha = 0.45f)) }
+                                                                )
+                                                                .clip(CircleShape)
+                                                                .clickable { 
+                                                                    isBottomBarCollapsed = false
+                                                                },
+                                                            contentAlignment = Alignment.Center
                                                         ) {
-                                                            Box(modifier=Modifier.fillMaxSize(), contentAlignment=Alignment.Center) {
-                                                                Icon(androidx.compose.ui.res.painterResource(id = R.drawable.nav_inicio), contentDescription="Home", tint = Color(0xFFFA243C), modifier = Modifier.size(28.dp))
-                                                            }
+                                                            Icon(
+                                                                painter = androidx.compose.ui.res.painterResource(id = R.drawable.nav_inicio),
+                                                                contentDescription = "Home",
+                                                                tint = Color(0xFFFA243C),
+                                                                modifier = Modifier.size(28.dp)
+                                                            )
                                                         }
                                                         
-                                                        scope.GlassBox(
-                                                            modifier = Modifier.size(56.dp).clickable { 
-                                                                isBottomBarCollapsed = false
-                                                                selectedIndex = 4 
-                                                            },
-                                                            shape = CircleShape,
-                                                            tint = globalDominantColor.copy(alpha = 0.35f),
-                                                            blur = 0.8f, centerDistortion = 0.1f, scale = 0.02f, warpEdges = 0.4f, elevation = 4.dp
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .size(56.dp)
+                                                                .drawBackdrop(
+                                                                    backdrop = mainBackdrop,
+                                                                    shape = { CircleShape },
+                                                                    effects = {
+                                                                        vibrancy()
+                                                                        blur(8f.dp.toPx())
+                                                                        lens(24f.dp.toPx(), 24f.dp.toPx())
+                                                                    },
+                                                                    onDrawSurface = { drawRect(globalDominantColor.copy(alpha = 0.45f)) }
+                                                                )
+                                                                .clip(CircleShape)
+                                                                .clickable { 
+                                                                    isBottomBarCollapsed = false
+                                                                    selectedIndex = 4 
+                                                                },
+                                                            contentAlignment = Alignment.Center
                                                         ) {
-                                                            Box(modifier=Modifier.fillMaxSize(), contentAlignment=Alignment.Center) {
-                                                                Icon(Icons.Default.Search, contentDescription="Search", tint = contentTintColor, modifier = Modifier.size(32.dp))
-                                                            }
+                                                            Icon(
+                                                                imageVector = Icons.Default.Search,
+                                                                contentDescription = "Search",
+                                                                tint = contentTintColor,
+                                                                modifier = Modifier.size(32.dp)
+                                                            )
                                                         }
                                                     }
                                                 }
                                             }
                                         }
+                                        } // end CompositionLocalProvider(LocalBackdrop)
                                     }
                                 }
                             )
-                            
+
+                            // ── Apple Music expand overlay: Album ──────────────────────────────
+                            if (albumDetail != null) {
+                                SharedElementTransitionContainer(onBack = { albumDetail = null }) { _, _ ->
+                                    AlbumScreen(
+                                        albumState = albumDetail!!,
+                                        onBack = { albumDetail = null },
+                                        onSongSelected = playSong,
+                                        onArtistSelected = { artist -> artistDetail = artist },
+                                        onAlbumSelected = { album -> albumDetail = album },
+                                        onDominantColorChanged = { color -> globalDominantColor = color },
+                                        isPaused = showPlayer
+                                    )
+                                }
+                            }
+
+                            // ── Apple Music expand overlay: Playlist ───────────────────────────
+                            if (playlistDetail != null) {
+                                SharedElementTransitionContainer(onBack = { playlistDetail = null }) { _, _ ->
+                                    PlaylistDetailScreen(
+                                        playlist = playlistDetail!!,
+                                        onBack = { playlistDetail = null },
+                                        onSongSelected = playSong,
+                                        onArtistSelected = { artistDetail = it }
+                                    )
+                                }
+                            }
+                            // ── Apple Music expand overlay: Category ──────────────────────────
+                            if (categoryDetail != null) {
+                                SharedElementTransitionContainer(onBack = { categoryDetail = null }) { _, _ ->
+                                    com.mrtdk.liquid_glass.ui.screens.CategoriaScreen(
+                                        category = categoryDetail!!,
+                                        innerPadding = innerPadding,
+                                        onBack = { categoryDetail = null },
+                                        onSongSelected = playSong,
+                                        onAlbumSelected = { album -> albumDetail = album },
+                                        onPlaylistSelected = { playlist -> albumDetail = playlist },
+                                        onArtistSelected = { artist -> artistDetail = artist }
+                                    )
+                                }
+                            }
+
+                            // ── Apple Music expand overlay: Favorite Songs ──────────────────────
+                            if (showFavoriteSongs) {
+                                SharedElementTransitionContainer(onBack = { showFavoriteSongs = false }) { _, _ ->
+                                    FavoriteSongsScreen(
+                                        onBack = { showFavoriteSongs = false },
+                                        onSongSelected = playSong
+                                    )
+                                }
+                            }
+
+                            // ── Apple Music expand overlay: Video Player ────────────────────────
+                            if (videoDetail != null) {
+                                VideoPlayerScreen(
+                                    videoId = videoDetail!!,
+                                    onBack = { videoDetail = null }
+                                )
+                            }
+
                             PlayerScreen(
                                 playerState = playerState,
                                 isVisible = showPlayer,
