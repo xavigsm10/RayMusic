@@ -14,6 +14,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.res.stringResource
 import com.mrtdk.liquid_glass.R
+import com.mrtdk.liquid_glass.ui.components.trackClickBounds
+import com.mrtdk.liquid_glass.ui.components.trackTapBounds
+import com.mrtdk.liquid_glass.ui.components.wiggleOnScroll
+import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -135,7 +143,10 @@ fun NovedadesScreen(
         while (true) { delay(4500); pagerState.animateScrollToPage((pagerState.currentPage + 1) % state.featuredAlbums.size) }
     }
 
+    val listState = rememberLazyListState()
+
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize().background(Color.Black),
         contentPadding = PaddingValues(top = innerPadding.calculateTopPadding() + 16.dp, bottom = innerPadding.calculateBottomPadding() + 180.dp)
     ) {
@@ -157,7 +168,11 @@ fun NovedadesScreen(
 
                     Box(
                         modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)).background(Color.DarkGray)
-                            .clickable { onAlbumSelected(AlbumState(id = album.id, playlistId = album.playlistId ?: album.id, title = album.title, artist = artistText, thumbnail = hdThumb, year = album.year as? Int ?: album.year?.toString()?.toIntOrNull())) }
+                            .wiggleOnScroll(album.id, lazyListState = listState)
+                            .trackClickBounds {
+                                SharedTransitionState.lastOpenedId = album.id
+                                onAlbumSelected(AlbumState(id = album.id, playlistId = album.playlistId ?: album.id, title = album.title, artist = artistText, thumbnail = hdThumb, year = album.year as? Int ?: album.year?.toString()?.toIntOrNull()))
+                            }
                     ) {
                         AsyncImage(
                             model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
@@ -234,7 +249,6 @@ fun NovedadesScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     val remaining = state.newReleaseAlbums.drop(6)
-                    // Chunk into pairs for 2-row layout
                     val pairedColumns = remaining.chunked(2)
                     items(pairedColumns.size) { colIdx ->
                         Column(
@@ -243,10 +257,23 @@ fun NovedadesScreen(
                         ) {
                             pairedColumns[colIdx].forEach { album ->
                                 val hdThumb = album.thumbnail?.replace("=w226-h226", "=w540-h540")?.replace("=w120-h120", "=w540-h540")
-                                Column(modifier = Modifier.fillMaxWidth().clickable {
-                                    onAlbumSelected(AlbumState(id = album.id, playlistId = album.playlistId ?: album.id, title = album.title, artist = album.artists?.joinToString { it.name } ?: "", thumbnail = hdThumb, year = album.year as? Int ?: album.year?.toString()?.toIntOrNull()))
-                                }) {
-                                    Box(modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp)).background(Color.DarkGray)) {
+                                var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+                                Column(modifier = Modifier
+                                    .fillMaxWidth()
+                                    .wiggleOnScroll(album.id, lazyListState = listState)
+                                    .clickable {
+                                        SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                        SharedTransitionState.lastOpenedId = album.id
+                                        onAlbumSelected(AlbumState(id = album.id, playlistId = album.playlistId ?: album.id, title = album.title, artist = album.artists?.joinToString { it.name } ?: "", thumbnail = hdThumb, year = album.year as? Int ?: album.year?.toString()?.toIntOrNull()))
+                                    }
+                                ) {
+                                    Box(modifier = Modifier
+                                        .fillMaxWidth()
+                                        .aspectRatio(1f)
+                                        .onGloballyPositioned { imageCoords = it }
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color.DarkGray)
+                                    ) {
                                         AsyncImage(model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(), contentDescription = album.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                                     }
                                     Spacer(modifier = Modifier.height(8.dp))

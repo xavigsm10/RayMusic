@@ -13,7 +13,23 @@ import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.Check
-import com.mrtdk.glass.GlassBox
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Shuffle
+import com.mrtdk.liquid_glass.ui.components.LiquidButton
+import com.mrtdk.liquid_glass.ui.components.LocalBackdrop
+import com.mrtdk.liquid_glass.ui.components.SharedElementTransitionContainer
+import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.ui.graphics.graphicsLayer
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import com.kyant.shapes.Capsule
 import com.mrtdk.liquid_glass.data.ItemType
 import com.mrtdk.liquid_glass.data.LibraryItem
 import com.mrtdk.liquid_glass.data.LibraryManager
@@ -224,11 +240,31 @@ fun AlbumScreen(
         }
     }
 
+    val localBackdrop = rememberLayerBackdrop()
+
     val isLightBackground = dominantColor.luminance() > 0.5f
     val contentColor = if (isLightBackground) Color(0xFF1E1E1E) else Color.White
 
-    com.mrtdk.glass.GlassContainer(
-        modifier = Modifier.fillMaxSize(),
+    SharedElementTransitionContainer(onBack = onBack) { progress, dismiss ->
+        val popScaleBack by animateFloatAsState(
+            targetValue = if (progress > 0.80f) 1f else 0f,
+            animationSpec = spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMediumLow),
+            label = "popScaleBack"
+        )
+        val popScaleShare by animateFloatAsState(
+            targetValue = if (progress > 0.85f) 1f else 0f,
+            animationSpec = spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMediumLow),
+            label = "popScaleShare"
+        )
+        val popScaleMore by animateFloatAsState(
+            targetValue = if (progress > 0.90f) 1f else 0f,
+            animationSpec = spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMediumLow),
+            label = "popScaleMore"
+        )
+        val contentAlpha = ((progress - 0.4f).coerceAtLeast(0f) / 0.6f)
+
+        com.mrtdk.glass.GlassContainer(
+            modifier = Modifier.fillMaxSize(),
         useShader = true,
         content = {
             LazyColumn(
@@ -244,104 +280,77 @@ fun AlbumScreen(
                     .aspectRatio(1f / albumHeightRatio),
                 useShader = true,
                 content = {
-                    // Base sharp album cover (always drawn in background to prevent black flashes)
-                    AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(headerArt).crossfade(true).build(),
-                        imageLoader = animatedImageLoader,
-                        contentDescription = albumState.title,
-                        contentScale = ContentScale.Crop,
-                        alignment = Alignment.TopCenter,
-                        modifier = Modifier.fillMaxSize()
-                    )
-
-                    var isVideoPlaying by remember(albumState.id) { mutableStateOf(false) }
-                    val currentAnimatedUrl = animatedArtworkUrl
-
-                    if (!currentAnimatedUrl.isNullOrBlank()) {
-                        com.mrtdk.liquid_glass.ui.components.AnimatedArtworkPlayer(
-                            videoUrl = currentAnimatedUrl,
-                            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (isVideoPlaying) 1f else 0f },
-                            isPaused = isPaused,
-                            onPlaybackStarted = { isVideoPlaying = true },
-                            onFrameCaptured = { frameBitmap ->
-                                try {
-                                    var r = 0L; var g = 0L; var b = 0L
-                                    val y = frameBitmap.height - 1
-                                    val w = frameBitmap.width
-                                    for (x in 0 until w) {
-                                        val pixel = frameBitmap.getPixel(x, y)
-                                        r += android.graphics.Color.red(pixel)
-                                        g += android.graphics.Color.green(pixel)
-                                        b += android.graphics.Color.blue(pixel)
-                                    }
-                                    val sampledColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
-                                    dominantColor = sampledColor
-                                    onDominantColorChanged(sampledColor)
-                                } catch (e: Exception) { }
-                            }
+                    Box(modifier = Modifier.fillMaxSize().layerBackdrop(localBackdrop)) {
+                        // Base sharp album cover (always drawn in background to prevent black flashes)
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(headerArt).crossfade(true).build(),
+                            imageLoader = animatedImageLoader,
+                            contentDescription = albumState.title,
+                            contentScale = ContentScale.Crop,
+                            alignment = Alignment.TopCenter,
+                            modifier = Modifier.fillMaxSize()
                         )
-                    }
-                    // Gradient: transparent → dominant color at bottom
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.verticalGradient(
-                                    0.0f to Color.Transparent,
-                                    0.75f to Color.Transparent,
-                                    1.0f to dominantColor
-                                )
+
+                        var isVideoPlaying by remember(albumState.id) { mutableStateOf(false) }
+                        val currentAnimatedUrl = animatedArtworkUrl
+
+                        if (!currentAnimatedUrl.isNullOrBlank()) {
+                            com.mrtdk.liquid_glass.ui.components.AnimatedArtworkPlayer(
+                                videoUrl = currentAnimatedUrl,
+                                modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (isVideoPlaying) 1f else 0f },
+                                isPaused = isPaused,
+                                onPlaybackStarted = { isVideoPlaying = true },
+                                onFrameCaptured = { frameBitmap ->
+                                    try {
+                                        var r = 0L; var g = 0L; var b = 0L
+                                        val y = frameBitmap.height - 1
+                                        val w = frameBitmap.width
+                                        for (x in 0 until w) {
+                                            val pixel = frameBitmap.getPixel(x, y)
+                                            r += android.graphics.Color.red(pixel)
+                                            g += android.graphics.Color.green(pixel)
+                                            b += android.graphics.Color.blue(pixel)
+                                        }
+                                        val sampledColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
+                                        dominantColor = sampledColor
+                                        onDominantColorChanged(sampledColor)
+                                    } catch (e: Exception) { }
+                                }
                             )
-                    )
-                    if (isVerticalAlbum) {
+                        }
+                        // Gradient: transparent → dominant color at bottom
                         Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.BottomCenter
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 20.dp)
-                                    .padding(horizontal = 20.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        0.0f to Color.Transparent,
+                                        0.75f to Color.Transparent,
+                                        1.0f to dominantColor
+                                    )
+                                )
+                        )
+                        if (isVerticalAlbum) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.BottomCenter
                             ) {
-                                Text(
-                                    text = albumState.title,
-                                    color = Color.White,
-                                    fontSize = 24.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                    style = TextStyle(
-                                        shadow = Shadow(
-                                            color = Color.Black.copy(alpha = 0.8f),
-                                            offset = Offset(2f, 2f),
-                                            blurRadius = 4f
-                                        )
-                                    )
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = albumState.artist,
-                                    color = Color.White.copy(alpha = 0.8f),
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    style = TextStyle(
-                                        shadow = Shadow(
-                                            color = Color.Black.copy(alpha = 0.8f),
-                                            offset = Offset(2f, 2f),
-                                            blurRadius = 4f
-                                        )
-                                    )
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                if (albumState.year != null) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 20.dp)
+                                        .padding(horizontal = 20.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
                                     Text(
-                                        text = albumState.year.toString(),
-                                        color = Color.White.copy(alpha = 0.6f),
-                                        fontSize = 12.sp,
+                                        text = albumState.title,
+                                        color = Color.White,
+                                        fontSize = 24.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                         style = TextStyle(
                                             shadow = Shadow(
                                                 color = Color.Black.copy(alpha = 0.8f),
@@ -350,6 +359,35 @@ fun AlbumScreen(
                                             )
                                         )
                                     )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = albumState.artist,
+                                        color = Color.White.copy(alpha = 0.8f),
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        style = TextStyle(
+                                            shadow = Shadow(
+                                                color = Color.Black.copy(alpha = 0.8f),
+                                                offset = Offset(2f, 2f),
+                                                blurRadius = 4f
+                                            )
+                                        )
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    if (albumState.year != null) {
+                                        Text(
+                                            text = albumState.year.toString(),
+                                            color = Color.White.copy(alpha = 0.6f),
+                                            fontSize = 12.sp,
+                                            style = TextStyle(
+                                                shadow = Shadow(
+                                                    color = Color.Black.copy(alpha = 0.8f),
+                                                    offset = Offset(2f, 2f),
+                                                    blurRadius = 4f
+                                                )
+                                            )
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -365,36 +403,65 @@ fun AlbumScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        scope.GlassBox(
-                            modifier = Modifier.size(48.dp).clip(CircleShape).clickable { onBack() },
-                            shape = CircleShape,
-                            tint = dominantColor.copy(alpha = 0.35f),
-                            blur = 0.8f,
-                            centerDistortion = 0.2f,
-                            scale = 0.02f,
-                            warpEdges = 0.6f,
-                            elevation = 8.dp
+                        // Bigger circular back button
+                        Box(
+                            modifier = Modifier
+                                .size(54.dp)
+                                .graphicsLayer {
+                                    scaleX = popScaleBack
+                                    scaleY = popScaleBack
+                                    alpha = popScaleBack
+                                }
+                                .drawBackdrop(
+                                    backdrop = localBackdrop,
+                                    shape = { CircleShape },
+                                    effects = {
+                                        vibrancy()
+                                        blur(2f.dp.toPx())
+                                        lens(12f.dp.toPx(), 24f.dp.toPx())
+                                    },
+                                    onDrawSurface = {
+                                        drawRect(dominantColor.copy(alpha = 0.35f))
+                                    }
+                                )
+                                .clickable { dismiss() },
+                            contentAlignment = Alignment.Center
                         ) {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                 Icon(Icons.Default.ArrowBackIosNew, "Back", tint = Color(0xFFFA243C))
-                            }
+                            Icon(
+                                imageVector = Icons.Default.ArrowBackIosNew,
+                                contentDescription = "Back",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
                         }
-                        scope.GlassBox(
-                            modifier = Modifier.height(48.dp).width(104.dp).clip(RoundedCornerShape(24.dp)),
-                            shape = RoundedCornerShape(24.dp),
-                            tint = dominantColor.copy(alpha = 0.35f),
-                            blur = 0.8f,
-                            centerDistortion = 0.2f,
-                            scale = 0.02f,
-                            warpEdges = 0.6f,
-                            elevation = 8.dp
+                        
+                        // Capsule containing Share and More options
+                        Row(
+                            modifier = Modifier
+                                .graphicsLayer {
+                                    scaleX = popScaleShare
+                                    scaleY = popScaleShare
+                                    alpha = popScaleShare
+                                }
+                                .height(48.dp)
+                                .drawBackdrop(
+                                    backdrop = localBackdrop,
+                                    shape = { Capsule() },
+                                    effects = {
+                                        vibrancy()
+                                        blur(2f.dp.toPx())
+                                        lens(12f.dp.toPx(), 24f.dp.toPx())
+                                    },
+                                    onDrawSurface = {
+                                        drawRect(dominantColor.copy(alpha = 0.35f))
+                                    }
+                                )
+                                .padding(horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                modifier = Modifier.fillMaxSize(),
-                                horizontalArrangement = Arrangement.SpaceEvenly,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Default.IosShare, "Share", tint = Color.White, modifier = Modifier.size(24.dp).clickable {
+                            IconButton(
+                                onClick = {
                                     val shareUrl = "https://music.youtube.com/playlist?list=${albumState.playlistId.ifEmpty { albumState.id }.removePrefix("VL")}"
                                     val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                         type = "text/plain"
@@ -402,8 +469,26 @@ fun AlbumScreen(
                                         putExtra(android.content.Intent.EXTRA_TEXT, "$shareUrl")
                                     }
                                     context.startActivity(android.content.Intent.createChooser(shareIntent, "Compartir"))
-                                })
-                                Icon(Icons.Default.MoreVert, "More", tint = Color.White, modifier = Modifier.size(24.dp).clickable { showAlbumMenu = true })
+                                },
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.IosShare,
+                                    contentDescription = "Share",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            IconButton(
+                                onClick = { showAlbumMenu = true },
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "More",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
                             }
                         }
                     }
@@ -417,7 +502,8 @@ fun AlbumScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                        .padding(horizontal = 20.dp, vertical = 12.dp)
+                        .graphicsLayer { alpha = contentAlpha },
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
@@ -453,11 +539,11 @@ fun AlbumScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
+                    .graphicsLayer { alpha = contentAlpha },
+                horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                val appleRed = Color(0xFFFA243C)
                 val darkTranslucent = Color.Black.copy(alpha = 0.35f)
 
                 // Shuffle button
@@ -495,17 +581,19 @@ fun AlbumScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        painter = painterResource(id = R.drawable.shuffle),
+                        imageVector = Icons.Default.Shuffle,
                         contentDescription = "Shuffle",
                         tint = Color.White,
                         modifier = Modifier.size(22.dp)
                     )
                 }
 
+                Spacer(modifier = Modifier.width(16.dp))
+
                 // ▶ Play button
                 Box(
                     modifier = Modifier
-                        .weight(1f)
+                        .width(180.dp)
                         .height(48.dp)
                         .clip(RoundedCornerShape(24.dp))
                         .background(Color.White)
@@ -539,15 +627,17 @@ fun AlbumScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Canvas(modifier = Modifier.size(14.dp)) {
-                            drawPath(Path().apply {
-                                moveTo(0f, 0f); lineTo(size.width, size.height / 2f)
-                                lineTo(0f, size.height); close()
-                            }, appleRed)
-                        }
-                        Text("Play", color = appleRed, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = "Play",
+                            tint = Color.Black,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Text("Play", color = Color.Black, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
+
+                Spacer(modifier = Modifier.width(16.dp))
 
                 // + button
                 Box(
@@ -587,6 +677,7 @@ fun AlbumScreen(
                     .fillMaxWidth()
                     .height(24.dp)
                     .background(dominantColor)
+                    .graphicsLayer { alpha = contentAlpha }
             )
         }
 
@@ -597,6 +688,7 @@ fun AlbumScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(dominantColor)
+                    .graphicsLayer { alpha = contentAlpha }
                     .clickable {
                         val albumQueue = tracks.drop(i + 1).map { t ->
                             QueueItem(
@@ -745,4 +837,5 @@ glassContent = {
         )
     }
 })
+    }
 }

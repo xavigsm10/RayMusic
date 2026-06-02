@@ -89,6 +89,7 @@
     <string name="create_new_playlist">Crear nueva playlist</string>
     <string name="create_new_folder">Crear nueva carpeta</string>
     <string name="favorite_songs">Canciones favoritas</string>
+    <string name="no_favorite_songs">Aún no tienes canciones favoritas.\nToca la estrella ★ en cualquier canción para guardarla aquí.</string>
     <string name="new_playlist_title">Nueva playlist</string>
     <string name="pinch_drag_position">Pellizca y arrastra para posicionar</string>
     <string name="take_photo">Tomar foto</string>
@@ -109,4 +110,47 @@
     <string name="audio_quality_high">Alta (160 kbps Opus / 128 kbps AAC)</string>
     <string name="audio_quality_low">Baja (48 kbps AAC / 50 kbps Opus)</string>
     <string name="audio_quality_dialog_title">Calidad de reproducción</string>
+
+    <!-- Playlist Context Menu Options -->
+    <string name="menu_favorite">Favorita</string>
+    <string name="menu_share">Compartir</string>
+    <string name="menu_pin_playlist">Fijar playlist</string>
+    <string name="menu_unpin_playlist">Desfijar playlist</string>
+    <string name="menu_add_to_playlist">Añadir a playlist</string>
+    <string name="menu_edit">Editar</string>
+    <string name="menu_start_collaboration">Iniciar colaboración</string>
+    <string name="menu_sort_by">Ordenar por</string>
+    <string name="menu_move_to_folder">Mover a carpeta</string>
+    <string name="menu_play_next">Reproducir siguiente</string>
+    <string name="menu_suggest_less">Sugerir menos</string>
+    <string name="menu_download">Descargar</string>
+    <string name="menu_remove_download">Eliminar descarga</string>
+    <string name="menu_toast_collaboration">Enlace de colaboración copiado al portapapeles</string>
+    <string name="menu_toast_suggest_less">Sugeriremos menos contenido como este</string>
+    <string name="menu_toast_added_fav">Playlist añadida a favoritas</string>
+    <string name="menu_toast_removed_fav">Playlist eliminada de favoritas</string>
+    <string name="menu_sort_default">Predeterminado</string>
+    <string name="menu_sort_title">Título</string>
+    <string name="menu_sort_artist">Artista</string>
+    <string name="menu_sort_album">Álbum</string>
+    <string name="menu_move_folder_title">Mover a carpeta</string>
+    <string name="menu_move_folder_desc">Elige una carpeta o crea una nueva para organizar tus playlists.</string>
+    <string name="menu_folder_created">Carpeta creada y playlist movida</string>
+    <string name="menu_folder_select">Seleccionar carpeta</string>
+    <string name="menu_folder_new">Nueva carpeta...</string>
+    <string name="menu_folder_name_label">Nombre de la carpeta</string>
+    <string name="share_playlist_prefix">Escucha mi playlist:</string>
+    <string name="compartir">Compartir</string>
+
+    <!-- Artist Context Menu Options -->
+    <string name="menu_artist_add_favorite">Añadir a favoritos</string>
+    <string name="menu_artist_remove_favorite">Quitar de favoritos</string>
+    <string name="menu_artist_share">Compartir</string>
+    <string name="menu_artist_create_radio">Crear emisora</string>
+    <string name="menu_artist_open_classical">Abrir en Clásica</string>
+    <string name="menu_artist_suggest_less">Sugerir menos</string>
+    <string name="menu_artist_toast_added">Artista añadido a favoritos</string>
+    <string name="menu_artist_toast_removed">Artista eliminado de favoritos</string>
+    <string name="menu_artist_toast_suggest_less">Sugeriremos menos contenido de este artista</string>
+    <string name="menu_artist_toast_classical">Abriendo versión clásica...</string>
 </resources>

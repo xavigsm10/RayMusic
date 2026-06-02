@@ -72,6 +72,10 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.LayoutCoordinates
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -153,6 +157,7 @@ fun PlayerScreen(
         if (playerState == null) return@AnimatedVisibility
 
         val context = LocalContext.current
+        val localBackdrop = rememberLayerBackdrop()
         val audioManager = remember { context.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager }
         val maxVolume = remember { audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC).toFloat() }
         var volumePosition by remember { 
@@ -197,6 +202,8 @@ fun PlayerScreen(
         }
 
         var dominantColor by remember { mutableStateOf(Color(0xFF1E1E1E)) }
+        var parentCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+        var sliderCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
 
         var lyricsLines by remember { mutableStateOf<List<com.mrtdk.liquid_glass.utils.LyricLine>?>(null) }
         var showManualLyricsSearch by remember { mutableStateOf(false) }
@@ -349,21 +356,15 @@ fun PlayerScreen(
                         coverBitmap = bitmap.asImageBitmap()
                         try {
                             var r = 0L; var g = 0L; var b = 0L
-                            var totalPixels = 0
-                            // Sample multiple rows from 70% to 95% of the image for reliable color detection
-                            val sampleRows = listOf(0.70f, 0.75f, 0.80f, 0.85f, 0.90f, 0.95f)
+                            val y = bitmap.height - 1
                             val w = bitmap.width
-                            for (fraction in sampleRows) {
-                                val y = (bitmap.height * fraction).toInt().coerceIn(0, bitmap.height - 1)
-                                for (x in 0 until w) {
-                                    val pixel = bitmap.getPixel(x, y)
-                                    r += android.graphics.Color.red(pixel)
-                                    g += android.graphics.Color.green(pixel)
-                                    b += android.graphics.Color.blue(pixel)
-                                }
-                                totalPixels += w
+                            for (x in 0 until w) {
+                                val pixel = bitmap.getPixel(x, y)
+                                r += android.graphics.Color.red(pixel)
+                                g += android.graphics.Color.green(pixel)
+                                b += android.graphics.Color.blue(pixel)
                             }
-                            val sampledColor = Color((r / totalPixels).toInt(), (g / totalPixels).toInt(), (b / totalPixels).toInt())
+                            val sampledColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
                             dominantColor = sampledColor
                             onDominantColorChanged(sampledColor)
                         } catch (e: Exception) { }
@@ -442,6 +443,8 @@ fun PlayerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(dominantColor.copy(alpha = bgAlpha))
+                .onGloballyPositioned { parentCoordinates = it }
+                .layerBackdrop(localBackdrop)
                 .drawWithContent {
                     if (dragProgress == 0f) {
                         drawRect(
@@ -509,15 +512,31 @@ fun PlayerScreen(
             val imageCornerTarget = if (isOverlayActive) 8.dp else cornerRadius
             val imgCorner by androidx.compose.animation.core.animateDpAsState(imageCornerTarget)
 
-            // Capa 1: Reflejo Líquido Estirado 1D (Proyección vertical de la carátula)
+
+            // Capa 1: Reflejo Líquido Estirado 1D (Proyección vertical de la carátula)
             val currentCoverBitmap = coverBitmap
             if (currentCoverBitmap != null && !isOverlayActive && dragProgress == 0f) {
                 val overlapDp = imgHeight * 0.20f
+                val density = androidx.compose.ui.platform.LocalDensity.current
+                val parentCoords = parentCoordinates
+                val sliderCoords = sliderCoordinates
+                val sliderYInParent = if (parentCoords != null && sliderCoords != null && parentCoords.isAttached && sliderCoords.isAttached) {
+                    parentCoords.localPositionOf(sliderCoords, androidx.compose.ui.geometry.Offset.Zero).y
+                } else {
+                    0f
+                }
+                val sliderYDp = with(density) { sliderYInParent.toDp() }
+                
+                val blurHeight = if (sliderYDp > 0.dp) {
+                    (sliderYDp - (imgOffsetY + imgHeight - overlapDp)).coerceAtLeast(0.dp)
+                } else {
+                    maxHeight - (imgOffsetY + imgHeight) + overlapDp
+                }
                 // Caja del reflejo posicionada bajo la portada
                 Box(
                     modifier = Modifier
                         .offset(x = imgOffsetX, y = imgOffsetY + imgHeight - overlapDp) // Solapamiento dinámico de 20%
-                        .size(width = imgWidth, height = maxHeight - (imgOffsetY + imgHeight) + overlapDp)
+                        .size(width = imgWidth, height = blurHeight)
                         .blur(85.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
                 ) {
                     Canvas(modifier = Modifier.fillMaxSize()) {
@@ -597,20 +616,15 @@ fun PlayerScreen(
                             coverBitmap = frameBitmap.asImageBitmap()
                             try {
                                 var r = 0L; var g = 0L; var b = 0L
-                                var totalPixels = 0
-                                val sampleRows = listOf(0.70f, 0.75f, 0.80f, 0.85f, 0.90f, 0.95f)
+                                val y = frameBitmap.height - 1
                                 val w = frameBitmap.width
-                                for (fraction in sampleRows) {
-                                    val y = (frameBitmap.height * fraction).toInt().coerceIn(0, frameBitmap.height - 1)
-                                    for (x in 0 until w) {
-                                        val pixel = frameBitmap.getPixel(x, y)
-                                        r += android.graphics.Color.red(pixel)
-                                        g += android.graphics.Color.green(pixel)
-                                        b += android.graphics.Color.blue(pixel)
-                                    }
-                                    totalPixels += w
+                                for (x in 0 until w) {
+                                    val pixel = frameBitmap.getPixel(x, y)
+                                    r += android.graphics.Color.red(pixel)
+                                    g += android.graphics.Color.green(pixel)
+                                    b += android.graphics.Color.blue(pixel)
                                 }
-                                val sampledColor = Color((r / totalPixels).toInt(), (g / totalPixels).toInt(), (b / totalPixels).toInt())
+                                val sampledColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
                                 dominantColor = sampledColor
                                 onDominantColorChanged(sampledColor)
                             } catch (e: Exception) { }
@@ -628,7 +642,8 @@ fun PlayerScreen(
                 enter = androidx.compose.animation.fadeIn(),
                 exit = androidx.compose.animation.fadeOut()
             ) {
-                 Column(modifier = Modifier.fillMaxSize()) {                      Row(
+                 Column(modifier = Modifier.fillMaxSize()) {
+                      Row(
                           modifier = Modifier.fillMaxWidth().padding(top = 64.dp, start = 124.dp, end = 24.dp), 
                           verticalAlignment = Alignment.CenterVertically
                       ) {
@@ -644,15 +659,33 @@ fun PlayerScreen(
                                Text(playerState?.title ?: "", color = contentColor, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                Text(playerState?.artist ?: "", color = contentColor.copy(alpha=0.7f), fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                            }
-                           Icon(Icons.Default.Star, "Fav", tint = starTint, modifier = Modifier.size(24.dp).clickable {
-                               if (playerState != null) {
-                                   if (!isSaved) {
-                                       LibraryManager.saveItem(LibraryItem(playerState.videoId ?: "", playerState.title, playerState.artist, playerState.artUrl?.toString(), ItemType.SONG))
-                                   } else {
-                                       LibraryManager.removeItem(playerState.videoId ?: "")
-                                   }
-                               }
-                           })
+                           Box(
+                               modifier = Modifier
+                                   .size(36.dp)
+                                   .clip(CircleShape)
+                                   .background(
+                                       if (isSaved) contentColor else contentColor.copy(alpha = 0.15f)
+                                   )
+                                   .clickable {
+                                       if (playerState != null) {
+                                           if (!isSaved) {
+                                               LibraryManager.saveItem(LibraryItem(playerState.videoId ?: "", playerState.title, playerState.artist, playerState.artUrl?.toString(), ItemType.SONG))
+                                           } else {
+                                               LibraryManager.removeItem(playerState.videoId ?: "")
+                                           }
+                                       }
+                                   },
+                               contentAlignment = Alignment.Center
+                           ) {
+                               AsyncImage(
+                                   model = "file:///android_asset/img reproductor/c.png",
+                                   contentDescription = "Fav",
+                                   colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(
+                                       if (isSaved) (if (isLightBackground) Color.White else Color(0xFF1A1A1A)) else contentColor
+                                   ),
+                                   modifier = Modifier.size(20.dp)
+                               )
+                           }
                            Spacer(modifier = Modifier.width(20.dp))
                            Icon(Icons.Default.MoreVert, "More", tint = contentColor, modifier = Modifier.size(24.dp).clickable { 
                                if (showLyrics) {
@@ -1109,18 +1142,31 @@ fun PlayerScreen(
                           }
                           Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
                               Box(
-                                  modifier = Modifier.size(32.dp).clip(CircleShape).background(contentColor.copy(alpha = 0.15f)).clickable {
-                                      if (playerState != null) {
-                                          if (!isSaved) {
-                                              LibraryManager.saveItem(LibraryItem(playerState.videoId ?: "", playerState.title, playerState.artist, playerState.artUrl?.toString(), ItemType.SONG))
-                                          } else {
-                                              LibraryManager.removeItem(playerState.videoId ?: "")
+                                  modifier = Modifier
+                                      .size(36.dp)
+                                      .clip(CircleShape)
+                                      .background(
+                                          if (isSaved) contentColor else contentColor.copy(alpha = 0.15f)
+                                      )
+                                      .clickable {
+                                          if (playerState != null) {
+                                              if (!isSaved) {
+                                                  LibraryManager.saveItem(LibraryItem(playerState.videoId ?: "", playerState.title, playerState.artist, playerState.artUrl?.toString(), ItemType.SONG))
+                                              } else {
+                                                  LibraryManager.removeItem(playerState.videoId ?: "")
+                                              }
                                           }
-                                      }
-                                  },
+                                      },
                                   contentAlignment = Alignment.Center
                               ) {
-                                  Icon(Icons.Default.Star, contentDescription = "Fav", tint = starTint, modifier = Modifier.size(18.dp))
+                                  AsyncImage(
+                                      model = "file:///android_asset/img reproductor/c.png",
+                                      contentDescription = "Fav",
+                                      colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(
+                                          if (isSaved) (if (isLightBackground) Color.White else Color(0xFF1A1A1A)) else contentColor
+                                      ),
+                                      modifier = Modifier.size(18.dp)
+                                  )
                               }
                               Box(
                                   modifier = Modifier.size(32.dp).clip(CircleShape).background(contentColor.copy(alpha = 0.15f)).clickable { showOptionsMenu = true },
@@ -1143,7 +1189,12 @@ fun PlayerScreen(
                       
                       AppleMusicSlider(
                           value = progress, onValueChange = { onSeek((it * duration).toLong()) },
-                          modifier = Modifier.fillMaxWidth().height(24.dp),
+                          modifier = Modifier
+                              .fillMaxWidth()
+                              .height(24.dp)
+                              .onGloballyPositioned { coords ->
+                                  sliderCoordinates = coords
+                              },
                           activeColor = contentColor,
                           inactiveColor = contentColor.copy(alpha = 0.3f),
                           barHeightDp = 6.dp
@@ -1181,28 +1232,32 @@ fun PlayerScreen(
         }
 
         if (showOptionsMenu) {
-            ModalBottomSheet(onDismissRequest = { showOptionsMenu = false }, containerColor = Color(0xFF1E1E1E)) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(playerState?.title ?: "", color=Color.White, fontSize=20.sp, fontWeight=FontWeight.Bold)
-                    Spacer(modifier=Modifier.height(16.dp))
-                    Row(modifier=Modifier.fillMaxWidth().clickable { 
-                        showOptionsMenu = false 
-                        if (playerState?.videoId != null) {
-                            downloadSong(context, playerState.videoId, playerState.title, playerState.artist, playerState.artUrl?.toString(), playerState.album)
+            com.mrtdk.liquid_glass.ui.components.PlayerOptionsMenu(
+                backdrop = localBackdrop,
+                onDismiss = { showOptionsMenu = false },
+                playerState = playerState,
+                isSaved = isSaved,
+                onToggleSaved = {
+                    if (playerState != null) {
+                        if (!isSaved) {
+                            LibraryManager.saveItem(LibraryItem(playerState.videoId ?: "", playerState.title, playerState.artist, playerState.artUrl?.toString(), ItemType.SONG))
+                        } else {
+                            LibraryManager.removeItem(playerState.videoId ?: "")
                         }
-                    }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
-                        Icon(Icons.Default.ArrowDownward, contentDescription=null, tint=Color.White)
-                        Spacer(modifier=Modifier.width(16.dp))
-                        Text("Descargar para modo offline", color=Color.White, fontSize=16.sp)
                     }
-                    Row(modifier=Modifier.fillMaxWidth().clickable { showOptionsMenu=false; showPlaylistMenu=true }.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
-                        Icon(Icons.Default.Menu, contentDescription=null, tint=Color.White)
-                        Spacer(modifier=Modifier.width(16.dp))
-                        Text(stringResource(R.string.añadir_a_playlist), color=Color.White, fontSize=16.sp)
+                },
+                onDownload = {
+                    if (playerState?.videoId != null) {
+                        downloadSong(context, playerState.videoId, playerState.title, playerState.artist, playerState.artUrl?.toString(), playerState.album)
                     }
-                    Spacer(modifier=Modifier.height(32.dp))
+                },
+                onAddToPlaylist = {
+                    showPlaylistMenu = true
+                },
+                onSongSelected = { targetState ->
+                    onSongSelected(targetState)
                 }
-            }
+            )
         }
 
         if (showLyricsMenu) {
@@ -1454,6 +1509,7 @@ fun PlayerBottomControls(
     onSkipNext: () -> Unit = {},
     onSkipPrevious: () -> Unit = {}
 ) {
+    val isLightBackground = contentColor != Color.White
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
         if (includeProgress) {
             AppleMusicSlider(
@@ -1522,25 +1578,47 @@ fun PlayerBottomControls(
             }
             Spacer(modifier = Modifier.height(32.dp))
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(if (showLyrics) contentColor.copy(alpha = 0.2f) else Color.Transparent).clickable { onToggleLyrics() }, contentAlignment = Alignment.Center) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.lyrics),
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(if (showLyrics) contentColor else Color.Transparent)
+                        .clickable { onToggleLyrics() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = "file:///android_asset/img reproductor/Letras.png",
                         contentDescription = "Lyrics",
-                        tint = contentColor,
+                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(
+                            if (showLyrics) (if (isLightBackground) Color.White else Color(0xFF1A1A1A)) else contentColor
+                        ),
                         modifier = Modifier.size(20.dp)
                     )
                 }
-                Icon(
-                    painter = painterResource(id = R.drawable.apple_lossless_seeklogo),
+                AsyncImage(
+                    model = "file:///android_asset/img reproductor/parlante.png",
                     contentDescription = "Format",
-                    tint = contentColor,
-                    modifier = Modifier.height(20.dp).padding(horizontal = 8.dp)
+                    colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(contentColor),
+                    modifier = Modifier
+                        .height(20.dp)
+                        .padding(horizontal = 8.dp)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { /* do nothing */ }
                 )
-                Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(if (showQueue) contentColor.copy(alpha = 0.2f) else Color.Transparent).clickable { onToggleQueue() }, contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(if (showQueue) contentColor else Color.Transparent)
+                        .clickable { onToggleQueue() },
+                    contentAlignment = Alignment.Center
+                ) {
                     Icon(
                         painter = painterResource(id = R.drawable.nextinfo),
                         contentDescription = "Next Info",
-                        tint = contentColor,
+                        tint = if (showQueue) (if (isLightBackground) Color.White else Color(0xFF1A1A1A)) else contentColor,
                         modifier = Modifier.size(24.dp)
                     )
                 }

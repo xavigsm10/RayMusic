@@ -22,6 +22,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.res.stringResource
 import com.mrtdk.liquid_glass.R
+import com.mrtdk.liquid_glass.ui.components.trackClickBounds
+import com.mrtdk.liquid_glass.ui.components.trackTapBounds
+import com.mrtdk.liquid_glass.ui.components.wiggleOnScroll
+import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -311,7 +319,10 @@ fun InicioScreen(
         }
     }
 
+    val listState = rememberLazyListState()
+
     LazyColumn(
+        state = listState,
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black),
@@ -357,7 +368,8 @@ fun InicioScreen(
                             item = itm,
                             onSongSelected = onSongSelected,
                             onAlbumSelected = onAlbumSelected,
-                            onArtistSelected = onArtistSelected
+                            onArtistSelected = onArtistSelected,
+                            scrollState = listState
                         )
                     }
                 }
@@ -459,10 +471,13 @@ fun InicioScreen(
                         val item = itemsToDisplay[index]
                         val hdThumb = upgradeThumb(item.thumbnail)
                         val isCircle = item.type == ItemType.ARTIST
+                        var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
                         Column(
                             modifier = Modifier
                                 .width(180.dp)
+                                .wiggleOnScroll(item.id, lazyListState = listState)
                                 .clickable {
+                                    SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
                                     if (item.type == ItemType.SONG) {
                                         onSongSelected(PlayerState(
                                             title = item.title,
@@ -471,6 +486,7 @@ fun InicioScreen(
                                             videoId = item.id
                                         ))
                                     } else {
+                                        SharedTransitionState.lastOpenedId = item.id
                                         onAlbumSelected(AlbumState(
                                             id = item.id,
                                             playlistId = item.id,
@@ -486,7 +502,10 @@ fun InicioScreen(
                                 model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
                                 contentDescription = item.title,
                                 contentScale = ContentScale.Crop,
-                                modifier = Modifier.size(180.dp).clip(if (isCircle) CircleShape else RoundedCornerShape(12.dp))
+                                modifier = Modifier
+                                    .size(180.dp)
+                                    .onGloballyPositioned { imageCoords = it }
+                                    .clip(if (isCircle) CircleShape else RoundedCornerShape(12.dp))
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(item.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -893,14 +912,19 @@ fun InicioScreen(
                                 val hdThumb = upgradeThumb(thumbUrl)
 
                                 // Standard card (180dp for consistency with recently played)
+                                var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
                                 Column(
                                     modifier = Modifier
                                         .width(180.dp)
-                                        .clickable(onClick = clickAction)
+                                        .clickable {
+                                            SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                            clickAction()
+                                        }
                                 ) {
                                     Box(
                                         modifier = Modifier
                                             .size(180.dp)
+                                            .onGloballyPositioned { imageCoords = it }
                                             .clip(if (isCircle) CircleShape else RoundedCornerShape(12.dp))
                                             .background(Color(0xFF1C1C1E))
                                     ) {
@@ -934,7 +958,8 @@ private fun FeaturedSuggestionCard(
     item: com.echo.innertube.models.YTItem,
     onSongSelected: (PlayerState) -> Unit,
     onAlbumSelected: (AlbumState) -> Unit,
-    onArtistSelected: (ArtistState) -> Unit
+    onArtistSelected: (ArtistState) -> Unit,
+    scrollState: androidx.compose.foundation.lazy.LazyListState
 ) {
     var titleStr = ""
     var subtitleStr = ""
@@ -955,7 +980,10 @@ private fun FeaturedSuggestionCard(
             subtitleStr = item.artists?.joinToString { it.name } ?: "Album"
             thumbUrl = item.thumbnail
             labelStr = "Álbum"
-            clickAction = { onAlbumSelected(AlbumState(id = item.id, playlistId = item.playlistId ?: item.id, title = titleStr, artist = subtitleStr, thumbnail = thumbUrl, year = item.year as? Int ?: item.year?.toString()?.toIntOrNull())) }
+            clickAction = { 
+                SharedTransitionState.lastOpenedId = item.id
+                onAlbumSelected(AlbumState(id = item.id, playlistId = item.playlistId ?: item.id, title = titleStr, artist = subtitleStr, thumbnail = thumbUrl, year = item.year as? Int ?: item.year?.toString()?.toIntOrNull())) 
+            }
         }
         is com.echo.innertube.models.ArtistItem -> {
             titleStr = item.title
@@ -969,7 +997,10 @@ private fun FeaturedSuggestionCard(
             subtitleStr = item.author?.name ?: "Playlist"
             thumbUrl = item.thumbnail
             labelStr = "Playlist"
-            clickAction = { onAlbumSelected(AlbumState(id = item.id, playlistId = item.id, title = titleStr, artist = subtitleStr, thumbnail = thumbUrl, year = null)) }
+            clickAction = { 
+                SharedTransitionState.lastOpenedId = item.id
+                onAlbumSelected(AlbumState(id = item.id, playlistId = item.id, title = titleStr, artist = subtitleStr, thumbnail = thumbUrl, year = null)) 
+            }
         }
         else -> {
             titleStr = "Unknown"
@@ -1020,13 +1051,18 @@ private fun FeaturedSuggestionCard(
     }
 
     // Card container
+    var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
     Box(
         modifier = Modifier
             .width(280.dp)
             .height(380.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(dominantColor)
-            .clickable(onClick = clickAction)
+            .wiggleOnScroll(item.id, lazyListState = scrollState)
+            .clickable {
+                SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                clickAction()
+            }
     ) {
         // Capa 1: Reflejo Líquido Estirado 1D
         val currentCoverBitmap = coverBitmap
@@ -1065,6 +1101,7 @@ private fun FeaturedSuggestionCard(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .size(width = 280.dp, height = 270.dp)
+                .onGloballyPositioned { imageCoords = it }
                 .graphicsLayer {
                     compositingStrategy = CompositingStrategy.Offscreen
                 }
