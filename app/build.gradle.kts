@@ -8,11 +8,11 @@ plugins {
 
 android {
     namespace = "com.mrtdk.liquid_glass"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.mrtdk.liquid_glass"
-        minSdk = 21
+        minSdk = 23
         targetSdk = 36
         versionCode = 3
         versionName = "0.6.1"
@@ -91,6 +91,10 @@ dependencies {
     
     // Permissions
     implementation("com.google.accompanist:accompanist-permissions:0.35.0-alpha")
+
+    // Backdrop & Shapes Liquid Glass
+    implementation("io.github.kyant0:backdrop:2.0.0")
+    implementation("io.github.kyant0:shapes:1.2.0")
 
     // XML Layout UI Dependencies
     implementation("androidx.constraintlayout:constraintlayout:2.2.0")
