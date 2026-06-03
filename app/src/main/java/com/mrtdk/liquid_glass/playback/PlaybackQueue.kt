@@ -49,7 +49,8 @@ object PlaybackQueue {
                 contentUri = null,
                 queue = queue.drop(1),
                 isExclusiveQueue = isExclusiveQueue,
-                album = next.album
+                album = next.album,
+                albumId = next.albumId
             )
             currentSong = nextState
             queue = queue.drop(1)
@@ -76,7 +77,8 @@ object PlaybackQueue {
                 videoId = next.id,
                 contentUri = null,
                 isExclusiveQueue = false,
-                album = next.album?.name
+                album = next.album?.name,
+                albumId = next.album?.id
             )
             currentSong = nextState
             upNextSongs = upNextSongs.drop(1)
@@ -93,7 +95,8 @@ object PlaybackQueue {
                     artist = state.artist,
                     artUrl = state.artUrl,
                     videoId = state.videoId,
-                    album = state.album
+                    album = state.album,
+                    albumId = state.albumId
                 )
             }
             val nextState = PlayerState(
@@ -104,7 +107,8 @@ object PlaybackQueue {
                 contentUri = first.contentUri,
                 queue = remaining,
                 isExclusiveQueue = isExclusiveQueue,
-                album = first.album
+                album = first.album,
+                albumId = first.albumId
             )
             currentSong = nextState
             queue = remaining

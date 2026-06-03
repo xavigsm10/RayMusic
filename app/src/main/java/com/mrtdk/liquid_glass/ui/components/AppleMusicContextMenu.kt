@@ -46,6 +46,7 @@ import com.mrtdk.liquid_glass.playback.PlaybackQueue
 import com.mrtdk.liquid_glass.ui.screens.PlayerState
 import com.mrtdk.liquid_glass.ui.screens.QueueItem
 import com.mrtdk.liquid_glass.ui.screens.downloadSong
+import com.echo.innertube.YouTube
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -605,7 +606,8 @@ fun GlassBoxScope.AppleMusicAlbumMenu(
     album: ContextMenuAlbum,
     onDismiss: () -> Unit,
     onAddAlbumToQueue: () -> Unit,
-    onSaveAlbumToLibrary: () -> Unit
+    onSaveAlbumToLibrary: () -> Unit,
+    tracks: List<com.echo.innertube.models.SongItem>? = null
 ) {
     val glassScope = this
     val context = LocalContext.current
@@ -711,27 +713,39 @@ fun GlassBoxScope.AppleMusicAlbumMenu(
                                 Toast.makeText(context, "Obteniendo pistas del álbum...", Toast.LENGTH_SHORT).show()
                                 scope.launch {
                                     withContext(Dispatchers.IO) {
-                                        val isAlbum = album.id.startsWith("MPREb") || album.id.startsWith("FEmusic")
-                                        val tracks = if (isAlbum) {
-                                            com.echo.innertube.YouTube.album(album.id).getOrNull()?.songs
+                                        val tracksToDownload = if (!tracks.isNullOrEmpty()) {
+                                            tracks
                                         } else {
-                                            val pId = album.playlistId.ifEmpty { album.id }.removePrefix("VL")
-                                            com.echo.innertube.YouTube.playlist(pId).getOrNull()?.songs
+                                            val isAlbum = album.id.startsWith("MPREb") || album.id.startsWith("FEmusic")
+                                            if (isAlbum) {
+                                                com.echo.innertube.YouTube.album(album.id).getOrNull()?.songs
+                                                    ?: run {
+                                                        val pId = album.playlistId.ifEmpty { album.id }.removePrefix("VL")
+                                                        com.echo.innertube.YouTube.playlist(pId).getOrNull()?.songs
+                                                    }
+                                            } else {
+                                                val pId = album.playlistId.ifEmpty { album.id }.removePrefix("VL")
+                                                com.echo.innertube.YouTube.playlist(pId).getOrNull()?.songs
+                                                    ?: run {
+                                                        com.echo.innertube.YouTube.album(album.id).getOrNull()?.songs
+                                                    }
+                                            }
                                         }
                                         
                                         withContext(Dispatchers.Main) {
-                                            if (tracks.isNullOrEmpty()) {
+                                            if (tracksToDownload.isNullOrEmpty()) {
                                                 Toast.makeText(context, "No se pudieron obtener las pistas del álbum", Toast.LENGTH_SHORT).show()
                                             } else {
-                                                Toast.makeText(context, "Iniciando descarga de ${tracks.size} pistas...", Toast.LENGTH_SHORT).show()
-                                                tracks.forEach { track ->
+                                                Toast.makeText(context, "Iniciando descarga de ${tracksToDownload.size} pistas...", Toast.LENGTH_SHORT).show()
+                                                tracksToDownload.forEach { track ->
                                                     downloadSong(
                                                         context = context,
                                                         videoId = track.id,
                                                         title = track.title,
                                                         artist = track.artists.joinToString { it.name },
                                                         artUrl = track.thumbnail,
-                                                        album = album.title
+                                                        album = album.title,
+                                                        silent = true
                                                     )
                                                 }
                                             }
@@ -2092,9 +2106,11 @@ fun PlayerOptionsMenu(
     onToggleSaved: () -> Unit,
     onDownload: () -> Unit,
     onAddToPlaylist: () -> Unit,
-    onSongSelected: (PlayerState) -> Unit
+    onSongSelected: (PlayerState) -> Unit,
+    onAlbumSelected: (com.mrtdk.liquid_glass.ui.screens.AlbumState) -> Unit
 ) {
     var visible by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         visible = true
@@ -2315,12 +2331,83 @@ fun PlayerOptionsMenu(
                         icon = Icons.Default.Album,
                         label = "Ir al álbum"
                     ) {
-                        if (playerState?.album != null) {
-                            Toast.makeText(context, "Cargando álbum: ${playerState.album}", Toast.LENGTH_SHORT).show()
+                        if (playerState != null) {
+                            if (!playerState.albumId.isNullOrBlank()) {
+                                onAlbumSelected(
+                                    com.mrtdk.liquid_glass.ui.screens.AlbumState(
+                                        id = playerState.albumId,
+                                        playlistId = playerState.albumId,
+                                        title = playerState.album ?: playerState.title,
+                                        artist = playerState.artist,
+                                        thumbnail = playerState.artUrl?.toString()
+                                    )
+                                )
+                                handleDismiss()
+                            } else {
+                                // Fallback: If offline/local or no internet
+                                val isOffline = playerState.contentUri != null || (!playerState.album.isNullOrBlank() && LibraryManager.getDownloadedSongsForAlbum(playerState.album).isNotEmpty())
+                                if (isOffline && !playerState.album.isNullOrBlank()) {
+                                    onAlbumSelected(
+                                        com.mrtdk.liquid_glass.ui.screens.AlbumState(
+                                            id = "offline_album_${playerState.album}",
+                                            playlistId = "offline_album_${playerState.album}",
+                                            title = playerState.album,
+                                            artist = playerState.artist,
+                                            thumbnail = playerState.artUrl?.toString()
+                                        )
+                                    )
+                                    handleDismiss()
+                                } else {
+                                    // Online search fallback
+                                    scope.launch {
+                                        Toast.makeText(context, "Buscando álbum...", Toast.LENGTH_SHORT).show()
+                                        withContext(Dispatchers.IO) {
+                                            val query = "${playerState.album ?: playerState.title} ${playerState.artist}"
+                                            val searchResult = YouTube.search(query, YouTube.SearchFilter.FILTER_ALBUM).getOrNull()
+                                            val albumItem = searchResult?.items?.filterIsInstance<com.echo.innertube.models.AlbumItem>()?.firstOrNull {
+                                                it.title.equals(playerState.album, ignoreCase = true)
+                                            } ?: searchResult?.items?.filterIsInstance<com.echo.innertube.models.AlbumItem>()?.firstOrNull()
+
+                                            if (albumItem != null) {
+                                                withContext(Dispatchers.Main) {
+                                                    onAlbumSelected(
+                                                        com.mrtdk.liquid_glass.ui.screens.AlbumState(
+                                                            id = albumItem.browseId,
+                                                            playlistId = albumItem.playlistId,
+                                                            title = albumItem.title,
+                                                            artist = albumItem.artists?.joinToString { it.name } ?: playerState.artist,
+                                                            thumbnail = albumItem.thumbnail
+                                                        )
+                                                    )
+                                                    handleDismiss()
+                                                }
+                                            } else {
+                                                withContext(Dispatchers.Main) {
+                                                    if (!playerState.album.isNullOrBlank()) {
+                                                        // Last fallback: try to open offline
+                                                        onAlbumSelected(
+                                                            com.mrtdk.liquid_glass.ui.screens.AlbumState(
+                                                                id = "offline_album_${playerState.album}",
+                                                                playlistId = "offline_album_${playerState.album}",
+                                                                title = playerState.album,
+                                                                artist = playerState.artist,
+                                                                thumbnail = playerState.artUrl?.toString()
+                                                            )
+                                                        )
+                                                        handleDismiss()
+                                                    } else {
+                                                        Toast.makeText(context, "Información de álbum no disponible", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         } else {
                             Toast.makeText(context, "Información de álbum no disponible", Toast.LENGTH_SHORT).show()
+                            handleDismiss()
                         }
-                        handleDismiss()
                     }
 
                     // Ver créditos

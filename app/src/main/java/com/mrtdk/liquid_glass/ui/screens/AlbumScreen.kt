@@ -217,23 +217,61 @@ fun AlbumScreen(
     // Load album/playlist tracks
     LaunchedEffect(albumState.id) {
         withContext(Dispatchers.IO) {
-            val isAlbum = albumState.id.startsWith("MPREb") || albumState.id.startsWith("FEmusic")
-            if (isAlbum) {
-                YouTube.album(albumState.id).onSuccess { albumPage ->
-                    tracks = albumPage.songs
-                }.onFailure {
-                    val pId = albumState.playlistId.ifEmpty { albumState.id }.removePrefix("VL")
-                    YouTube.playlist(pId).onSuccess { playlistPage ->
-                        tracks = playlistPage.songs
+            if (albumState.id.startsWith("offline_album_")) {
+                val localDownloads = LibraryManager.getDownloadedSongsForAlbum(albumState.title)
+                if (localDownloads.isNotEmpty()) {
+                    tracks = localDownloads.map { dl ->
+                        com.echo.innertube.models.SongItem(
+                            id = dl.id,
+                            title = dl.title,
+                            artists = listOf(com.echo.innertube.models.Artist(name = dl.subtitle, id = null)),
+                            album = com.echo.innertube.models.Album(name = dl.album ?: albumState.title, id = albumState.id),
+                            thumbnail = dl.thumbnail ?: albumState.thumbnail ?: "",
+                            explicit = false
+                        )
                     }
                 }
             } else {
-                val pId = albumState.playlistId.ifEmpty { albumState.id }.removePrefix("VL")
-                YouTube.playlist(pId).onSuccess { playlistPage ->
-                    tracks = playlistPage.songs
-                }.onFailure {
+                var loaded = false
+                val isAlbum = albumState.id.startsWith("MPREb") || albumState.id.startsWith("FEmusic")
+                if (isAlbum) {
                     YouTube.album(albumState.id).onSuccess { albumPage ->
                         tracks = albumPage.songs
+                        loaded = true
+                    }.onFailure {
+                        val pId = albumState.playlistId.ifEmpty { albumState.id }.removePrefix("VL")
+                        YouTube.playlist(pId).onSuccess { playlistPage ->
+                            tracks = playlistPage.songs
+                            loaded = true
+                        }
+                    }
+                } else {
+                    val pId = albumState.playlistId.ifEmpty { albumState.id }.removePrefix("VL")
+                    YouTube.playlist(pId).onSuccess { playlistPage ->
+                        tracks = playlistPage.songs
+                        loaded = true
+                    }.onFailure {
+                        YouTube.album(albumState.id).onSuccess { albumPage ->
+                            tracks = albumPage.songs
+                            loaded = true
+                        }
+                    }
+                }
+                
+                // Fallback to downloaded tracks if online fetch failed or returned empty
+                if (!loaded || tracks.isEmpty()) {
+                    val localDownloads = LibraryManager.getDownloadedSongsForAlbum(albumState.title)
+                    if (localDownloads.isNotEmpty()) {
+                        tracks = localDownloads.map { dl ->
+                            com.echo.innertube.models.SongItem(
+                                id = dl.id,
+                                title = dl.title,
+                                artists = listOf(com.echo.innertube.models.Artist(name = dl.subtitle, id = null)),
+                                album = com.echo.innertube.models.Album(name = dl.album ?: albumState.title, id = albumState.id),
+                                thumbnail = dl.thumbnail ?: albumState.thumbnail ?: "",
+                                explicit = false
+                            )
+                        }
                     }
                 }
             }
@@ -562,7 +600,8 @@ fun AlbumScreen(
                                         artist = t.artists.joinToString { it.name },
                                         artUrl = songArtUrl,
                                         videoId = t.id,
-                                        album = albumState.title
+                                        album = albumState.title,
+                                        albumId = albumState.id
                                     )
                                 }
                                 onSongSelected(
@@ -573,7 +612,8 @@ fun AlbumScreen(
                                         videoId = s.id,
                                         queue = albumQueue,
                                         isExclusiveQueue = true,
-                                        album = albumState.title
+                                        album = albumState.title,
+                                        albumId = albumState.id
                                     )
                                 )
                             }
@@ -605,7 +645,8 @@ fun AlbumScreen(
                                         artist = t.artists.joinToString { it.name },
                                         artUrl = songArtUrl,
                                         videoId = t.id,
-                                        album = albumState.title
+                                        album = albumState.title,
+                                        albumId = albumState.id
                                     )
                                 }
                                 onSongSelected(
@@ -616,7 +657,8 @@ fun AlbumScreen(
                                         videoId = s.id,
                                         queue = albumQueue,
                                         isExclusiveQueue = true,
-                                        album = albumState.title
+                                        album = albumState.title,
+                                        albumId = albumState.id
                                     )
                                 )
                             }
@@ -696,7 +738,8 @@ fun AlbumScreen(
                                 artist = t.artists.joinToString { it.name },
                                 artUrl = songArtUrl,
                                 videoId = t.id,
-                                album = albumState.title
+                                album = albumState.title,
+                                albumId = albumState.id
                             )
                         }
                         onSongSelected(
@@ -707,7 +750,8 @@ fun AlbumScreen(
                                 videoId = song.id,
                                 queue = albumQueue,
                                 isExclusiveQueue = true,
-                                album = albumState.title
+                                album = albumState.title,
+                                albumId = albumState.id
                             )
                         )
                     }
@@ -790,6 +834,7 @@ glassContent = {
                 year = albumState.year
             ),
             onDismiss = { showAlbumMenu = false },
+            tracks = tracks,
             onAddAlbumToQueue = {
                 if (tracks.isNotEmpty()) {
                     val current = PlaybackQueue.currentSong

@@ -518,4 +518,35 @@ class LibraryDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABA
         }
         return false
     }
+
+    fun getDownloadedSongsForAlbum(albumName: String): List<LibraryItem> {
+        val items = mutableListOf<LibraryItem>()
+        val db = this.readableDatabase
+        val query = "SELECT * FROM $TABLE_DOWNLOADED_SONGS WHERE $KEY_ALBUM = ? ORDER BY $KEY_TIMESTAMP ASC"
+        db.rawQuery(query, arrayOf(albumName)).use { cursor ->
+            if (cursor.moveToFirst()) {
+                val idIdx = cursor.getColumnIndex(KEY_ID)
+                val titleIdx = cursor.getColumnIndex(KEY_TITLE)
+                val subtitleIdx = cursor.getColumnIndex(KEY_SUBTITLE)
+                val thumbnailIdx = cursor.getColumnIndex(KEY_THUMBNAIL)
+                val typeIdx = cursor.getColumnIndex(KEY_TYPE)
+                val albumIdx = cursor.getColumnIndex(KEY_ALBUM)
+
+                if (idIdx != -1 && titleIdx != -1 && subtitleIdx != -1 && thumbnailIdx != -1 && typeIdx != -1 && albumIdx != -1) {
+                    do {
+                        val id = cursor.getString(idIdx)
+                        val title = cursor.getString(titleIdx) ?: ""
+                        val subtitle = cursor.getString(subtitleIdx) ?: ""
+                        val thumbnail = cursor.getString(thumbnailIdx)
+                        val typeName = cursor.getString(typeIdx) ?: "SONG"
+                        val type = try { ItemType.valueOf(typeName) } catch(e: Exception) { ItemType.SONG }
+                        val album = cursor.getString(albumIdx)
+
+                        items.add(LibraryItem(id, title, subtitle, thumbnail, type, album))
+                    } while (cursor.moveToNext())
+                }
+            }
+        }
+        return items
+    }
 }
