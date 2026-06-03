@@ -311,7 +311,8 @@ fun BusquedaScreen(
                                             artist = item.artists.joinToString { it.name },
                                             artUrl = hdThumb,
                                             videoId = item.id,
-                                            album = item.album?.name
+                                            album = item.album?.name,
+                                            albumId = item.album?.id
                                         )
                                     )
                                 }
@@ -513,9 +514,16 @@ glassContent = {
                     val isAlbum = album.id.startsWith("MPREb") || album.id.startsWith("FEmusic")
                     val albumTracks = if (isAlbum) {
                         YouTube.album(album.id).getOrNull()?.songs
+                            ?: run {
+                                val pId = album.playlistId.ifEmpty { album.id }.removePrefix("VL")
+                                YouTube.playlist(pId).getOrNull()?.songs
+                            }
                     } else {
                         val pId = album.playlistId.ifEmpty { album.id }.removePrefix("VL")
                         YouTube.playlist(pId).getOrNull()?.songs
+                            ?: run {
+                                YouTube.album(album.id).getOrNull()?.songs
+                            }
                     }
                     withContext(kotlinx.coroutines.Dispatchers.Main) {
                         if (albumTracks.isNullOrEmpty()) {
@@ -528,7 +536,8 @@ glassContent = {
                                     artist = t.artists.joinToString { it.name },
                                     artUrl = album.thumbnail,
                                     videoId = t.id,
-                                    album = album.title
+                                    album = album.title,
+                                    albumId = album.id
                                 )
                             }
                             if (current == null) {
@@ -541,7 +550,8 @@ glassContent = {
                                         videoId = s.id,
                                         queue = qItems.drop(1),
                                         isExclusiveQueue = true,
-                                        album = album.title
+                                        album = album.title,
+                                        albumId = album.id
                                     )
                                 )
                             } else {

@@ -27,6 +27,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 // Removed LocalMediaScanner import
 import com.mrtdk.liquid_glass.data.Song
+import com.mrtdk.liquid_glass.data.LibraryItem
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
 import com.mrtdk.liquid_glass.data.LibraryManager
@@ -756,7 +757,26 @@ fun BibliotecaScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     val filteredItems = if (selectedCategoryKey == "Descargados") {
-                        downloadedSongs
+                        val grouped = mutableListOf<LibraryItem>()
+                        val albumGroups = downloadedSongs.groupBy { it.album }
+                        albumGroups.forEach { (albumName, songsInAlbum) ->
+                            if (albumName.isNullOrBlank()) {
+                                grouped.addAll(songsInAlbum)
+                            } else {
+                                val firstSong = songsInAlbum.first()
+                                grouped.add(
+                                    LibraryItem(
+                                        id = "offline_album_$albumName",
+                                        title = albumName,
+                                        subtitle = firstSong.subtitle,
+                                        thumbnail = firstSong.thumbnail,
+                                        type = ItemType.ALBUM,
+                                        album = albumName
+                                    )
+                                )
+                            }
+                        }
+                        grouped
                     } else {
                         savedItems.filter { it.type == selectedCategory }
                     }

@@ -397,4 +397,9 @@ object LibraryManager {
         if (!isInitialized) return
         dbHelper.saveSetting("glass_style", style)
     }
+
+    fun getDownloadedSongsForAlbum(albumName: String): List<LibraryItem> {
+        if (!isInitialized) return emptyList()
+        return dbHelper.getDownloadedSongsForAlbum(albumName)
+    }
 }

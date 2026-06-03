@@ -41,10 +41,10 @@ import com.mrtdk.liquid_glass.ui.components.LiquidBottomTabs
 import com.mrtdk.liquid_glass.ui.components.LocalBackdrop
 
 val tabs = listOf(
-    "Inicio" to R.drawable.nav_inicio,
-    "Novedades" to R.drawable.nav_novedades,
-    "Radio" to R.drawable.nav_radio,
-    "Biblioteca" to R.drawable.nav_biblioteca
+    R.string.nav_inicio to R.drawable.nav_inicio,
+    R.string.nav_novedades to R.drawable.nav_novedades,
+    R.string.nav_radio to R.drawable.nav_radio,
+    R.string.nav_biblioteca to R.drawable.nav_biblioteca
 )
 
 @Composable
@@ -257,13 +257,7 @@ fun MainTabs(
         modifier = Modifier.fillMaxSize()
     ) {
         tabs.forEachIndexed { index, pair ->
-            val tabText = when (index) {
-                0 -> "Home"
-                1 -> "New"
-                2 -> "Radio"
-                3 -> "Library"
-                else -> pair.first
-            }
+            val tabText = stringResource(id = pair.first)
             
             val isSelected = selectedIndex == index
             val itemColor = if (isSelected) Color.White else Color.White.copy(alpha = 0.6f)

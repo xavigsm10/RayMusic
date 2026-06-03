@@ -108,7 +108,8 @@ data class PlayerState(
     val duration: Long = 0L,
     val queue: List<QueueItem> = emptyList(),
     val isExclusiveQueue: Boolean = false,
-    val album: String? = null
+    val album: String? = null,
+    val albumId: String? = null
 )
 
 data class QueueItem(
@@ -116,7 +117,8 @@ data class QueueItem(
     val artist: String,
     val artUrl: Any?,
     val videoId: String? = null,
-    val album: String? = null
+    val album: String? = null,
+    val albumId: String? = null
 )
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
@@ -138,6 +140,7 @@ fun PlayerScreen(
     onSeek: (Long) -> Unit,
     onVolumeChange: (Float) -> Unit,
     onArtistSelected: (com.mrtdk.liquid_glass.ui.screens.ArtistState) -> Unit = {},
+    onAlbumSelected: (com.mrtdk.liquid_glass.ui.screens.AlbumState) -> Unit = {},
     onSongSelected: (PlayerState) -> Unit = {},
     onSongSelectedFromQueue: (PlayerState) -> Unit = {},
     shuffleModeEnabled: Boolean = false,
@@ -167,6 +170,22 @@ fun PlayerScreen(
         var offsetY by remember { mutableFloatStateOf(0f) }
         var showQueue by remember { mutableStateOf(false) }
         var showLyrics by remember { mutableStateOf(false) }
+        var showLyricsControls by remember { mutableStateOf(true) }
+        var lyricsControlsHideTrigger by remember { mutableStateOf(0) }
+
+        LaunchedEffect(showLyrics) {
+            if (showLyrics) {
+                showLyricsControls = true
+                lyricsControlsHideTrigger++
+            }
+        }
+
+        LaunchedEffect(showLyrics, showLyricsControls, lyricsControlsHideTrigger) {
+            if (showLyrics && showLyricsControls) {
+                kotlinx.coroutines.delay(2000L)
+                showLyricsControls = false
+            }
+        }
         
         var showOptionsMenu by remember { mutableStateOf(false) }
         var showLyricsMenu by remember { mutableStateOf(false) }
@@ -558,6 +577,16 @@ fun PlayerScreen(
                 modifier = Modifier
                     .offset(x = imgOffsetX, y = imgOffsetY)
                     .size(width = imgWidth, height = imgHeight)
+                    .then(
+                        if (showLyrics) {
+                            Modifier.clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                showLyrics = false
+                            }
+                        } else Modifier
+                    )
                     .graphicsLayer {
                         shape = RoundedCornerShape(imgCorner.toPx())
                         clip = true
@@ -881,8 +910,21 @@ fun PlayerScreen(
                               }
                           }
                       } else if (showLyrics) {
-                            Spacer(modifier = Modifier.height(44.dp))
-                            Box(modifier = Modifier.weight(1f).clipToBounds()) {
+                             Spacer(modifier = Modifier.height(44.dp))
+                             Box(
+                                 modifier = Modifier
+                                     .weight(1f)
+                                     .clipToBounds()
+                                     .clickable(
+                                         interactionSource = remember { MutableInteractionSource() },
+                                         indication = null
+                                     ) {
+                                         showLyricsControls = !showLyricsControls
+                                         if (showLyricsControls) {
+                                             lyricsControlsHideTrigger++
+                                         }
+                                     }
+                             ) {
                                  val currentLyricsLines = lyricsLines
                                  if (currentLyricsLines != null && currentLyricsLines.isNotEmpty()) {
                                      val listState = androidx.compose.foundation.lazy.rememberLazyListState()
@@ -970,7 +1012,11 @@ fun PlayerScreen(
                                                          transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
                                                      }
                                                      .then(if (animBlur > 0f) Modifier.blur(animBlur.dp) else Modifier)
-                                                     .clickable { if(line.timeMs != -1L) onSeek(line.timeMs) },
+                                                     .clickable { 
+                                                          if(line.timeMs != -1L) onSeek(line.timeMs)
+                                                          showLyricsControls = true
+                                                          lyricsControlsHideTrigger++
+                                                      },
                                                  horizontalArrangement = Arrangement.Start,
                                                  verticalArrangement = Arrangement.spacedBy(4.dp)
                                              ) {
@@ -1018,54 +1064,73 @@ fun PlayerScreen(
                                          item { Spacer(modifier = Modifier.height(200.dp)) }
                                      }
                                  } else {
-                                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                     Box(
+                                         modifier = Modifier
+                                             .fillMaxSize()
+                                             .clickable(
+                                                 interactionSource = remember { MutableInteractionSource() },
+                                                 indication = null
+                                             ) {
+                                                 showLyricsControls = !showLyricsControls
+                                                 if (showLyricsControls) {
+                                                     lyricsControlsHideTrigger++
+                                                 }
+                                             },
+                                         contentAlignment = Alignment.Center
+                                     ) {
                                          CircularProgressIndicator(color = contentColor)
                                      }
                                  }
                             }
                        }
                       
-                      Box(
-                           modifier = Modifier
-                               .fillMaxWidth()
-                               .background( Brush.verticalGradient(listOf(Color.Transparent, dominantColor.copy(alpha=0.8f), dominantColor, dominantColor)) )
-                       ) {
-                          Column(
+                      androidx.compose.animation.AnimatedVisibility(
+                           visible = !showLyrics || showLyricsControls,
+                           enter = androidx.compose.animation.slideInVertically(initialOffsetY = { it }) + androidx.compose.animation.fadeIn(),
+                           exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { it }) + androidx.compose.animation.fadeOut()
+                      ) {
+                          Box(
                                modifier = Modifier
                                    .fillMaxWidth()
-                                   .padding(horizontal = 24.dp)
-                                   .padding(top = 40.dp) // difuminado padding
+                                   .background( Brush.verticalGradient(listOf(Color.Transparent, dominantColor.copy(alpha=0.8f), dominantColor, dominantColor)) )
                            ) {
-                              AppleMusicSlider(
-                                  value = progress, onValueChange = { onSeek((it * duration).toLong()) },
-                                  modifier = Modifier.fillMaxWidth().height(24.dp),
-                                  activeColor = contentColor,
-                                  inactiveColor = contentColor.copy(alpha = 0.3f),
-                                  barHeightDp = 6.dp
-                              )
-                              Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                  Text(formatDuration(currentPosition), color = contentColor.copy(alpha = 0.6f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                                  Text("-${formatDuration(duration - currentPosition)}", color = contentColor.copy(alpha = 0.6f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                              }
-                              
-                              Spacer(modifier = Modifier.height(32.dp))
-                              
-                              Box(
-                                  modifier = Modifier
-                                      .fillMaxWidth()
-                                      .padding(bottom = 32.dp)
-                              ) {
-                                  PlayerBottomControls( // We only want the icons, volume and stuff here, NO PROGRESS
-                                      progress = progress, currentPosition = currentPosition, duration = duration,
-                                      isPlaying = isPlaying, contentColor = contentColor, volumePosition = volumePosition,
-                                      showLyrics = showLyrics, showQueue = showQueue,
-                                      onSeek = onSeek, onTogglePlayPause = onTogglePlayPause, onVolumeChange = { v -> volumePosition = v; onVolumeChange(v) },
-                                      onToggleLyrics = { showLyrics = !showLyrics; showQueue = false }, onToggleQueue = { showQueue = !showQueue; showLyrics = false },
-                                      includeVolumeAndIcons = true,
-                                      includeProgress = false,
-                                      onSkipNext = { swipeDirection = 1; onSkipNext() },
-                                      onSkipPrevious = { swipeDirection = -1; onSkipPrevious() }
+                              Column(
+                                   modifier = Modifier
+                                       .fillMaxWidth()
+                                       .padding(horizontal = 24.dp)
+                                       .padding(top = 40.dp) // difuminado padding
+                               ) {
+                                  AppleMusicSlider(
+                                      value = progress, onValueChange = { onSeek((it * duration).toLong()) },
+                                      modifier = Modifier.fillMaxWidth().height(24.dp),
+                                      activeColor = contentColor,
+                                      inactiveColor = contentColor.copy(alpha = 0.3f),
+                                      barHeightDp = 6.dp
                                   )
+                                  Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                      Text(formatDuration(currentPosition), color = contentColor.copy(alpha = 0.6f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                                      Text("-${formatDuration(duration - currentPosition)}", color = contentColor.copy(alpha = 0.6f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                                  }
+                                  
+                                  Spacer(modifier = Modifier.height(32.dp))
+                                  
+                                  Box(
+                                      modifier = Modifier
+                                          .fillMaxWidth()
+                                          .padding(bottom = 32.dp)
+                                  ) {
+                                      PlayerBottomControls( // We only want the icons, volume and stuff here, NO PROGRESS
+                                          progress = progress, currentPosition = currentPosition, duration = duration,
+                                          isPlaying = isPlaying, contentColor = contentColor, volumePosition = volumePosition,
+                                          showLyrics = showLyrics, showQueue = showQueue,
+                                          onSeek = onSeek, onTogglePlayPause = onTogglePlayPause, onVolumeChange = { v -> volumePosition = v; onVolumeChange(v) },
+                                          onToggleLyrics = { showLyrics = !showLyrics; showQueue = false }, onToggleQueue = { showQueue = !showQueue; showLyrics = false },
+                                          includeVolumeAndIcons = true,
+                                          includeProgress = false,
+                                          onSkipNext = { swipeDirection = 1; onSkipNext() },
+                                          onSkipPrevious = { swipeDirection = -1; onSkipPrevious() }
+                                      )
+                                  }
                               }
                           }
                       }
@@ -1256,6 +1321,10 @@ fun PlayerScreen(
                 },
                 onSongSelected = { targetState ->
                     onSongSelected(targetState)
+                },
+                onAlbumSelected = { album ->
+                    showOptionsMenu = false
+                    onAlbumSelected(album)
                 }
             )
         }
@@ -1756,11 +1825,13 @@ fun AppleMusicSlider(
     }
 }
 
-fun downloadSong(context: android.content.Context, videoId: String, title: String, artist: String, artUrl: String?, album: String? = null) {
+fun downloadSong(context: android.content.Context, videoId: String, title: String, artist: String, artUrl: String?, album: String? = null, silent: Boolean = false) {
     val coroutineScope = CoroutineScope(Dispatchers.IO)
     coroutineScope.launch {
-        withContext(Dispatchers.Main) {
-            Toast.makeText(context, "Obteniendo enlace de descarga...", Toast.LENGTH_SHORT).show()
+        if (!silent) {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "Obteniendo enlace de descarga...", Toast.LENGTH_SHORT).show()
+            }
         }
         val streamUrl = com.mrtdk.liquid_glass.playback.MusicPlayer.resolveUrl(videoId)
         if (streamUrl != null) {
@@ -1796,7 +1867,9 @@ fun downloadSong(context: android.content.Context, videoId: String, title: Strin
                     
                     LibraryManager.saveString("local_uri_$videoId", fileUri.toString())
                     
-                    Toast.makeText(context, "Iniciando descarga: ${title}", Toast.LENGTH_SHORT).show()
+                    if (!silent) {
+                        Toast.makeText(context, "Iniciando descarga: ${title}", Toast.LENGTH_SHORT).show()
+                    }
                 } catch (e: Exception) {
                     Toast.makeText(context, "Error al descargar: ${e.message}", Toast.LENGTH_SHORT).show()
                 }

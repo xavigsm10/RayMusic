@@ -773,6 +773,10 @@ class MainActivity : ComponentActivity() {
                                     showPlayer = false
                                     artistDetail = artist
                                 },
+                                onAlbumSelected = { album ->
+                                    showPlayer = false
+                                    albumDetail = album
+                                },
                                 onSongSelected = playSong,
                                 onSongSelectedFromQueue = playSongFromQueue,
                                 shuffleModeEnabled = shuffleModeEnabled,

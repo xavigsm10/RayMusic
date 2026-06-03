@@ -9,8 +9,8 @@ kotlin {
     // will be added more in next PRs
     android {
         namespace = "com.mrtdk.glass"
-        compileSdk = 36
-        minSdk = 21
+        compileSdk = 37
+        minSdk = 23
     }
     sourceSets {
         commonMain {
