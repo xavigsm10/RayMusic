@@ -746,22 +746,24 @@ fun PlayerScreen(
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .fillMaxWidth()
-                            .fillMaxHeight(0.08f)
+                            .fillMaxSize()
                             .blur(25.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
                             .drawWithContent {
-                                drawContent()
+                                val topY = size.height * 0.92f
+                                drawContext.canvas.save()
+                                drawContext.canvas.clipRect(0f, topY, size.width, size.height)
+                                this@drawWithContent.drawContent()
                                 drawRect(
                                     brush = Brush.verticalGradient(
                                         colorStops = arrayOf(
-                                            0f to Color.Transparent,
-                                            0.3f to Color.Black,
-                                            1f to Color.Black
+                                            0.92f to Color.Transparent,
+                                            0.96f to Color.Black,
+                                            1.0f to Color.Black
                                         )
                                     ),
                                     blendMode = BlendMode.DstIn
                                 )
+                                drawContext.canvas.restore()
                             }
                     )
                 }
