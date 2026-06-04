@@ -609,7 +609,7 @@ fun PlayerScreen(
             // Capa 1: Reflejo Líquido Estirado 1D (Proyección vertical de la carátula)
             val currentCoverBitmap = coverBitmap
             if (currentCoverBitmap != null && !isOverlayActive && dragProgress == 0f) {
-                val overlapDp = imgHeight * 0.03f
+                val overlapDp = 1.dp
                 val density = androidx.compose.ui.platform.LocalDensity.current
                 val parentCoords = parentCoordinates
                 val sliderCoords = sliderCoordinates
@@ -628,9 +628,10 @@ fun PlayerScreen(
                 // Caja del reflejo posicionada bajo la portada
                 Box(
                     modifier = Modifier
-                        .offset(x = imgOffsetX, y = imgOffsetY + imgHeight - overlapDp) // Solapamiento dinámico de 20%
+                        .offset(x = imgOffsetX, y = imgOffsetY + imgHeight - overlapDp) // Solapamiento mínimo
                         .size(width = imgWidth, height = blurHeight)
                         .blur(25.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+                        .clipToBounds()
                 ) {
                     Canvas(modifier = Modifier.fillMaxSize()) {
                         val sampleHeight = 5 // Altura de muestreo del borde
@@ -1265,8 +1266,8 @@ fun PlayerScreen(
                                  Brush.verticalGradient(
                                      colors = listOf(
                                          Color.Transparent,
-                                         dominantColor.copy(alpha = 0.5f),
-                                         dominantColor.copy(alpha = 0.95f)
+                                         Color(dominantColor.red * 0.15f, dominantColor.green * 0.15f, dominantColor.blue * 0.15f, 1f).copy(alpha = 0.5f),
+                                         Color(dominantColor.red * 0.15f, dominantColor.green * 0.15f, dominantColor.blue * 0.15f, 1f).copy(alpha = 0.95f)
                                      )
                                  )
                              )
