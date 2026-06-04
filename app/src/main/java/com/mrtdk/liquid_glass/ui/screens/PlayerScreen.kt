@@ -146,9 +146,9 @@ private fun extractDominantColor(bitmap: android.graphics.Bitmap, isBillieJean: 
     return if (isBillieJean) {
         val skinTone = Color(0xFF6E472A) // Rich brown skin tone
         Color(
-            red = (extractedColor.red * 0.8f + skinTone.red * 0.2f),
-            green = (extractedColor.green * 0.8f + skinTone.green * 0.2f),
-            blue = (extractedColor.blue * 0.8f + skinTone.blue * 0.2f),
+            red = (extractedColor.red * 0.5f + skinTone.red * 0.5f),
+            green = (extractedColor.green * 0.5f + skinTone.green * 0.5f),
+            blue = (extractedColor.blue * 0.5f + skinTone.blue * 0.5f),
             alpha = 1f
         )
     } else {
@@ -632,7 +632,7 @@ fun PlayerScreen(
             // Capa 1: Reflejo Líquido Estirado 1D (Proyección vertical de la carátula)
             val currentCoverBitmap = coverBitmap
             if (currentCoverBitmap != null && !isOverlayActive && dragProgress == 0f) {
-                val overlapDp = 1.dp
+                val overlapDp = 0.dp
                 val density = androidx.compose.ui.platform.LocalDensity.current
                 val parentCoords = parentCoordinates
                 val sliderCoords = sliderCoordinates
@@ -711,23 +711,6 @@ fun PlayerScreen(
                             CompositingStrategy.Auto
                         }
                     }
-                    .then(
-                        if (!isOverlayActive && dragProgress == 0f) {
-                            Modifier.drawWithContent {
-                                drawContent()
-                                drawRect(
-                                    brush = Brush.verticalGradient(
-                                        colorStops = arrayOf(
-                                            0f to Color.Black,
-                                            0.92f to Color.Black,
-                                            1f to Color.Transparent
-                                        )
-                                    ),
-                                    blendMode = BlendMode.DstIn
-                                )
-                            }
-                        } else Modifier
-                    )
             ) {
                 // Base sharp album cover (always drawn in background during drag or before playback starts)
                 AsyncImage(
@@ -780,7 +763,7 @@ fun PlayerScreen(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .fillMaxSize()
-                            .cloudy(radius = 25)
+                            .cloudy(radius = 100)
                             .drawWithContent {
                                 val topY = size.height * 0.92f
                                 drawContext.canvas.save()
@@ -790,7 +773,7 @@ fun PlayerScreen(
                                     brush = Brush.verticalGradient(
                                         colorStops = arrayOf(
                                             0.92f to Color.Transparent,
-                                            0.96f to Color.Black,
+                                            0.96f to Color.Black.copy(alpha = 0.6f),
                                             1.0f to Color.Black
                                         )
                                     ),
@@ -1289,17 +1272,17 @@ fun PlayerScreen(
                           .fillMaxWidth()
                           .graphicsLayer { alpha = contentAlpha }
                   ) {
-                      // Gradient background of dominant color behind the controls
+                      // Gradient background of dominant color starting from bottom of cover image
                       Box(
                           modifier = Modifier
+                              .offset(x = 0.dp, y = imgOffsetY + imgHeight)
                               .fillMaxWidth()
-                              .align(Alignment.BottomCenter)
-                              .height(270.dp)
+                              .height(maxHeight - (imgOffsetY + imgHeight))
                               .background(
                                   Brush.verticalGradient(
                                       colors = listOf(
                                           Color.Transparent,
-                                          dominantColor.copy(alpha = 0.5f),
+                                          dominantColor.copy(alpha = 0.6f),
                                           dominantColor.copy(alpha = 0.95f)
                                       )
                                   )
@@ -1309,7 +1292,6 @@ fun PlayerScreen(
                           modifier = Modifier
                               .fillMaxWidth()
                               .padding(horizontal = 24.dp)
-                              .padding(bottom = 48.dp)
                      ) {
                       Row(
                           modifier = Modifier.fillMaxWidth(),
