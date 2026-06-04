@@ -264,14 +264,7 @@ fun PlayerScreen(
         }
 
         var dominantColor by remember { mutableStateOf(Color(0xFF1E1E1E)) }
-        val darkDominantColor = remember(dominantColor) {
-            Color(
-                red = dominantColor.red * 0.12f,
-                green = dominantColor.green * 0.12f,
-                blue = dominantColor.blue * 0.12f,
-                alpha = 1f
-            )
-        }
+        var bottomAverageColor by remember { mutableStateOf(Color(0xFF1E1E1E)) }
         var parentCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
         var sliderCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
 
@@ -430,6 +423,18 @@ fun PlayerScreen(
                             val sampledColor = extractDominantColor(bitmap, isBillieJean)
                             dominantColor = sampledColor
                             onDominantColorChanged(sampledColor)
+
+                            // Mismo método de los álbumes (promedio de la fila inferior de píxeles)
+                            var r = 0L; var g = 0L; var b = 0L
+                            val yCoord = bitmap.height - 1
+                            val w = bitmap.width
+                            for (x in 0 until w) {
+                                val pixel = bitmap.getPixel(x, yCoord)
+                                r += android.graphics.Color.red(pixel)
+                                g += android.graphics.Color.green(pixel)
+                                b += android.graphics.Color.blue(pixel)
+                            }
+                            bottomAverageColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
                         } catch (e: Exception) { }
                     }
                 }
@@ -860,6 +865,18 @@ fun PlayerScreen(
                                 val sampledColor = extractDominantColor(frameBitmap, isBillieJean)
                                 dominantColor = sampledColor
                                 onDominantColorChanged(sampledColor)
+
+                                // Promedio de la fila inferior de píxeles
+                                var r = 0L; var g = 0L; var b = 0L
+                                val yCoord = frameBitmap.height - 1
+                                val w = frameBitmap.width
+                                for (x in 0 until w) {
+                                    val pixel = frameBitmap.getPixel(x, yCoord)
+                                    r += android.graphics.Color.red(pixel)
+                                    g += android.graphics.Color.green(pixel)
+                                    b += android.graphics.Color.blue(pixel)
+                                }
+                                bottomAverageColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
                             } catch (e: Exception) { }
                         }
                     )
@@ -908,14 +925,7 @@ fun PlayerScreen(
                  Column(
                      modifier = Modifier
                          .fillMaxSize()
-                         .background(
-                             Brush.verticalGradient(
-                                 colors = listOf(
-                                     dominantColor,
-                                     darkDominantColor
-                                 )
-                             )
-                         )
+                         .background(bottomAverageColor)
                  ) {
                       Row(
                           modifier = Modifier.fillMaxWidth().padding(top = 64.dp, start = 124.dp, end = 24.dp), 
@@ -1394,26 +1404,21 @@ fun PlayerScreen(
                           .fillMaxWidth()
                           .graphicsLayer { alpha = contentAlpha }
                   ) {
-                      // Gradient background of dominant color starting from bottom of cover image to dark at the bottom
-                      val totalHeight = maxHeight - (imgOffsetY + imgHeight)
-                      val sliderOffset = if (sliderYDp > 0.dp) sliderYDp - (imgOffsetY + imgHeight) else 0.dp
-                      val stopFraction = if (totalHeight > 0.dp) (sliderOffset / totalHeight).coerceIn(0f, 1f) else 0f
-
-                      Box(
-                          modifier = Modifier
-                              .offset(x = 0.dp, y = imgOffsetY + imgHeight)
-                              .fillMaxWidth()
-                              .height(totalHeight)
-                              .background(
-                                  Brush.verticalGradient(
-                                      colorStops = arrayOf(
-                                          0.0f to dominantColor,
-                                          stopFraction to dominantColor,
-                                          1.0f to darkDominantColor
-                                      )
-                                  )
-                              )
-                      )
+                       Box(
+                           modifier = Modifier
+                               .offset(x = 0.dp, y = imgOffsetY + imgHeight)
+                               .fillMaxWidth()
+                               .height(maxHeight - (imgOffsetY + imgHeight))
+                               .background(
+                                   Brush.verticalGradient(
+                                       colors = listOf(
+                                           Color.Transparent,
+                                           dominantColor.copy(alpha = 0.6f),
+                                           dominantColor.copy(alpha = 0.95f)
+                                       )
+                                   )
+                               )
+                       )
                      Column(
                           modifier = Modifier
                               .fillMaxWidth()
