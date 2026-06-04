@@ -7,6 +7,7 @@ activityCompose = "1.10.1"
 composeBom = "2024.09.00"
 vanniktechPublishing = "0.35.0"
 media3 = "1.5.1"
+cloudy = "0.5.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -23,6 +24,8 @@ androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplaye
 androidx-media3-session = { group = "androidx.media3", name = "media3-session", version.ref = "media3" }
 androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
 androidx-media3-hls = { group = "androidx.media3", name = "media3-exoplayer-hls", version.ref = "media3" }
+compose-cloudy = { module = "com.github.skydoves:cloudy", version.ref = "cloudy" }
+
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

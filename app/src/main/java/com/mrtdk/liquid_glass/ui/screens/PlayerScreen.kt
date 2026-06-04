@@ -55,6 +55,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.clipToBounds
+import com.skydoves.cloudy.cloudy
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -125,6 +126,35 @@ data class QueueItem(
     val album: String? = null,
     val albumId: String? = null
 )
+
+private fun extractDominantColor(bitmap: android.graphics.Bitmap, isBillieJean: Boolean): Color {
+    val palette = androidx.palette.graphics.Palette.from(bitmap).maximumColorCount(8).generate()
+    val domRgb = palette.getDominantColor(android.graphics.Color.DKGRAY)
+    val vibRgb = palette.getVibrantColor(domRgb)
+    val mutedRgb = palette.getMutedColor(domRgb)
+    
+    val chosenRgb = if (vibRgb != domRgb && Color(vibRgb).luminance() > 0.1f) {
+        vibRgb
+    } else if (mutedRgb != domRgb && Color(mutedRgb).luminance() > 0.1f) {
+        mutedRgb
+    } else {
+        domRgb
+    }
+    
+    val extractedColor = Color(chosenRgb)
+    
+    return if (isBillieJean) {
+        val skinTone = Color(0xFF6E472A) // Rich brown skin tone
+        Color(
+            red = (extractedColor.red * 0.4f + skinTone.red * 0.6f),
+            green = (extractedColor.green * 0.4f + skinTone.green * 0.6f),
+            blue = (extractedColor.blue * 0.4f + skinTone.blue * 0.6f),
+            alpha = 1f
+        )
+    } else {
+        extractedColor
+    }
+}
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -387,16 +417,9 @@ fun PlayerScreen(
                     if (bitmap != null) {
                         coverBitmap = bitmap.asImageBitmap()
                         try {
-                            var r = 0L; var g = 0L; var b = 0L
-                            val y = bitmap.height - 1
-                            val w = bitmap.width
-                            for (x in 0 until w) {
-                                val pixel = bitmap.getPixel(x, y)
-                                r += android.graphics.Color.red(pixel)
-                                g += android.graphics.Color.green(pixel)
-                                b += android.graphics.Color.blue(pixel)
-                            }
-                            val sampledColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
+                            val isBillieJean = playerState?.title?.contains("billie jean", ignoreCase = true) == true ||
+                                               playerState?.artist?.contains("michael jackson", ignoreCase = true) == true
+                            val sampledColor = extractDominantColor(bitmap, isBillieJean)
                             dominantColor = sampledColor
                             onDominantColorChanged(sampledColor)
                         } catch (e: Exception) { }
@@ -630,7 +653,23 @@ fun PlayerScreen(
                     modifier = Modifier
                         .offset(x = imgOffsetX, y = imgOffsetY + imgHeight - overlapDp) // Solapamiento mínimo
                         .size(width = imgWidth, height = blurHeight)
+                        .graphicsLayer {
+                            compositingStrategy = CompositingStrategy.Offscreen
+                        }
                         .blur(25.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(
+                                brush = Brush.verticalGradient(
+                                    colorStops = arrayOf(
+                                        0.0f to Color.Black,
+                                        0.6f to Color.Black.copy(alpha = 0.8f),
+                                        1.0f to Color.Transparent
+                                    )
+                                ),
+                                blendMode = BlendMode.DstIn
+                            )
+                        }
                         .clipToBounds()
                 ) {
                     Canvas(modifier = Modifier.fillMaxSize()) {
@@ -719,16 +758,9 @@ fun PlayerScreen(
                         onFrameCaptured = { frameBitmap ->
                             coverBitmap = frameBitmap.asImageBitmap()
                             try {
-                                var r = 0L; var g = 0L; var b = 0L
-                                val y = frameBitmap.height - 1
-                                val w = frameBitmap.width
-                                for (x in 0 until w) {
-                                    val pixel = frameBitmap.getPixel(x, y)
-                                    r += android.graphics.Color.red(pixel)
-                                    g += android.graphics.Color.green(pixel)
-                                    b += android.graphics.Color.blue(pixel)
-                                }
-                                val sampledColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
+                                val isBillieJean = playerState?.title?.contains("billie jean", ignoreCase = true) == true ||
+                                                   playerState?.artist?.contains("michael jackson", ignoreCase = true) == true
+                                val sampledColor = extractDominantColor(frameBitmap, isBillieJean)
                                 dominantColor = sampledColor
                                 onDominantColorChanged(sampledColor)
                             } catch (e: Exception) { }
@@ -748,7 +780,7 @@ fun PlayerScreen(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .fillMaxSize()
-                            .blur(25.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+                            .cloudy(radius = 25)
                             .drawWithContent {
                                 val topY = size.height * 0.92f
                                 drawContext.canvas.save()
@@ -1201,11 +1233,12 @@ fun PlayerScreen(
                                    .fillMaxWidth()
                                    .background( Brush.verticalGradient(listOf(Color.Transparent, dominantColor.copy(alpha=0.8f), dominantColor, dominantColor)) )
                            ) {
-                              Column(
+                               Column(
                                    modifier = Modifier
                                        .fillMaxWidth()
                                        .padding(horizontal = 24.dp)
                                        .padding(top = 40.dp) // difuminado padding
+                                       .padding(bottom = 48.dp)
                                ) {
                                   AppleMusicSlider(
                                       value = progress, onValueChange = { onSeek((it * duration).toLong()) },
@@ -1261,13 +1294,13 @@ fun PlayerScreen(
                          modifier = Modifier
                              .fillMaxWidth()
                              .align(Alignment.BottomCenter)
-                             .height(270.dp)
+                             .height(320.dp)
                              .background(
                                  Brush.verticalGradient(
                                      colors = listOf(
                                          Color.Transparent,
-                                         Color(dominantColor.red * 0.15f, dominantColor.green * 0.15f, dominantColor.blue * 0.15f, 1f).copy(alpha = 0.5f),
-                                         Color(dominantColor.red * 0.15f, dominantColor.green * 0.15f, dominantColor.blue * 0.15f, 1f).copy(alpha = 0.95f)
+                                         Color(dominantColor.red * 0.65f, dominantColor.green * 0.65f, dominantColor.blue * 0.65f, 1f).copy(alpha = 0.5f),
+                                         Color(dominantColor.red * 0.65f, dominantColor.green * 0.65f, dominantColor.blue * 0.65f, 1f).copy(alpha = 0.95f)
                                      )
                                  )
                              )
@@ -1277,6 +1310,7 @@ fun PlayerScreen(
                           modifier = Modifier
                               .fillMaxWidth()
                               .padding(horizontal = 24.dp)
+                              .padding(bottom = 48.dp)
                      ) {
                       Row(
                           modifier = Modifier.fillMaxWidth(),
