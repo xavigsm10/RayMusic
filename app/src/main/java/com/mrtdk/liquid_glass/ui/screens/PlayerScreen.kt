@@ -630,7 +630,7 @@ fun PlayerScreen(
                     modifier = Modifier
                         .offset(x = imgOffsetX, y = imgOffsetY + imgHeight - overlapDp) // Solapamiento dinámico de 20%
                         .size(width = imgWidth, height = blurHeight)
-                        .blur(85.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+                        .blur(25.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
                 ) {
                     Canvas(modifier = Modifier.fillMaxSize()) {
                         val sampleHeight = 5 // Altura de muestreo del borde
@@ -732,6 +732,37 @@ fun PlayerScreen(
                                 onDominantColorChanged(sampledColor)
                             } catch (e: Exception) { }
                         }
+                    )
+                }
+
+                // Blurred bottom overlay to fade/blur the bottom of the image
+                if (!isOverlayActive && dragProgress == 0f) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(hdArtUrl)
+                            .crossfade(true)
+                            .build(),
+                        imageLoader = animatedImageLoader,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .fillMaxHeight(0.30f)
+                            .blur(25.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+                            .drawWithContent {
+                                drawContent()
+                                drawRect(
+                                    brush = Brush.verticalGradient(
+                                        colorStops = arrayOf(
+                                            0f to Color.Transparent,
+                                            0.5f to Color.Black,
+                                            1f to Color.Black
+                                        )
+                                    ),
+                                    blendMode = BlendMode.DstIn
+                                )
+                            }
                     )
                 }
             }
@@ -1217,12 +1248,33 @@ fun PlayerScreen(
                  enter = fadeIn(),
                  exit = fadeOut()
             ) {
-                 Column(
-                      modifier = Modifier
-                          .fillMaxWidth()
-                          .padding(horizontal = 24.dp)
-                          .graphicsLayer { alpha = contentAlpha }
+                 Box(
+                     modifier = Modifier
+                         .fillMaxWidth()
+                         .graphicsLayer { alpha = contentAlpha }
                  ) {
+                     // Gradient background of dominant color behind the controls
+                     Box(
+                         modifier = Modifier
+                             .fillMaxWidth()
+                             .align(Alignment.BottomCenter)
+                             .height(270.dp)
+                             .background(
+                                 Brush.verticalGradient(
+                                     colors = listOf(
+                                         Color.Transparent,
+                                         dominantColor.copy(alpha = 0.5f),
+                                         dominantColor.copy(alpha = 0.95f)
+                                     )
+                                 )
+                             )
+                     )
+
+                     Column(
+                          modifier = Modifier
+                              .fillMaxWidth()
+                              .padding(horizontal = 24.dp)
+                     ) {
                       Row(
                           modifier = Modifier.fillMaxWidth(),
                           verticalAlignment = Alignment.CenterVertically
@@ -1365,9 +1417,10 @@ fun PlayerScreen(
                               onSkipPrevious = { swipeDirection = -1; onSkipPrevious() }
                            )
                        }
-                  }
-             }
-        } // end inner Box
+                   }
+                 }
+              }
+         } // end inner Box
         } // end BoxWithConstraints
 
         if (showOptionsMenu) {
