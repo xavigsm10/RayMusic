@@ -632,7 +632,7 @@ fun PlayerScreen(
             // Capa 1: Reflejo Líquido Estirado 1D (Proyección vertical de la carátula)
             val currentCoverBitmap = coverBitmap
             if (currentCoverBitmap != null && !isOverlayActive && dragProgress == 0f) {
-                val overlapDp = 0.dp
+                val overlapDp = 2.dp
                 val density = androidx.compose.ui.platform.LocalDensity.current
                 val parentCoords = parentCoordinates
                 val sliderCoords = sliderCoordinates
@@ -765,15 +765,15 @@ fun PlayerScreen(
                             .fillMaxSize()
                             .cloudy(radius = 100)
                             .drawWithContent {
-                                val topY = size.height * 0.92f
+                                val topY = size.height * 0.75f
                                 drawContext.canvas.save()
                                 drawContext.canvas.clipRect(0f, topY, size.width, size.height)
                                 this@drawWithContent.drawContent()
                                 drawRect(
                                     brush = Brush.verticalGradient(
                                         colorStops = arrayOf(
-                                            0.92f to Color.Transparent,
-                                            0.96f to Color.Black.copy(alpha = 0.6f),
+                                            0.75f to Color.Transparent,
+                                            0.88f to Color.Black.copy(alpha = 0.6f),
                                             1.0f to Color.Black
                                         )
                                     ),
