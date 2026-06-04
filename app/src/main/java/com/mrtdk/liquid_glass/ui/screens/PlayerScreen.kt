@@ -7,6 +7,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -836,22 +837,39 @@ fun PlayerScreen(
                             )
                         }
                 ) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(hdArtUrl)
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .offset(x = childOffsetX)
-                            .width(childWidth)
-                            .fillMaxHeight()
-                            .graphicsLayer {
-                                scaleY = -1f // Invertido verticalmente
-                            }
-                            .blur(150.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
-                    )
+                    val currentBitmap = coverBitmap
+                    if (currentBitmap != null) {
+                        Image(
+                            bitmap = currentBitmap,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .offset(x = childOffsetX)
+                                .width(childWidth)
+                                .fillMaxHeight()
+                                .graphicsLayer {
+                                    scaleY = -1f // Invertido verticalmente
+                                }
+                                .blur(280.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+                        )
+                    } else {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(hdArtUrl)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .offset(x = childOffsetX)
+                                .width(childWidth)
+                                .fillMaxHeight()
+                                .graphicsLayer {
+                                    scaleY = -1f // Invertido verticalmente
+                                }
+                                .blur(280.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+                        )
+                    }
                 }
             }
 
@@ -921,7 +939,7 @@ fun PlayerScreen(
 
                 val currentAnimatedUrl = animatedArtworkUrl
 
-                if (!currentAnimatedUrl.isNullOrBlank() && (dragProgress == 0f || dragProgress == 1f)) {
+                if (!currentAnimatedUrl.isNullOrBlank()) {
                     DisposableEffect(Unit) {
                         onDispose {
                             isVideoPlaying = false
@@ -957,32 +975,57 @@ fun PlayerScreen(
 
                 // Blurred bottom overlay to fade/blur the bottom of the image
                 if (dragProgress < 1f) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(hdArtUrl)
-                            .size(150) // Downsample to 150x150 for a much more aggressive, premium soft blur
-                            .crossfade(true)
-                            .build(),
-                        imageLoader = animatedImageLoader,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .cloudy(radius = 100)
-                            .drawWithContent {
-                                drawContent()
-                                drawRect(
-                                    brush = Brush.verticalGradient(
-                                        colorStops = arrayOf(
-                                            0.75f to Color.Transparent,
-                                            0.88f to Color.Black.copy(alpha = 0.6f),
-                                            1.0f to Color.Black
-                                        )
-                                    ),
-                                    blendMode = BlendMode.DstIn
-                                )
-                            }
-                    )
+                    val currentBitmap = coverBitmap
+                    if (currentBitmap != null) {
+                        Image(
+                            bitmap = currentBitmap,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .cloudy(radius = 100)
+                                .drawWithContent {
+                                    drawContent()
+                                    drawRect(
+                                        brush = Brush.verticalGradient(
+                                            colorStops = arrayOf(
+                                                0.75f to Color.Transparent,
+                                                0.88f to Color.Black.copy(alpha = 0.6f),
+                                                1.0f to Color.Black
+                                            )
+                                        ),
+                                        blendMode = BlendMode.DstIn
+                                    )
+                                }
+                        )
+                    } else {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(hdArtUrl)
+                                .size(150) // Downsample to 150x150 for a much more aggressive, premium soft blur
+                                .crossfade(true)
+                                .build(),
+                            imageLoader = animatedImageLoader,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .cloudy(radius = 100)
+                                .drawWithContent {
+                                    drawContent()
+                                    drawRect(
+                                        brush = Brush.verticalGradient(
+                                            colorStops = arrayOf(
+                                                0.75f to Color.Transparent,
+                                                0.88f to Color.Black.copy(alpha = 0.6f),
+                                                1.0f to Color.Black
+                                            )
+                                        ),
+                                        blendMode = BlendMode.DstIn
+                                    )
+                                }
+                        )
+                    }
                 }
             }
 
@@ -2160,58 +2203,39 @@ fun AppleMusicSlider(
 }
 
 fun downloadSong(context: android.content.Context, videoId: String, title: String, artist: String, artUrl: String?, album: String? = null, silent: Boolean = false) {
-    val coroutineScope = CoroutineScope(Dispatchers.IO)
-    coroutineScope.launch {
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+        if (androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.POST_NOTIFICATIONS
+            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            if (context is android.app.Activity) {
+                androidx.core.app.ActivityCompat.requestPermissions(
+                    context,
+                    arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+                    101
+                )
+            }
+        }
+    }
+
+    try {
+        val metaString = "$title||$artist||${artUrl ?: ""}||${album ?: ""}"
+        val downloadRequest = androidx.media3.exoplayer.offline.DownloadRequest.Builder(videoId, android.net.Uri.parse("yt://$videoId"))
+            .setCustomCacheKey(videoId)
+            .setData(metaString.toByteArray(Charsets.UTF_8))
+            .build()
+        
+        androidx.media3.exoplayer.offline.DownloadService.sendAddDownload(
+            context,
+            com.mrtdk.liquid_glass.playback.ExoDownloadService::class.java,
+            downloadRequest,
+            false
+        )
         if (!silent) {
-            withContext(Dispatchers.Main) {
-                Toast.makeText(context, "Obteniendo enlace de descarga...", Toast.LENGTH_SHORT).show()
-            }
+            Toast.makeText(context, "Descarga agregada a la cola: $title", Toast.LENGTH_SHORT).show()
         }
-        val streamUrl = com.mrtdk.liquid_glass.playback.MusicPlayer.resolveUrl(videoId)
-        if (streamUrl != null) {
-            withContext(Dispatchers.Main) {
-                try {
-                    val uri = Uri.parse(streamUrl)
-                    val cleanTitle = title.replace(Regex("[\\\\/:*?\"<>|]"), "_")
-                    val cleanArtist = artist.replace(Regex("[\\\\/:*?\"<>|]"), "_")
-                    val filename = "${cleanArtist} - ${cleanTitle}.mp3"
-                    
-                    val request = DownloadManager.Request(uri)
-                        .setTitle("${artist} - ${title}")
-                        .setDescription("Descargando canción para el modo offline...")
-                        .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                        .setDestinationInExternalFilesDir(context, Environment.DIRECTORY_MUSIC, filename)
-                        .setAllowedOverMetered(true)
-                        .setAllowedOverRoaming(true)
-                        .setMimeType("audio/mpeg")
-                    
-                    val dm = context.getSystemService(android.content.Context.DOWNLOAD_SERVICE) as DownloadManager
-                    dm.enqueue(request)
-                    
-                    val fileUri = Uri.fromFile(java.io.File(context.getExternalFilesDir(Environment.DIRECTORY_MUSIC), filename))
-                    val libraryItem = LibraryItem(
-                        id = videoId,
-                        title = title,
-                        subtitle = artist,
-                        thumbnail = artUrl,
-                        type = ItemType.SONG,
-                        album = album
-                    )
-                    LibraryManager.saveDownloadedSong(libraryItem)
-                    
-                    LibraryManager.saveString("local_uri_$videoId", fileUri.toString())
-                    
-                    if (!silent) {
-                        Toast.makeText(context, "Iniciando descarga: ${title}", Toast.LENGTH_SHORT).show()
-                    }
-                } catch (e: Exception) {
-                    Toast.makeText(context, "Error al descargar: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
-            }
-        } else {
-            withContext(Dispatchers.Main) {
-                Toast.makeText(context, "No se pudo obtener el enlace de descarga de YouTube", Toast.LENGTH_SHORT).show()
-            }
-        }
+    } catch (e: Exception) {
+        Toast.makeText(context, "Error al iniciar descarga: ${e.message}", Toast.LENGTH_SHORT).show()
     }
 }

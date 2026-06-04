@@ -73,6 +73,7 @@ class MusicService : MediaSessionService() {
             val mediaItem = androidx.media3.common.MediaItem.Builder()
                 .setMediaId(state.videoId)
                 .setUri(android.net.Uri.parse("yt://${state.videoId}"))
+                .setCustomCacheKey(state.videoId)
                 .setMediaMetadata(metadata)
                 .build()
             
@@ -175,10 +176,34 @@ class MusicService : MediaSessionService() {
                 .build()
         )
 
-        val resolvingDataSourceFactory = androidx.media3.datasource.ResolvingDataSource.Factory(okHttpDataSourceFactory) { dataSpec ->
+        val downloadUtil = com.mrtdk.liquid_glass.playback.DownloadUtil.getInstance(this)
+        val downloadCache = downloadUtil.downloadCache
+        val playerCache = downloadUtil.playerCache
+
+        val cacheDataSourceFactory = androidx.media3.datasource.cache.CacheDataSource.Factory()
+            .setCache(downloadCache)
+            .setUpstreamDataSourceFactory(
+                androidx.media3.datasource.cache.CacheDataSource.Factory()
+                    .setCache(playerCache)
+                    .setUpstreamDataSourceFactory(okHttpDataSourceFactory)
+            )
+            .setCacheWriteDataSinkFactory(null)
+            .setFlags(androidx.media3.datasource.cache.CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+
+        val resolvingDataSourceFactory = androidx.media3.datasource.ResolvingDataSource.Factory(cacheDataSourceFactory) { dataSpec ->
             if (dataSpec.uri.scheme == "yt") {
                 val videoId = dataSpec.uri.host ?: dataSpec.uri.toString().removePrefix("yt://")
                 
+                // If it is in the download cache, play it instantly without resolving (supports offline play)
+                val isCached = downloadCache.isCached(
+                    videoId,
+                    dataSpec.position,
+                    if (dataSpec.length >= 0) dataSpec.length else 1
+                )
+                if (isCached) {
+                    return@Factory dataSpec
+                }
+
                 activeResolutions.incrementAndGet()
                 acquireLocks()
 

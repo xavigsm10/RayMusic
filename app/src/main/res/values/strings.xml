@@ -153,4 +153,8 @@
     <string name="menu_artist_toast_removed">Artista eliminado de favoritos</string>
     <string name="menu_artist_toast_suggest_less">Sugeriremos menos contenido de este artista</string>
     <string name="menu_artist_toast_classical">Abriendo versión clásica...</string>
+    <plurals name="n_song">
+        <item quantity="one">%1$d canción</item>
+        <item quantity="other">%1$d canciones</item>
+    </plurals>
 </resources>

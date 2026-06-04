@@ -238,6 +238,18 @@ object LibraryManager {
         if (!isInitialized) return
         dbHelper.deleteDownloadedSong(id)
         _downloadedSongs.value = dbHelper.getDownloadedSongs()
+        
+        try {
+            androidx.media3.exoplayer.offline.DownloadService.sendRemoveDownload(
+                context,
+                com.mrtdk.liquid_glass.playback.ExoDownloadService::class.java,
+                id,
+                false
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         val fileUriStr = getString("local_uri_$id")
         if (!fileUriStr.isNullOrBlank()) {
             try {
