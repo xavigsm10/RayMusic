@@ -632,7 +632,7 @@ fun PlayerScreen(
             // Capa 1: Reflejo Líquido Estirado 1D (Proyección vertical de la carátula)
             val currentCoverBitmap = coverBitmap
             if (currentCoverBitmap != null && !isOverlayActive && dragProgress == 0f) {
-                val overlapDp = 2.dp
+                val overlapDp = 5.dp
                 val density = androidx.compose.ui.platform.LocalDensity.current
                 val parentCoords = parentCoordinates
                 val sliderCoords = sliderCoordinates
@@ -756,6 +756,7 @@ fun PlayerScreen(
                     AsyncImage(
                         model = ImageRequest.Builder(context)
                             .data(hdArtUrl)
+                            .size(150) // Downsample to 150x150 for a much more aggressive, premium soft blur
                             .crossfade(true)
                             .build(),
                         imageLoader = animatedImageLoader,
@@ -765,10 +766,7 @@ fun PlayerScreen(
                             .fillMaxSize()
                             .cloudy(radius = 100)
                             .drawWithContent {
-                                val topY = size.height * 0.75f
-                                drawContext.canvas.save()
-                                drawContext.canvas.clipRect(0f, topY, size.width, size.height)
-                                this@drawWithContent.drawContent()
+                                drawContent()
                                 drawRect(
                                     brush = Brush.verticalGradient(
                                         colorStops = arrayOf(
@@ -779,7 +777,6 @@ fun PlayerScreen(
                                     ),
                                     blendMode = BlendMode.DstIn
                                 )
-                                drawContext.canvas.restore()
                             }
                     )
                 }
