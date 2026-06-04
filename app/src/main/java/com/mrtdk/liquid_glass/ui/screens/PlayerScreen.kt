@@ -632,7 +632,7 @@ fun PlayerScreen(
             // Capa 1: Reflejo Líquido Estirado 1D (Proyección vertical de la carátula)
             val currentCoverBitmap = coverBitmap
             if (currentCoverBitmap != null && !isOverlayActive && dragProgress == 0f) {
-                val overlapDp = 8.dp
+                val overlapDp = 10.dp
                 val density = androidx.compose.ui.platform.LocalDensity.current
                 val parentCoords = parentCoordinates
                 val sliderCoords = sliderCoordinates
@@ -711,6 +711,23 @@ fun PlayerScreen(
                             CompositingStrategy.Auto
                         }
                     }
+                    .then(
+                        if (!isOverlayActive && dragProgress == 0f) {
+                            Modifier.drawWithContent {
+                                drawContent()
+                                drawRect(
+                                    brush = Brush.verticalGradient(
+                                        colorStops = arrayOf(
+                                            0f to Color.Black,
+                                            0.97f to Color.Black,
+                                            1f to Color.Transparent
+                                        )
+                                    ),
+                                    blendMode = BlendMode.DstIn
+                                )
+                            }
+                        } else Modifier
+                    )
             ) {
                 // Base sharp album cover (always drawn in background during drag or before playback starts)
                 AsyncImage(
