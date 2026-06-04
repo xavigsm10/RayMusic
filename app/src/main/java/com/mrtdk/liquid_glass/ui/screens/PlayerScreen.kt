@@ -671,7 +671,6 @@ fun PlayerScreen(
                                 blendMode = BlendMode.DstIn
                             )
                         }
-                        .clipToBounds()
                 ) {
                     Canvas(modifier = Modifier.fillMaxSize()) {
                         val sampleHeight = 5 // Altura de muestreo del borde
