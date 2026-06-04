@@ -418,12 +418,6 @@ fun PlayerScreen(
                     if (bitmap != null) {
                         coverBitmap = bitmap.asImageBitmap()
                         try {
-                            val isBillieJean = playerState?.title?.contains("billie jean", ignoreCase = true) == true ||
-                                               playerState?.artist?.contains("michael jackson", ignoreCase = true) == true
-                            val sampledColor = extractDominantColor(bitmap, isBillieJean)
-                            dominantColor = sampledColor
-                            onDominantColorChanged(sampledColor)
-
                             // Mismo método de los álbumes (promedio de la fila inferior de píxeles)
                             var r = 0L; var g = 0L; var b = 0L
                             val yCoord = bitmap.height - 1
@@ -434,14 +428,17 @@ fun PlayerScreen(
                                 g += android.graphics.Color.green(pixel)
                                 b += android.graphics.Color.blue(pixel)
                             }
-                            bottomAverageColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
+                            val avgColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
+                            bottomAverageColor = avgColor
+                            dominantColor = avgColor
+                            onDominantColorChanged(avgColor)
                         } catch (e: Exception) { }
                     }
                 }
             }
         }
         
-        val isLightBackground = dominantColor.luminance() > 0.35f
+        val isLightBackground = bottomAverageColor.luminance() > 0.35f
         val contentColor = if (isLightBackground) Color(0xFF1A1A1A) else Color.White
 
         val animatedImageLoader = remember(context) {
@@ -502,6 +499,12 @@ fun PlayerScreen(
             val expandedX = 0.dp
             val expandedY = 0.dp
             
+            val startWidth = if (isOverlayActive) lyricsImageSize else expandedWidth
+            val startHeight = if (isOverlayActive) lyricsImageSize else expandedHeight
+            val startOffsetX = if (isOverlayActive) 24.dp else expandedX
+            val startOffsetY = if (isOverlayActive) 64.dp else expandedY
+            val startCorner = if (isOverlayActive) 8.dp else 12.dp
+
             val threshold = 0.70f
             
             val imgWidthTarget: androidx.compose.ui.unit.Dp
@@ -510,34 +513,26 @@ fun PlayerScreen(
             val imgOffsetYTarget: androidx.compose.ui.unit.Dp
             val imageCornerTarget: androidx.compose.ui.unit.Dp
             val contentAlpha: Float
+            val overlayAlpha: Float
             
-            if (isOverlayActive) {
-                imgWidthTarget = lyricsImageSize
-                imgHeightTarget = lyricsImageSize
-                imgOffsetXTarget = 24.dp
-                imgOffsetYTarget = 64.dp
-                imageCornerTarget = 8.dp
-                contentAlpha = 1f
+            if (dragProgress <= threshold) {
+                val p1 = if (threshold > 0f) dragProgress / threshold else 0f
+                imgWidthTarget = startWidth
+                imgHeightTarget = startHeight
+                imgOffsetXTarget = startOffsetX
+                imgOffsetYTarget = startOffsetY
+                imageCornerTarget = startCorner
+                contentAlpha = (1f - p1).coerceIn(0f, 1f)
+                overlayAlpha = (1f - p1).coerceIn(0f, 1f)
             } else {
-                if (dragProgress <= threshold) {
-                    val p1 = if (threshold > 0f) dragProgress / threshold else 0f
-                    imgWidthTarget = expandedWidth
-                    imgHeightTarget = expandedHeight
-                    imgOffsetXTarget = expandedX
-                    imgOffsetYTarget = expandedY
-                    imageCornerTarget = 12.dp
-                    contentAlpha = (1f - p1).coerceIn(0f, 1f)
-                } else {
-                    val p2 = if (threshold < 1f) (dragProgress - threshold) / (1f - threshold) else 1f
-                    imgWidthTarget = androidx.compose.ui.unit.lerp(expandedWidth, 40.dp, p2)
-                    imgHeightTarget = androidx.compose.ui.unit.lerp(expandedHeight, 40.dp, p2)
-                    
-                    imgOffsetXTarget = androidx.compose.ui.unit.lerp(expandedX, targetOffsetX, p2)
-                    imgOffsetYTarget = expandedY
-                    
-                    imageCornerTarget = androidx.compose.ui.unit.lerp(12.dp, 20.dp, p2)
-                    contentAlpha = 0f
-                }
+                val p2 = if (threshold < 1f) (dragProgress - threshold) / (1f - threshold) else 1f
+                imgWidthTarget = androidx.compose.ui.unit.lerp(startWidth, 40.dp, p2)
+                imgHeightTarget = androidx.compose.ui.unit.lerp(startHeight, 40.dp, p2)
+                imgOffsetXTarget = androidx.compose.ui.unit.lerp(startOffsetX, targetOffsetX, p2)
+                imgOffsetYTarget = androidx.compose.ui.unit.lerp(startOffsetY, 0.dp, p2)
+                imageCornerTarget = androidx.compose.ui.unit.lerp(startCorner, 20.dp, p2)
+                contentAlpha = 0f
+                overlayAlpha = 0f
             }
 
             val imgWidth by androidx.compose.animation.core.animateDpAsState(imgWidthTarget)
@@ -546,9 +541,10 @@ fun PlayerScreen(
             val imgOffsetY by androidx.compose.animation.core.animateDpAsState(imgOffsetYTarget)
             val imgCorner by androidx.compose.animation.core.animateDpAsState(imageCornerTarget)
 
-            val nestedScrollConnection = remember(maxDragDistance, onClose) {
+            val nestedScrollConnection = remember(maxDragDistance, onClose, showLyrics, showQueue) {
                 object : NestedScrollConnection {
                     override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                        if (showLyrics || showQueue) return Offset.Zero
                         val delta = available.y
                         val currentOffsetY = dragOffsetY.value
                         if (currentOffsetY > 0f && delta < 0f) {
@@ -565,6 +561,7 @@ fun PlayerScreen(
                         available: Offset,
                         source: NestedScrollSource
                     ): Offset {
+                        if (showLyrics || showQueue) return Offset.Zero
                         val delta = available.y
                         val currentOffsetY = dragOffsetY.value
                         
@@ -583,6 +580,7 @@ fun PlayerScreen(
                     }
 
                     override suspend fun onPreFling(available: Velocity): Velocity {
+                        if (showLyrics || showQueue) return Velocity.Zero
                         val currentOffsetY = dragOffsetY.value
                         if (currentOffsetY > with(density) { 150.dp.toPx() }) {
                             dragOffsetY.animateTo(
@@ -604,16 +602,16 @@ fun PlayerScreen(
                     .graphicsLayer {
                         translationY = offsetY
                     }
-                    .background(dominantColor.copy(alpha = bgAlpha))
+                    .background(bottomAverageColor.copy(alpha = bgAlpha))
                     .drawWithContent {
-                        if (dragProgress == 0f) {
+                        if (dragProgress < 1f) {
                             drawRect(
                                 brush = Brush.verticalGradient(
                                     colors = listOf(
                                         Color.Transparent,
-                                        dominantColor.copy(alpha = 0.25f),
-                                        dominantColor.copy(alpha = 0.7f),
-                                        dominantColor
+                                        bottomAverageColor.copy(alpha = 0.25f),
+                                        bottomAverageColor.copy(alpha = 0.7f),
+                                        bottomAverageColor
                                     ),
                                     startY = this.size.height * 0.55f,
                                     endY = this.size.height
@@ -653,7 +651,7 @@ fun PlayerScreen(
 
             // Capa 1: Reflejo Líquido Estirado 1D (Proyección vertical de la carátula)
             val currentCoverBitmap = coverBitmap
-            if (currentCoverBitmap != null && !isOverlayActive && dragProgress == 0f) {
+            if (currentCoverBitmap != null && dragProgress < 1f && !isOverlayActive) {
                 val overlapDp = 30.dp
                 val blurHeight = if (sliderYDp > 0.dp) {
                     (sliderYDp - (imgOffsetY + imgHeight - overlapDp)).coerceAtLeast(0.dp)
@@ -666,7 +664,7 @@ fun PlayerScreen(
                     modifier = Modifier
                         .offset(x = 0.dp, y = imgOffsetY + imgHeight - overlapDp)
                         .fillMaxWidth()
-                        .height(blurHeight)
+                        .height(blurHeight + 40.dp)
                         .graphicsLayer {
                             compositingStrategy = CompositingStrategy.Offscreen
                         }
@@ -779,6 +777,84 @@ fun PlayerScreen(
                 }
             }
 
+            // Capa 4: Reflejo invertido con difuminado extremo
+            if (hdArtUrl != null && dragProgress < 1f) {
+                val reflectionWidth: androidx.compose.ui.unit.Dp
+                val reflectionHeight: androidx.compose.ui.unit.Dp
+                val reflectionX: androidx.compose.ui.unit.Dp
+                val reflectionY: androidx.compose.ui.unit.Dp
+                val childWidth: androidx.compose.ui.unit.Dp
+                val childOffsetX: androidx.compose.ui.unit.Dp
+                val reflectionGradient: Array<Pair<Float, Color>>
+
+                if (isOverlayActive) {
+                    reflectionWidth = maxWidth
+                    reflectionHeight = maxHeight
+                    reflectionX = 0.dp
+                    reflectionY = 0.dp
+                    childWidth = maxWidth
+                    childOffsetX = 0.dp
+                    reflectionGradient = arrayOf(
+                        0.0f to Color.Black,
+                        0.85f to Color.Black,
+                        1.0f to Color.Black.copy(alpha = 0.6f)
+                    )
+                } else {
+                    reflectionWidth = maxWidth
+                    reflectionHeight = imgHeight
+                    reflectionX = 0.dp
+                    childWidth = imgWidth
+                    childOffsetX = imgOffsetX
+                    
+                    val overlapDp = 24.dp
+                    reflectionY = (if (sliderYDp > 0.dp) sliderYDp else (imgOffsetY + imgHeight)) - overlapDp
+                    reflectionGradient = arrayOf(
+                        0.0f to Color.Transparent,
+                        0.25f to Color.Black,
+                        0.5f to Color.Black.copy(alpha = 0.8f),
+                        0.8f to Color.Black.copy(alpha = 0.2f),
+                        1.0f to Color.Transparent
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .offset(x = reflectionX, y = reflectionY)
+                        .width(reflectionWidth)
+                        .height(reflectionHeight)
+                        .graphicsLayer {
+                            compositingStrategy = CompositingStrategy.Offscreen
+                            alpha = (1f - dragProgress).coerceIn(0f, 1f)
+                        }
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(
+                                brush = Brush.verticalGradient(
+                                    colorStops = reflectionGradient
+                                ),
+                                blendMode = BlendMode.DstIn
+                            )
+                        }
+                ) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(hdArtUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .offset(x = childOffsetX)
+                            .width(childWidth)
+                            .fillMaxHeight()
+                            .graphicsLayer {
+                                scaleY = -1f // Invertido verticalmente
+                            }
+                            .blur(150.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+                    )
+                }
+            }
+
             // THE MAIN IMAGE (Capa 3: Portada Principal)
             Box(
                 modifier = Modifier
@@ -806,15 +882,15 @@ fun PlayerScreen(
                             RoundedCornerShape(imgCorner.toPx())
                         }
                         clip = true
-                        // Apply offscreen strategy only when player is fully expanded and overlay is inactive
-                        compositingStrategy = if (!isOverlayActive && dragProgress == 0f) {
+                        // Apply offscreen strategy only when player is not fully collapsed
+                        compositingStrategy = if (dragProgress < 1f) {
                             CompositingStrategy.Offscreen
                         } else {
                             CompositingStrategy.Auto
                         }
                     }
                     .then(
-                        if (!isOverlayActive && dragProgress == 0f) {
+                        if (dragProgress < 1f) {
                             Modifier.drawWithContent {
                                 drawContent()
                                 drawRect(
@@ -860,12 +936,6 @@ fun PlayerScreen(
                         onFrameCaptured = { frameBitmap ->
                             coverBitmap = frameBitmap.asImageBitmap()
                             try {
-                                val isBillieJean = playerState?.title?.contains("billie jean", ignoreCase = true) == true ||
-                                                   playerState?.artist?.contains("michael jackson", ignoreCase = true) == true
-                                val sampledColor = extractDominantColor(frameBitmap, isBillieJean)
-                                dominantColor = sampledColor
-                                onDominantColorChanged(sampledColor)
-
                                 // Promedio de la fila inferior de píxeles
                                 var r = 0L; var g = 0L; var b = 0L
                                 val yCoord = frameBitmap.height - 1
@@ -876,14 +946,17 @@ fun PlayerScreen(
                                     g += android.graphics.Color.green(pixel)
                                     b += android.graphics.Color.blue(pixel)
                                 }
-                                bottomAverageColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
+                                val avgColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
+                                bottomAverageColor = avgColor
+                                dominantColor = avgColor
+                                onDominantColorChanged(avgColor)
                             } catch (e: Exception) { }
                         }
                     )
                 }
 
                 // Blurred bottom overlay to fade/blur the bottom of the image
-                if (!isOverlayActive && dragProgress == 0f) {
+                if (dragProgress < 1f) {
                     AsyncImage(
                         model = ImageRequest.Builder(context)
                             .data(hdArtUrl)
@@ -925,7 +998,7 @@ fun PlayerScreen(
                  Column(
                      modifier = Modifier
                          .fillMaxSize()
-                         .background(bottomAverageColor)
+                         .graphicsLayer { alpha = overlayAlpha }
                  ) {
                       Row(
                           modifier = Modifier.fillMaxWidth().padding(top = 64.dp, start = 124.dp, end = 24.dp), 
@@ -1353,7 +1426,7 @@ fun PlayerScreen(
                                        .fillMaxWidth()
                                        .padding(horizontal = 24.dp)
                                        .padding(top = 40.dp) // difuminado padding
-                                       .padding(bottom = 48.dp)
+                                       .padding(bottom = 0.dp)
                                ) {
                                   AppleMusicSlider(
                                       value = progress, onValueChange = { onSeek((it * duration).toLong()) },
@@ -1404,21 +1477,6 @@ fun PlayerScreen(
                           .fillMaxWidth()
                           .graphicsLayer { alpha = contentAlpha }
                   ) {
-                       Box(
-                           modifier = Modifier
-                               .offset(x = 0.dp, y = imgOffsetY + imgHeight)
-                               .fillMaxWidth()
-                               .height(maxHeight - (imgOffsetY + imgHeight))
-                               .background(
-                                   Brush.verticalGradient(
-                                       colors = listOf(
-                                           Color.Transparent,
-                                           dominantColor.copy(alpha = 0.6f),
-                                           dominantColor.copy(alpha = 0.95f)
-                                       )
-                                   )
-                               )
-                       )
                      Column(
                           modifier = Modifier
                               .fillMaxWidth()
