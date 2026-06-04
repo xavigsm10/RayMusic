@@ -264,6 +264,14 @@ fun PlayerScreen(
         }
 
         var dominantColor by remember { mutableStateOf(Color(0xFF1E1E1E)) }
+        val darkDominantColor = remember(dominantColor) {
+            Color(
+                red = dominantColor.red * 0.12f,
+                green = dominantColor.green * 0.12f,
+                blue = dominantColor.blue * 0.12f,
+                alpha = 1f
+            )
+        }
         var parentCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
         var sliderCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
 
@@ -470,6 +478,16 @@ fun PlayerScreen(
             
             val density = androidx.compose.ui.platform.LocalDensity.current
             val maxDragDistance = with(density) { targetOffsetY.toPx() }
+            val sliderYDp = remember(sliderCoordinates, parentCoordinates) {
+                val sliderCoords = sliderCoordinates
+                val parentCoords = parentCoordinates
+                if (sliderCoords != null && parentCoords != null && sliderCoords.isAttached && parentCoords.isAttached) {
+                    val localOffset = parentCoords.localPositionOf(sliderCoords, Offset.Zero)
+                    with(density) { localOffset.y.toDp() }
+                } else {
+                    0.dp
+                }
+            }
             val dragProgress = if (maxDragDistance > 0f) (offsetY / maxDragDistance).coerceIn(0f, 1f) else 0f
             
             val bgAlpha = 1f - dragProgress
@@ -628,36 +646,10 @@ fun PlayerScreen(
                     }
             ) {
 
-            // Fondo difuminado de la carátula (Apple Music style)
-            if (!isOverlayActive && dragProgress == 0f) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(hdArtUrl)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .blur(100.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
-                        .graphicsLayer { alpha = 0.4f }
-                )
-            }
-
             // Capa 1: Reflejo Líquido Estirado 1D (Proyección vertical de la carátula)
             val currentCoverBitmap = coverBitmap
             if (currentCoverBitmap != null && !isOverlayActive && dragProgress == 0f) {
                 val overlapDp = 30.dp
-                val sliderYDp = remember(sliderCoordinates, parentCoordinates) {
-                    val sliderCoords = sliderCoordinates
-                    val parentCoords = parentCoordinates
-                    if (sliderCoords != null && parentCoords != null && sliderCoords.isAttached && parentCoords.isAttached) {
-                        val localOffset = parentCoords.localPositionOf(sliderCoords, Offset.Zero)
-                        with(density) { localOffset.y.toDp() }
-                    } else {
-                        0.dp
-                    }
-                }
                 val blurHeight = if (sliderYDp > 0.dp) {
                     (sliderYDp - (imgOffsetY + imgHeight - overlapDp)).coerceAtLeast(0.dp)
                 } else {
@@ -913,7 +905,18 @@ fun PlayerScreen(
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
-                 Column(modifier = Modifier.fillMaxSize()) {
+                 Column(
+                     modifier = Modifier
+                         .fillMaxSize()
+                         .background(
+                             Brush.verticalGradient(
+                                 colors = listOf(
+                                     dominantColor,
+                                     darkDominantColor
+                                 )
+                             )
+                         )
+                 ) {
                       Row(
                           modifier = Modifier.fillMaxWidth().padding(top = 64.dp, start = 124.dp, end = 24.dp), 
                           verticalAlignment = Alignment.CenterVertically
@@ -1391,18 +1394,22 @@ fun PlayerScreen(
                           .fillMaxWidth()
                           .graphicsLayer { alpha = contentAlpha }
                   ) {
-                      // Gradient background of dominant color starting from bottom of cover image
+                      // Gradient background of dominant color starting from bottom of cover image to dark at the bottom
+                      val totalHeight = maxHeight - (imgOffsetY + imgHeight)
+                      val sliderOffset = if (sliderYDp > 0.dp) sliderYDp - (imgOffsetY + imgHeight) else 0.dp
+                      val stopFraction = if (totalHeight > 0.dp) (sliderOffset / totalHeight).coerceIn(0f, 1f) else 0f
+
                       Box(
                           modifier = Modifier
                               .offset(x = 0.dp, y = imgOffsetY + imgHeight)
                               .fillMaxWidth()
-                              .height(maxHeight - (imgOffsetY + imgHeight))
+                              .height(totalHeight)
                               .background(
                                   Brush.verticalGradient(
-                                      colors = listOf(
-                                          Color.Transparent,
-                                          dominantColor.copy(alpha = 0.6f),
-                                          dominantColor.copy(alpha = 0.95f)
+                                      colorStops = arrayOf(
+                                          0.0f to dominantColor,
+                                          stopFraction to dominantColor,
+                                          1.0f to darkDominantColor
                                       )
                                   )
                               )
