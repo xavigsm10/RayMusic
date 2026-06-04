@@ -633,22 +633,8 @@ fun PlayerScreen(
             val currentCoverBitmap = coverBitmap
             if (currentCoverBitmap != null && !isOverlayActive && dragProgress == 0f) {
                 val overlapDp = 30.dp
-                val density = androidx.compose.ui.platform.LocalDensity.current
-                val parentCoords = parentCoordinates
-                val sliderCoords = sliderCoordinates
-                val sliderYInParent = if (parentCoords != null && sliderCoords != null && parentCoords.isAttached && sliderCoords.isAttached) {
-                    parentCoords.localPositionOf(sliderCoords, androidx.compose.ui.geometry.Offset.Zero).y
-                } else {
-                    0f
-                }
-                val sliderYDp = with(density) { sliderYInParent.toDp() }
-                
-                val blurHeight = if (sliderYDp > 0.dp) {
-                    (sliderYDp - (imgOffsetY + imgHeight - overlapDp)).coerceAtLeast(0.dp)
-                } else {
-                    maxHeight - (imgOffsetY + imgHeight) + overlapDp
-                }
-                // Caja del reflejo posicionada bajo la portada, desvaneciéndose suavemente al fondo
+                val blurHeight = maxHeight - (imgOffsetY + imgHeight) + overlapDp
+                // Caja del reflejo posicionada bajo la portada, llenando todo el espacio inferior
                 Box(
                     modifier = Modifier
                         .offset(x = 0.dp, y = imgOffsetY + imgHeight - overlapDp)
@@ -664,9 +650,10 @@ fun PlayerScreen(
                                 brush = Brush.verticalGradient(
                                     colorStops = arrayOf(
                                         0.0f to Color.Black,
-                                        0.12f to Color.Black,
-                                        0.4f to Color.Black.copy(alpha = 0.7f),
-                                        0.7f to Color.Black.copy(alpha = 0.35f),
+                                        0.1f to Color.Black,
+                                        0.3f to Color.Black.copy(alpha = 0.8f),
+                                        0.6f to Color.Black.copy(alpha = 0.5f),
+                                        0.85f to Color.Black.copy(alpha = 0.3f),
                                         1.0f to Color.Transparent
                                     )
                                 ),
