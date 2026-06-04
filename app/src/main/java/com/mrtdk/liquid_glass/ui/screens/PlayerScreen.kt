@@ -628,6 +628,21 @@ fun PlayerScreen(
                     }
             ) {
 
+            // Fondo difuminado de la carátula (Apple Music style)
+            if (!isOverlayActive && dragProgress == 0f) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(hdArtUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .blur(100.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+                        .graphicsLayer { alpha = 0.4f }
+                )
+            }
 
             // Capa 1: Reflejo Líquido Estirado 1D (Proyección vertical de la carátula)
             val currentCoverBitmap = coverBitmap
