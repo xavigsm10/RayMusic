@@ -688,13 +688,47 @@ fun PlayerScreen(
 
                         val sampleHeight = 5 // Altura de muestreo del borde
                         val sampleH = sampleHeight.coerceAtMost(currentCoverBitmap.height).coerceAtLeast(1)
-                        val srcY = (currentCoverBitmap.height - sampleH).coerceAtLeast(0)
 
-                        // 1. Dibuja la parte izquierda (difuminado del píxel del borde izquierdo)
+                        // Mapeo del recorte de la portada debido a ContentScale.Crop en la pantalla
+                        val containerW = imgW
+                        val containerH = imgHeight.toPx()
+                        val bitmapW = currentCoverBitmap.width.toFloat()
+                        val bitmapH = currentCoverBitmap.height.toFloat()
+
+                        val containerRatio = containerW / containerH
+                        val bitmapRatio = bitmapW / bitmapH
+
+                        val srcX: Float
+                        val srcWidth: Float
+                        val srcY: Float
+
+                        if (containerRatio < bitmapRatio) {
+                            // El contenedor es proporcionalmente más alto (se recorta izq/der)
+                            val scale = containerH / bitmapH
+                            val visibleWidth = containerW / scale
+                            srcX = (bitmapW - visibleWidth) / 2f
+                            srcWidth = visibleWidth
+                            srcY = bitmapH - sampleH
+                        } else {
+                            // El contenedor es proporcionalmente más ancho (se recorta arriba/abajo)
+                            val scale = containerW / bitmapW
+                            val visibleHeight = containerH / scale
+                            srcX = 0f
+                            srcWidth = bitmapW
+                            val cropY = (bitmapH - visibleHeight) / 2f
+                            val visibleBottomY = cropY + visibleHeight
+                            srcY = (visibleBottomY - sampleH).coerceIn(0f, bitmapH - sampleH)
+                        }
+
+                        val srcXInt = srcX.toInt().coerceIn(0, currentCoverBitmap.width - 1)
+                        val srcWInt = srcWidth.toInt().coerceIn(1, currentCoverBitmap.width - srcXInt)
+                        val srcYInt = srcY.toInt().coerceIn(0, currentCoverBitmap.height - sampleH)
+
+                        // 1. Dibuja la parte izquierda (difuminado del píxel del borde izquierdo visible)
                         if (imgXInt > 0) {
                             drawImage(
                                 image = currentCoverBitmap,
-                                srcOffset = IntOffset(0, srcY),
+                                srcOffset = IntOffset(srcXInt, srcYInt),
                                 srcSize = IntSize(1, sampleH),
                                 dstOffset = IntOffset.Zero,
                                 dstSize = IntSize(imgXInt, screenH.toInt()),
@@ -702,26 +736,26 @@ fun PlayerScreen(
                             )
                         }
 
-                        // 2. Dibuja la parte central (alineada perfectamente con la carátula)
+                        // 2. Dibuja la parte central (alineada perfectamente con la carátula visible)
                         if (imgWInt > 0) {
                             drawImage(
                                 image = currentCoverBitmap,
-                                srcOffset = IntOffset(0, srcY),
-                                srcSize = IntSize(currentCoverBitmap.width, sampleH),
+                                srcOffset = IntOffset(srcXInt, srcYInt),
+                                srcSize = IntSize(srcWInt, sampleH),
                                 dstOffset = IntOffset(imgXInt, 0),
                                 dstSize = IntSize(imgWInt, screenH.toInt()),
                                 filterQuality = FilterQuality.Low
                             )
                         }
 
-                        // 3. Dibuja la parte derecha (difuminado del píxel del borde derecho)
+                        // 3. Dibuja la parte derecha (difuminado del píxel del borde derecho visible)
                         val rightX = imgXInt + imgWInt
                         if (rightX < screenWInt) {
                             val rightW = screenWInt - rightX
                             if (rightW > 0) {
                                 drawImage(
                                     image = currentCoverBitmap,
-                                    srcOffset = IntOffset((currentCoverBitmap.width - 1).coerceAtLeast(0), srcY),
+                                    srcOffset = IntOffset((srcXInt + srcWInt - 1).coerceIn(0, currentCoverBitmap.width - 1), srcYInt),
                                     srcSize = IntSize(1, sampleH),
                                     dstOffset = IntOffset(rightX, 0),
                                     dstSize = IntSize(rightW, screenH.toInt()),
