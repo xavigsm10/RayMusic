@@ -651,8 +651,9 @@ fun PlayerScreen(
                 // Caja del reflejo posicionada bajo la portada, desvaneciéndose suavemente al fondo
                 Box(
                     modifier = Modifier
-                        .offset(x = imgOffsetX, y = imgOffsetY + imgHeight - overlapDp) // Solapamiento mínimo
-                        .size(width = imgWidth, height = blurHeight)
+                        .offset(x = 0.dp, y = imgOffsetY + imgHeight - overlapDp)
+                        .fillMaxWidth()
+                        .height(blurHeight)
                         .graphicsLayer {
                             compositingStrategy = CompositingStrategy.Offscreen
                         }
