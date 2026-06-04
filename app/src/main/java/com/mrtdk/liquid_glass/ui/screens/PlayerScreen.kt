@@ -609,7 +609,7 @@ fun PlayerScreen(
             // Capa 1: Reflejo Líquido Estirado 1D (Proyección vertical de la carátula)
             val currentCoverBitmap = coverBitmap
             if (currentCoverBitmap != null && !isOverlayActive && dragProgress == 0f) {
-                val overlapDp = imgHeight * 0.20f
+                val overlapDp = imgHeight * 0.03f
                 val density = androidx.compose.ui.platform.LocalDensity.current
                 val parentCoords = parentCoordinates
                 val sliderCoords = sliderCoordinates
@@ -679,7 +679,7 @@ fun PlayerScreen(
                                     brush = Brush.verticalGradient(
                                         colorStops = arrayOf(
                                             0f to Color.Black,
-                                            0.80f to Color.Black,
+                                            0.92f to Color.Black,
                                             1f to Color.Transparent
                                         )
                                     ),
@@ -748,7 +748,7 @@ fun PlayerScreen(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .fillMaxWidth()
-                            .fillMaxHeight(0.30f)
+                            .fillMaxHeight(0.08f)
                             .blur(25.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
                             .drawWithContent {
                                 drawContent()
@@ -756,7 +756,7 @@ fun PlayerScreen(
                                     brush = Brush.verticalGradient(
                                         colorStops = arrayOf(
                                             0f to Color.Transparent,
-                                            0.5f to Color.Black,
+                                            0.3f to Color.Black,
                                             1f to Color.Black
                                         )
                                     ),
