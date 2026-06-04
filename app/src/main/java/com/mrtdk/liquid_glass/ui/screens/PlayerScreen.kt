@@ -629,10 +629,61 @@ fun PlayerScreen(
             ) {
 
 
-            // Capa 1: Reflejo Líquido Estirado 1D (Proyección vertical de la carátula) - Disabled to match mockups
+            // Capa 1: Reflejo Líquido Estirado 1D (Proyección vertical de la carátula)
             val currentCoverBitmap = coverBitmap
             if (currentCoverBitmap != null && !isOverlayActive && dragProgress == 0f) {
-                // Disabled
+                val overlapDp = 1.dp
+                val density = androidx.compose.ui.platform.LocalDensity.current
+                val parentCoords = parentCoordinates
+                val sliderCoords = sliderCoordinates
+                val sliderYInParent = if (parentCoords != null && sliderCoords != null && parentCoords.isAttached && sliderCoords.isAttached) {
+                    parentCoords.localPositionOf(sliderCoords, androidx.compose.ui.geometry.Offset.Zero).y
+                } else {
+                    0f
+                }
+                val sliderYDp = with(density) { sliderYInParent.toDp() }
+                
+                val blurHeight = if (sliderYDp > 0.dp) {
+                    (sliderYDp - (imgOffsetY + imgHeight - overlapDp)).coerceAtLeast(0.dp)
+                } else {
+                    maxHeight - (imgOffsetY + imgHeight) + overlapDp
+                }
+                // Caja del reflejo posicionada bajo la portada, desvaneciéndose suavemente al fondo
+                Box(
+                    modifier = Modifier
+                        .offset(x = imgOffsetX, y = imgOffsetY + imgHeight - overlapDp) // Solapamiento mínimo
+                        .size(width = imgWidth, height = blurHeight)
+                        .graphicsLayer {
+                            compositingStrategy = CompositingStrategy.Offscreen
+                        }
+                        .blur(25.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(
+                                brush = Brush.verticalGradient(
+                                    colorStops = arrayOf(
+                                        0.0f to Color.Black,
+                                        0.6f to Color.Black.copy(alpha = 0.8f),
+                                        1.0f to Color.Transparent
+                                    )
+                                ),
+                                blendMode = BlendMode.DstIn
+                            )
+                        }
+                        .clipToBounds()
+                ) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val sampleHeight = 5 // Altura de muestreo del borde
+                        drawImage(
+                            image = currentCoverBitmap,
+                            srcOffset = IntOffset(0, currentCoverBitmap.height - sampleHeight),
+                            srcSize = IntSize(currentCoverBitmap.width, sampleHeight),
+                            dstOffset = IntOffset.Zero,
+                            dstSize = IntSize(size.width.toInt(), size.height.toInt()),
+                            filterQuality = FilterQuality.Low
+                        )
+                    }
+                }
             }
 
             // THE MAIN IMAGE (Capa 3: Portada Principal)
@@ -668,7 +719,7 @@ fun PlayerScreen(
                                     brush = Brush.verticalGradient(
                                         colorStops = arrayOf(
                                             0f to Color.Black,
-                                            0.75f to Color.Black,
+                                            0.92f to Color.Black,
                                             1f to Color.Transparent
                                         )
                                     ),
@@ -731,15 +782,15 @@ fun PlayerScreen(
                             .fillMaxSize()
                             .cloudy(radius = 25)
                             .drawWithContent {
-                                val topY = size.height * 0.75f
+                                val topY = size.height * 0.92f
                                 drawContext.canvas.save()
                                 drawContext.canvas.clipRect(0f, topY, size.width, size.height)
                                 this@drawWithContent.drawContent()
                                 drawRect(
                                     brush = Brush.verticalGradient(
                                         colorStops = arrayOf(
-                                            0.75f to Color.Transparent,
-                                            0.88f to Color.Black,
+                                            0.92f to Color.Transparent,
+                                            0.96f to Color.Black,
                                             1.0f to Color.Black
                                         )
                                     ),
@@ -1234,60 +1285,26 @@ fun PlayerScreen(
                  exit = fadeOut()
             ) {
                  Box(
-                     modifier = Modifier
-                         .fillMaxWidth()
-                         .graphicsLayer { alpha = contentAlpha }
-                 ) {
-                     // Gradient background of 2D blurred artwork behind the controls
-                     Box(
-                         modifier = Modifier
-                             .fillMaxWidth()
-                             .align(Alignment.BottomCenter)
-                             .height(380.dp)
-                             .graphicsLayer {
-                                 compositingStrategy = CompositingStrategy.Offscreen
-                             }
-                             .drawWithContent {
-                                 drawContent()
-                                 drawRect(
-                                     brush = Brush.verticalGradient(
-                                         colors = listOf(
-                                             Color.Transparent,
-                                             Color.Black
-                                         )
-                                     ),
-                                     blendMode = BlendMode.DstIn
-                                 )
-                             }
-                     ) {
-                         AsyncImage(
-                             model = ImageRequest.Builder(context)
-                                 .data(hdArtUrl)
-                                 .crossfade(true)
-                                 .build(),
-                             imageLoader = animatedImageLoader,
-                             contentDescription = null,
-                             contentScale = ContentScale.Crop,
-                             modifier = Modifier
-                                 .fillMaxSize()
-                                 .cloudy(radius = 80)
-                         )
-                         
-                         Box(
-                             modifier = Modifier
-                                 .fillMaxSize()
-                                 .background(
-                                     Brush.verticalGradient(
-                                         colors = listOf(
-                                             Color.Black.copy(alpha = 0.2f),
-                                             Color.Black.copy(alpha = 0.5f),
-                                             Color.Black.copy(alpha = 0.75f)
-                                         )
-                                     )
-                                 )
-                         )
-                     }
-
+                      modifier = Modifier
+                          .fillMaxWidth()
+                          .graphicsLayer { alpha = contentAlpha }
+                  ) {
+                      // Gradient background of dominant color behind the controls
+                      Box(
+                          modifier = Modifier
+                              .fillMaxWidth()
+                              .align(Alignment.BottomCenter)
+                              .height(270.dp)
+                              .background(
+                                  Brush.verticalGradient(
+                                      colors = listOf(
+                                          Color.Transparent,
+                                          dominantColor.copy(alpha = 0.5f),
+                                          dominantColor.copy(alpha = 0.95f)
+                                      )
+                                  )
+                              )
+                      )
                      Column(
                           modifier = Modifier
                               .fillMaxWidth()
