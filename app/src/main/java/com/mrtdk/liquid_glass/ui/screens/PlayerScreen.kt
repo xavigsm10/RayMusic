@@ -662,8 +662,7 @@ fun PlayerScreen(
                             drawRect(
                                 brush = Brush.verticalGradient(
                                     colorStops = arrayOf(
-                                        0.0f to Color.Transparent,
-                                        0.05f to Color.Black,
+                                        0.0f to Color.Black,
                                         0.6f to Color.Black.copy(alpha = 0.8f),
                                         1.0f to Color.Transparent
                                     )
@@ -712,23 +711,6 @@ fun PlayerScreen(
                             CompositingStrategy.Auto
                         }
                     }
-                    .then(
-                        if (!isOverlayActive && dragProgress == 0f) {
-                            Modifier.drawWithContent {
-                                drawContent()
-                                drawRect(
-                                    brush = Brush.verticalGradient(
-                                        colorStops = arrayOf(
-                                            0f to Color.Black,
-                                            0.95f to Color.Black,
-                                            1f to Color.Transparent
-                                        )
-                                    ),
-                                    blendMode = BlendMode.DstIn
-                                )
-                            }
-                        } else Modifier
-                    )
             ) {
                 // Base sharp album cover (always drawn in background during drag or before playback starts)
                 AsyncImage(
