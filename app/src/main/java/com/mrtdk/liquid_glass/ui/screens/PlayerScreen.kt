@@ -657,14 +657,15 @@ fun PlayerScreen(
                         .graphicsLayer {
                             compositingStrategy = CompositingStrategy.Offscreen
                         }
-                        .blur(25.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+                        .blur(50.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
                         .drawWithContent {
                             drawContent()
                             drawRect(
                                 brush = Brush.verticalGradient(
                                     colorStops = arrayOf(
                                         0.0f to Color.Black,
-                                        0.6f to Color.Black.copy(alpha = 0.8f),
+                                        0.15f to Color.Black.copy(alpha = 0.5f),
+                                        0.4f to Color.Black.copy(alpha = 0.15f),
                                         1.0f to Color.Transparent
                                     )
                                 ),
