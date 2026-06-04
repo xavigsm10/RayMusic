@@ -702,7 +702,16 @@ fun PlayerScreen(
                         } else Modifier
                     )
                     .graphicsLayer {
-                        shape = RoundedCornerShape(imgCorner.toPx())
+                        shape = if (!isOverlayActive && dragProgress == 0f) {
+                            RoundedCornerShape(
+                                topStart = imgCorner.toPx(),
+                                topEnd = imgCorner.toPx(),
+                                bottomStart = 0f,
+                                bottomEnd = 0f
+                            )
+                        } else {
+                            RoundedCornerShape(imgCorner.toPx())
+                        }
                         clip = true
                         // Apply offscreen strategy only when player is fully expanded and overlay is inactive
                         compositingStrategy = if (!isOverlayActive && dragProgress == 0f) {
