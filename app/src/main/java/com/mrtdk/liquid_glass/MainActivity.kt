@@ -468,22 +468,70 @@ class MainActivity : ComponentActivity() {
                                             }
                                         }
 
-                                        if (artistDetail != null) {
-                                            SharedElementTransitionContainer(onBack = { artistDetail = null }) { _, _ ->
-                                                ArtistScreen(
-                                                    artistState = artistDetail!!,
-                                                    innerPadding = innerPadding,
-                                                    onBack = { artistDetail = null },
-                                                    onSongSelected = playSong,
-                                                    onAlbumSelected = { album -> albumDetail = album },
-                                                    onArtistSelected = { artist -> artistDetail = artist },
-                                                    onVideoSelected = { videoId ->
-                                                        musicPlayer?.pause()
-                                                        videoDetail = videoId
-                                                    }
-                                                )
-                                            }
-                                        }
+                                         if (artistDetail != null) {
+                                             SharedElementTransitionContainer(onBack = { artistDetail = null }, shrinkToTarget = false, enableSwipeToDismiss = false) { _, _ ->
+                                                 ArtistScreen(
+                                                     artistState = artistDetail!!,
+                                                     innerPadding = innerPadding,
+                                                     onBack = { artistDetail = null },
+                                                     onSongSelected = playSong,
+                                                     onAlbumSelected = { album -> albumDetail = album },
+                                                     onArtistSelected = { artist -> artistDetail = artist },
+                                                     onVideoSelected = { videoId ->
+                                                         musicPlayer?.pause()
+                                                         videoDetail = videoId
+                                                     }
+                                                 )
+                                             }
+                                         }
+
+                                         if (albumDetail != null) {
+                                             SharedElementTransitionContainer(onBack = { albumDetail = null }, enableSwipeToDismiss = false) { _, _ ->
+                                                 AlbumScreen(
+                                                     albumState = albumDetail!!,
+                                                     onBack = { albumDetail = null },
+                                                     onSongSelected = playSong,
+                                                     onArtistSelected = { artist -> artistDetail = artist },
+                                                     onAlbumSelected = { album -> albumDetail = album },
+                                                     onDominantColorChanged = { color -> globalDominantColor = color },
+                                                     isPaused = showPlayer
+                                                 )
+                                             }
+                                         }
+
+                                         if (playlistDetail != null) {
+                                             SharedElementTransitionContainer(onBack = { playlistDetail = null }) { _, _ ->
+                                                 PlaylistDetailScreen(
+                                                     playlist = playlistDetail!!,
+                                                     onBack = { playlistDetail = null },
+                                                     onSongSelected = playSong,
+                                                     onArtistSelected = { artistDetail = it }
+                                                 )
+                                             }
+                                         }
+
+                                         if (categoryDetail != null) {
+                                             SharedElementTransitionContainer(onBack = { categoryDetail = null }) { _, _ ->
+                                                 com.mrtdk.liquid_glass.ui.screens.CategoriaScreen(
+                                                     category = categoryDetail!!,
+                                                     innerPadding = innerPadding,
+                                                     onBack = { categoryDetail = null },
+                                                     onSongSelected = playSong,
+                                                     onAlbumSelected = { album -> albumDetail = album },
+                                                     onPlaylistSelected = { playlist -> albumDetail = playlist },
+                                                     onArtistSelected = { artist -> artistDetail = artist }
+                                                 )
+                                             }
+                                         }
+
+                                         if (showFavoriteSongs) {
+                                             SharedElementTransitionContainer(onBack = { showFavoriteSongs = false }) { _, _ ->
+                                                 FavoriteSongsScreen(
+                                                     onBack = { showFavoriteSongs = false },
+                                                     onSongSelected = playSong
+                                                 )
+                                             }
+                                         }
                                     }
                                     },
                                     glassContent = {
@@ -680,56 +728,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
 
-                            // ── Apple Music expand overlay: Album ──────────────────────────────
-                            if (albumDetail != null) {
-                                SharedElementTransitionContainer(onBack = { albumDetail = null }) { _, _ ->
-                                    AlbumScreen(
-                                        albumState = albumDetail!!,
-                                        onBack = { albumDetail = null },
-                                        onSongSelected = playSong,
-                                        onArtistSelected = { artist -> artistDetail = artist },
-                                        onAlbumSelected = { album -> albumDetail = album },
-                                        onDominantColorChanged = { color -> globalDominantColor = color },
-                                        isPaused = showPlayer
-                                    )
-                                }
-                            }
 
-                            // ── Apple Music expand overlay: Playlist ───────────────────────────
-                            if (playlistDetail != null) {
-                                SharedElementTransitionContainer(onBack = { playlistDetail = null }) { _, _ ->
-                                    PlaylistDetailScreen(
-                                        playlist = playlistDetail!!,
-                                        onBack = { playlistDetail = null },
-                                        onSongSelected = playSong,
-                                        onArtistSelected = { artistDetail = it }
-                                    )
-                                }
-                            }
-                            // ── Apple Music expand overlay: Category ──────────────────────────
-                            if (categoryDetail != null) {
-                                SharedElementTransitionContainer(onBack = { categoryDetail = null }) { _, _ ->
-                                    com.mrtdk.liquid_glass.ui.screens.CategoriaScreen(
-                                        category = categoryDetail!!,
-                                        innerPadding = innerPadding,
-                                        onBack = { categoryDetail = null },
-                                        onSongSelected = playSong,
-                                        onAlbumSelected = { album -> albumDetail = album },
-                                        onPlaylistSelected = { playlist -> albumDetail = playlist },
-                                        onArtistSelected = { artist -> artistDetail = artist }
-                                    )
-                                }
-                            }
-
-                            // ── Apple Music expand overlay: Favorite Songs ──────────────────────
-                            if (showFavoriteSongs) {
-                                SharedElementTransitionContainer(onBack = { showFavoriteSongs = false }) { _, _ ->
-                                    FavoriteSongsScreen(
-                                        onBack = { showFavoriteSongs = false },
-                                        onSongSelected = playSong
-                                    )
-                                }
-                            }
 
                             // ── Apple Music expand overlay: Video Player ────────────────────────
                             if (videoDetail != null) {

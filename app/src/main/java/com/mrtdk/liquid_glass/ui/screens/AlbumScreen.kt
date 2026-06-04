@@ -283,7 +283,7 @@ fun AlbumScreen(
     val isLightBackground = dominantColor.luminance() > 0.5f
     val contentColor = if (isLightBackground) Color(0xFF1E1E1E) else Color.White
 
-    SharedElementTransitionContainer(onBack = onBack) { progress, dismiss ->
+    SharedElementTransitionContainer(onBack = onBack, enableSwipeToDismiss = false) { progress, dismiss ->
         val popScaleBack by animateFloatAsState(
             targetValue = if (progress > 0.80f) 1f else 0f,
             animationSpec = spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMediumLow),

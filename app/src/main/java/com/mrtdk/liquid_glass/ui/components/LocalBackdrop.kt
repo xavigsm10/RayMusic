@@ -27,6 +27,7 @@ import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.emptyBackdrop
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 
 val LocalBackdrop = staticCompositionLocalOf<Backdrop> { emptyBackdrop() }
 
@@ -117,75 +118,122 @@ private fun lerpFloat(start: Float, stop: Float, fraction: Float): Float {
 @Composable
 fun SharedElementTransitionContainer(
     onBack: () -> Unit,
+    shrinkToTarget: Boolean = true,
+    enableSwipeToDismiss: Boolean = true,
     content: @Composable (progress: Float, dismiss: () -> Unit) -> Unit
 ) {
-    val configuration = LocalConfiguration.current
-    val density = LocalDensity.current
-    
-    val screenWidth = with(density) { configuration.screenWidthDp.dp.toPx() }
-    val screenHeight = with(density) { configuration.screenHeightDp.dp.toPx() }
-    
-    val lastClickBounds = SharedTransitionState.lastClickBounds
-    val sourceBounds = lastClickBounds ?: Rect(
-        screenWidth / 2f - 100f,
-        screenHeight / 2f - 100f,
-        screenWidth / 2f + 100f,
-        screenHeight / 2f + 100f
-    )
-    
-    val progress = remember { Animatable(0f) }
-    var dragY by remember { mutableStateOf(0f) }
-    val scope = rememberCoroutineScope()
-    
-    val dismissAction = remember(scope, progress, onBack) {
-        {
-            scope.launch {
-                progress.animateTo(
-                    targetValue = 0f,
-                    animationSpec = spring(
-                        dampingRatio = 0.8f,
-                        stiffness = 300f
-                    )
-                )
-                onBack()
-            }
-            Unit
-        }
-    }
-    
-    androidx.activity.compose.BackHandler(enabled = progress.value > 0.01f) {
-        dismissAction()
-    }
-    
-    LaunchedEffect(Unit) {
-        progress.animateTo(
-            targetValue = 1f,
-            animationSpec = spring(
-                dampingRatio = 0.75f,
-                stiffness = 200f
-            )
+    androidx.compose.foundation.layout.BoxWithConstraints(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        val density = LocalDensity.current
+        val screenWidth = constraints.maxWidth.toFloat()
+        val screenHeight = constraints.maxHeight.toFloat()
+        
+        val lastClickBounds = SharedTransitionState.lastClickBounds
+        val sourceBounds = lastClickBounds ?: Rect(
+            screenWidth / 2f - 100f,
+            screenHeight / 2f - 100f,
+            screenWidth / 2f + 100f,
+            screenHeight / 2f + 100f
         )
-    }
-    
-    val currentProgress = progress.value
-    
-    // Interpolated geometry values
-    val currentLeft = lerpFloat(sourceBounds.left, 0f, currentProgress)
-    val currentTop = lerpFloat(sourceBounds.top, 0f, currentProgress)
-    val currentWidth = lerpFloat(sourceBounds.width, screenWidth, currentProgress).coerceAtLeast(0f)
-    val currentHeight = lerpFloat(sourceBounds.height, screenHeight, currentProgress).coerceAtLeast(0f)
-    val currentCornerRadius = lerpFloat(24f, 0f, currentProgress).coerceAtLeast(0f)
-    
-    val currentWidthDp = with(density) { currentWidth.toDp() }
-    val currentHeightDp = with(density) { currentHeight.toDp() }
-    
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragStart = { dragY = 0f },
-                    onDragEnd = {
+        
+        val progress = remember { Animatable(0f) }
+        var dragY by remember { mutableStateOf(0f) }
+        val scope = rememberCoroutineScope()
+        
+        val dismissAction = remember(scope, progress, onBack) {
+            {
+                scope.launch {
+                    progress.animateTo(
+                        targetValue = 0f,
+                        animationSpec = spring(
+                            dampingRatio = 0.8f,
+                            stiffness = 300f
+                        )
+                    )
+                    onBack()
+                }
+                Unit
+            }
+        }
+        
+        androidx.activity.compose.BackHandler(enabled = progress.value > 0.01f) {
+            dismissAction()
+        }
+        
+        LaunchedEffect(Unit) {
+            progress.animateTo(
+                targetValue = 1f,
+                animationSpec = spring(
+                    dampingRatio = 0.75f,
+                    stiffness = 200f
+                )
+            )
+        }
+        
+        val currentProgress = progress.value
+        
+        // Interpolated geometry values
+        val currentLeft = if (shrinkToTarget) lerpFloat(sourceBounds.left, 0f, currentProgress) else 0f
+        val currentTop = if (shrinkToTarget) {
+            lerpFloat(sourceBounds.top, 0f, currentProgress)
+        } else {
+            lerpFloat(screenHeight, 0f, currentProgress)
+        }
+        val currentWidth = if (shrinkToTarget) {
+            lerpFloat(sourceBounds.width, screenWidth, currentProgress).coerceAtLeast(0f)
+        } else {
+            screenWidth
+        }
+        val currentHeight = if (shrinkToTarget) {
+            lerpFloat(sourceBounds.height, screenHeight, currentProgress).coerceAtLeast(0f)
+        } else {
+            screenHeight
+        }
+        val currentCornerRadius = if (shrinkToTarget) lerpFloat(24f, 0f, currentProgress).coerceAtLeast(0f) else 0f
+        
+        val currentWidthDp = with(density) { currentWidth.toDp() }
+        val currentHeightDp = with(density) { currentHeight.toDp() }
+        
+        val nestedScrollConnection = remember(scope, progress, onBack, screenHeight) {
+            object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+                override fun onPreScroll(
+                    available: androidx.compose.ui.geometry.Offset,
+                    source: androidx.compose.ui.input.nestedscroll.NestedScrollSource
+                ): androidx.compose.ui.geometry.Offset {
+                    val delta = available.y
+                    if (dragY > 0f && delta < 0f) {
+                        val oldDragY = dragY
+                        dragY = (dragY + delta).coerceAtLeast(0f)
+                        val consumed = dragY - oldDragY
+                        val newProgress = (1f - (dragY / (screenHeight * 0.8f))).coerceIn(0f, 1f)
+                        scope.launch {
+                            progress.snapTo(newProgress)
+                        }
+                        return androidx.compose.ui.geometry.Offset(0f, consumed)
+                    }
+                    return androidx.compose.ui.geometry.Offset.Zero
+                }
+                
+                override fun onPostScroll(
+                    consumed: androidx.compose.ui.geometry.Offset,
+                    available: androidx.compose.ui.geometry.Offset,
+                    source: androidx.compose.ui.input.nestedscroll.NestedScrollSource
+                ): androidx.compose.ui.geometry.Offset {
+                    val delta = available.y
+                    if (delta > 0f) {
+                        dragY += delta
+                        val newProgress = (1f - (dragY / (screenHeight * 0.8f))).coerceIn(0f, 1f)
+                        scope.launch {
+                            progress.snapTo(newProgress)
+                        }
+                        return androidx.compose.ui.geometry.Offset(0f, delta)
+                    }
+                    return androidx.compose.ui.geometry.Offset.Zero
+                }
+                
+                override suspend fun onPreFling(available: androidx.compose.ui.unit.Velocity): androidx.compose.ui.unit.Velocity {
+                    if (dragY > 0f) {
                         scope.launch {
                             if (dragY > screenHeight * 0.2f) {
                                 progress.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 300f))
@@ -195,35 +243,67 @@ fun SharedElementTransitionContainer(
                             }
                             dragY = 0f
                         }
-                    },
-                    onDragCancel = {
-                        scope.launch {
-                            progress.animateTo(1f, spring(dampingRatio = 0.75f, stiffness = 200f))
-                            dragY = 0f
-                        }
-                    },
-                    onDrag = { change, dragAmount ->
-                        if (dragAmount.y > 0 || dragY > 0) {
-                            dragY += dragAmount.y
-                            val newProgress = (1f - (dragY / (screenHeight * 0.8f))).coerceIn(0f, 1f)
+                        return available
+                    }
+                    return androidx.compose.ui.unit.Velocity.Zero
+                }
+            }
+        }
+        
+        val dragModifier = if (enableSwipeToDismiss) {
+            Modifier
+                .nestedScroll(nestedScrollConnection)
+                .pointerInput(Unit) {
+                    detectDragGestures(
+                        onDragStart = { dragY = 0f },
+                        onDragEnd = {
                             scope.launch {
-                                progress.snapTo(newProgress)
+                                if (dragY > screenHeight * 0.2f) {
+                                    progress.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 300f))
+                                    onBack()
+                                } else {
+                                    progress.animateTo(1f, spring(dampingRatio = 0.75f, stiffness = 200f))
+                                }
+                                dragY = 0f
+                            }
+                        },
+                        onDragCancel = {
+                            scope.launch {
+                                progress.animateTo(1f, spring(dampingRatio = 0.75f, stiffness = 200f))
+                                dragY = 0f
+                            }
+                        },
+                        onDrag = { change, dragAmount ->
+                            if (dragAmount.y > 0 || dragY > 0) {
+                                dragY += dragAmount.y
+                                val newProgress = (1f - (dragY / (screenHeight * 0.8f))).coerceIn(0f, 1f)
+                                scope.launch {
+                                    progress.snapTo(newProgress)
+                                }
                             }
                         }
-                    }
-                )
-            }
-    ) {
+                    )
+                }
+        } else {
+            Modifier
+        }
+
         Box(
             modifier = Modifier
-                .offset { IntOffset(currentLeft.roundToInt(), currentTop.roundToInt()) }
-                .size(currentWidthDp, currentHeightDp)
-                .graphicsLayer {
-                    clip = true
-                    shape = RoundedCornerShape(currentCornerRadius.dp)
-                }
+                .fillMaxSize()
+                .then(dragModifier)
         ) {
-            content(currentProgress, dismissAction)
+            Box(
+                modifier = Modifier
+                    .offset { IntOffset(currentLeft.roundToInt(), currentTop.roundToInt()) }
+                    .size(currentWidthDp, currentHeightDp)
+                    .graphicsLayer {
+                        clip = true
+                        shape = RoundedCornerShape(currentCornerRadius.dp)
+                    }
+            ) {
+                content(currentProgress, dismissAction)
+            }
         }
     }
 }
