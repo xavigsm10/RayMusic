@@ -632,7 +632,7 @@ fun PlayerScreen(
             // Capa 1: Reflejo Líquido Estirado 1D (Proyección vertical de la carátula)
             val currentCoverBitmap = coverBitmap
             if (currentCoverBitmap != null && !isOverlayActive && dragProgress == 0f) {
-                val overlapDp = 5.dp
+                val overlapDp = 8.dp
                 val density = androidx.compose.ui.platform.LocalDensity.current
                 val parentCoords = parentCoordinates
                 val sliderCoords = sliderCoordinates
