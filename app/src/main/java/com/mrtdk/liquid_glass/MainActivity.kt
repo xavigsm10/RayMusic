@@ -109,6 +109,18 @@ class MainActivity : ComponentActivity() {
         setContent {
             LiquidglassuicomponentTheme {
                 val context = LocalContext.current
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val notificationPermissionState = rememberPermissionState(
+                        permission = Manifest.permission.POST_NOTIFICATIONS
+                    )
+                    LaunchedEffect(Unit) {
+                        if (!notificationPermissionState.status.isGranted) {
+                            notificationPermissionState.launchPermissionRequest()
+                        }
+                    }
+                }
+
                 var selectedIndex by remember { mutableIntStateOf(com.mrtdk.liquid_glass.data.LibraryManager.getLastTab()) }
                 LaunchedEffect(selectedIndex) {
                     com.mrtdk.liquid_glass.data.LibraryManager.saveLastTab(selectedIndex)

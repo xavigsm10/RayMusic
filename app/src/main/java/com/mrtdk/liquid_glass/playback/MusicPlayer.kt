@@ -147,6 +147,7 @@ class MusicPlayer(private val context: Context) {
         val mediaItem = MediaItem.Builder()
             .setMediaId(videoId)
             .setUri(Uri.parse("yt://$videoId"))
+            .setCustomCacheKey(videoId)
             .setMediaMetadata(metadata)
             .build()
             
@@ -171,6 +172,7 @@ class MusicPlayer(private val context: Context) {
         val mediaItem = MediaItem.Builder()
             .setMediaId(videoId)
             .setUri(Uri.parse("yt://$videoId"))
+            .setCustomCacheKey(videoId)
             .setMediaMetadata(metadata)
             .build()
             

@@ -712,44 +712,48 @@ fun GlassBoxScope.AppleMusicAlbumMenu(
                                 // Run background download of all tracks of this album/playlist
                                 Toast.makeText(context, "Obteniendo pistas del álbum...", Toast.LENGTH_SHORT).show()
                                 scope.launch {
-                                    withContext(Dispatchers.IO) {
-                                        val tracksToDownload = if (!tracks.isNullOrEmpty()) {
-                                            tracks
-                                        } else {
-                                            val isAlbum = album.id.startsWith("MPREb") || album.id.startsWith("FEmusic")
-                                            if (isAlbum) {
-                                                com.echo.innertube.YouTube.album(album.id).getOrNull()?.songs
-                                                    ?: run {
-                                                        val pId = album.playlistId.ifEmpty { album.id }.removePrefix("VL")
-                                                        com.echo.innertube.YouTube.playlist(pId).getOrNull()?.songs
-                                                    }
+                                    try {
+                                        withContext(Dispatchers.IO) {
+                                            val tracksToDownload = if (!tracks.isNullOrEmpty()) {
+                                                tracks
                                             } else {
-                                                val pId = album.playlistId.ifEmpty { album.id }.removePrefix("VL")
-                                                com.echo.innertube.YouTube.playlist(pId).getOrNull()?.songs
-                                                    ?: run {
-                                                        com.echo.innertube.YouTube.album(album.id).getOrNull()?.songs
-                                                    }
+                                                val isAlbum = album.id.startsWith("MPREb") || album.id.startsWith("FEmusic")
+                                                if (isAlbum) {
+                                                    com.echo.innertube.YouTube.album(album.id).getOrNull()?.songs
+                                                        ?: run {
+                                                            val pId = album.playlistId.ifEmpty { album.id }.removePrefix("VL")
+                                                            com.echo.innertube.YouTube.playlist(pId).getOrNull()?.songs
+                                                        }
+                                                } else {
+                                                    val pId = album.playlistId.ifEmpty { album.id }.removePrefix("VL")
+                                                    com.echo.innertube.YouTube.playlist(pId).getOrNull()?.songs
+                                                        ?: run {
+                                                            com.echo.innertube.YouTube.album(album.id).getOrNull()?.songs
+                                                        }
+                                                }
                                             }
-                                        }
-                                        
-                                        withContext(Dispatchers.Main) {
-                                            if (tracksToDownload.isNullOrEmpty()) {
-                                                Toast.makeText(context, "No se pudieron obtener las pistas del álbum", Toast.LENGTH_SHORT).show()
-                                            } else {
-                                                Toast.makeText(context, "Iniciando descarga de ${tracksToDownload.size} pistas...", Toast.LENGTH_SHORT).show()
-                                                tracksToDownload.forEach { track ->
-                                                    downloadSong(
-                                                        context = context,
-                                                        videoId = track.id,
-                                                        title = track.title,
-                                                        artist = track.artists.joinToString { it.name },
-                                                        artUrl = track.thumbnail,
-                                                        album = album.title,
-                                                        silent = true
-                                                    )
+                                            
+                                            withContext(Dispatchers.Main) {
+                                                if (tracksToDownload.isNullOrEmpty()) {
+                                                    Toast.makeText(context, "No se pudieron obtener las pistas del álbum", Toast.LENGTH_SHORT).show()
+                                                } else {
+                                                    Toast.makeText(context, "Iniciando descarga de ${tracksToDownload.size} pistas...", Toast.LENGTH_SHORT).show()
+                                                    tracksToDownload.forEach { track ->
+                                                        downloadSong(
+                                                            context = context,
+                                                            videoId = track.id,
+                                                            title = track.title,
+                                                            artist = track.artists.joinToString { it.name },
+                                                            artUrl = track.thumbnail,
+                                                            album = album.title,
+                                                            silent = true
+                                                        )
+                                                    }
                                                 }
                                             }
                                         }
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, "Error al obtener pistas: ${e.localizedMessage ?: e.message}", Toast.LENGTH_LONG).show()
                                     }
                                 }
                             }
