@@ -4,6 +4,8 @@ import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -12,6 +14,9 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -155,7 +160,10 @@ fun PlayerScreen(
                initialOffsetY = { it },
                animationSpec = androidx.compose.animation.core.tween(380, easing = androidx.compose.animation.core.FastOutSlowInEasing)
            ) + androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(250)),
-        exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(180))
+        exit = androidx.compose.animation.slideOutVertically(
+               targetOffsetY = { it },
+               animationSpec = androidx.compose.animation.core.tween(300, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+           ) + androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(200))
     ) {
         if (playerState == null) return@AnimatedVisibility
 
@@ -167,7 +175,12 @@ fun PlayerScreen(
             mutableFloatStateOf(audioManager.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) / maxVolume)
         }
         val progress = if (duration > 0) currentPosition.toFloat() / duration.toFloat() else 0f
-        var offsetY by remember { mutableFloatStateOf(0f) }
+        val scope = rememberCoroutineScope()
+        val dragOffsetY = remember { Animatable(0f) }
+        val offsetY = dragOffsetY.value
+        
+        val queueListState = androidx.compose.foundation.lazy.rememberLazyListState()
+        val lyricsListState = androidx.compose.foundation.lazy.rememberLazyListState()
         var showQueue by remember { mutableStateOf(false) }
         var showLyrics by remember { mutableStateOf(false) }
         var showLyricsControls by remember { mutableStateOf(true) }
@@ -392,15 +405,6 @@ fun PlayerScreen(
             }
         }
         
-        val maxDragDistance = 250f 
-        val dragProgress = (offsetY / maxDragDistance).coerceIn(0f, 1f)
-        val imageScale = 1f - (dragProgress * 0.85f).coerceIn(0f, 1f)
-        val cornerRadius = (12 + (dragProgress * 180)).dp 
-        val bgAlpha = 1f - dragProgress
-        val contentAlpha = 1f - (dragProgress * 2.5f).coerceIn(0f, 1f)
-
-        val scrollState = rememberScrollState()
-
         val isLightBackground = dominantColor.luminance() > 0.35f
         val contentColor = if (isLightBackground) Color(0xFF1A1A1A) else Color.White
 
@@ -420,84 +424,11 @@ fun PlayerScreen(
         val isSaved = savedItems.any { it.id == playerState?.videoId }
         val starTint by androidx.compose.animation.animateColorAsState(targetValue = if(isSaved) Color(0xFFFA243C) else contentColor, label="starTint")
 
-        val nestedScrollConnection = remember {
-            object : NestedScrollConnection {
-                override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                    val delta = available.y
-                    if (offsetY > 0f && delta < 0f) {
-                        val newOffset = (offsetY + delta).coerceAtLeast(0f)
-                        val consumed = newOffset - offsetY
-                        offsetY = newOffset
-                        return Offset(0f, consumed)
-                    }
-                    return Offset.Zero
-                }
-
-                override fun onPostScroll(
-                    consumed: Offset,
-                    available: Offset,
-                    source: NestedScrollSource
-                ): Offset {
-                    val delta = available.y
-                    if (delta > 0f && scrollState.value == 0) {
-                        offsetY = (offsetY + delta * 0.7f).coerceAtLeast(0f)
-                        return Offset(0f, delta)
-                    }
-                    return Offset.Zero
-                }
-
-                override suspend fun onPreFling(available: Velocity): Velocity {
-                    if (offsetY > 150f) {
-                        onClose()
-                    } else {
-                        offsetY = 0f
-                    }
-                    return Velocity.Zero
-                }
-            }
-        }
-
-        // Contenedor principal anclado (sin mover) pero desvaneciéndose
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .background(dominantColor.copy(alpha = bgAlpha))
                 .onGloballyPositioned { parentCoordinates = it }
                 .layerBackdrop(localBackdrop)
-                .drawWithContent {
-                    if (dragProgress == 0f) {
-                        drawRect(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    dominantColor.copy(alpha = 0.25f),
-                                    dominantColor.copy(alpha = 0.7f),
-                                    dominantColor
-                                ),
-                                startY = this.size.height * 0.55f,
-                                endY = this.size.height
-                            )
-                        )
-                    }
-                    drawContent()
-                }
-                .pointerInput(showLyrics, showQueue) {
-                    if (!showLyrics && !showQueue) {
-                        detectVerticalDragGestures(
-                            onDragEnd = {
-                                if (offsetY > 150f) {
-                                    onClose()
-                                } else {
-                                    offsetY = 0f
-                                }
-                            }
-                        ) { change, dragAmount ->
-                            if (dragAmount > 0f || offsetY > 0f) {
-                                offsetY = (offsetY + dragAmount * 0.7f).coerceAtLeast(0f)
-                            }
-                        }
-                    }
-                }
         ) {
             val maxWidth = maxWidth
             val maxHeight = maxHeight
@@ -514,22 +445,165 @@ fun PlayerScreen(
             val targetOffsetX = if (isBottomBarCollapsed) collapsedTargetOffsetX else normalTargetOffsetX
             val targetOffsetY = if (isBottomBarCollapsed) collapsedTargetOffsetY else normalTargetOffsetY
             
-            val imgWidthTarget = if (isOverlayActive) lyricsImageSize 
-                else androidx.compose.ui.unit.lerp(maxWidth, 40.dp, dragProgress)
-            val imgHeightTarget = if (isOverlayActive) lyricsImageSize 
-                else androidx.compose.ui.unit.lerp(maxWidth * 1.15f, 40.dp, dragProgress)
-                
-            val imgOffsetXTarget = if (isOverlayActive) 24.dp 
-                else androidx.compose.ui.unit.lerp(0.dp, targetOffsetX, dragProgress)
-            val imgOffsetYTarget = if (isOverlayActive) 64.dp 
-                else androidx.compose.ui.unit.lerp(0.dp, targetOffsetY, dragProgress)
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            val maxDragDistance = with(density) { targetOffsetY.toPx() }
+            val dragProgress = if (maxDragDistance > 0f) (offsetY / maxDragDistance).coerceIn(0f, 1f) else 0f
+            
+            val bgAlpha = 1f - dragProgress
+            
+            val expandedWidth = maxWidth
+            val expandedHeight = maxWidth * 1.15f
+            val expandedX = 0.dp
+            val expandedY = 0.dp
+            
+            val threshold = 0.70f
+            
+            val imgWidthTarget: androidx.compose.ui.unit.Dp
+            val imgHeightTarget: androidx.compose.ui.unit.Dp
+            val imgOffsetXTarget: androidx.compose.ui.unit.Dp
+            val imgOffsetYTarget: androidx.compose.ui.unit.Dp
+            val imageCornerTarget: androidx.compose.ui.unit.Dp
+            val contentAlpha: Float
+            
+            if (isOverlayActive) {
+                imgWidthTarget = lyricsImageSize
+                imgHeightTarget = lyricsImageSize
+                imgOffsetXTarget = 24.dp
+                imgOffsetYTarget = 64.dp
+                imageCornerTarget = 8.dp
+                contentAlpha = 1f
+            } else {
+                if (dragProgress <= threshold) {
+                    val p1 = if (threshold > 0f) dragProgress / threshold else 0f
+                    imgWidthTarget = expandedWidth
+                    imgHeightTarget = expandedHeight
+                    imgOffsetXTarget = expandedX
+                    imgOffsetYTarget = expandedY
+                    imageCornerTarget = 12.dp
+                    contentAlpha = (1f - p1).coerceIn(0f, 1f)
+                } else {
+                    val p2 = if (threshold < 1f) (dragProgress - threshold) / (1f - threshold) else 1f
+                    imgWidthTarget = androidx.compose.ui.unit.lerp(expandedWidth, 40.dp, p2)
+                    imgHeightTarget = androidx.compose.ui.unit.lerp(expandedHeight, 40.dp, p2)
+                    
+                    imgOffsetXTarget = androidx.compose.ui.unit.lerp(expandedX, targetOffsetX, p2)
+                    imgOffsetYTarget = expandedY
+                    
+                    imageCornerTarget = androidx.compose.ui.unit.lerp(12.dp, 20.dp, p2)
+                    contentAlpha = 0f
+                }
+            }
 
             val imgWidth by androidx.compose.animation.core.animateDpAsState(imgWidthTarget)
             val imgHeight by androidx.compose.animation.core.animateDpAsState(imgHeightTarget)
             val imgOffsetX by androidx.compose.animation.core.animateDpAsState(imgOffsetXTarget)
             val imgOffsetY by androidx.compose.animation.core.animateDpAsState(imgOffsetYTarget)
-            val imageCornerTarget = if (isOverlayActive) 8.dp else cornerRadius
             val imgCorner by androidx.compose.animation.core.animateDpAsState(imageCornerTarget)
+
+            val nestedScrollConnection = remember(maxDragDistance, onClose) {
+                object : NestedScrollConnection {
+                    override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                        val delta = available.y
+                        val currentOffsetY = dragOffsetY.value
+                        if (currentOffsetY > 0f && delta < 0f) {
+                            val newOffset = (currentOffsetY + delta).coerceAtLeast(0f)
+                            val consumed = newOffset - currentOffsetY
+                            scope.launch { dragOffsetY.snapTo(newOffset) }
+                            return Offset(0f, consumed)
+                        }
+                        return Offset.Zero
+                    }
+
+                    override fun onPostScroll(
+                        consumed: Offset,
+                        available: Offset,
+                        source: NestedScrollSource
+                    ): Offset {
+                        val delta = available.y
+                        val currentOffsetY = dragOffsetY.value
+                        
+                        val isAtTop = when {
+                            showLyrics -> lyricsListState.firstVisibleItemIndex == 0 && lyricsListState.firstVisibleItemScrollOffset == 0
+                            showQueue -> queueListState.firstVisibleItemIndex == 0 && queueListState.firstVisibleItemScrollOffset == 0
+                            else -> true
+                        }
+                        
+                        if (delta > 0f && isAtTop) {
+                            val newOffset = (currentOffsetY + delta * 0.7f).coerceAtLeast(0f)
+                            scope.launch { dragOffsetY.snapTo(newOffset) }
+                            return Offset(0f, delta)
+                        }
+                        return Offset.Zero
+                    }
+
+                    override suspend fun onPreFling(available: Velocity): Velocity {
+                        val currentOffsetY = dragOffsetY.value
+                        if (currentOffsetY > with(density) { 150.dp.toPx() }) {
+                            dragOffsetY.animateTo(
+                                targetValue = maxDragDistance,
+                                animationSpec = tween(300, easing = FastOutSlowInEasing)
+                            )
+                            onClose()
+                        } else {
+                            dragOffsetY.animateTo(0f, spring())
+                        }
+                        return Velocity.Zero
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        translationY = offsetY
+                    }
+                    .background(dominantColor.copy(alpha = bgAlpha))
+                    .drawWithContent {
+                        if (dragProgress == 0f) {
+                            drawRect(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        dominantColor.copy(alpha = 0.25f),
+                                        dominantColor.copy(alpha = 0.7f),
+                                        dominantColor
+                                    ),
+                                    startY = this.size.height * 0.55f,
+                                    endY = this.size.height
+                                )
+                            )
+                        }
+                        drawContent()
+                    }
+                    .pointerInput(showLyrics, showQueue) {
+                        if (!showLyrics && !showQueue) {
+                            detectVerticalDragGestures(
+                                onDragEnd = {
+                                    val currentOffsetY = dragOffsetY.value
+                                    if (currentOffsetY > with(density) { 150.dp.toPx() }) {
+                                        scope.launch {
+                                            dragOffsetY.animateTo(
+                                                targetValue = maxDragDistance,
+                                                animationSpec = tween(300, easing = FastOutSlowInEasing)
+                                            )
+                                            onClose()
+                                        }
+                                    } else {
+                                        scope.launch {
+                                            dragOffsetY.animateTo(0f, spring())
+                                        }
+                                    }
+                                }
+                            ) { change, dragAmount ->
+                                if (dragAmount > 0f || dragOffsetY.value > 0f) {
+                                    val newOffset = (dragOffsetY.value + dragAmount * 0.7f).coerceAtLeast(0f)
+                                    scope.launch { dragOffsetY.snapTo(newOffset) }
+                                }
+                            }
+                        }
+                    }
+            ) {
 
 
             // Capa 1: Reflejo Líquido Estirado 1D (Proyección vertical de la carátula)
@@ -666,10 +740,10 @@ fun PlayerScreen(
 
 
             // LYRICS / QUEUE OVERLAY
-            androidx.compose.animation.AnimatedVisibility(
+            AnimatedVisibility(
                 visible = showLyrics || showQueue,
-                enter = androidx.compose.animation.fadeIn(),
-                exit = androidx.compose.animation.fadeOut()
+                enter = fadeIn(),
+                exit = fadeOut()
             ) {
                  Column(modifier = Modifier.fillMaxSize()) {
                       Row(
@@ -835,7 +909,7 @@ fun PlayerScreen(
                                  }
                              }
                           
-                          LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                           LazyColumn(state = queueListState, modifier = Modifier.weight(1f).padding(horizontal = 24.dp).nestedScroll(nestedScrollConnection), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                               // 1. Manual Queue Section (Album/Playlist)
                               if (playerState != null && playerState.queue.isNotEmpty()) {
                                    items(playerState.queue.size) { index ->
@@ -927,18 +1001,17 @@ fun PlayerScreen(
                              ) {
                                  val currentLyricsLines = lyricsLines
                                  if (currentLyricsLines != null && currentLyricsLines.isNotEmpty()) {
-                                     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
                                      val isSynced = currentLyricsLines.any { it.timeMs > 0L }
                                      
                                      LaunchedEffect(currentPosition, currentLyricsLines) {
                                          if (!isSynced) return@LaunchedEffect
                                          val currentIdx = currentLyricsLines.indexOfLast { it.timeMs != -1L && it.timeMs <= currentPosition + 500 }
-                                         if (currentIdx >= 0 && !listState.isScrollInProgress) {
-                                             listState.animateScrollToItem(currentIdx.coerceAtLeast(0), scrollOffset = -100)
+                                         if (currentIdx >= 0 && !lyricsListState.isScrollInProgress) {
+                                             lyricsListState.animateScrollToItem(currentIdx.coerceAtLeast(0), scrollOffset = -100)
                                          }
                                      }
                                      
-                                     LazyColumn(state = listState, modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+                                     LazyColumn(state = lyricsListState, modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp).nestedScroll(nestedScrollConnection), verticalArrangement = Arrangement.spacedBy(24.dp)) {
                                          item { Spacer(modifier = Modifier.height(60.dp)) }
                                          items(currentLyricsLines.size) { i ->
                                              val line = currentLyricsLines[i]
@@ -1084,10 +1157,10 @@ fun PlayerScreen(
                             }
                        }
                       
-                      androidx.compose.animation.AnimatedVisibility(
+                      AnimatedVisibility(
                            visible = !showLyrics || showLyricsControls,
-                           enter = androidx.compose.animation.slideInVertically(initialOffsetY = { it }) + androidx.compose.animation.fadeIn(),
-                           exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { it }) + androidx.compose.animation.fadeOut()
+                           enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                           exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
                       ) {
                           Box(
                                modifier = Modifier
@@ -1138,11 +1211,11 @@ fun PlayerScreen(
             }
 
             // DETAILS AND CONTROLS (WHEN NO QUEUE AND NO LYRICS)
-            androidx.compose.animation.AnimatedVisibility(
+            AnimatedVisibility(
                  visible = !isOverlayActive,
                  modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
-                 enter = androidx.compose.animation.fadeIn(),
-                 exit = androidx.compose.animation.fadeOut()
+                 enter = fadeIn(),
+                 exit = fadeOut()
             ) {
                  Column(
                       modifier = Modifier
@@ -1172,8 +1245,8 @@ fun PlayerScreen(
                               androidx.compose.animation.AnimatedContent(
                                   targetState = playerState,
                                   transitionSpec = {
-                                      (androidx.compose.animation.slideInHorizontally { width -> dir * width } + androidx.compose.animation.fadeIn()).togetherWith(
-                                          androidx.compose.animation.slideOutHorizontally { width -> dir * -width } + androidx.compose.animation.fadeOut()
+                                      (androidx.compose.animation.slideInHorizontally { width -> dir * width } + fadeIn()).togetherWith(
+                                          androidx.compose.animation.slideOutHorizontally { width -> dir * -width } + fadeOut()
                                       )
                                   }, label="textSlide"
                               ) { state ->
@@ -1290,11 +1363,12 @@ fun PlayerScreen(
                               includeProgress = false,
                               onSkipNext = { swipeDirection = 1; onSkipNext() },
                               onSkipPrevious = { swipeDirection = -1; onSkipPrevious() }
-                          )
-                      }
-                 }
-            }
-        }
+                           )
+                       }
+                  }
+             }
+        } // end inner Box
+        } // end BoxWithConstraints
 
         if (showOptionsMenu) {
             com.mrtdk.liquid_glass.ui.components.PlayerOptionsMenu(
