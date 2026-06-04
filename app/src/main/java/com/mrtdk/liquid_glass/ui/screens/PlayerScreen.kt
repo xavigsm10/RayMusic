@@ -633,7 +633,22 @@ fun PlayerScreen(
             val currentCoverBitmap = coverBitmap
             if (currentCoverBitmap != null && !isOverlayActive && dragProgress == 0f) {
                 val overlapDp = 30.dp
-                val blurHeight = maxHeight - (imgOffsetY + imgHeight) + overlapDp
+                val sliderYDp = remember(sliderCoordinates, parentCoordinates) {
+                    val sliderCoords = sliderCoordinates
+                    val parentCoords = parentCoordinates
+                    if (sliderCoords != null && parentCoords != null && sliderCoords.isAttached && parentCoords.isAttached) {
+                        val localOffset = parentCoords.localPositionOf(sliderCoords, Offset.Zero)
+                        with(density) { localOffset.y.toDp() }
+                    } else {
+                        0.dp
+                    }
+                }
+                val blurHeight = if (sliderYDp > 0.dp) {
+                    (sliderYDp - (imgOffsetY + imgHeight - overlapDp)).coerceAtLeast(0.dp)
+                } else {
+                    maxHeight - (imgOffsetY + imgHeight) + overlapDp
+                }
+
                 // Caja del reflejo posicionada bajo la portada, llenando todo el espacio inferior
                 Box(
                     modifier = Modifier
@@ -662,15 +677,58 @@ fun PlayerScreen(
                         }
                 ) {
                     Canvas(modifier = Modifier.fillMaxSize()) {
+                        val imgX = imgOffsetX.toPx()
+                        val imgW = imgWidth.toPx()
+                        val screenW = size.width
+                        val screenH = size.height
+
+                        val imgXInt = imgX.toInt()
+                        val imgWInt = imgW.toInt()
+                        val screenWInt = screenW.toInt()
+
                         val sampleHeight = 5 // Altura de muestreo del borde
-                        drawImage(
-                            image = currentCoverBitmap,
-                            srcOffset = IntOffset(0, currentCoverBitmap.height - sampleHeight),
-                            srcSize = IntSize(currentCoverBitmap.width, sampleHeight),
-                            dstOffset = IntOffset.Zero,
-                            dstSize = IntSize(size.width.toInt(), size.height.toInt()),
-                            filterQuality = FilterQuality.Low
-                        )
+                        val sampleH = sampleHeight.coerceAtMost(currentCoverBitmap.height).coerceAtLeast(1)
+                        val srcY = (currentCoverBitmap.height - sampleH).coerceAtLeast(0)
+
+                        // 1. Dibuja la parte izquierda (difuminado del píxel del borde izquierdo)
+                        if (imgXInt > 0) {
+                            drawImage(
+                                image = currentCoverBitmap,
+                                srcOffset = IntOffset(0, srcY),
+                                srcSize = IntSize(1, sampleH),
+                                dstOffset = IntOffset.Zero,
+                                dstSize = IntSize(imgXInt, screenH.toInt()),
+                                filterQuality = FilterQuality.Low
+                            )
+                        }
+
+                        // 2. Dibuja la parte central (alineada perfectamente con la carátula)
+                        if (imgWInt > 0) {
+                            drawImage(
+                                image = currentCoverBitmap,
+                                srcOffset = IntOffset(0, srcY),
+                                srcSize = IntSize(currentCoverBitmap.width, sampleH),
+                                dstOffset = IntOffset(imgXInt, 0),
+                                dstSize = IntSize(imgWInt, screenH.toInt()),
+                                filterQuality = FilterQuality.Low
+                            )
+                        }
+
+                        // 3. Dibuja la parte derecha (difuminado del píxel del borde derecho)
+                        val rightX = imgXInt + imgWInt
+                        if (rightX < screenWInt) {
+                            val rightW = screenWInt - rightX
+                            if (rightW > 0) {
+                                drawImage(
+                                    image = currentCoverBitmap,
+                                    srcOffset = IntOffset((currentCoverBitmap.width - 1).coerceAtLeast(0), srcY),
+                                    srcSize = IntSize(1, sampleH),
+                                    dstOffset = IntOffset(rightX, 0),
+                                    dstSize = IntSize(rightW, screenH.toInt()),
+                                    filterQuality = FilterQuality.Low
+                                )
+                            }
+                        }
                     }
                 }
             }
