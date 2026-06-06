@@ -44,6 +44,63 @@ import kotlinx.coroutines.withContext
 
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.ChevronRight
+import org.json.JSONObject
+import org.json.JSONArray
+import com.echo.innertube.models.Artist
+import com.echo.innertube.models.Album
+
+private fun parseSongItem(obj: JSONObject): SongItem {
+    val id = obj.getString("id")
+    val title = obj.getString("title")
+    val thumbnail = obj.getString("thumbnail")
+    val explicit = obj.optBoolean("explicit", false)
+    val artistsArray = obj.getJSONArray("artists")
+    val artistsList = mutableListOf<Artist>()
+    for (i in 0 until artistsArray.length()) {
+        val aObj = artistsArray.getJSONObject(i)
+        artistsList.add(Artist(
+            name = aObj.getString("name"),
+            id = aObj.optString("id").takeIf { it.isNotEmpty() }
+        ))
+    }
+    return SongItem(
+        id = id,
+        title = title,
+        artists = artistsList,
+        thumbnail = thumbnail,
+        explicit = explicit
+    )
+}
+
+private fun parseAlbumItem(obj: JSONObject): AlbumItem {
+    val browseId = obj.getString("browseId")
+    val playlistId = obj.getString("playlistId")
+    val title = obj.getString("title")
+    val thumbnail = obj.getString("thumbnail")
+    val explicit = obj.optBoolean("explicit", false)
+    val artistsArray = obj.optJSONArray("artists")
+    val artistsList = if (artistsArray != null) {
+        val list = mutableListOf<Artist>()
+        for (i in 0 until artistsArray.length()) {
+            val aObj = artistsArray.getJSONObject(i)
+            list.add(Artist(
+                name = aObj.getString("name"),
+                id = aObj.optString("id").takeIf { it.isNotEmpty() }
+            ))
+        }
+        list
+    } else null
+    val year = if (obj.has("year")) obj.getInt("year") else null
+    return AlbumItem(
+        browseId = browseId,
+        playlistId = playlistId,
+        title = title,
+        artists = artistsList,
+        year = year,
+        thumbnail = thumbnail,
+        explicit = explicit
+    )
+}
 
 class NovedadesState {
     var isLoaded by mutableStateOf(false)
@@ -68,67 +125,115 @@ fun NovedadesScreen(
     LaunchedEffect(Unit) {
         if (!state.isLoaded) {
             withContext(Dispatchers.IO) {
-                // Helper: filter out mixes, compilations, and songs without known artist links
-                fun filterRealArtistSongs(songs: List<SongItem>): List<SongItem> = songs.filter { s ->
-                    val titleLower = s.title.lowercase()
-                    val artistText = s.artists.joinToString { it.name }.lowercase()
-                    // Exclude mixes, compilations, and generic entries
-                    val isMix = titleLower.contains("mix") || titleLower.contains("compilation") ||
-                        titleLower.contains("playlist") || titleLower.contains("mashup") ||
-                        titleLower.contains("medley") || titleLower.contains("recopilación") ||
-                        titleLower.contains("album") || titleLower.contains("álbum") ||
-                        titleLower.contains("completo")
-                    val isGenericArtist = artistText.contains("various") || artistText.contains("varios") ||
-                        artistText.contains("topic") || s.artists.isEmpty() || artistText.contains("mix")
-                    // Must have at least one artist with a browseId (real YTM artist page)
-                    val hasRealArtist = s.artists.any { it.id != null }
-                    val duration = s.duration
-                    val isNormalDuration = duration == null || duration < 600 // max 10 mins
-                    !isMix && !isGenericArtist && hasRealArtist && isNormalDuration
-                }
-
-                // Fetch charts for trending/top songs from known artists
-                YouTube.getChartsPage().onSuccess { chartsPage ->
-                    val allSongs = filterRealArtistSongs(
-                        chartsPage.sections
-                            .flatMap { it.items }
-                            .filterIsInstance<SongItem>()
-                    )
-
-                    state.trendingSongs = allSongs.take(20)
-                    // Use a different slice for "everyone listening"
-                    state.everyoneListening = allSongs.drop(8).take(15)
-                }
-
-                // Fetch explore page for new release albums
-                YouTube.explore().onSuccess { page ->
-                    val albums = page.newReleaseAlbums
-                    state.newReleaseAlbums = albums
-                    state.featuredAlbums = albums.take(6)
-                }
-
-                // Featured new songs: search for recent hit songs from real artists
-                YouTube.search("top hits songs 2025 2026", YouTube.SearchFilter.FILTER_SONG).onSuccess { result ->
-                    state.featuredNewSongs = filterRealArtistSongs(
-                        result.items.filterIsInstance<SongItem>()
-                    ).take(16)
-                }
-
-                // Fallback: if charts didn't return songs, use curated search
-                if (state.trendingSongs.isEmpty()) {
-                    YouTube.search("top songs chart", YouTube.SearchFilter.FILTER_SONG).onSuccess { result ->
-                        state.trendingSongs = filterRealArtistSongs(
-                            result.items.filterIsInstance<SongItem>()
-                        ).take(20)
+                var loadedOffline = false
+                try {
+                    val inputStream = context.assets.open("novedades_apple.json")
+                    val jsonStr = inputStream.bufferedReader().use { it.readText() }
+                    val root = JSONObject(jsonStr)
+                    
+                    val fAlbums = mutableListOf<AlbumItem>()
+                    val fAlbumsArray = root.getJSONArray("featuredAlbums")
+                    for (i in 0 until fAlbumsArray.length()) {
+                        fAlbums.add(parseAlbumItem(fAlbumsArray.getJSONObject(i)))
                     }
+                    
+                    val fSongs = mutableListOf<SongItem>()
+                    val fSongsArray = root.getJSONArray("featuredNewSongs")
+                    for (i in 0 until fSongsArray.length()) {
+                        fSongs.add(parseSongItem(fSongsArray.getJSONObject(i)))
+                    }
+                    
+                    val nrAlbums = mutableListOf<AlbumItem>()
+                    val nrAlbumsArray = root.getJSONArray("newReleaseAlbums")
+                    for (i in 0 until nrAlbumsArray.length()) {
+                        nrAlbums.add(parseAlbumItem(nrAlbumsArray.getJSONObject(i)))
+                    }
+                    
+                    val tSongs = mutableListOf<SongItem>()
+                    val tSongsArray = root.getJSONArray("trendingSongs")
+                    for (i in 0 until tSongsArray.length()) {
+                        tSongs.add(parseSongItem(tSongsArray.getJSONObject(i)))
+                    }
+                    
+                    val elSongs = mutableListOf<SongItem>()
+                    val elSongsArray = root.getJSONArray("everyoneListening")
+                    for (i in 0 until elSongsArray.length()) {
+                        elSongs.add(parseSongItem(elSongsArray.getJSONObject(i)))
+                    }
+                    
+                    state.featuredAlbums = fAlbums
+                    state.featuredNewSongs = fSongs
+                    state.newReleaseAlbums = nrAlbums
+                    state.trendingSongs = tSongs
+                    state.everyoneListening = elSongs
+                    loadedOffline = true
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
+                
+                if (!loadedOffline) {
+                    // Helper: filter out mixes, compilations, and songs without known artist links
+                    fun filterRealArtistSongs(songs: List<SongItem>): List<SongItem> = songs.filter { s ->
+                        val titleLower = s.title.lowercase()
+                        val artistText = s.artists.joinToString { it.name }.lowercase()
+                        // Exclude mixes, compilations, and generic entries
+                        val isMix = titleLower.contains("mix") || titleLower.contains("compilation") ||
+                            titleLower.contains("playlist") || titleLower.contains("mashup") ||
+                            titleLower.contains("medley") || titleLower.contains("recopilación") ||
+                            titleLower.contains("album") || titleLower.contains("álbum") ||
+                            titleLower.contains("completo")
+                        val isGenericArtist = artistText.contains("various") || artistText.contains("varios") ||
+                            artistText.contains("topic") || s.artists.isEmpty() || artistText.contains("mix")
+                        // Must have at least one artist with a browseId (real YTM artist page)
+                        val hasRealArtist = s.artists.any { it.id != null }
+                        val duration = s.duration
+                        val isNormalDuration = duration == null || duration < 600 // max 10 mins
+                        !isMix && !isGenericArtist && hasRealArtist && isNormalDuration
+                    }
 
-                // Fallback for everyone listening
-                if (state.everyoneListening.isEmpty()) {
-                    YouTube.search("most listened songs today", YouTube.SearchFilter.FILTER_SONG).onSuccess { result ->
-                        state.everyoneListening = filterRealArtistSongs(
+                    // Fetch charts for trending/top songs from known artists
+                    YouTube.getChartsPage().onSuccess { chartsPage ->
+                        val allSongs = filterRealArtistSongs(
+                            chartsPage.sections
+                                .flatMap { it.items }
+                                .filterIsInstance<SongItem>()
+                        )
+
+                        state.trendingSongs = allSongs.take(20)
+                        // Use a different slice for "everyone listening"
+                        state.everyoneListening = allSongs.drop(8).take(15)
+                    }
+
+                    // Fetch explore page for new release albums
+                    YouTube.explore().onSuccess { page ->
+                        val albums = page.newReleaseAlbums
+                        state.newReleaseAlbums = albums
+                        state.featuredAlbums = albums.take(6)
+                    }
+
+                    // Featured new songs: search for recent hit songs from real artists
+                    YouTube.search("top hits songs 2025 2026", YouTube.SearchFilter.FILTER_SONG).onSuccess { result ->
+                        state.featuredNewSongs = filterRealArtistSongs(
                             result.items.filterIsInstance<SongItem>()
-                        ).take(15)
+                        ).take(16)
+                    }
+
+                    // Fallback: if charts didn't return songs, use curated search
+                    if (state.trendingSongs.isEmpty()) {
+                        YouTube.search("top songs chart", YouTube.SearchFilter.FILTER_SONG).onSuccess { result ->
+                            state.trendingSongs = filterRealArtistSongs(
+                                result.items.filterIsInstance<SongItem>()
+                            ).take(20)
+                        }
+                    }
+
+                    // Fallback for everyone listening
+                    if (state.everyoneListening.isEmpty()) {
+                        YouTube.search("most listened songs today", YouTube.SearchFilter.FILTER_SONG).onSuccess { result ->
+                            state.everyoneListening = filterRealArtistSongs(
+                                result.items.filterIsInstance<SongItem>()
+                            ).take(15)
+                        }
                     }
                 }
             }

@@ -14,6 +14,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.stringResource
+import com.mrtdk.liquid_glass.R
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -105,13 +107,13 @@ fun RadioScreen(
                             delay(1000)
                             onSearchResult("${res.title} ${res.artist}")
                         },
-                        onFailure = { resultText = "No se encontraron coincidencias" }
+                        onFailure = { resultText = context.getString(R.string.radio_no_matches) }
                     )
                 } else {
-                    resultText = "No se pudo generar la firma"
+                    resultText = context.getString(R.string.radio_failed_signature)
                 }
             } catch (e: Exception) {
-                resultText = "Error al escuchar"
+                resultText = context.getString(R.string.radio_error_listening)
             } finally {
                 isListening = false
                 isProcessing = false
@@ -180,10 +182,10 @@ fun RadioScreen(
             
             Text(
                 text = when {
-                    isProcessing -> "Buscando coincidencias..."
-                    isListening -> "Escuchando..."
+                    isProcessing -> stringResource(R.string.radio_processing)
+                    isListening -> stringResource(R.string.radio_listening)
                     resultText != null -> resultText!!
-                    else -> "Toca para identificar música"
+                    else -> stringResource(R.string.radio_tap_to_identify)
                 },
                 color = Color.White,
                 fontSize = 22.sp,
@@ -192,7 +194,7 @@ fun RadioScreen(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Asegúrate de que tu dispositivo pueda\noír la música claramente.",
+                text = stringResource(R.string.radio_hear_clearly),
                 color = Color.Gray,
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center

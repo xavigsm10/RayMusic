@@ -522,10 +522,16 @@ class MainActivity : ComponentActivity() {
                                              }
                                          }
 
-                                         if (categoryDetail != null) {
-                                             SharedElementTransitionContainer(onBack = { categoryDetail = null }) { _, _ ->
+                                         androidx.compose.animation.AnimatedVisibility(
+                                             visible = categoryDetail != null,
+                                             enter = androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(100)),
+                                             exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(80))
+                                         ) {
+                                             val cat = categoryDetail
+                                             if (cat != null) {
+                                                 androidx.activity.compose.BackHandler { categoryDetail = null }
                                                  com.mrtdk.liquid_glass.ui.screens.CategoriaScreen(
-                                                     category = categoryDetail!!,
+                                                     category = cat,
                                                      innerPadding = innerPadding,
                                                      onBack = { categoryDetail = null },
                                                      onSongSelected = playSong,

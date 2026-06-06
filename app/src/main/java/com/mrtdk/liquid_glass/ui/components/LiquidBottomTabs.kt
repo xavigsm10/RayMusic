@@ -68,8 +68,11 @@ fun LiquidBottomTabs(
     modifier: Modifier = Modifier,
     containerColor: Color = if (!isSystemInDarkTheme()) Color(0xFFFAFAFA).copy(0.4f) else Color(0xFF121212).copy(0.4f),
     accentColor: Color = if (!isSystemInDarkTheme()) Color(0xFF0088FF) else Color(0xFF0091FF),
+    searchProgress: Float = 0f,
+    collapseProgress: Float = 0f,
     content: @Composable RowScope.() -> Unit
 ) {
+    val isCollapsing = collapseProgress > 0.001f && collapseProgress < 0.999f
     val tabsBackdrop = rememberLayerBackdrop()
     val isLightTheme = !isSystemInDarkTheme()
 
@@ -168,9 +171,11 @@ fun LiquidBottomTabs(
                     backdrop = backdrop,
                     shape = { Capsule() },
                     effects = {
-                        vibrancy()
-                        blur(8f.dp.toPx())
-                        lens(24f.dp.toPx(), 24f.dp.toPx())
+                        if (!isCollapsing) {
+                            vibrancy()
+                            blur(8f.dp.toPx())
+                            lens(24f.dp.toPx(), 24f.dp.toPx())
+                        }
                     },
                     layerBlock = {
                         val progress = dampedDragAnimation.pressProgress
@@ -205,17 +210,19 @@ fun LiquidBottomTabs(
                         backdrop = backdrop,
                         shape = { Capsule() },
                         effects = {
-                            val progress = dampedDragAnimation.pressProgress
-                            vibrancy()
-                            blur(8f.dp.toPx())
-                            lens(
-                                24f.dp.toPx() * progress,
-                                24f.dp.toPx() * progress
-                            )
+                            if (!isCollapsing) {
+                                val progress = dampedDragAnimation.pressProgress
+                                vibrancy()
+                                blur(8f.dp.toPx())
+                                lens(
+                                    24f.dp.toPx() * progress,
+                                    24f.dp.toPx() * progress
+                                )
+                            }
                         },
                         highlight = {
                             val progress = dampedDragAnimation.pressProgress
-                            Highlight.Default.copy(alpha = progress)
+                            Highlight.Default.copy(alpha = if (isCollapsing) 0f else progress)
                         },
                         onDrawSurface = { drawRect(containerColor) }
                     )
@@ -223,7 +230,8 @@ fun LiquidBottomTabs(
                     .height(56f.dp)
                     .fillMaxWidth()
                     .padding(horizontal = 4f.dp)
-                    .graphicsLayer(colorFilter = ColorFilter.tint(accentColor)),
+                    .graphicsLayer(colorFilter = ColorFilter.tint(accentColor))
+                    .graphicsLayer { alpha = 1f - searchProgress },
                 verticalAlignment = Alignment.CenterVertically,
                 content = content
             )
@@ -236,6 +244,7 @@ fun LiquidBottomTabs(
                     translationX =
                         if (isLtr) dampedDragAnimation.value * tabWidth + panelOffset
                         else size.width - (dampedDragAnimation.value + 1f) * tabWidth + panelOffset
+                    alpha = 1f - searchProgress
                 }
                 .then(interactiveHighlight.gestureModifier)
                 .then(dampedDragAnimation.modifier)
@@ -243,26 +252,28 @@ fun LiquidBottomTabs(
                     backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
                     shape = { Capsule() },
                     effects = {
-                        val progress = dampedDragAnimation.pressProgress
-                        lens(
-                            10f.dp.toPx() * progress,
-                            14f.dp.toPx() * progress,
-                            chromaticAberration = true
-                        )
+                        if (!isCollapsing) {
+                            val progress = dampedDragAnimation.pressProgress
+                            lens(
+                                10f.dp.toPx() * progress,
+                                14f.dp.toPx() * progress,
+                                chromaticAberration = true
+                            )
+                        }
                     },
                     highlight = {
                         val progress = dampedDragAnimation.pressProgress
-                        Highlight.Default.copy(alpha = progress)
+                        Highlight.Default.copy(alpha = if (isCollapsing) 0f else progress)
                     },
                     shadow = {
                         val progress = dampedDragAnimation.pressProgress
-                        Shadow(alpha = progress)
+                        Shadow(alpha = if (isCollapsing) 0f else progress)
                     },
                     innerShadow = {
                         val progress = dampedDragAnimation.pressProgress
                         InnerShadow(
-                            radius = 8f.dp * progress,
-                            alpha = progress
+                            radius = if (isCollapsing) 0.dp else 8f.dp * progress,
+                            alpha = if (isCollapsing) 0f else progress
                         )
                     },
                     layerBlock = {

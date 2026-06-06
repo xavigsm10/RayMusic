@@ -157,4 +157,39 @@
         <item quantity="one">%1$d song</item>
         <item quantity="other">%1$d songs</item>
     </plurals>
+
+    <!-- Player Options Menu -->
+    <string name="player_menu_download">Download</string>
+    <string name="player_menu_add_favorite">Add to fav.</string>
+    <string name="player_menu_favorite">Favorite</string>
+    <string name="player_menu_share">Share</string>
+    <string name="player_menu_pin_song">Pin Song</string>
+    <string name="player_menu_unpin_song">Remove Pin</string>
+    <string name="player_menu_add_to_playlist">Add to a playlist</string>
+    <string name="player_menu_create_station">Create Station</string>
+    <string name="player_menu_go_to_album">Go to Album</string>
+    <string name="player_menu_view_credits">View Credits</string>
+    <string name="player_menu_share_lyrics">Share Lyrics</string>
+    <string name="player_menu_suggest_less">Suggest Less</string>
+    <string name="player_menu_delete_library">Remove from Library</string>
+    
+    <string name="toast_song_pinned">Song pinned</string>
+    <string name="toast_song_unpinned">Pin removed</string>
+    <string name="toast_starting_station">Starting station for: %1$s</string>
+    <string name="toast_searching_album">Searching album...</string>
+    <string name="toast_album_info_unavailable">Album info unavailable</string>
+    <string name="toast_credits_perf_by">Credits: performed by %1$s</string>
+    <string name="toast_lyrics_shared">Lyrics shared</string>
+    <string name="toast_suggestion_saved">Suggestion saved</string>
+    <string name="toast_removed_favorites">Removed from favorites</string>
+    <string name="toast_not_in_library">Not in library</string>
+
+    <!-- Radio Screen -->
+    <string name="radio_listening">Listening...</string>
+    <string name="radio_processing">Searching for matches...</string>
+    <string name="radio_tap_to_identify">Tap to identify music</string>
+    <string name="radio_hear_clearly">Make sure your device can\nhear the music clearly.</string>
+    <string name="radio_no_matches">No matches found</string>
+    <string name="radio_failed_signature">Could not generate signature</string>
+    <string name="radio_error_listening">Error listening</string>
 </resources>

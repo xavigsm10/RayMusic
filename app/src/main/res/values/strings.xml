@@ -157,4 +157,39 @@
         <item quantity="one">%1$d canción</item>
         <item quantity="other">%1$d canciones</item>
     </plurals>
+
+    <!-- Player Options Menu -->
+    <string name="player_menu_download">Descargar</string>
+    <string name="player_menu_add_favorite">Añadir a fav.</string>
+    <string name="player_menu_favorite">Favorito</string>
+    <string name="player_menu_share">Compartir</string>
+    <string name="player_menu_pin_song">Fijar canción</string>
+    <string name="player_menu_unpin_song">Eliminar fijación</string>
+    <string name="player_menu_add_to_playlist">Añadir a una playlist</string>
+    <string name="player_menu_create_station">Crear emisora</string>
+    <string name="player_menu_go_to_album">Ir al álbum</string>
+    <string name="player_menu_view_credits">Ver créditos</string>
+    <string name="player_menu_share_lyrics">Compartir letra</string>
+    <string name="player_menu_suggest_less">Sugerir menos</string>
+    <string name="player_menu_delete_library">Eliminar de la biblioteca</string>
+    
+    <string name="toast_song_pinned">Canción fijada</string>
+    <string name="toast_song_unpinned">Fijación eliminada</string>
+    <string name="toast_starting_station">Iniciando emisora para: %1$s</string>
+    <string name="toast_searching_album">Buscando álbum...</string>
+    <string name="toast_album_info_unavailable">Información de álbum no disponible</string>
+    <string name="toast_credits_perf_by">Créditos: interpretado por %1$s</string>
+    <string name="toast_lyrics_shared">Letra compartida</string>
+    <string name="toast_suggestion_saved">Sugerencia guardada</string>
+    <string name="toast_removed_favorites">Eliminado de favoritos</string>
+    <string name="toast_not_in_library">No está en la biblioteca</string>
+
+    <!-- Radio Screen -->
+    <string name="radio_listening">Escuchando...</string>
+    <string name="radio_processing">Buscando coincidencias...</string>
+    <string name="radio_tap_to_identify">Toca para identificar música</string>
+    <string name="radio_hear_clearly">Asegúrate de que tu dispositivo pueda\noír la música claramente.</string>
+    <string name="radio_no_matches">No se encontraron coincidencias</string>
+    <string name="radio_failed_signature">No se pudo generar la firma</string>
+    <string name="radio_error_listening">Error al escuchar</string>
 </resources>

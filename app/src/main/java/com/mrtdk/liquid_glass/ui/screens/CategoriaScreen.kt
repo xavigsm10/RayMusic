@@ -1,7 +1,10 @@
 package com.mrtdk.liquid_glass.ui.screens
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -26,12 +29,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import com.mrtdk.liquid_glass.ui.components.trackClickBounds
 import com.mrtdk.liquid_glass.ui.components.trackTapBounds
 import com.mrtdk.liquid_glass.ui.components.wiggleOnScroll
 import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
+import com.mrtdk.liquid_glass.ui.components.SharedElementTransitionContainer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
@@ -48,7 +54,102 @@ import com.echo.innertube.models.SongItem
 import com.echo.innertube.models.ArtistItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import org.json.JSONArray
+import com.echo.innertube.models.Artist
+import com.echo.innertube.models.Album
+
+private fun parseSongItem(obj: JSONObject): SongItem {
+    val id = obj.getString("id")
+    val title = obj.getString("title")
+    val thumbnail = obj.getString("thumbnail")
+    val explicit = obj.optBoolean("explicit", false)
+    val artistsArray = obj.getJSONArray("artists")
+    val artistsList = mutableListOf<Artist>()
+    for (i in 0 until artistsArray.length()) {
+        val aObj = artistsArray.getJSONObject(i)
+        artistsList.add(Artist(
+            name = aObj.getString("name"),
+            id = aObj.optString("id").takeIf { it.isNotEmpty() }
+        ))
+    }
+    return SongItem(
+        id = id,
+        title = title,
+        artists = artistsList,
+        thumbnail = thumbnail,
+        explicit = explicit
+    )
+}
+
+private fun parseAlbumItem(obj: JSONObject): AlbumItem {
+    val browseId = obj.getString("browseId")
+    val playlistId = obj.getString("playlistId")
+    val title = obj.getString("title")
+    val thumbnail = obj.getString("thumbnail")
+    val explicit = obj.optBoolean("explicit", false)
+    val artistsArray = obj.optJSONArray("artists")
+    val artistsList = if (artistsArray != null) {
+        val list = mutableListOf<Artist>()
+        for (i in 0 until artistsArray.length()) {
+            val aObj = artistsArray.getJSONObject(i)
+            list.add(Artist(
+                name = aObj.getString("name"),
+                id = aObj.optString("id").takeIf { it.isNotEmpty() }
+            ))
+        }
+        list
+    } else null
+    val year = if (obj.has("year")) obj.getInt("year") else null
+    return AlbumItem(
+        browseId = browseId,
+        playlistId = playlistId,
+        title = title,
+        artists = artistsList,
+        year = year,
+        thumbnail = thumbnail,
+        explicit = explicit
+    )
+}
+
+private fun parsePlaylistItem(obj: JSONObject): PlaylistItem {
+    val id = obj.getString("id")
+    val title = obj.getString("title")
+    val thumbnail = obj.optString("thumbnail", "")
+    val authorObj = obj.optJSONObject("author")
+    val author = if (authorObj != null) {
+        Artist(
+            name = authorObj.getString("name"),
+            id = authorObj.optString("id").takeIf { it.isNotEmpty() }
+        )
+    } else null
+    val songCountText = obj.optString("songCountText", "Playlist")
+    return PlaylistItem(
+        id = id,
+        title = title,
+        author = author,
+        songCountText = songCountText,
+        thumbnail = thumbnail,
+        playEndpoint = null,
+        shuffleEndpoint = null,
+        radioEndpoint = null
+    )
+}
+
+private fun parseArtistItem(obj: JSONObject): ArtistItem {
+    val id = obj.getString("id")
+    val title = obj.getString("title")
+    val thumbnail = obj.optString("thumbnail", "")
+    return ArtistItem(
+        id = id,
+        title = title,
+        thumbnail = thumbnail,
+        shuffleEndpoint = null,
+        radioEndpoint = null
+    )
+}
 
 class CategoriaState {
     var isLoading by mutableStateOf(true)
@@ -64,47 +165,104 @@ fun CategoriaScreen(
     innerPadding: PaddingValues,
     onBack: () -> Unit,
     onSongSelected: (PlayerState) -> Unit,
-    onAlbumSelected: (AlbumState) -> Unit,
-    onPlaylistSelected: (AlbumState) -> Unit,
-    onArtistSelected: (ArtistState) -> Unit
+    onAlbumSelected: (AlbumState) -> Unit = {},
+    onPlaylistSelected: (AlbumState) -> Unit = {},
+    onArtistSelected: (ArtistState) -> Unit = {}
 ) {
     val context = LocalContext.current
     val state = remember { CategoriaState() }
+
+    // Local navigation stack for album/artist overlays within the category page
+    var localAlbumDetail by remember { mutableStateOf<AlbumState?>(null) }
+    var localArtistDetail by remember { mutableStateOf<ArtistState?>(null) }
+
+    // Handle system back: close local overlays first, then go back to search
+    androidx.activity.compose.BackHandler(enabled = localAlbumDetail != null || localArtistDetail != null) {
+        when {
+            localAlbumDetail != null -> localAlbumDetail = null
+            localArtistDetail != null -> localArtistDetail = null
+        }
+    }
     
     LaunchedEffect(category.name) {
         state.isLoading = true
         withContext(Dispatchers.IO) {
-            val d1 = async {
-                YouTube.search(category.name, YouTube.SearchFilter.FILTER_FEATURED_PLAYLIST).getOrNull()?.items?.filterIsInstance<PlaylistItem>()?.take(16) ?: emptyList()
-            }
-            val d2 = async {
-                val rawAlbums = YouTube.search(category.name, YouTube.SearchFilter.FILTER_ALBUM).getOrNull()?.items?.filterIsInstance<AlbumItem>() ?: emptyList()
-                rawAlbums.filter { a ->
-                    val titleLower = a.title.lowercase()
-                    val artistText = a.artists?.joinToString { it.name }?.lowercase() ?: ""
-                    val isMix = titleLower.contains("mix") || titleLower.contains("compilation") ||
-                        titleLower.contains("playlist") || titleLower.contains("mashup") ||
-                        titleLower.contains("medley") || titleLower.contains("recopilación")
-                    val isGenericArtist = artistText.contains("various") || artistText.contains("varios") ||
-                        artistText.contains("topic") || artistText.isEmpty() || artistText.contains("mix")
-                    !isMix && !isGenericArtist
-                }.take(16)
-            }
-            val d3 = async {
-                YouTube.search(category.name, YouTube.SearchFilter.FILTER_SONG).getOrNull()?.items?.filterIsInstance<SongItem>()?.take(24) ?: emptyList()
-            }
-            val d4 = async {
-                YouTube.search(category.name, YouTube.SearchFilter.FILTER_ARTIST).getOrNull()?.items?.filterIsInstance<ArtistItem>()?.take(16) ?: emptyList()
+            var loadedOffline = false
+            try {
+                val inputStream = context.assets.open("categorias_apple.json")
+                val jsonStr = inputStream.bufferedReader().use { it.readText() }
+                val root = JSONObject(jsonStr)
+                if (root.has(category.name)) {
+                    val catData = root.getJSONObject(category.name)
+                    
+                    val songsList = mutableListOf<SongItem>()
+                    val songsArray = catData.getJSONArray("songs")
+                    for (i in 0 until songsArray.length()) {
+                        songsList.add(parseSongItem(songsArray.getJSONObject(i)))
+                    }
+                    
+                    val albumsList = mutableListOf<AlbumItem>()
+                    val albumsArray = catData.getJSONArray("albums")
+                    for (i in 0 until albumsArray.length()) {
+                        albumsList.add(parseAlbumItem(albumsArray.getJSONObject(i)))
+                    }
+                    
+                    val playlistsList = mutableListOf<PlaylistItem>()
+                    val playlistsArray = catData.getJSONArray("playlists")
+                    for (i in 0 until playlistsArray.length()) {
+                        playlistsList.add(parsePlaylistItem(playlistsArray.getJSONObject(i)))
+                    }
+                    
+                    val artistsList = mutableListOf<ArtistItem>()
+                    val artistsArray = catData.getJSONArray("artists")
+                    for (i in 0 until artistsArray.length()) {
+                        artistsList.add(parseArtistItem(artistsArray.getJSONObject(i)))
+                    }
+                    
+                    state.songs = songsList
+                    state.albums = albumsList
+                    state.playlists = playlistsList
+                    state.artists = artistsList
+                    loadedOffline = true
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
             
-            state.playlists = d1.await()
-            state.albums = d2.await()
-            state.songs = d3.await()
-            state.artists = d4.await()
+            if (!loadedOffline) {
+                val d1 = async {
+                    YouTube.search(category.name, YouTube.SearchFilter.FILTER_FEATURED_PLAYLIST).getOrNull()?.items?.filterIsInstance<PlaylistItem>()?.take(16) ?: emptyList()
+                }
+                val d2 = async {
+                    val rawAlbums = YouTube.search(category.name, YouTube.SearchFilter.FILTER_ALBUM).getOrNull()?.items?.filterIsInstance<AlbumItem>() ?: emptyList()
+                    rawAlbums.filter { a ->
+                        val titleLower = a.title.lowercase()
+                        val artistText = a.artists?.joinToString { it.name }?.lowercase() ?: ""
+                        val isMix = titleLower.contains("mix") || titleLower.contains("compilation") ||
+                            titleLower.contains("playlist") || titleLower.contains("mashup") ||
+                            titleLower.contains("medley") || titleLower.contains("recopilación")
+                        val isGenericArtist = artistText.contains("various") || artistText.contains("varios") ||
+                            artistText.contains("topic") || artistText.isEmpty() || artistText.contains("mix")
+                        !isMix && !isGenericArtist
+                    }.take(16)
+                }
+                val d3 = async {
+                    YouTube.search(category.name, YouTube.SearchFilter.FILTER_SONG).getOrNull()?.items?.filterIsInstance<SongItem>()?.take(24) ?: emptyList()
+                }
+                val d4 = async {
+                    YouTube.search(category.name, YouTube.SearchFilter.FILTER_ARTIST).getOrNull()?.items?.filterIsInstance<ArtistItem>()?.take(16) ?: emptyList()
+                }
+                
+                state.playlists = d1.await()
+                state.albums = d2.await()
+                state.songs = d3.await()
+                state.artists = d4.await()
+            }
         }
         state.isLoading = false
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -250,21 +408,37 @@ fun CategoriaScreen(
                     ) {
                         items(state.playlists) { item ->
                             var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+                            val pressScale = remember { Animatable(1f) }
+                            val pressScopePlaylist = rememberCoroutineScope()
                             Column(
                                 modifier = Modifier
                                     .width(160.dp)
-                                    .wiggleOnScroll(item.id, customScrollState = verticalScrollState)
-                                    .clickable {
-                                        SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
-                                        SharedTransitionState.lastOpenedId = item.id
-                                        onPlaylistSelected(
-                                            AlbumState(
-                                                id = item.id,
-                                                playlistId = item.id,
-                                                title = item.title,
-                                                artist = item.author?.name ?: "",
-                                                thumbnail = item.thumbnail
-                                            )
+                                    .graphicsLayer {
+                                        scaleX = pressScale.value
+                                        scaleY = pressScale.value
+                                    }
+                                    .pointerInput(item.id) {
+                                        detectTapGestures(
+                                            onPress = {
+                                                pressScopePlaylist.launch {
+                                                    pressScale.animateTo(0.93f, spring(dampingRatio = 0.6f, stiffness = 600f))
+                                                }
+                                                val released = tryAwaitRelease()
+                                                pressScopePlaylist.launch {
+                                                    pressScale.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = 400f))
+                                                }
+                                                if (released) {
+                                                    SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                                    SharedTransitionState.lastOpenedId = item.id
+                                                    localAlbumDetail = AlbumState(
+                                                        id = item.id,
+                                                        playlistId = item.id,
+                                                        title = item.title,
+                                                        artist = item.author?.name ?: "",
+                                                        thumbnail = item.thumbnail
+                                                    )
+                                                }
+                                            }
                                         )
                                     }
                             ) {
@@ -391,22 +565,38 @@ fun CategoriaScreen(
                     ) {
                         items(state.albums) { item ->
                             var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+                            val pressScale = remember { Animatable(1f) }
+                            val pressScopeAlbum = rememberCoroutineScope()
                             Column(
                                 modifier = Modifier
                                     .width(160.dp)
-                                    .wiggleOnScroll(item.browseId, customScrollState = verticalScrollState)
-                                    .clickable {
-                                        SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
-                                        SharedTransitionState.lastOpenedId = item.browseId
-                                        onAlbumSelected(
-                                            AlbumState(
-                                                id = item.browseId,
-                                                playlistId = item.playlistId,
-                                                title = item.title,
-                                                artist = item.artists?.joinToString { it.name } ?: "",
-                                                thumbnail = item.thumbnail,
-                                                year = item.year
-                                            )
+                                    .graphicsLayer {
+                                        scaleX = pressScale.value
+                                        scaleY = pressScale.value
+                                    }
+                                    .pointerInput(item.browseId) {
+                                        detectTapGestures(
+                                            onPress = {
+                                                pressScopeAlbum.launch {
+                                                    pressScale.animateTo(0.93f, spring(dampingRatio = 0.6f, stiffness = 600f))
+                                                }
+                                                val released = tryAwaitRelease()
+                                                pressScopeAlbum.launch {
+                                                    pressScale.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = 400f))
+                                                }
+                                                if (released) {
+                                                    SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                                    SharedTransitionState.lastOpenedId = item.browseId
+                                                    localAlbumDetail = AlbumState(
+                                                        id = item.browseId,
+                                                        playlistId = item.playlistId,
+                                                        title = item.title,
+                                                        artist = item.artists?.joinToString { it.name } ?: "",
+                                                        thumbnail = item.thumbnail,
+                                                        year = item.year
+                                                    )
+                                                }
+                                            }
                                         )
                                     }
                             ) {
@@ -457,11 +647,30 @@ fun CategoriaScreen(
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         items(state.artists) { item ->
+                            val pressScale = remember { Animatable(1f) }
+                            val pressScopeArtist = rememberCoroutineScope()
                             Column(
                                 modifier = Modifier
                                     .width(120.dp)
-                                    .clickable {
-                                        onArtistSelected(ArtistState(id = item.id, name = item.title, thumbnail = item.thumbnail))
+                                    .graphicsLayer {
+                                        scaleX = pressScale.value
+                                        scaleY = pressScale.value
+                                    }
+                                    .pointerInput(item.id) {
+                                        detectTapGestures(
+                                            onPress = {
+                                                pressScopeArtist.launch {
+                                                    pressScale.animateTo(0.93f, spring(dampingRatio = 0.6f, stiffness = 600f))
+                                                }
+                                                val released = tryAwaitRelease()
+                                                pressScopeArtist.launch {
+                                                    pressScale.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = 400f))
+                                                }
+                                                if (released) {
+                                                    localArtistDetail = ArtistState(id = item.id, name = item.title, thumbnail = item.thumbnail)
+                                                }
+                                            }
+                                        )
                                     },
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
@@ -498,4 +707,39 @@ fun CategoriaScreen(
             }
         }
     }
+
+    // ── Local Album overlay (shown on top of the category page) ──
+    if (localAlbumDetail != null) {
+        SharedElementTransitionContainer(
+            onBack = { localAlbumDetail = null },
+            enableSwipeToDismiss = false
+        ) { _, _ ->
+            AlbumScreen(
+                albumState = localAlbumDetail!!,
+                onBack = { localAlbumDetail = null },
+                onSongSelected = onSongSelected,
+                onArtistSelected = { artist -> localArtistDetail = artist },
+                onAlbumSelected = { album -> localAlbumDetail = album },
+                onDominantColorChanged = {}
+            )
+        }
+    }
+
+    // ── Local Artist overlay (shown on top of the category page) ──
+    if (localArtistDetail != null) {
+        SharedElementTransitionContainer(
+            onBack = { localArtistDetail = null },
+            enableSwipeToDismiss = false
+        ) { _, _ ->
+            ArtistScreen(
+                artistState = localArtistDetail!!,
+                innerPadding = innerPadding,
+                onBack = { localArtistDetail = null },
+                onSongSelected = onSongSelected,
+                onAlbumSelected = { album -> localAlbumDetail = album },
+                onArtistSelected = { artist -> localArtistDetail = artist }
+            )
+        }
+    }
+    } // end Box
 }

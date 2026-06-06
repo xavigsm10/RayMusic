@@ -2218,9 +2218,9 @@ fun PlayerOptionsMenu(
                             .padding(vertical = 8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(Icons.Default.ArrowCircleDown, contentDescription = "Descargar", tint = Color.White, modifier = Modifier.size(24.dp))
+                        Icon(Icons.Default.ArrowCircleDown, contentDescription = stringResource(R.string.player_menu_download), tint = Color.White, modifier = Modifier.size(24.dp))
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("Descargar", color = Color.White, fontSize = 11.sp, textAlign = TextAlign.Center)
+                        Text(stringResource(R.string.player_menu_download), color = Color.White, fontSize = 11.sp, textAlign = TextAlign.Center)
                     }
 
                     // Favorito
@@ -2236,13 +2236,13 @@ fun PlayerOptionsMenu(
                     ) {
                         Icon(
                             imageVector = if (isSaved) Icons.Default.Star else Icons.Default.StarBorder,
-                            contentDescription = "Favorito",
+                            contentDescription = stringResource(if (isSaved) R.string.player_menu_favorite else R.string.player_menu_add_favorite),
                             tint = if (isSaved) Color(0xFFFA243C) else Color.White,
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = if (isSaved) "Favorito" else "Añadir a fav.",
+                            text = if (isSaved) stringResource(R.string.player_menu_favorite) else stringResource(R.string.player_menu_add_favorite),
                             color = Color.White,
                             fontSize = 11.sp,
                             textAlign = TextAlign.Center
@@ -2261,16 +2261,16 @@ fun PlayerOptionsMenu(
                                         putExtra(Intent.EXTRA_SUBJECT, playerState.title)
                                         putExtra(Intent.EXTRA_TEXT, shareUrl)
                                     }
-                                    context.startActivity(Intent.createChooser(intent, "Compartir"))
+                                    context.startActivity(Intent.createChooser(intent, context.getString(R.string.compartir)))
                                 }
                                 handleDismiss()
                             }
                             .padding(vertical = 8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(Icons.Default.IosShare, contentDescription = "Compartir", tint = Color.White, modifier = Modifier.size(24.dp))
+                        Icon(Icons.Default.IosShare, contentDescription = stringResource(R.string.player_menu_share), tint = Color.White, modifier = Modifier.size(24.dp))
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("Compartir", color = Color.White, fontSize = 11.sp, textAlign = TextAlign.Center)
+                        Text(stringResource(R.string.player_menu_share), color = Color.White, fontSize = 11.sp, textAlign = TextAlign.Center)
                     }
                 }
 
@@ -2289,13 +2289,13 @@ fun PlayerOptionsMenu(
                     }
                     VerticalMenuActionItem(
                         icon = Icons.Default.PushPin,
-                        label = if (isPinned) "Eliminar fijación" else "Fijar canción"
+                        label = if (isPinned) stringResource(R.string.player_menu_unpin_song) else stringResource(R.string.player_menu_pin_song)
                     ) {
                         if (playerState?.videoId != null) {
                             val key = "song_pinned_${playerState.videoId}"
                             val newPinned = !isPinned
                             LibraryManager.saveString(key, if (newPinned) "true" else "false")
-                            Toast.makeText(context, if (newPinned) "Canción fijada" else "Fijación eliminada", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, if (newPinned) context.getString(R.string.toast_song_pinned) else context.getString(R.string.toast_song_unpinned), Toast.LENGTH_SHORT).show()
                         }
                         handleDismiss()
                     }
@@ -2303,7 +2303,7 @@ fun PlayerOptionsMenu(
                     // Añadir a una playlist
                     VerticalMenuActionItem(
                         icon = Icons.Default.PlaylistAdd,
-                        label = "Añadir a una playlist"
+                        label = stringResource(R.string.player_menu_add_to_playlist)
                     ) {
                         onAddToPlaylist()
                         handleDismiss()
@@ -2312,7 +2312,7 @@ fun PlayerOptionsMenu(
                     // Crear emisora
                     VerticalMenuActionItem(
                         icon = Icons.Default.Radio,
-                        label = "Crear emisora"
+                        label = stringResource(R.string.player_menu_create_station)
                     ) {
                         if (playerState != null) {
                             onSongSelected(
@@ -2325,7 +2325,7 @@ fun PlayerOptionsMenu(
                                     album = playerState.album
                                 )
                             )
-                            Toast.makeText(context, "Iniciando emisora para: ${playerState.title}", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.toast_starting_station, playerState.title), Toast.LENGTH_SHORT).show()
                         }
                         handleDismiss()
                     }
@@ -2333,7 +2333,7 @@ fun PlayerOptionsMenu(
                     // Ir al álbum
                     VerticalMenuActionItem(
                         icon = Icons.Default.Album,
-                        label = "Ir al álbum"
+                        label = stringResource(R.string.player_menu_go_to_album)
                     ) {
                         if (playerState != null) {
                             if (!playerState.albumId.isNullOrBlank()) {
@@ -2364,7 +2364,7 @@ fun PlayerOptionsMenu(
                                 } else {
                                     // Online search fallback
                                     scope.launch {
-                                        Toast.makeText(context, "Buscando álbum...", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, context.getString(R.string.toast_searching_album), Toast.LENGTH_SHORT).show()
                                         withContext(Dispatchers.IO) {
                                             val query = "${playerState.album ?: playerState.title} ${playerState.artist}"
                                             val searchResult = YouTube.search(query, YouTube.SearchFilter.FILTER_ALBUM).getOrNull()
@@ -2400,7 +2400,7 @@ fun PlayerOptionsMenu(
                                                         )
                                                         handleDismiss()
                                                     } else {
-                                                        Toast.makeText(context, "Información de álbum no disponible", Toast.LENGTH_SHORT).show()
+                                                        Toast.makeText(context, context.getString(R.string.toast_album_info_unavailable), Toast.LENGTH_SHORT).show()
                                                     }
                                                 }
                                             }
@@ -2409,7 +2409,7 @@ fun PlayerOptionsMenu(
                                 }
                             }
                         } else {
-                            Toast.makeText(context, "Información de álbum no disponible", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.toast_album_info_unavailable), Toast.LENGTH_SHORT).show()
                             handleDismiss()
                         }
                     }
@@ -2417,10 +2417,10 @@ fun PlayerOptionsMenu(
                     // Ver créditos
                     VerticalMenuActionItem(
                         icon = Icons.Default.Info,
-                        label = "Ver créditos"
+                        label = stringResource(R.string.player_menu_view_credits)
                     ) {
                         if (playerState != null) {
-                            Toast.makeText(context, "Créditos: interpretado por ${playerState.artist}", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.toast_credits_perf_by, playerState.artist), Toast.LENGTH_SHORT).show()
                         }
                         handleDismiss()
                     }
@@ -2428,34 +2428,34 @@ fun PlayerOptionsMenu(
                     // Compartir letra
                     VerticalMenuActionItem(
                         icon = Icons.Default.ChatBubble,
-                        label = "Compartir letra"
+                        label = stringResource(R.string.player_menu_share_lyrics)
                     ) {
-                        Toast.makeText(context, "Letra compartida", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.toast_lyrics_shared), Toast.LENGTH_SHORT).show()
                         handleDismiss()
                     }
 
                     // Sugerir menos
                     VerticalMenuActionItem(
                         icon = Icons.Default.ThumbDown,
-                        label = "Sugerir menos"
+                        label = stringResource(R.string.player_menu_suggest_less)
                     ) {
-                        Toast.makeText(context, "Sugerencia guardada", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.toast_suggestion_saved), Toast.LENGTH_SHORT).show()
                         handleDismiss()
                     }
 
                     // Eliminar de...
                     VerticalMenuActionItem(
                         icon = Icons.Default.Delete,
-                        label = "Eliminar de la biblioteca",
+                        label = stringResource(R.string.player_menu_delete_library),
                         iconTint = Color(0xFFFA243C),
                         textColor = Color(0xFFFA243C)
                     ) {
                         if (playerState?.videoId != null) {
                             if (isSaved) {
                                 LibraryManager.removeItem(playerState.videoId)
-                                Toast.makeText(context, "Eliminado de favoritos", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.toast_removed_favorites), Toast.LENGTH_SHORT).show()
                             } else {
-                                Toast.makeText(context, "No está en la biblioteca", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.toast_not_in_library), Toast.LENGTH_SHORT).show()
                             }
                         }
                         handleDismiss()

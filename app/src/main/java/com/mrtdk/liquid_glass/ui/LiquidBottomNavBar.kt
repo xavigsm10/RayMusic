@@ -3,7 +3,13 @@ package com.mrtdk.liquid_glass.ui
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -56,22 +62,39 @@ fun LiquidBottomNavBar(
     onSearchSubmit: (String) -> Unit = {},
     modifier: Modifier = Modifier,
     tintColor: Color = Color.White.copy(alpha = 0.15f),
-    contentColor: Color = Color.White
+    contentColor: Color = Color.White,
+    collapseProgress: Float = 0f
 ) {
     val imeBottom = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current)
     val isKeyboardOpen = imeBottom > 0
+    val focusManager = LocalFocusManager.current
 
+    val isCollapsing = collapseProgress > 0.001f && collapseProgress < 0.999f
     val isSearchActive = selectedIndex == 4
-    val mainWeight by animateFloatAsState(if (isSearchActive) 0.0001f else 1f, animationSpec = tween(400))
-    val searchWeight by animateFloatAsState(if (isSearchActive) 1f else 0.0001f, animationSpec = tween(400))
     
-    val searchWidth by animateDpAsState(if (!isSearchActive) 56.dp else 0.dp, animationSpec = tween(400))
-    val homeWidth by animateDpAsState(if (isSearchActive && !isKeyboardOpen) 56.dp else 0.dp, animationSpec = tween(400))
-    val xWidth by animateDpAsState(if (isSearchActive && isKeyboardOpen) 56.dp else 0.dp, animationSpec = tween(400))
+    val navSpringSpec = spring<Float>(
+        dampingRatio = 0.85f,
+        stiffness = 300f
+    )
+    val navDpSpringSpec = spring<androidx.compose.ui.unit.Dp>(
+        dampingRatio = 0.85f,
+        stiffness = 300f
+    )
 
-    val spacingMainSearch by animateDpAsState(if (!isSearchActive && mainWeight > 0.01f) 12.dp else 0.dp, animationSpec = tween(400))
-    val spacingHomeSearch by animateDpAsState(if (isSearchActive && !isKeyboardOpen) 12.dp else 0.dp, animationSpec = tween(400))
-    val spacingSearchX by animateDpAsState(if (isSearchActive && isKeyboardOpen) 12.dp else 0.dp, animationSpec = tween(400))
+    val searchProgress by animateFloatAsState(
+        targetValue = if (isSearchActive) 1f else 0f,
+        animationSpec = navSpringSpec
+    )
+    
+    val xWidth by animateDpAsState(
+        targetValue = if (isSearchActive && isKeyboardOpen) 64.dp else 0.dp,
+        animationSpec = navDpSpringSpec
+    )
+    
+    val spacingSearchX by animateDpAsState(
+        targetValue = if (isSearchActive && isKeyboardOpen) 12.dp else 0.dp,
+        animationSpec = navDpSpringSpec
+    )
 
     val focusRequester = remember { FocusRequester() }
 
@@ -82,156 +105,185 @@ fun LiquidBottomNavBar(
     }
 
     val backdrop = LocalBackdrop.current
+    val combineProgress = if (searchProgress > collapseProgress) searchProgress else collapseProgress
+    val navBarHeight = 84.dp - 20.dp * combineProgress
 
-    Row(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .height(72.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .height(navBarHeight)
     ) {
-        // Main Pill
-        if (mainWeight > 0.01f) {
-            Box(
-                modifier = Modifier
-                    .weight(mainWeight)
-                    .fillMaxHeight(),
-                contentAlignment = Alignment.Center
-            ) {
-                MainTabs(selectedIndex, onTabSelected, contentColor, tintColor)
-            }
-            Spacer(modifier = Modifier.width(spacingMainSearch))
-        }
+        val parentWidth = maxWidth
+        val mainTabsMaxWidth = parentWidth - 56.dp - 12.dp
+        val closeWidth = xWidth
+        val availableWidth = parentWidth - closeWidth - spacingSearchX - 12.dp
 
-        // Home Pill
-        if (homeWidth > 0.5.dp) {
-            Box(
-                modifier = Modifier
-                    .width(homeWidth)
-                    .height(56.dp)
-                    .drawBackdrop(
-                        backdrop = backdrop,
-                        shape = { Capsule() },
-                        effects = {
-                            vibrancy()
-                            blur(8f.dp.toPx())
-                            lens(24f.dp.toPx(), 24f.dp.toPx())
-                        },
-                        onDrawSurface = { drawRect(tintColor) }
-                    )
-                    .clip(Capsule())
-                    .clickable { onTabSelected(0) },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.nav_inicio),
-                    contentDescription = stringResource(R.string.nav_inicio),
-                    tint = contentColor,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            Spacer(modifier = Modifier.width(spacingHomeSearch))
-        }
+        val mainPillWidth = availableWidth - 56.dp - (availableWidth - 112.dp) * combineProgress
+        val searchPillWidth = 56.dp + (availableWidth - 112.dp) * searchProgress * (1f - collapseProgress)
+        val spacerWidth = parentWidth - closeWidth - spacingSearchX - mainPillWidth - searchPillWidth
+        val mainPillHeight = 84.dp - 28.dp * combineProgress
+        val searchPillHeight = 56.dp + 8.dp * searchProgress * (1f - collapseProgress)
 
-        // Search Pill
-        val searchModifier = if (isSearchActive) Modifier.weight(searchWeight) else Modifier.width(searchWidth)
-        Box(
-            modifier = searchModifier
-                .height(56.dp)
-                .drawBackdrop(
-                    backdrop = backdrop,
-                    shape = { Capsule() },
-                    effects = {
-                        vibrancy()
-                        blur(8f.dp.toPx())
-                        lens(24f.dp.toPx(), 24f.dp.toPx())
-                    },
-                    onDrawSurface = { drawRect(tintColor) }
-                )
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
+            // Main Navigation Pill (shrinks smoothly to become circular Home button)
+            Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .clickable { if (!isSearchActive) onTabSelected(4) },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = if (!isSearchActive) Arrangement.Center else Arrangement.Start
-            ) {
-                if (!isSearchActive) {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = stringResource(R.string.search_action),
-                        tint = Color.White,
-                        modifier = Modifier.size(26.dp)
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = stringResource(R.string.search_action),
-                        tint = Color.White,
-                        modifier = Modifier
-                            .padding(start = 20.dp, end = 12.dp)
-                            .size(26.dp)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) { onTabSelected(4) }
-                    )
-                    BasicTextField(
-                        value = searchQuery,
-                        onValueChange = onSearchQueryChange,
-                        modifier = Modifier
-                            .weight(1f)
-                            .focusRequester(focusRequester)
-                            .padding(end = 16.dp),
-                        textStyle = TextStyle(color = contentColor, fontSize = 16.sp),
-                        cursorBrush = SolidColor(contentColor),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        keyboardActions = KeyboardActions(onSearch = { onSearchSubmit(searchQuery) }),
-                        decorationBox = { innerTextField ->
-                            if (searchQuery.isEmpty()) {
-                                Text(stringResource(R.string.search_placeholder), color = contentColor.copy(alpha = 0.5f), fontSize = 16.sp)
-                            }
-                            innerTextField()
+                    .width(mainPillWidth)
+                    .height(mainPillHeight)
+                    .let { mod ->
+                        if (combineProgress > 0f) {
+                            mod.clip(Capsule()).clipToBounds()
+                        } else {
+                            mod
                         }
-                    )
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier.requiredWidth(mainTabsMaxWidth)
+                ) {
+                    MainTabs(selectedIndex, onTabSelected, contentColor, tintColor, searchProgress, collapseProgress)
                 }
             }
-        }
 
-        // Close Pill (X)
-        if (xWidth > 0.5.dp) {
-            Spacer(modifier = Modifier.width(spacingSearchX))
+            Spacer(modifier = Modifier.width(spacerWidth))
+
+            // Search Pill (expands smoothly to become the search bar)
             Box(
                 modifier = Modifier
-                    .width(xWidth)
-                    .height(56.dp)
+                    .width(searchPillWidth)
+                    .height(searchPillHeight)
+                    .clip(Capsule())
+                    .clipToBounds()
                     .drawBackdrop(
                         backdrop = backdrop,
                         shape = { Capsule() },
                         effects = {
-                            vibrancy()
-                            blur(8f.dp.toPx())
-                            lens(24f.dp.toPx(), 24f.dp.toPx())
+                            if (!isCollapsing) {
+                                vibrancy()
+                                blur(8f.dp.toPx())
+                                lens(24f.dp.toPx(), 24f.dp.toPx())
+                            }
                         },
                         onDrawSurface = { drawRect(tintColor) }
                     )
-                    .clip(Capsule())
-                    .clickable { 
-                        if (searchQuery.isNotEmpty()) {
-                            onSearchQueryChange("")
-                        } else {
-                            onTabSelected(0)
-                        }
-                    },
-                contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = stringResource(R.string.close_action),
-                    tint = contentColor,
-                    modifier = Modifier.size(24.dp)
-                )
+                val showSearchInput = isSearchActive && collapseProgress < 0.5f
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable { if (!isSearchActive) onTabSelected(4) },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = if (!showSearchInput) Arrangement.Center else Arrangement.Start
+                ) {
+                    if (!showSearchInput) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = stringResource(R.string.search_action),
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = stringResource(R.string.search_action),
+                            tint = Color.White,
+                            modifier = Modifier
+                                .padding(start = 20.dp, end = 12.dp)
+                                .size(24.dp)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) { onTabSelected(4) }
+                        )
+                        val textAlpha = (1f - collapseProgress * 2f).coerceIn(0f, 1f)
+                        BasicTextField(
+                            value = searchQuery,
+                            onValueChange = onSearchQueryChange,
+                            modifier = Modifier
+                                .weight(1f)
+                                .focusRequester(focusRequester)
+                                .padding(end = 8.dp)
+                                .graphicsLayer { alpha = textAlpha },
+                            textStyle = TextStyle(color = contentColor, fontSize = 16.sp),
+                            cursorBrush = SolidColor(contentColor),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(onSearch = { onSearchSubmit(searchQuery) }),
+                            decorationBox = { innerTextField ->
+                                if (searchQuery.isEmpty()) {
+                                    Text(stringResource(R.string.search_placeholder), color = contentColor.copy(alpha = 0.5f * textAlpha), fontSize = 16.sp)
+                                }
+                                innerTextField()
+                            }
+                        )
+                        if (searchQuery.isNotEmpty() && textAlpha > 0.1f) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(end = 12.dp)
+                                    .size(22.dp)
+                                    .background(Color.White.copy(alpha = 0.2f), CircleShape)
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null
+                                    ) {
+                                        onSearchQueryChange("")
+                                    }
+                                    .graphicsLayer { alpha = textAlpha },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Clear search",
+                                    tint = contentColor.copy(alpha = 0.8f),
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Close Pill (X)
+            if (xWidth > 0.5.dp) {
+                Spacer(modifier = Modifier.width(spacingSearchX))
+                Box(
+                    modifier = Modifier
+                        .width(xWidth)
+                        .height(searchPillHeight)
+                        .drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { Capsule() },
+                            effects = {
+                                if (!isCollapsing) {
+                                    vibrancy()
+                                    blur(8f.dp.toPx())
+                                    lens(24f.dp.toPx(), 24f.dp.toPx())
+                                }
+                            },
+                            onDrawSurface = { drawRect(tintColor) }
+                        )
+                        .clip(Capsule())
+                        .clickable { 
+                            if (searchQuery.isNotEmpty()) {
+                                onSearchQueryChange("")
+                            } else {
+                                focusManager.clearFocus()
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = stringResource(R.string.close_action),
+                        tint = contentColor,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
         }
     }
@@ -242,10 +294,14 @@ fun MainTabs(
     selectedIndex: Int,
     onTabSelected: (Int) -> Unit,
     contentColor: Color = Color.White,
-    tintColor: Color = Color.White.copy(alpha = 0.15f)
+    tintColor: Color = Color.White.copy(alpha = 0.15f),
+    searchProgress: Float = 0f,
+    collapseProgress: Float = 0f
 ) {
     val backdrop = LocalBackdrop.current
     val tabsCount = tabs.size
+
+    val combineProgress = if (searchProgress > collapseProgress) searchProgress else collapseProgress
 
     LiquidBottomTabs(
         selectedTabIndex = { selectedIndex },
@@ -254,34 +310,55 @@ fun MainTabs(
         tabsCount = tabsCount,
         containerColor = tintColor,
         accentColor = Color(0xFFFA243C),
+        searchProgress = combineProgress,
+        collapseProgress = collapseProgress,
         modifier = Modifier.fillMaxSize()
     ) {
         tabs.forEachIndexed { index, pair ->
             val tabText = stringResource(id = pair.first)
             
             val isSelected = selectedIndex == index
-            val itemColor = if (isSelected) Color.White else Color.White.copy(alpha = 0.6f)
-            val iconSize = when (index) {
-                2, 3 -> 29.dp
-                else -> 26.dp
+            val itemColor = if (index == 0) {
+                androidx.compose.ui.graphics.lerp(
+                    if (isSelected) Color.White else Color.White.copy(alpha = 0.6f),
+                    Color(0xFFFA243C),
+                    combineProgress
+                )
+            } else {
+                if (isSelected) Color.White else Color.White.copy(alpha = 0.6f)
             }
+            val iconSize = 26.dp
+
+            val tabWeight = if (index == 0) 1f else (1f - combineProgress).coerceAtLeast(0.0001f)
+            val tabAlpha = if (index == 0) 1f else (1f - combineProgress)
+            val textAlpha = 1f - combineProgress
 
             LiquidBottomTab(
-                onClick = { onTabSelected(index) }
+                onClick = { onTabSelected(index) },
+                weight = tabWeight
             ) {
+                val iconOffsetY = 5.dp * (1f - combineProgress)
                 Icon(
                     painter = painterResource(id = pair.second),
                     contentDescription = tabText,
                     tint = itemColor,
-                    modifier = Modifier.size(iconSize)
+                    modifier = Modifier
+                        .size(iconSize)
+                        .offset(y = iconOffsetY)
+                        .graphicsLayer { alpha = tabAlpha }
                 )
-                Text(
-                    text = tabText,
-                    color = itemColor,
-                    fontSize = 10.sp,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
-                    maxLines = 1
-                )
+                if (textAlpha > 0.05f) {
+                    Text(
+                        text = tabText,
+                        color = itemColor,
+                        fontSize = 10.sp,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+                        maxLines = 1,
+                        modifier = Modifier
+                            .offset(y = (-3).dp)
+                            .graphicsLayer { alpha = textAlpha }
+                    )
+                }
             }
         }
     }
