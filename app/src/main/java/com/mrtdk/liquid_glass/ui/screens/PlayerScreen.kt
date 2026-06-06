@@ -665,7 +665,7 @@ fun PlayerScreen(
                     modifier = Modifier
                         .offset(x = 0.dp, y = imgOffsetY + imgHeight - overlapDp)
                         .fillMaxWidth()
-                        .height(blurHeight + 40.dp)
+                        .height(blurHeight + 120.dp)
                         .graphicsLayer {
                             compositingStrategy = CompositingStrategy.Offscreen
                         }
@@ -678,8 +678,9 @@ fun PlayerScreen(
                                         0.0f to Color.Black,
                                         0.1f to Color.Black,
                                         0.3f to Color.Black.copy(alpha = 0.8f),
-                                        0.6f to Color.Black.copy(alpha = 0.5f),
-                                        0.85f to Color.Black.copy(alpha = 0.3f),
+                                        0.5f to Color.Black.copy(alpha = 0.4f),
+                                        0.7f to Color.Black.copy(alpha = 0.15f),
+                                        0.8f to Color.Transparent,
                                         1.0f to Color.Transparent
                                     )
                                 ),
@@ -802,18 +803,29 @@ fun PlayerScreen(
                     )
                 } else {
                     reflectionWidth = maxWidth
-                    reflectionHeight = imgHeight
+                    val pad = 120.dp
                     reflectionX = 0.dp
                     childWidth = imgWidth
                     childOffsetX = imgOffsetX
                     
                     val overlapDp = 24.dp
-                    reflectionY = (if (sliderYDp > 0.dp) sliderYDp else (imgOffsetY + imgHeight)) - overlapDp
+                    val baseReflectionY = (if (sliderYDp > 0.dp) sliderYDp else (imgOffsetY + imgHeight)) - overlapDp
+                    reflectionY = baseReflectionY - pad
+                    reflectionHeight = imgHeight + pad * 2
+                    
+                    val hPx = with(density) { reflectionHeight.toPx() }
+                    val padPx = with(density) { pad.toPx() }
+                    val imgHPx = with(density) { imgHeight.toPx() }
+                    val gapPx = with(density) { 40.dp.toPx() }
+                    
                     reflectionGradient = arrayOf(
                         0.0f to Color.Transparent,
-                        0.25f to Color.Black,
-                        0.5f to Color.Black.copy(alpha = 0.8f),
-                        0.8f to Color.Black.copy(alpha = 0.2f),
+                        ((padPx - gapPx) / hPx).coerceIn(0f, 1f) to Color.Transparent,
+                        (padPx / hPx).coerceIn(0f, 1f) to Color.Transparent,
+                        ((padPx + imgHPx * 0.25f) / hPx).coerceIn(0f, 1f) to Color.Black,
+                        ((padPx + imgHPx * 0.5f) / hPx).coerceIn(0f, 1f) to Color.Black.copy(alpha = 0.8f),
+                        ((padPx + imgHPx * 0.8f) / hPx).coerceIn(0f, 1f) to Color.Black.copy(alpha = 0.2f),
+                        ((padPx + imgHPx) / hPx).coerceIn(0f, 1f) to Color.Transparent,
                         1.0f to Color.Transparent
                     )
                 }
@@ -844,9 +856,9 @@ fun PlayerScreen(
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
-                                .offset(x = childOffsetX)
+                                .offset(x = childOffsetX, y = if (isOverlayActive) 0.dp else 120.dp)
                                 .width(childWidth)
-                                .fillMaxHeight()
+                                .height(if (isOverlayActive) reflectionHeight else imgHeight)
                                 .graphicsLayer {
                                     scaleY = -1f // Invertido verticalmente
                                 }
@@ -861,9 +873,9 @@ fun PlayerScreen(
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
-                                .offset(x = childOffsetX)
+                                .offset(x = childOffsetX, y = if (isOverlayActive) 0.dp else 120.dp)
                                 .width(childWidth)
-                                .fillMaxHeight()
+                                .height(if (isOverlayActive) reflectionHeight else imgHeight)
                                 .graphicsLayer {
                                     scaleY = -1f // Invertido verticalmente
                                 }

@@ -55,7 +55,8 @@ fun MiniPlayer(
     modifier: Modifier = Modifier,
     hideImage: Boolean = false,
     tintColor: Color = Color.White.copy(alpha = 0.15f),
-    contentColor: Color = Color.White
+    contentColor: Color = Color.White,
+    collapseProgress: Float = 0f
 ) {
     if (playerState == null) return
 
@@ -96,6 +97,7 @@ fun MiniPlayer(
 
     val swipeOffsetX = remember { Animatable(0f) }
     val backdrop = LocalBackdrop.current
+    val isCollapsing = collapseProgress > 0.001f && collapseProgress < 0.999f
 
     Box(
         modifier = modifier
@@ -110,9 +112,11 @@ fun MiniPlayer(
                 backdrop = backdrop,
                 shape = { Capsule() },
                 effects = {
-                    vibrancy()
-                    blur(8f.dp.toPx())
-                    lens(24f.dp.toPx(), 24f.dp.toPx())
+                    if (!isCollapsing) {
+                        vibrancy()
+                        blur(8f.dp.toPx())
+                        lens(24f.dp.toPx(), 24f.dp.toPx())
+                    }
                 },
                 onDrawSurface = { drawRect(tintColor) }
             )
