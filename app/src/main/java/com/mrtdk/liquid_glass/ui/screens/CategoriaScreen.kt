@@ -61,6 +61,29 @@ import org.json.JSONArray
 import com.echo.innertube.models.Artist
 import com.echo.innertube.models.Album
 
+/** Upgrades any thumbnail URL to the highest quality available.
+ *  Handles Apple Music CDN, YouTube Music and YouTube thumbnail formats. */
+private fun upgradeThumbQuality(url: String?): String? {
+    if (url == null) return null
+    return when {
+        url.contains("mzstatic.com") -> url
+            .replace(Regex("/\\d+x\\d+bb\\.jpg$"), "/600x600bb.jpg")
+            .replace(Regex("/\\d+x\\d+bb\\.webp$"), "/600x600bb.jpg")
+        url.contains("lh3.googleusercontent.com") ->
+            url.replace(Regex("=w\\d+-h\\d+.*$"), "=w600-h600-l90-rj")
+        url.contains("yt3.ggpht.com") ->
+            url.replace(Regex("=w\\d+-h\\d+.*$"), "=w600-h600-l90-rj")
+                .replace(Regex("=s\\d+$"), "=s600")
+        url.contains("ytimg.com/vi/") -> url
+            .replace("hqdefault.jpg", "maxresdefault.jpg")
+            .replace("mqdefault.jpg", "maxresdefault.jpg")
+            .replace("sddefault.jpg", "maxresdefault.jpg")
+        url.contains("=w226") || url.contains("=w120") ->
+            url.replace("=w226-h226", "=w600-h600").replace("=w120-h120", "=w600-h600")
+        else -> url
+    }
+}
+
 private fun parseSongItem(obj: JSONObject): SongItem {
     val id = obj.getString("id")
     val title = obj.getString("title")
@@ -79,7 +102,7 @@ private fun parseSongItem(obj: JSONObject): SongItem {
         id = id,
         title = title,
         artists = artistsList,
-        thumbnail = thumbnail,
+        thumbnail = upgradeThumbQuality(thumbnail) ?: thumbnail,
         explicit = explicit
     )
 }
@@ -109,7 +132,7 @@ private fun parseAlbumItem(obj: JSONObject): AlbumItem {
         title = title,
         artists = artistsList,
         year = year,
-        thumbnail = thumbnail,
+        thumbnail = upgradeThumbQuality(thumbnail) ?: thumbnail,
         explicit = explicit
     )
 }
@@ -131,7 +154,7 @@ private fun parsePlaylistItem(obj: JSONObject): PlaylistItem {
         title = title,
         author = author,
         songCountText = songCountText,
-        thumbnail = thumbnail,
+        thumbnail = upgradeThumbQuality(thumbnail) ?: thumbnail,
         playEndpoint = null,
         shuffleEndpoint = null,
         radioEndpoint = null
@@ -145,7 +168,7 @@ private fun parseArtistItem(obj: JSONObject): ArtistItem {
     return ArtistItem(
         id = id,
         title = title,
-        thumbnail = thumbnail,
+        thumbnail = upgradeThumbQuality(thumbnail) ?: thumbnail,
         shuffleEndpoint = null,
         radioEndpoint = null
     )
@@ -339,7 +362,7 @@ fun CategoriaScreen(
                                         .background(Color.DarkGray)
                                 ) {
                                     AsyncImage(
-                                        model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                                        model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(),
                                         contentDescription = "Hero Image",
                                         contentScale = ContentScale.Crop,
                                         modifier = Modifier.fillMaxSize()
@@ -377,7 +400,7 @@ fun CategoriaScreen(
                                             lineHeight = 20.sp
                                         )
                                         AsyncImage(
-                                            model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                                            model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(),
                                             contentDescription = "Mini Cover",
                                             contentScale = ContentScale.Crop,
                                             modifier = Modifier.size(56.dp).clip(RoundedCornerShape(6.dp))
@@ -445,7 +468,7 @@ fun CategoriaScreen(
                                 AsyncImage(
                                     model = ImageRequest.Builder(context)
                                         .data(item.thumbnail?.replace("w226", "w400")?.replace("h226", "h400"))
-                                        .crossfade(true).build(),
+                                        .crossfade(false).build(),
                                     contentDescription = "Playlist Cover",
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier
@@ -516,7 +539,7 @@ fun CategoriaScreen(
                             ) {
                                 AsyncImage(
                                     model = ImageRequest.Builder(context)
-                                        .data(hdThumb).crossfade(true).build(),
+                                        .data(hdThumb).crossfade(false).build(),
                                     contentDescription = "Song Cover",
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier
@@ -603,7 +626,7 @@ fun CategoriaScreen(
                                 AsyncImage(
                                     model = ImageRequest.Builder(context)
                                         .data(item.thumbnail?.replace("w226", "w400")?.replace("h226", "h400"))
-                                        .crossfade(true).build(),
+                                        .crossfade(false).build(),
                                     contentDescription = "Album Cover",
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier
@@ -682,7 +705,7 @@ fun CategoriaScreen(
                                                 else -> it
                                             }
                                         })
-                                        .crossfade(true).build(),
+                                        .crossfade(false).build(),
                                     contentDescription = "Artist Cover",
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier

@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -104,6 +105,12 @@ fun InicioScreen(
     onVideoSelected: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
+    var activeSimilarSection by remember { mutableStateOf<SimilarSection?>(null) }
+    val similarGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+
+    androidx.activity.compose.BackHandler(enabled = activeSimilarSection != null) {
+        activeSimilarSection = null
+    }
 
     // Recently played from LibraryManager
     val recentlyPlayed by LibraryManager.recentlyPlayed.collectAsState()
@@ -264,8 +271,8 @@ fun InicioScreen(
 
                 // Primary similar section for this seed
                 val primaryItems = mutableListOf<com.echo.innertube.models.YTItem>()
-                primaryItems.addAll(relatedPage.artists.take(3))
-                primaryItems.addAll(availableSongs.drop(4).take(3))
+                primaryItems.addAll(relatedPage.artists.take(10))
+                primaryItems.addAll(availableSongs.drop(4).take(10))
                 if (primaryItems.isNotEmpty()) {
                     sections.add(SimilarSection(
                         artistName = seedArtist,
@@ -274,7 +281,7 @@ fun InicioScreen(
                 }
 
                 // Add a "Porque escuchaste a" section for this seed
-                val seedSongs = relatedPage.songs.take(8)
+                val seedSongs = relatedPage.songs.take(20)
                 if (seedSongs.isNotEmpty() && seedArtist.isNotEmpty() && seedArtist != "Artistas") {
                     porqueEscuchasteList.add(PorqueEscuchasteSection(
                         artistName = seedArtist,
@@ -284,7 +291,7 @@ fun InicioScreen(
             }
 
             state.quickPickSongs = allQuickPicks.distinctBy { it.id }.shuffled().take(12)
-            state.seleccionesParaTi = allParaTi.distinctBy { it.id }.shuffled().take(10)
+            state.seleccionesParaTi = allParaTi.distinctBy { it.id }.shuffled().take(20)
             state.porqueEscuchasteSections = porqueEscuchasteList.distinctBy { it.artistName }
 
             if (results.isNotEmpty()) {
@@ -321,16 +328,17 @@ fun InicioScreen(
 
     val listState = rememberLazyListState()
 
-    LazyColumn(
-        state = listState,
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black),
-        contentPadding = PaddingValues(
-            top = innerPadding.calculateTopPadding() + 24.dp,
-            bottom = innerPadding.calculateBottomPadding() + 180.dp
-        )
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black),
+            contentPadding = PaddingValues(
+                top = innerPadding.calculateTopPadding() + 24.dp,
+                bottom = innerPadding.calculateBottomPadding() + 180.dp
+            )
+        ) {
         item {
             Text(
                 text = stringResource(R.string.nav_inicio),
@@ -606,7 +614,10 @@ fun InicioScreen(
                 item {
                     Text(stringResource(R.string.similar_a), color = Color.Gray, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 16.dp))
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { activeSimilarSection = section }
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
@@ -617,7 +628,7 @@ fun InicioScreen(
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        items(section.items.take(10).size) { idx ->
+                        items(section.items.size) { idx ->
                             val item = section.items[idx]
                             val hdThumb = upgradeThumb(
                                 when (item) {
@@ -946,7 +957,139 @@ fun InicioScreen(
                 }
             }
         }
+    } // Cierra LazyColumn
+
+    // Overlay similar
+    androidx.compose.animation.AnimatedVisibility(
+        visible = activeSimilarSection != null,
+        enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInHorizontally(initialOffsetX = { it }),
+        exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutHorizontally(targetOffsetX = { it }),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        val section = activeSimilarSection
+        if (section != null) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+                    .padding(top = innerPadding.calculateTopPadding(), bottom = innerPadding.calculateBottomPadding() + 120.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    androidx.compose.material3.IconButton(onClick = { activeSimilarSection = null }) {
+                        Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Default.ArrowBackIosNew,
+                            contentDescription = stringResource(R.string.back_action),
+                            tint = Color(0xFFFA243C)
+                        )
+                    }
+                    Text(
+                        text = section.artistName,
+                        color = Color.White,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
+
+                androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                    state = similarGridState,
+                    columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(section.items.size) { index ->
+                        val item = section.items[index]
+                        val hdThumb = upgradeThumb(
+                            when (item) {
+                                is com.echo.innertube.models.ArtistItem -> item.thumbnail
+                                is com.echo.innertube.models.SongItem -> item.thumbnail
+                                is com.echo.innertube.models.AlbumItem -> item.thumbnail
+                                else -> null
+                            }
+                        )
+                        val title = when (item) {
+                            is com.echo.innertube.models.ArtistItem -> item.title
+                            is com.echo.innertube.models.SongItem -> item.title
+                            is com.echo.innertube.models.AlbumItem -> item.title
+                            else -> "Desconocido"
+                        }
+                        val subtitle = when (item) {
+                            is com.echo.innertube.models.ArtistItem -> "Artista"
+                            is com.echo.innertube.models.SongItem -> "Canción • ${item.artists.joinToString { it.name }}"
+                            is com.echo.innertube.models.AlbumItem -> "Álbum • ${item.year ?: ""}"
+                            else -> ""
+                        }
+                        val isCircle = item is com.echo.innertube.models.ArtistItem
+                        val itemId = when (item) {
+                            is com.echo.innertube.models.ArtistItem -> item.id
+                            is com.echo.innertube.models.SongItem -> item.id
+                            is com.echo.innertube.models.AlbumItem -> item.id
+                            else -> item.hashCode().toString()
+                        }
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .wiggleOnScroll(itemId, similarGridState)
+                                .clickable {
+                                    when (item) {
+                                        is com.echo.innertube.models.ArtistItem -> {
+                                            onArtistSelected(com.mrtdk.liquid_glass.ui.screens.ArtistState(item.id, item.title, item.thumbnail))
+                                        }
+                                        is com.echo.innertube.models.SongItem -> {
+                                            onSongSelected(PlayerState(item.title, item.artists.joinToString { it.name }, upgradeThumbHD(item.thumbnail), item.id))
+                                        }
+                                        is com.echo.innertube.models.AlbumItem -> {
+                                            onAlbumSelected(com.mrtdk.liquid_glass.ui.screens.AlbumState(item.id, item.playlistId ?: item.id, item.title, item.artists?.joinToString { it.name } ?: "Varios", item.thumbnail, item.year as? Int))
+                                        }
+                                        else -> {}
+                                    }
+                                }
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(1f)
+                                    .clip(if (isCircle) androidx.compose.foundation.shape.CircleShape else RoundedCornerShape(12.dp))
+                                    .background(Color(0xFF1C1C1E))
+                            ) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(),
+                                    contentDescription = title,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = title,
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = subtitle,
+                                color = Color.Gray,
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
+}
 }
 
 // ═══════════════════════════════════════════════════════════════════

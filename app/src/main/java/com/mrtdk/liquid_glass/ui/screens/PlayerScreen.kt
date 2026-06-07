@@ -237,30 +237,21 @@ fun PlayerScreen(
         var showNewPlaylistDialog by remember { mutableStateOf(false) }
         
         var swipeDirection by remember { mutableIntStateOf(1) }
+        val isBadSong = remember(playerState) {
+            val title = playerState?.title ?: ""
+            val artist = playerState?.artist ?: ""
+            val album = playerState?.album ?: ""
+            (album.contains("Bad", ignoreCase = true) || title.contains("Bad", ignoreCase = true)) &&
+            artist.contains("Michael Jackson", ignoreCase = true)
+        }
         val hdArtUrl = remember(playerState?.artUrl, playerState?.title, playerState?.artist) {
-            val url = playerState?.artUrl
-            val urlString = url?.toString() ?: ""
-
-            // Check if it is already a local asset url passed from AlbumScreen
-            val isLocalArt = urlString.startsWith("file:///android_asset/")
-
-            when {
-                isLocalArt -> url
-                url is String -> {
-                    when {
-                        url.contains("=w") || url.contains("=s") -> {
-                            val index = url.indexOf("=w").takeIf { it != -1 } ?: url.indexOf("=s")
-                            url.substring(0, index) + "=w1200-h1200-l90-rj"
-                        }
-                        url.contains("ytimg.com/vi/") -> url
-                            .replace("hqdefault", "maxresdefault")
-                            .replace("mqdefault", "maxresdefault")
-                            .replace("sddefault", "maxresdefault")
-                            .replace("default", "maxresdefault")
-                        else -> url
-                    }
-                }
-                else -> url
+            val url = playerState?.artUrl ?: return@remember null
+            val urlString = url.toString()
+            if (urlString.startsWith("file:///android_asset/")) {
+                url
+            } else {
+                val upgraded = com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(urlString) ?: urlString
+                if (url is android.net.Uri) android.net.Uri.parse(upgraded) else upgraded
             }
         }
 
@@ -445,6 +436,7 @@ fun PlayerScreen(
         val animatedImageLoader = remember(context) {
             coil.ImageLoader.Builder(context)
                 .components {
+                    add(com.mrtdk.liquid_glass.utils.CoilUtils.HdThumbnailInterceptor())
                     if (android.os.Build.VERSION.SDK_INT >= 28) {
                         add(coil.decode.ImageDecoderDecoder.Factory())
                     } else {
@@ -674,15 +666,24 @@ fun PlayerScreen(
                             drawContent()
                             drawRect(
                                 brush = Brush.verticalGradient(
-                                    colorStops = arrayOf(
-                                        0.0f to Color.Black,
-                                        0.1f to Color.Black,
-                                        0.3f to Color.Black.copy(alpha = 0.8f),
-                                        0.5f to Color.Black.copy(alpha = 0.4f),
-                                        0.7f to Color.Black.copy(alpha = 0.15f),
-                                        0.8f to Color.Transparent,
-                                        1.0f to Color.Transparent
-                                    )
+                                    colorStops = if (isBadSong) {
+                                        arrayOf(
+                                            0.0f to Color.Black,
+                                            0.05f to Color.Black.copy(alpha = 0.4f),
+                                            0.1f to Color.Transparent,
+                                            1.0f to Color.Transparent
+                                        )
+                                    } else {
+                                        arrayOf(
+                                            0.0f to Color.Black,
+                                            0.1f to Color.Black,
+                                            0.3f to Color.Black.copy(alpha = 0.8f),
+                                            0.5f to Color.Black.copy(alpha = 0.4f),
+                                            0.7f to Color.Black.copy(alpha = 0.15f),
+                                            0.8f to Color.Transparent,
+                                            1.0f to Color.Transparent
+                                        )
+                                    }
                                 ),
                                 blendMode = BlendMode.DstIn
                             )
@@ -818,16 +819,27 @@ fun PlayerScreen(
                     val imgHPx = with(density) { imgHeight.toPx() }
                     val gapPx = with(density) { 40.dp.toPx() }
                     
-                    reflectionGradient = arrayOf(
-                        0.0f to Color.Transparent,
-                        ((padPx - gapPx) / hPx).coerceIn(0f, 1f) to Color.Transparent,
-                        (padPx / hPx).coerceIn(0f, 1f) to Color.Transparent,
-                        ((padPx + imgHPx * 0.25f) / hPx).coerceIn(0f, 1f) to Color.Black,
-                        ((padPx + imgHPx * 0.5f) / hPx).coerceIn(0f, 1f) to Color.Black.copy(alpha = 0.8f),
-                        ((padPx + imgHPx * 0.8f) / hPx).coerceIn(0f, 1f) to Color.Black.copy(alpha = 0.2f),
-                        ((padPx + imgHPx) / hPx).coerceIn(0f, 1f) to Color.Transparent,
-                        1.0f to Color.Transparent
-                    )
+                    reflectionGradient = if (isBadSong) {
+                        arrayOf(
+                            0.0f to Color.Transparent,
+                            ((padPx - gapPx) / hPx).coerceIn(0f, 1f) to Color.Transparent,
+                            (padPx / hPx).coerceIn(0f, 1f) to Color.Transparent,
+                            ((padPx + imgHPx * 0.05f) / hPx).coerceIn(0f, 1f) to Color.Black,
+                            ((padPx + imgHPx * 0.1f) / hPx).coerceIn(0f, 1f) to Color.Transparent,
+                            1.0f to Color.Transparent
+                        )
+                    } else {
+                        arrayOf(
+                            0.0f to Color.Transparent,
+                            ((padPx - gapPx) / hPx).coerceIn(0f, 1f) to Color.Transparent,
+                            (padPx / hPx).coerceIn(0f, 1f) to Color.Transparent,
+                            ((padPx + imgHPx * 0.25f) / hPx).coerceIn(0f, 1f) to Color.Black,
+                            ((padPx + imgHPx * 0.5f) / hPx).coerceIn(0f, 1f) to Color.Black.copy(alpha = 0.8f),
+                            ((padPx + imgHPx * 0.8f) / hPx).coerceIn(0f, 1f) to Color.Black.copy(alpha = 0.2f),
+                            ((padPx + imgHPx) / hPx).coerceIn(0f, 1f) to Color.Transparent,
+                            1.0f to Color.Transparent
+                        )
+                    }
                 }
 
                 Box(
@@ -1222,55 +1234,48 @@ fun PlayerScreen(
                               // 1. Manual Queue Section (Album/Playlist)
                               if (playerState != null && playerState.queue.isNotEmpty()) {
                                    items(playerState.queue.size) { index ->
-                                       val qItem = playerState.queue[index]
-                                       val upgradedArt = qItem.artUrl?.let {
-                                           val itStr = it.toString()
-                                           if (itStr.contains("=w") || itStr.contains("=s")) {
-                                               val idx = itStr.indexOf("=w").takeIf { j -> j != -1 } ?: itStr.indexOf("=s")
-                                               itStr.substring(0, idx) + "=w1200-h1200-l90-rj"
-                                           } else if (itStr.contains("ytimg.com/vi/")) {
-                                               itStr.replace("hqdefault", "maxresdefault").replace("mqdefault", "maxresdefault").replace("sddefault", "maxresdefault").replace("default", "maxresdefault")
-                                           } else it
-                                       } ?: qItem.artUrl
-                                       
-                                       Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable {
-                                           swipeDirection = 1
-                                           val remaining = playerState.queue.drop(index + 1)
-                                           onSongSelectedFromQueue(PlayerState(
-                                               title = qItem.title,
-                                               artist = qItem.artist,
-                                               artUrl = upgradedArt,
-                                               videoId = qItem.videoId,
-                                               queue = remaining,
-                                               isExclusiveQueue = playerState.isExclusiveQueue
-                                           ))
-                                       }) {
-                                          AsyncImage(model = ImageRequest.Builder(context).data(qItem.artUrl).crossfade(true).build(), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp)))
-                                          Spacer(modifier = Modifier.width(12.dp))
-                                          Column(modifier = Modifier.weight(1f)) {
-                                              Text(qItem.title, color = contentColor, fontSize = 16.sp, maxLines = 1, fontWeight = FontWeight.SemiBold)
-                                              Text(qItem.artist, color = contentColor.copy(alpha=0.6f), fontSize = 14.sp, maxLines = 1)
-                                          }
-                                          Icon(Icons.Default.Menu, contentDescription=null, tint=contentColor.copy(alpha=0.6f))
-                                      }
-                                  }
+                                        val qItem = playerState.queue[index]
+                                        val upgradedArt = qItem.artUrl?.let {
+                                            val itStr = it.toString()
+                                            if (itStr.startsWith("file:///android_asset/")) {
+                                                it
+                                            } else {
+                                                val upgraded = com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(itStr) ?: itStr
+                                                if (it is android.net.Uri) android.net.Uri.parse(upgraded) else upgraded
+                                            }
+                                        } ?: qItem.artUrl
+                                        
+                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable {
+                                            swipeDirection = 1
+                                            val remaining = playerState.queue.drop(index + 1)
+                                            onSongSelectedFromQueue(PlayerState(
+                                                title = qItem.title,
+                                                artist = qItem.artist,
+                                                artUrl = upgradedArt,
+                                                videoId = qItem.videoId,
+                                                queue = remaining,
+                                                isExclusiveQueue = playerState.isExclusiveQueue
+                                            ))
+                                        }) {
+                                           AsyncImage(model = ImageRequest.Builder(context).data(qItem.artUrl).crossfade(false).build(), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp)))
+                                           Spacer(modifier = Modifier.width(12.dp))
+                                           Column(modifier = Modifier.weight(1f)) {
+                                               Text(qItem.title, color = contentColor, fontSize = 16.sp, maxLines = 1, fontWeight = FontWeight.SemiBold)
+                                               Text(qItem.artist, color = contentColor.copy(alpha=0.6f), fontSize = 14.sp, maxLines = 1)
+                                           }
+                                           Icon(Icons.Default.Menu, contentDescription=null, tint=contentColor.copy(alpha=0.6f))
+                                       }
+                                   }
                               }
                               if (playerState?.isExclusiveQueue != true) items(upNextSongs.size) { i ->
                                   val song = upNextSongs[i]
                                   val hdThumb = song.thumbnail?.let {
-                                       if (it.contains("=w") || it.contains("=s")) {
-                                           val idx = it.indexOf("=w").takeIf { j -> j != -1 } ?: it.indexOf("=s")
-                                           it.substring(0, idx) + "=w540-h540-l90-rj"
-                                       }
-                                       else if (it.contains("ytimg.com/vi/")) it.replace("hqdefault", "maxresdefault").replace("mqdefault", "maxresdefault")
-                                       else it
+                                       com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(it) ?: it
                                    } ?: song.thumbnail
                                   Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable {
                                       swipeDirection = 1
                                       val upgradedArt = song.thumbnail?.let {
-                                          if (it.contains("=w")) it.substringBefore("=w") + "=w1200-h1200-l90-rj"
-                                          else if (it.contains("ytimg.com/vi/")) it.replace("hqdefault", "maxresdefault").replace("mqdefault", "maxresdefault")
-                                          else it
+                                          com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(it) ?: it
                                       } ?: song.thumbnail
                                       // Remove clicked song and all before it from the queue
                                       onUpNextSongsChange(upNextSongs.drop(i + 1))
@@ -1282,7 +1287,7 @@ fun PlayerScreen(
                                           isExclusiveQueue = playerState.isExclusiveQueue
                                       ))
                                   }) {
-                                      AsyncImage(model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp)))
+                                      AsyncImage(model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp)))
                                       Spacer(modifier = Modifier.width(12.dp))
                                       Column(modifier = Modifier.weight(1f)) {
                                           Text(song.title, color = contentColor, fontSize = 16.sp, maxLines = 1, fontWeight = FontWeight.SemiBold)

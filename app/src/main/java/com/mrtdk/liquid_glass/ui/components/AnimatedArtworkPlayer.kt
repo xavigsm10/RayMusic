@@ -71,14 +71,22 @@ fun AnimatedArtworkPlayer(
 
     // Initialize ExoPlayer inside remember to keep instance alive
     val exoPlayer = remember {
-        ExoPlayer.Builder(context).build().apply {
-            trackSelectionParameters = trackSelectionParameters.buildUpon()
-                .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_AUDIO, true)
-                .build()
-            playWhenReady = !isPaused
-            repeatMode = Player.REPEAT_MODE_ALL
-            volume = 0f // Mute
+        val trackSelector = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(context).apply {
+            setParameters(
+                buildUponParameters()
+                    .setForceHighestSupportedBitrate(true)
+            )
         }
+        ExoPlayer.Builder(context)
+            .setTrackSelector(trackSelector)
+            .build().apply {
+                trackSelectionParameters = trackSelectionParameters.buildUpon()
+                    .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_AUDIO, true)
+                    .build()
+                playWhenReady = !isPaused
+                repeatMode = Player.REPEAT_MODE_ALL
+                volume = 0f // Mute
+            }
     }
 
     // Handle ExoPlayer lifecycle
