@@ -97,6 +97,41 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setTheme(R.style.Theme_Liquidglassuicomponent)
         enableEdgeToEdge()
+        
+        // Request highest refresh rate (90Hz/120Hz+) if supported by display
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            try {
+                val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    display
+                } else {
+                    @Suppress("DEPRECATION")
+                    windowManager.defaultDisplay
+                }
+                val modes = display?.supportedModes
+                val activeMode = display?.mode
+                if (modes != null && activeMode != null) {
+                    val maxRefresh = modes.maxOfOrNull { it.refreshRate } ?: 60f
+                    if (maxRefresh > 60f) {
+                        val bestMode = modes.filter { it.physicalWidth == activeMode.physicalWidth && it.physicalHeight == activeMode.physicalHeight }
+                            .maxByOrNull { it.refreshRate }
+                        if (bestMode != null) {
+                            val lp = window.attributes
+                            lp.preferredDisplayModeId = bestMode.modeId
+                            window.attributes = lp
+                        }
+                    }
+                }
+            } catch (e: Exception) { }
+        }
+
+        // Configure global Coil ImageLoader to automatically upgrade all images to HD
+        val globalImageLoader = coil.ImageLoader.Builder(this)
+            .components {
+                add(com.mrtdk.liquid_glass.utils.CoilUtils.HdThumbnailInterceptor())
+            }
+            .build()
+        coil.Coil.setImageLoader(globalImageLoader)
+
         musicPlayer = MusicPlayer(this)
         com.mrtdk.liquid_glass.data.LibraryManager.init(applicationContext)
 

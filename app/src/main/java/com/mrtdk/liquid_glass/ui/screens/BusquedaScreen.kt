@@ -210,7 +210,7 @@ fun BusquedaScreen(
                         AsyncImage(
                             model = ImageRequest.Builder(context)
                                 .data(category.imageUrl)
-                                .crossfade(true)
+                                .crossfade(false)
                                 .build(),
                             contentDescription = category.name,
                             contentScale = ContentScale.Crop,
@@ -327,7 +327,7 @@ fun BusquedaScreen(
                             ) {
                                 AsyncImage(
                                     model = ImageRequest.Builder(context)
-                                        .data(hdThumb).crossfade(true).build(),
+                                        .data(hdThumb).crossfade(false).build(),
                                     contentDescription = "Art",
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize()
@@ -382,7 +382,7 @@ fun BusquedaScreen(
                             ) {
                                 AsyncImage(
                                     model = ImageRequest.Builder(context)
-                                        .data(item.thumbnail).crossfade(true).build(),
+                                        .data(item.thumbnail).crossfade(false).build(),
                                     contentDescription = "Artist",
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize()
@@ -431,7 +431,7 @@ fun BusquedaScreen(
                             ) {
                                 AsyncImage(
                                     model = ImageRequest.Builder(context)
-                                        .data(item.thumbnail).crossfade(true).build(),
+                                        .data(item.thumbnail).crossfade(false).build(),
                                     contentDescription = "Album",
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize()

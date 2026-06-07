@@ -44,7 +44,15 @@ object PlaybackQueue {
             val nextState = PlayerState(
                 title = next.title,
                 artist = next.artist,
-                artUrl = next.artUrl,
+                artUrl = next.artUrl?.let {
+                    val itStr = it.toString()
+                    if (itStr.startsWith("file:///android_asset/")) {
+                        it
+                    } else {
+                        val upgraded = com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(itStr) ?: itStr
+                        if (it is android.net.Uri) android.net.Uri.parse(upgraded) else upgraded
+                    }
+                } ?: next.artUrl,
                 videoId = next.videoId,
                 contentUri = null,
                 queue = queue.drop(1),
@@ -62,12 +70,7 @@ object PlaybackQueue {
             songHistory.add(current)
             
             val upgradedArt = next.thumbnail?.let {
-                if (it.contains("=w") || it.contains("=s")) {
-                    val idx = it.indexOf("=w").takeIf { j -> j != -1 } ?: it.indexOf("=s")
-                    it.substring(0, idx) + "=w1200-h1200-l90-rj"
-                }
-                else if (it.contains("ytimg.com/vi/")) it.replace("hqdefault", "maxresdefault").replace("mqdefault", "maxresdefault")
-                else it
+                com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(it) ?: it
             } ?: next.thumbnail
 
             val nextState = PlayerState(
@@ -102,7 +105,15 @@ object PlaybackQueue {
             val nextState = PlayerState(
                 title = first.title,
                 artist = first.artist,
-                artUrl = first.artUrl,
+                artUrl = first.artUrl?.let {
+                    val itStr = it.toString()
+                    if (itStr.startsWith("file:///android_asset/")) {
+                        it
+                    } else {
+                        val upgraded = com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(itStr) ?: itStr
+                        if (it is android.net.Uri) android.net.Uri.parse(upgraded) else upgraded
+                    }
+                } ?: first.artUrl,
                 videoId = first.videoId,
                 contentUri = first.contentUri,
                 queue = remaining,

@@ -148,7 +148,7 @@ fun SharedElementTransitionContainer(
                         targetValue = 0f,
                         animationSpec = spring(
                             dampingRatio = 0.8f,
-                            stiffness = 300f
+                            stiffness = 500f
                         )
                     )
                     onBack()
@@ -166,7 +166,7 @@ fun SharedElementTransitionContainer(
                 targetValue = 1f,
                 animationSpec = spring(
                     dampingRatio = 0.75f,
-                    stiffness = 200f
+                    stiffness = 400f
                 )
             )
         }
@@ -236,10 +236,10 @@ fun SharedElementTransitionContainer(
                     if (dragY > 0f) {
                         scope.launch {
                             if (dragY > screenHeight * 0.2f) {
-                                progress.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 300f))
+                                progress.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 500f))
                                 onBack()
                             } else {
-                                progress.animateTo(1f, spring(dampingRatio = 0.75f, stiffness = 200f))
+                                progress.animateTo(1f, spring(dampingRatio = 0.75f, stiffness = 400f))
                             }
                             dragY = 0f
                         }
@@ -259,17 +259,17 @@ fun SharedElementTransitionContainer(
                         onDragEnd = {
                             scope.launch {
                                 if (dragY > screenHeight * 0.2f) {
-                                    progress.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 300f))
+                                    progress.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 500f))
                                     onBack()
                                 } else {
-                                    progress.animateTo(1f, spring(dampingRatio = 0.75f, stiffness = 200f))
+                                    progress.animateTo(1f, spring(dampingRatio = 0.75f, stiffness = 400f))
                                 }
                                 dragY = 0f
                             }
                         },
                         onDragCancel = {
                             scope.launch {
-                                progress.animateTo(1f, spring(dampingRatio = 0.75f, stiffness = 200f))
+                                progress.animateTo(1f, spring(dampingRatio = 0.75f, stiffness = 400f))
                                 dragY = 0f
                             }
                         },

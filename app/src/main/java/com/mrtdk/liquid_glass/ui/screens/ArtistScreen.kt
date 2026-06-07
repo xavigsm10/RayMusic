@@ -223,14 +223,15 @@ fun ArtistScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .height(380.dp)
                             .background(Color(0xFF111111))
                             .layerBackdrop(localBackdrop)
                     ) {
                         AsyncImage(
                             model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
                             contentDescription = artistState.name,
-                            contentScale = ContentScale.FillWidth,
-                            modifier = Modifier.fillMaxWidth()
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
                         )
                         // Subtle bottom fade to black for smooth transition
                         Box(

@@ -49,6 +49,35 @@ import org.json.JSONArray
 import com.echo.innertube.models.Artist
 import com.echo.innertube.models.Album
 
+/** Upgrades any thumbnail URL to the highest quality available.
+ *  Handles Apple Music CDN, YouTube Music and YouTube thumbnail formats. */
+private fun upgradeThumbQuality(url: String?): String? {
+    if (url == null) return null
+    return when {
+        // Apple Music CDN: upgrade to 600x600
+        url.contains("mzstatic.com") -> url
+            .replace(Regex("/\\d+x\\d+bb\\.jpg$"), "/600x600bb.jpg")
+            .replace(Regex("/\\d+x\\d+bb\\.webp$"), "/600x600bb.jpg")
+        // YouTube Music lh3 format
+        url.contains("lh3.googleusercontent.com") ->
+            url.replace(Regex("=w\\d+-h\\d+.*$"), "=w600-h600-l90-rj")
+        // YouTube yt3 format  
+        url.contains("yt3.ggpht.com") ->
+            url.replace(Regex("=w\\d+-h\\d+.*$"), "=w600-h600-l90-rj")
+                .replace(Regex("=s\\d+$"), "=s600")
+        // YouTube video thumbnails
+        url.contains("ytimg.com/vi/") -> url
+            .replace("hqdefault.jpg", "maxresdefault.jpg")
+            .replace("mqdefault.jpg", "maxresdefault.jpg")
+            .replace("sddefault.jpg", "maxresdefault.jpg")
+        // Generic =w226 or =w120 patterns
+        url.contains("=w226") || url.contains("=w120") ->
+            url.replace("=w226-h226", "=w600-h600").replace("=w120-h120", "=w600-h600")
+        else -> url
+    }
+}
+
+
 private fun parseSongItem(obj: JSONObject): SongItem {
     val id = obj.getString("id")
     val title = obj.getString("title")
@@ -67,7 +96,7 @@ private fun parseSongItem(obj: JSONObject): SongItem {
         id = id,
         title = title,
         artists = artistsList,
-        thumbnail = thumbnail,
+        thumbnail = upgradeThumbQuality(thumbnail) ?: thumbnail,
         explicit = explicit
     )
 }
@@ -97,7 +126,7 @@ private fun parseAlbumItem(obj: JSONObject): AlbumItem {
         title = title,
         artists = artistsList,
         year = year,
-        thumbnail = thumbnail,
+        thumbnail = upgradeThumbQuality(thumbnail) ?: thumbnail,
         explicit = explicit
     )
 }
@@ -280,7 +309,7 @@ fun NovedadesScreen(
                             }
                     ) {
                         AsyncImage(
-                            model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                            model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(),
                             contentDescription = album.title, contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize()
                         )
@@ -379,7 +408,7 @@ fun NovedadesScreen(
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(Color.DarkGray)
                                     ) {
-                                        AsyncImage(model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(), contentDescription = album.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                        AsyncImage(model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(), contentDescription = album.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                                     }
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(album.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -465,7 +494,7 @@ fun NovedadesScreen(
                                     .background(Color(0xFF1C1C1E))
                             ) {
                                 AsyncImage(
-                                    model = ImageRequest.Builder(context).data(songThumb).crossfade(true).build(),
+                                    model = ImageRequest.Builder(context).data(songThumb).crossfade(false).build(),
                                     contentDescription = s.title,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize()
@@ -513,7 +542,7 @@ private fun SongRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(modifier = Modifier.size(48.dp).clip(RoundedCornerShape(6.dp)).background(Color(0xFF1C1C1E))) {
-            AsyncImage(model = ImageRequest.Builder(context).data(songThumb).crossfade(true).build(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            AsyncImage(model = ImageRequest.Builder(context).data(songThumb).crossfade(false).build(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
         }
         Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {

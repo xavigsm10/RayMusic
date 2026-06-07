@@ -107,6 +107,10 @@ fun AlbumScreen(
                             (albumState.title.contains("After Hours", ignoreCase = true) && albumState.artist.contains("The Weeknd", ignoreCase = true))
     val isAroundTheFurAlbum = albumState.title.equals("Around the Fur", ignoreCase = true) ||
                               (albumState.title.contains("Around the Fur", ignoreCase = true) && albumState.artist.contains("Deftones", ignoreCase = true))
+    val isBadAlbum = albumState.title.equals("Bad", ignoreCase = true) &&
+                     albumState.artist.contains("Michael Jackson", ignoreCase = true)
+    // Albums that should never use animated artwork (wrong cache hits from similar-named albums)
+    val isAnimatedArtworkBlocked = isMichaelAlbum
 
     val hdThumb = albumState.thumbnail
         ?.replace("=w226-h226", "=w720-h720")
@@ -126,6 +130,7 @@ fun AlbumScreen(
     val animatedImageLoader = remember(context) {
         coil.ImageLoader.Builder(context)
             .components {
+                add(com.mrtdk.liquid_glass.utils.CoilUtils.HdThumbnailInterceptor())
                 if (android.os.Build.VERSION.SDK_INT >= 28) {
                     add(coil.decode.ImageDecoderDecoder.Factory())
                 } else {
@@ -136,12 +141,17 @@ fun AlbumScreen(
     }
 
     var animatedArtworkUrl by remember(albumState.artist, albumState.title) {
-        mutableStateOf(com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.get(albumState.artist, albumState.title))
+        // Block cached animated artwork for albums that have known wrong cache entries
+        val cached = if (isAnimatedArtworkBlocked) null
+                     else com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.get(albumState.artist, albumState.title)
+        mutableStateOf(cached)
     }
 
     LaunchedEffect(albumState.artist, albumState.title) {
         val artist = albumState.artist
         val album = albumState.title
+        // Block animated artwork for specific albums to prevent wrong cache hits
+        if (isAnimatedArtworkBlocked) return@LaunchedEffect
         if (animatedArtworkUrl != null) return@LaunchedEffect
         withContext(Dispatchers.IO) {
             try {
