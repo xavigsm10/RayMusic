@@ -866,7 +866,7 @@ fun PlaylistDetailScreen(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(dominantColor)
+                            .background(dominantColor.copy(alpha = contentAlpha))
                     ) {
             // Hero section
             item {
@@ -896,9 +896,9 @@ fun PlaylistDetailScreen(
                                         Brush.verticalGradient(
                                             0.0f to Color.Transparent,
                                             0.7f to Color.Transparent,
-                                            0.85f to dominantColor.copy(alpha = 0.25f),
-                                            0.95f to dominantColor.copy(alpha = 0.7f),
-                                            1.0f to dominantColor
+                                            0.85f to dominantColor.copy(alpha = 0.25f * contentAlpha),
+                                            0.95f to dominantColor.copy(alpha = 0.7f * contentAlpha),
+                                            1.0f to dominantColor.copy(alpha = contentAlpha)
                                         )
                                     )
                             )
@@ -1362,7 +1362,7 @@ fun FavoriteSongsScreen(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color(0xFFFA243C))
+                        .background(Color(0xFFFA243C).copy(alpha = contentAlpha))
                 ) {
                     // Hero section - star artwork with dynamic color
                     item {
@@ -1439,9 +1439,9 @@ fun FavoriteSongsScreen(
                                                 Brush.verticalGradient(
                                                     0.0f to Color.Transparent,
                                                     0.7f to Color.Transparent,
-                                                    0.85f to Color(0xFFFA243C).copy(alpha = 0.25f),
-                                                    0.95f to Color(0xFFFA243C).copy(alpha = 0.7f),
-                                                    1.0f to Color(0xFFFA243C)
+                                                    0.85f to Color(0xFFFA243C).copy(alpha = 0.25f * contentAlpha),
+                                                    0.95f to Color(0xFFFA243C).copy(alpha = 0.7f * contentAlpha),
+                                                    1.0f to Color(0xFFFA243C).copy(alpha = contentAlpha)
                                                 )
                                             )
                                     )

@@ -270,7 +270,7 @@ fun CategoriaScreen(
                     }.take(16)
                 }
                 val d3 = async {
-                    YouTube.search(category.name, YouTube.SearchFilter.FILTER_SONG).getOrNull()?.items?.filterIsInstance<SongItem>()?.take(24) ?: emptyList()
+                    YouTube.search(category.name, YouTube.SearchFilter.FILTER_SONG).getOrNull()?.items?.filterIsInstance<SongItem>()?.take(30) ?: emptyList()
                 }
                 val d4 = async {
                     YouTube.search(category.name, YouTube.SearchFilter.FILTER_ARTIST).getOrNull()?.items?.filterIsInstance<ArtistItem>()?.take(16) ?: emptyList()

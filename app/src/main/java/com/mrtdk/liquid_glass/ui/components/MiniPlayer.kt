@@ -3,6 +3,17 @@ package com.mrtdk.liquid_glass.ui.components
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -221,12 +232,54 @@ fun MiniPlayer(
                 )
             }
             
-            IconButton(onClick = onTogglePlayPause, modifier = Modifier.size(32.dp)) {
-                Icon(
-                    painter = painterResource(id = if (isPlaying) R.drawable.pause else R.drawable.resume),
-                    contentDescription = if (isPlaying) "Pause" else "Play",
-                    tint = contentColor
-                )
+            val playPauseInteractionSource = remember { MutableInteractionSource() }
+            val isPlayPausePressed by playPauseInteractionSource.collectIsPressedAsState()
+
+            val playPauseBgColor by animateColorAsState(
+                targetValue = if (isPlayPausePressed) contentColor.copy(alpha = 0.12f) else Color.Transparent,
+                label = "miniPlayPauseBg"
+            )
+
+            val playPauseRotation by animateFloatAsState(
+                targetValue = if (isPlaying) 180f else 0f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                ),
+                label = "miniPlayPauseRotation"
+            )
+
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(playPauseBgColor)
+                    .clickable(
+                        interactionSource = playPauseInteractionSource,
+                        indication = androidx.compose.foundation.LocalIndication.current,
+                        onClick = onTogglePlayPause
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                AnimatedContent(
+                    targetState = isPlaying,
+                    transitionSpec = {
+                        (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(initialScale = 0.3f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)))
+                            .togetherWith(fadeOut(animationSpec = tween(90)) + scaleOut(targetScale = 0.3f, animationSpec = tween(90)))
+                    },
+                    label = "miniPlayPauseIcon"
+                ) { playing ->
+                    Icon(
+                        painter = painterResource(id = if (playing) R.drawable.pause else R.drawable.resume),
+                        contentDescription = if (playing) "Pause" else "Play",
+                        tint = contentColor,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .graphicsLayer {
+                                rotationZ = playPauseRotation
+                            }
+                    )
+                }
             }
             
             Spacer(modifier = Modifier.width(8.dp))

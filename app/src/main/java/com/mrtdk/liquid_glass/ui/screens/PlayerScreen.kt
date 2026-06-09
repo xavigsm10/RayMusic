@@ -6,6 +6,9 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -393,6 +396,7 @@ fun PlayerScreen(
                     .data(hdArtUrl)
                     .allowHardware(false)
                     .size(300)
+                    .memoryCachePolicy(coil.request.CachePolicy.READ_ONLY)
                     .build()
                 val result = coil.Coil.imageLoader(context).execute(request)
                 if (result is coil.request.SuccessResult) {
@@ -1027,6 +1031,7 @@ fun PlayerScreen(
                             model = ImageRequest.Builder(context)
                                 .data(hdArtUrl)
                                 .size(150) // Downsample to 150x150 for a much more aggressive, premium soft blur
+                                .memoryCachePolicy(coil.request.CachePolicy.READ_ONLY)
                                 .crossfade(true)
                                 .build(),
                             imageLoader = animatedImageLoader,
@@ -1062,13 +1067,16 @@ fun PlayerScreen(
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
-                 Column(
+                 Box(
                      modifier = Modifier
                          .fillMaxSize()
                          .graphicsLayer { alpha = overlayAlpha }
                  ) {
+                      Column(
+                          modifier = Modifier.fillMaxSize()
+                      ) {
                       Row(
-                          modifier = Modifier.fillMaxWidth().padding(top = 64.dp, start = 124.dp, end = 24.dp), 
+                          modifier = Modifier.fillMaxWidth().padding(top = 64.dp, start = 124.dp, end = 24.dp).heightIn(min = 84.dp), 
                           verticalAlignment = Alignment.CenterVertically
                       ) {
                            Column(modifier = Modifier.weight(1f).clickable { 
@@ -1121,7 +1129,7 @@ fun PlayerScreen(
                       }
                       
                                                                     if (showQueue) {
-                            Spacer(modifier = Modifier.height(44.dp))
+                            Spacer(modifier = Modifier.height(24.dp))
                             
                             val shuffleInteraction = remember { MutableInteractionSource() }
                             val isShuffleActive = shuffleModeEnabled
@@ -1222,15 +1230,20 @@ fun PlayerScreen(
                                 }
                             }
                              if (playerState != null && playerState.queue.isNotEmpty()) {
-                               Text(text = stringResource(R.string.siguiente_en_album_playlist), color=contentColor, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top=32.dp, start=24.dp, end=24.dp, bottom=16.dp))
+                               Text(text = stringResource(R.string.siguiente_en_album_playlist), color=contentColor, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top=14.dp, start=24.dp, end=24.dp, bottom=8.dp))
                             } else if (playerState?.isExclusiveQueue != true) {
-                                 Column(modifier = Modifier.padding(top=32.dp, start=24.dp, end=24.dp, bottom=16.dp)) {
+                                 Column(modifier = Modifier.padding(top=14.dp, start=24.dp, end=24.dp, bottom=8.dp)) {
                                      Text(text = stringResource(R.string.continue_playing), color=contentColor, fontSize=18.sp, fontWeight=FontWeight.Bold)
                                      Text(text = stringResource(R.string.autoplaying_similar_music), color=contentColor.copy(alpha=0.7f), fontSize=14.sp)
                                  }
                              }
                           
-                           LazyColumn(state = queueListState, modifier = Modifier.weight(1f).padding(horizontal = 24.dp).nestedScroll(nestedScrollConnection), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                           LazyColumn(
+                                state = queueListState, 
+                                modifier = Modifier.weight(1f).padding(horizontal = 24.dp).nestedScroll(nestedScrollConnection), 
+                                contentPadding = PaddingValues(bottom = 260.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
                               // 1. Manual Queue Section (Album/Playlist)
                               if (playerState != null && playerState.queue.isNotEmpty()) {
                                    items(playerState.queue.size) { index ->
@@ -1254,10 +1267,12 @@ fun PlayerScreen(
                                                 artUrl = upgradedArt,
                                                 videoId = qItem.videoId,
                                                 queue = remaining,
-                                                isExclusiveQueue = playerState.isExclusiveQueue
+                                                isExclusiveQueue = playerState.isExclusiveQueue,
+                                                album = qItem.album,
+                                                albumId = qItem.albumId
                                             ))
                                         }) {
-                                           AsyncImage(model = ImageRequest.Builder(context).data(qItem.artUrl).crossfade(false).build(), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp)))
+                                           AsyncImage(model = ImageRequest.Builder(context).data(upgradedArt).crossfade(false).build(), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp)))
                                            Spacer(modifier = Modifier.width(12.dp))
                                            Column(modifier = Modifier.weight(1f)) {
                                                Text(qItem.title, color = contentColor, fontSize = 16.sp, maxLines = 1, fontWeight = FontWeight.SemiBold)
@@ -1284,7 +1299,9 @@ fun PlayerScreen(
                                           artist = song.artists.joinToString { it.name },
                                           artUrl = upgradedArt,
                                           videoId = song.id,
-                                          isExclusiveQueue = playerState.isExclusiveQueue
+                                          isExclusiveQueue = playerState.isExclusiveQueue,
+                                          album = song.album?.name,
+                                          albumId = song.album?.id
                                       ))
                                   }) {
                                       AsyncImage(model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp)))
@@ -1448,7 +1465,7 @@ fun PlayerScreen(
                                                  }
                                              }
                                          }
-                                         item { Spacer(modifier = Modifier.height(200.dp)) }
+                                         item { Spacer(modifier = Modifier.height(260.dp)) }
                                      }
                                  } else {
                                      Box(
@@ -1470,22 +1487,32 @@ fun PlayerScreen(
                                  }
                             }
                        }
+                      }
                       
                       AnimatedVisibility(
                            visible = !showLyrics || showLyricsControls,
+                           modifier = Modifier.align(Alignment.BottomCenter),
                            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
                            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
                       ) {
                           Box(
                                modifier = Modifier
                                    .fillMaxWidth()
-                                   .background( Brush.verticalGradient(listOf(Color.Transparent, dominantColor.copy(alpha=0.8f), dominantColor, dominantColor)) )
+                                   .background(
+                                       Brush.verticalGradient(
+                                           colorStops = arrayOf(
+                                               0.0f to Color.Transparent,
+                                               0.1f to dominantColor,
+                                               1.0f to dominantColor
+                                           )
+                                       )
+                                   )
                            ) {
                                Column(
                                    modifier = Modifier
                                        .fillMaxWidth()
                                        .padding(horizontal = 24.dp)
-                                       .padding(top = 40.dp) // difuminado padding
+                                       .padding(top = 20.dp) // difuminado padding
                                        .padding(bottom = 0.dp)
                                ) {
                                   AppleMusicSlider(
@@ -1997,13 +2024,54 @@ fun PlayerBottomControls(
                 onClick = onSkipPrevious
             )
             Spacer(modifier = Modifier.width(36.dp))
-            Box(modifier = Modifier.size(72.dp).clickable { onTogglePlayPause() }, contentAlignment = Alignment.Center) {
-                Icon(
-                    painter = painterResource(id = if (isPlaying) R.drawable.pause else R.drawable.resume),
-                    contentDescription = if (isPlaying) "Pause" else "Play",
-                    tint = contentColor,
-                    modifier = Modifier.size(64.dp)
-                )
+            val playPauseInteractionSource = remember { MutableInteractionSource() }
+            val isPlayPausePressed by playPauseInteractionSource.collectIsPressedAsState()
+
+            val playPauseBgColor by animateColorAsState(
+                targetValue = if (isPlayPausePressed) contentColor.copy(alpha = 0.12f) else Color.Transparent,
+                label = "playPauseBg"
+            )
+
+            val playPauseRotation by animateFloatAsState(
+                targetValue = if (isPlaying) 180f else 0f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                ),
+                label = "playPauseButtonRotation"
+            )
+
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(playPauseBgColor)
+                    .clickable(
+                        interactionSource = playPauseInteractionSource,
+                        indication = androidx.compose.foundation.LocalIndication.current,
+                        onClick = onTogglePlayPause
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                AnimatedContent(
+                    targetState = isPlaying,
+                    transitionSpec = {
+                        (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(initialScale = 0.3f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)))
+                            .togetherWith(fadeOut(animationSpec = tween(90)) + scaleOut(targetScale = 0.3f, animationSpec = tween(90)))
+                    },
+                    label = "playPauseIcon"
+                ) { playing ->
+                    Icon(
+                        painter = painterResource(id = if (playing) R.drawable.pause else R.drawable.resume),
+                        contentDescription = if (playing) "Pause" else "Play",
+                        tint = contentColor,
+                        modifier = Modifier
+                            .size(52.dp)
+                            .graphicsLayer {
+                                rotationZ = playPauseRotation
+                            }
+                    )
+                }
             }
             Spacer(modifier = Modifier.width(36.dp))
             AnimatedSkipButton(

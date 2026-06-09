@@ -102,6 +102,8 @@ fun ArtistScreen(
     // "Show all albums" overlay state
     var showAllAlbumsOverlay by remember { mutableStateOf(false) }
     var allAlbumsSection by remember { mutableStateOf<ArtistSection?>(null) }
+    var showAllSongsOverlay by remember { mutableStateOf(false) }
+    var allSongsSection by remember { mutableStateOf<ArtistSection?>(null) }
     var isDescriptionExpanded by remember { mutableStateOf(false) }
     // Generic "show all" overlay for videos / remaining sections
     var showAllSectionOverlay by remember { mutableStateOf(false) }
@@ -135,7 +137,14 @@ fun ArtistScreen(
                 artistPage = result
             } else {
                 // Fallback: search for the artist to get their correct browseId
-                val searchResult = YouTube.search(artistState.name, YouTube.SearchFilter.FILTER_ARTIST).getOrNull()
+                // If the artist name has commas, ampersands, or semicolons, take the first one
+                val firstArtistName = artistState.name
+                    .split(",").firstOrNull()
+                    ?.split("&")?.firstOrNull()
+                    ?.split(";")?.firstOrNull()
+                    ?.trim() ?: artistState.name
+                
+                val searchResult = YouTube.search(firstArtistName, YouTube.SearchFilter.FILTER_ARTIST).getOrNull()
                 val foundArtist = searchResult?.items?.filterIsInstance<com.echo.innertube.models.ArtistItem>()?.firstOrNull()
                 if (foundArtist != null && foundArtist.id != artistState.id) {
                     YouTube.artist(foundArtist.id).onSuccess { page ->
@@ -144,8 +153,8 @@ fun ArtistScreen(
                 }
                 // If still nothing, build a minimal page from search results
                 if (artistPage == null) {
-                    val songs = YouTube.search(artistState.name, YouTube.SearchFilter.FILTER_SONG).getOrNull()?.items?.filterIsInstance<SongItem>()?.take(10) ?: emptyList()
-                    val albums = YouTube.search(artistState.name, YouTube.SearchFilter.FILTER_ALBUM).getOrNull()?.items?.filterIsInstance<AlbumItem>() ?: emptyList()
+                    val songs = YouTube.search(firstArtistName, YouTube.SearchFilter.FILTER_SONG).getOrNull()?.items?.filterIsInstance<SongItem>()?.take(10) ?: emptyList()
+                    val albums = YouTube.search(firstArtistName, YouTube.SearchFilter.FILTER_ALBUM).getOrNull()?.items?.filterIsInstance<AlbumItem>() ?: emptyList()
                     if (songs.isNotEmpty() || albums.isNotEmpty()) {
                         val sections = mutableListOf<ArtistSection>()
                         if (songs.isNotEmpty()) sections.add(ArtistSection(title = "Songs", items = songs, moreEndpoint = null))
@@ -191,10 +200,11 @@ fun ArtistScreen(
     val fansSection = sections.find { it.title.contains("fans", true) || it.title.contains("like", true) || it.title.contains("gust", true) || it.title.contains("related", true) || it.title.contains("similar", true) }
 
     // Handle back for overlays
-    androidx.activity.compose.BackHandler(enabled = showAllAlbumsOverlay || showAllSectionOverlay) {
+    androidx.activity.compose.BackHandler(enabled = showAllAlbumsOverlay || showAllSectionOverlay || showAllSongsOverlay) {
         when {
             showAllSectionOverlay -> showAllSectionOverlay = false
             showAllAlbumsOverlay -> showAllAlbumsOverlay = false
+            showAllSongsOverlay -> showAllSongsOverlay = false
         }
     }
 
@@ -433,7 +443,32 @@ fun ArtistScreen(
             // ── TOP SONGS ──────────────────────────────────
             if (topSongsSection != null) {
                 val songs = topSongsSection.items.filterIsInstance<SongItem>().take(10)
-                item { Text(stringResource(R.string.top_songs), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) }
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(stringResource(R.string.top_songs), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        if (topSongsSection.items.size > 10 || topSongsSection.moreEndpoint != null) {
+                            val coroutineScope = rememberCoroutineScope()
+                            Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = 0.12f)).clickable {
+                                allSongsSection = topSongsSection
+                                showAllSongsOverlay = true
+                                if (topSongsSection.moreEndpoint != null && allSongsSection?.items?.size == topSongsSection.items.size) {
+                                    coroutineScope.launch(Dispatchers.IO) {
+                                        val result = YouTube.artistItems(topSongsSection.moreEndpoint!!).getOrNull()
+                                        if (result != null) {
+                                            allSongsSection = allSongsSection?.copy(items = result.items)
+                                        }
+                                    }
+                                }
+                            }.padding(horizontal = 12.dp, vertical = 6.dp)) {
+                                Text(stringResource(R.string.ver_todo), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                            }
+                        }
+                    }
+                }
                 item {
                     val chunkedSongs = songs.chunked(4)
                     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
@@ -744,6 +779,70 @@ fun ArtistScreen(
                                 if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
                             }
                             Spacer(modifier = Modifier.height(16.dp))
+                        }
+                    }
+                    item { Spacer(modifier = Modifier.height(80.dp)) }
+                }
+            }
+        }
+        // ── ALL SONGS OVERLAY PAGE ─────────────────────
+        if (showAllSongsOverlay && allSongsSection != null) {
+            val allSongs = allSongsSection!!.items.filterIsInstance<SongItem>()
+            Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    item { Spacer(modifier = Modifier.statusBarsPadding().height(16.dp)) }
+                    // Pill back button
+                    item {
+                        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.12f)).clickable { showAllSongsOverlay = false }, contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.ArrowBackIosNew, "Back", tint = Color(0xFFFA243C), modifier = Modifier.size(22.dp))
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text(stringResource(R.string.top_songs), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                    // Vertical list of all songs
+                    items(allSongs.size) { index ->
+                        val song = allSongs[index]
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    val upgradedArt = upgradeArtToHD(song.thumbnail)
+                                    val artistQueue = allSongs.drop(index + 1).map { t ->
+                                        QueueItem(
+                                            title = t.title,
+                                            artist = t.artists.joinToString { it.name },
+                                            artUrl = upgradeArtToHD(t.thumbnail),
+                                            videoId = t.id
+                                        )
+                                    }
+                                    onSongSelected(PlayerState(
+                                        title = song.title,
+                                        artist = song.artists.joinToString { it.name },
+                                        artUrl = upgradedArt,
+                                        videoId = song.id,
+                                        queue = artistQueue,
+                                        isExclusiveQueue = true
+                                    ))
+                                }
+                                .padding(horizontal = 20.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("${index + 1}", color = Color.Gray, fontSize = 16.sp, modifier = Modifier.width(36.dp))
+                            AsyncImage(
+                                model = ImageRequest.Builder(context).data(song.thumbnail).crossfade(true).build(),
+                                contentDescription = song.title,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.size(48.dp).clip(RoundedCornerShape(6.dp))
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(song.title, color = Color.White, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(song.artists.joinToString { it.name }, color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            IconButton(onClick = { }) { Icon(Icons.Default.MoreVert, null, tint = Color.Gray) }
                         }
                     }
                     item { Spacer(modifier = Modifier.height(80.dp)) }

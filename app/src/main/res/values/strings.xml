@@ -192,4 +192,29 @@
     <string name="radio_no_matches">No se encontraron coincidencias</string>
     <string name="radio_failed_signature">No se pudo generar la firma</string>
     <string name="radio_error_listening">Error al escuchar</string>
+
+    <!-- Replay Screen -->
+    <string name="replay_title">Replay: La música que más escuchas</string>
+    <string name="replay_subtitle">Un viaje al pasado.</string>
+    <string name="replay_card_headline_1">Tu</string>
+    <string name="replay_card_headline_2">historia musical</string>
+    <string name="replay_card_headline_3">está aquí.</string>
+    <string name="replay_card_footer">Vuelve a escuchar artistas, canciones y álbumes que definieron tu 2026.</string>
+    <string name="replay_screen_title">Replay</string>
+    <string name="replay_highlights_reel">Reel de momentos destacados</string>
+    <string name="replay_revive_this_year">Revive tu música de este año</string>
+    <string name="replay_top_artists">Tus top artistas de 2026</string>
+    <string name="replay_top_songs">Tus top canciones de 2026</string>
+    <string name="replay_top_albums">Tus top álbumes de 2026</string>
+    <string name="replay_top_playlists">Tus top playlists de 2026</string>
+    <string name="replay_top_genres">Tus top géneros de 2026</string>
+    <string name="replay_minutos">%1$s minutos</string>
+    <string name="replay_reproducciones">%1$s reproducciones</string>
+    <string name="replay_top_artists_by_month">Tus top artistas por mes</string>
+    <string name="replay_top_songs_by_month">Tus top canciones por mes</string>
+    <string name="replay_top_albums_by_month">Tus top álbumes por mes</string>
+    <string name="replay_comparison_title">¿Cómo se compara con el año pasado?</string>
+    <string name="replay_comparison_artists">Top artistas: Comparación</string>
+    <string name="replay_comparison_songs">Top canciones: Comparación</string>
+    <string name="replay_revive_last_year_songs">Revive tus top canciones de 2025</string>
 </resources>

@@ -3,6 +3,8 @@ package com.mrtdk.liquid_glass.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -128,11 +130,12 @@ fun BibliotecaScreen(
 
     if (showSettings) {
         val uriHandler = LocalUriHandler.current
+        val scrollState = rememberScrollState()
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black)
-                .padding(top = innerPadding.calculateTopPadding(), bottom = innerPadding.calculateBottomPadding() + 120.dp)
+                .padding(top = innerPadding.calculateTopPadding())
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
@@ -153,6 +156,7 @@ fun BibliotecaScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(scrollState)
                     .padding(horizontal = 16.dp)
             ) {
                 Text(
@@ -454,6 +458,7 @@ fun BibliotecaScreen(
                         )
                     }
                 }
+                Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding() + 180.dp))
             }
         }
         
@@ -720,7 +725,7 @@ fun BibliotecaScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black)
-                .padding(top = innerPadding.calculateTopPadding(), bottom = innerPadding.calculateBottomPadding() + 120.dp)
+                .padding(top = innerPadding.calculateTopPadding())
         ) {
             if (selectedCategoryKey != "Playlists") {
                 Row(
@@ -752,7 +757,12 @@ fun BibliotecaScreen(
                     state = categoryGridState,
                     columns = GridCells.Fixed(2),
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = 16.dp,
+                        bottom = innerPadding.calculateBottomPadding() + 180.dp
+                    ),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {

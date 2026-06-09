@@ -102,7 +102,8 @@ fun InicioScreen(
     onSongSelected: (PlayerState) -> Unit = {},
     onArtistSelected: (ArtistState) -> Unit = {},
     onAlbumSelected: (AlbumState) -> Unit = {},
-    onVideoSelected: (String) -> Unit = {}
+    onVideoSelected: (String) -> Unit = {},
+    onReplaySelected: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var activeSimilarSection by remember { mutableStateOf<SimilarSection?>(null) }
@@ -957,6 +958,85 @@ fun InicioScreen(
                 }
             }
         }
+
+        // ═══════════════════════════════════════════════════════════
+        // REPLAY SECTION — "Replay: La música que más escuchas"
+        // ═══════════════════════════════════════════════════════════
+        item {
+            SectionTitle(stringResource(R.string.replay_title), isDark = true, small = false)
+            SectionTitle(stringResource(R.string.replay_subtitle), isDark = true, small = true)
+            
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .width(280.dp)
+                    .height(380.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                Color(0xFFFF9500), // Orange/yellow
+                                Color(0xFFFF2D55), // Pink/Red
+                                Color(0xFF5856D6), // Purple
+                                Color(0xFF5AC8FA)  // Cyan
+                            ),
+                            start = androidx.compose.ui.geometry.Offset(0f, 0f),
+                            end = androidx.compose.ui.geometry.Offset(1000f, 1000f)
+                        )
+                    )
+                    .wiggleOnScroll("replay_home_card", lazyListState = listState)
+                    .clickable {
+                        onReplaySelected()
+                    }
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            text = "Replay",
+                            color = Color.White.copy(alpha = 0.9f),
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = stringResource(R.string.replay_card_headline_1),
+                            color = Color(0xFFFFCC00), // Golden Yellow
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Black,
+                            lineHeight = 36.sp
+                        )
+                        Text(
+                            text = stringResource(R.string.replay_card_headline_2),
+                            color = Color.White,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Black,
+                            lineHeight = 36.sp
+                        )
+                        Text(
+                            text = stringResource(R.string.replay_card_headline_3),
+                            color = Color(0xFFFF2D55), // Hot Pink/Magenta
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Black,
+                            lineHeight = 36.sp
+                        )
+                    }
+                    
+                    Text(
+                        text = stringResource(R.string.replay_card_footer),
+                        color = Color.White.copy(alpha = 0.85f),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        lineHeight = 18.sp
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(32.dp))
+        }
     } // Cierra LazyColumn
 
     // Overlay similar
@@ -972,7 +1052,7 @@ fun InicioScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.Black)
-                    .padding(top = innerPadding.calculateTopPadding(), bottom = innerPadding.calculateBottomPadding() + 120.dp)
+                    .padding(top = innerPadding.calculateTopPadding())
             ) {
                 Row(
                     modifier = Modifier
@@ -1000,7 +1080,12 @@ fun InicioScreen(
                     state = similarGridState,
                     columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = 16.dp,
+                        bottom = innerPadding.calculateBottomPadding() + 180.dp
+                    ),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {

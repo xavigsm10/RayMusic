@@ -74,6 +74,7 @@ import com.mrtdk.liquid_glass.ui.screens.NovedadesScreen
 import com.mrtdk.liquid_glass.ui.screens.PlayerScreen
 import com.mrtdk.liquid_glass.ui.screens.PlayerState
 import com.mrtdk.liquid_glass.ui.screens.VideoPlayerScreen
+import com.mrtdk.liquid_glass.ui.screens.ReplayScreen
 import com.mrtdk.liquid_glass.ui.theme.LiquidglassuicomponentTheme
 
 class MainActivity : ComponentActivity() {
@@ -227,19 +228,21 @@ class MainActivity : ComponentActivity() {
                     var videoDetail by remember { mutableStateOf<String?>(null) }
                     var categoryDetail by remember { mutableStateOf<com.mrtdk.liquid_glass.ui.screens.SearchCategory?>(null) }
                     var showFavoriteSongs by remember { mutableStateOf(false) }
+                    var showReplay by remember { mutableStateOf(false) }
 
                     // Handle system back navigation
                     androidx.activity.compose.BackHandler(
-                        enabled = showPlayer || videoDetail != null || playlistDetail != null || albumDetail != null || artistDetail != null || categoryDetail != null || showFavoriteSongs || (selectedIndex == 4 && isSearchSubmitted) || selectedIndex != 0
+                        enabled = showPlayer || showReplay || videoDetail != null || playlistDetail != null || albumDetail != null || artistDetail != null || categoryDetail != null || showFavoriteSongs || (selectedIndex == 4 && isSearchSubmitted) || selectedIndex != 0
                     ) {
                         when {
-                            showPlayer -> showPlayer = false
-                            showFavoriteSongs -> showFavoriteSongs = false
                             videoDetail != null -> videoDetail = null
                             playlistDetail != null -> playlistDetail = null
                             albumDetail != null -> albumDetail = null
                             artistDetail != null -> artistDetail = null
                             categoryDetail != null -> categoryDetail = null
+                            showPlayer -> showPlayer = false
+                            showReplay -> showReplay = false
+                            showFavoriteSongs -> showFavoriteSongs = false
                             selectedIndex == 4 && isSearchSubmitted -> {
                                 isSearchSubmitted = false
                                 searchQuery = ""
@@ -466,7 +469,8 @@ class MainActivity : ComponentActivity() {
                                                     onVideoSelected = { videoId ->
                                                         musicPlayer?.pause()
                                                         videoDetail = videoId
-                                                    }
+                                                    },
+                                                    onReplaySelected = { showReplay = true }
                                                 )
                                                 1 -> NovedadesScreen(
                                                     innerPadding = innerPadding,
@@ -515,6 +519,22 @@ class MainActivity : ComponentActivity() {
                                             }
                                         }
 
+                                         if (showReplay) {
+                                             SharedElementTransitionContainer(
+                                                 onBack = { showReplay = false },
+                                                 shrinkToTarget = false,
+                                                 enableSwipeToDismiss = false
+                                             ) { _, _ ->
+                                                 ReplayScreen(
+                                                     onBack = { showReplay = false },
+                                                     onSongSelected = playSong,
+                                                     onArtistSelected = { artistDetail = it },
+                                                     onAlbumSelected = { albumDetail = it },
+                                                     onPlaylistSelected = { playlistDetail = it }
+                                                 )
+                                             }
+                                         }
+
                                          if (artistDetail != null) {
                                              SharedElementTransitionContainer(onBack = { artistDetail = null }, shrinkToTarget = false, enableSwipeToDismiss = false) { _, _ ->
                                                  ArtistScreen(
@@ -547,7 +567,12 @@ class MainActivity : ComponentActivity() {
                                          }
 
                                          if (playlistDetail != null) {
-                                             SharedElementTransitionContainer(onBack = { playlistDetail = null }) { _, _ ->
+                                             val isReplay = playlistDetail?.id == "replay_2025"
+                                             SharedElementTransitionContainer(
+                                                 onBack = { playlistDetail = null },
+                                                 enableSwipeToDismiss = !isReplay,
+                                                 animate = !isReplay
+                                             ) { _, _ ->
                                                  PlaylistDetailScreen(
                                                      playlist = playlistDetail!!,
                                                      onBack = { playlistDetail = null },
@@ -556,6 +581,7 @@ class MainActivity : ComponentActivity() {
                                                  )
                                              }
                                          }
+
 
                                          androidx.compose.animation.AnimatedVisibility(
                                              visible = categoryDetail != null,
@@ -635,8 +661,10 @@ class MainActivity : ComponentActivity() {
                                                             .fillMaxWidth()
                                                             .align(Alignment.BottomCenter)
                                                             .padding(bottom = bottomPad)
-                                                            .offset(y = navBarOffset)
-                                                            .graphicsLayer { alpha = navBarAlpha }
+                                                            .graphicsLayer {
+                                                                translationY = navBarOffset.toPx()
+                                                                alpha = navBarAlpha
+                                                            }
                                                     ) {
                                                         LiquidBottomNavBar(
                                                             selectedIndex = selectedIndex,
@@ -713,8 +741,10 @@ class MainActivity : ComponentActivity() {
                                                             .align(Alignment.BottomCenter)
                                                             .padding(horizontal = 16.dp)
                                                             .padding(bottom = bottomPad)
-                                                            .offset(y = btnOffset)
-                                                            .graphicsLayer { alpha = btnAlpha },
+                                                            .graphicsLayer {
+                                                                translationY = btnOffset.toPx()
+                                                                alpha = btnAlpha
+                                                            },
                                                         horizontalArrangement = Arrangement.SpaceBetween,
                                                         verticalAlignment = Alignment.CenterVertically
                                                     ) {
