@@ -120,6 +120,7 @@ fun SharedElementTransitionContainer(
     onBack: () -> Unit,
     shrinkToTarget: Boolean = true,
     enableSwipeToDismiss: Boolean = true,
+    animate: Boolean = true,
     content: @Composable (progress: Float, dismiss: () -> Unit) -> Unit
 ) {
     androidx.compose.foundation.layout.BoxWithConstraints(
@@ -141,16 +142,20 @@ fun SharedElementTransitionContainer(
         var dragY by remember { mutableStateOf(0f) }
         val scope = rememberCoroutineScope()
         
-        val dismissAction = remember(scope, progress, onBack) {
+        val dismissAction = remember(scope, progress, onBack, animate) {
             {
                 scope.launch {
-                    progress.animateTo(
-                        targetValue = 0f,
-                        animationSpec = spring(
-                            dampingRatio = 0.8f,
-                            stiffness = 500f
+                    if (animate) {
+                        progress.animateTo(
+                            targetValue = 0f,
+                            animationSpec = spring(
+                                dampingRatio = 0.8f,
+                                stiffness = 500f
+                            )
                         )
-                    )
+                    } else {
+                        progress.snapTo(0f)
+                    }
                     onBack()
                 }
                 Unit
@@ -162,13 +167,17 @@ fun SharedElementTransitionContainer(
         }
         
         LaunchedEffect(Unit) {
-            progress.animateTo(
-                targetValue = 1f,
-                animationSpec = spring(
-                    dampingRatio = 0.75f,
-                    stiffness = 400f
+            if (animate) {
+                progress.animateTo(
+                    targetValue = 1f,
+                    animationSpec = spring(
+                        dampingRatio = 0.75f,
+                        stiffness = 400f
+                    )
                 )
-            )
+            } else {
+                progress.snapTo(1f)
+            }
         }
         
         val currentProgress = progress.value

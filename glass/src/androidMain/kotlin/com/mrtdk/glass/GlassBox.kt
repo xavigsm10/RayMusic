@@ -385,7 +385,7 @@ private fun GlassContainerWithShader(
                     shader.setFloatUniform("resolution", size.width, size.height)
                     val a = glassScope.updateCounter
 
-                    val elements = glassScope.elements.also { println(it) }
+                    val elements = glassScope.elements
 
                     val maxElements = 10
                     val positions = FloatArray(maxElements * 2)
@@ -670,9 +670,9 @@ private val GLASS_DISPLACEMENT_SHADER = """
             float totalWeight = 0.0;
             float invRadius = 1.0 / max(blurRadius, 1.0);
             
-            for (int dx = -5; dx <= 5; dx++) {
-                for (int dy = -5; dy <= 5; dy++) {
-                    float2 offset = float2(float(dx), float(dy)) * blurRadius * 0.4;
+            for (int dx = -2; dx <= 2; dx++) {
+                for (int dy = -2; dy <= 2; dy++) {
+                    float2 offset = float2(float(dx), float(dy)) * blurRadius * 0.8;
                     float distance = length(offset) * invRadius;
                     float weight = exp(-distance * distance * 2.0);
                     blurredColor += contents.eval(finalCoord + offset) * weight;

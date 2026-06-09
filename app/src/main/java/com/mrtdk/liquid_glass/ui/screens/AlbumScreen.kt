@@ -192,7 +192,11 @@ fun AlbumScreen(
     LaunchedEffect(headerArt) {
         if (!headerArt.isNullOrBlank()) {
             val request = ImageRequest.Builder(context)
-                .data(headerArt).allowHardware(false).size(200).build()
+                .data(headerArt)
+                .allowHardware(false)
+                .size(200)
+                .memoryCachePolicy(coil.request.CachePolicy.READ_ONLY)
+                .build()
             val result = coil.Coil.imageLoader(context).execute(request)
             if (result is coil.request.SuccessResult) {
                 val drawable = result.drawable
@@ -318,7 +322,7 @@ fun AlbumScreen(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(dominantColor)
+                    .background(dominantColor.copy(alpha = contentAlpha))
             ) {
         // ── HERO: Album art with gradient overlay ──────────────────
         item {
@@ -375,7 +379,7 @@ fun AlbumScreen(
                                     Brush.verticalGradient(
                                         0.0f to Color.Transparent,
                                         0.75f to Color.Transparent,
-                                        1.0f to dominantColor
+                                        1.0f to dominantColor.copy(alpha = contentAlpha)
                                     )
                                 )
                         )

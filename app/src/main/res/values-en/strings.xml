@@ -192,4 +192,29 @@
     <string name="radio_no_matches">No matches found</string>
     <string name="radio_failed_signature">Could not generate signature</string>
     <string name="radio_error_listening">Error listening</string>
+
+    <!-- Replay Screen -->
+    <string name="replay_title">Replay: The music you listen to most</string>
+    <string name="replay_subtitle">A trip down memory lane.</string>
+    <string name="replay_card_headline_1">Your</string>
+    <string name="replay_card_headline_2">music history</string>
+    <string name="replay_card_headline_3">is here.</string>
+    <string name="replay_card_footer">Replay the artists, songs, and albums that defined your 2026.</string>
+    <string name="replay_screen_title">Replay</string>
+    <string name="replay_highlights_reel">Highlight moments reel</string>
+    <string name="replay_revive_this_year">Revive your music from this year</string>
+    <string name="replay_top_artists">Your top artists of 2026</string>
+    <string name="replay_top_songs">Your top songs of 2026</string>
+    <string name="replay_top_albums">Your top albums of 2026</string>
+    <string name="replay_top_playlists">Your top playlists of 2026</string>
+    <string name="replay_top_genres">Your top genres of 2026</string>
+    <string name="replay_minutos">%1$s minutes</string>
+    <string name="replay_reproducciones">%1$s plays</string>
+    <string name="replay_top_artists_by_month">Your top artists by month</string>
+    <string name="replay_top_songs_by_month">Your top songs by month</string>
+    <string name="replay_top_albums_by_month">Your top albums by month</string>
+    <string name="replay_comparison_title">How does it compare to last year?</string>
+    <string name="replay_comparison_artists">Top artists: Comparison</string>
+    <string name="replay_comparison_songs">Top songs: Comparison</string>
+    <string name="replay_revive_last_year_songs">Revive your top songs of 2025</string>
 </resources>
