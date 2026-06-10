@@ -48,6 +48,11 @@ import androidx.compose.material.icons.filled.ToggleOn
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.ToggleOff
+import androidx.compose.ui.platform.LocalConfiguration
+import android.content.res.Configuration
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -463,7 +468,59 @@ fun PlayerScreen(
             val maxWidth = maxWidth
             val maxHeight = maxHeight
 
-            val lyricsImageSize = 84.dp
+            val isLandscape = LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+
+            if (isLandscape) {
+                LandscapePlayerLayout(
+                    playerState = playerState,
+                    isPlaying = isPlaying,
+                    currentPosition = currentPosition,
+                    duration = duration,
+                    upNextSongs = upNextSongs,
+                    onUpNextSongsChange = onUpNextSongsChange,
+                    onSkipNext = onSkipNext,
+                    onSkipPrevious = onSkipPrevious,
+                    onClose = onClose,
+                    onTogglePlayPause = onTogglePlayPause,
+                    onSeek = onSeek,
+                    onVolumeChange = onVolumeChange,
+                    onArtistSelected = onArtistSelected,
+                    onAlbumSelected = onAlbumSelected,
+                    onSongSelected = onSongSelected,
+                    onSongSelectedFromQueue = onSongSelectedFromQueue,
+                    shuffleModeEnabled = shuffleModeEnabled,
+                    repeatMode = repeatMode,
+                    onToggleShuffle = onToggleShuffle,
+                    onToggleRepeat = onToggleRepeat,
+                    showLyrics = showLyrics,
+                    onShowLyricsChange = { showLyrics = it },
+                    showQueue = showQueue,
+                    onShowQueueChange = { showQueue = it },
+                    volumePosition = volumePosition,
+                    onVolumePositionChange = { volumePosition = it },
+                    coverBitmap = coverBitmap,
+                    onCoverBitmapChange = { coverBitmap = it },
+                    dominantColor = dominantColor,
+                    onDominantColorChange = { dominantColor = it },
+                    bottomAverageColor = bottomAverageColor,
+                    onBottomAverageColorChange = { bottomAverageColor = it },
+                    hdArtUrl = hdArtUrl,
+                    lyricsLines = lyricsLines,
+                    isRomajiEnabled = isRomajiEnabled,
+                    onToggleRomaji = { isRomajiEnabled = !isRomajiEnabled },
+                    isSaved = isSaved,
+                    animatedArtworkUrl = animatedArtworkUrl,
+                    isVideoPlaying = isVideoPlaying,
+                    onVideoPlayingChange = { isVideoPlaying = it },
+                    animatedImageLoader = animatedImageLoader,
+                    isLightBackground = isLightBackground,
+                    contentColor = contentColor,
+                    onShowOptionsMenu = { showOptionsMenu = true },
+                    onShowLyricsMenu = { showLyricsMenu = true },
+                    onShowPlaylistMenu = { showPlaylistMenu = true }
+                )
+            } else {
+                val lyricsImageSize = 84.dp
             val isOverlayActive = showLyrics || showQueue
             
             // Calculating destinations depending on normal vs collapsed bottom bar
@@ -1987,6 +2044,7 @@ fun PlayerScreen(
         }
     }
 }
+}
 @Composable
 fun PlayerBottomControls(
     progress: Float, currentPosition: Long, duration: Long,
@@ -2322,5 +2380,953 @@ fun downloadSong(context: android.content.Context, videoId: String, title: Strin
         }
     } catch (e: Exception) {
         Toast.makeText(context, "Error al iniciar descarga: ${e.message}", Toast.LENGTH_SHORT).show()
+    }
+}
+
+@Composable
+fun LandscapePlayerLayout(
+    playerState: PlayerState?,
+    isPlaying: Boolean,
+    currentPosition: Long,
+    duration: Long,
+    upNextSongs: List<com.echo.innertube.models.SongItem>,
+    onUpNextSongsChange: (List<com.echo.innertube.models.SongItem>) -> Unit,
+    onSkipNext: () -> Unit,
+    onSkipPrevious: () -> Unit,
+    onClose: () -> Unit,
+    onTogglePlayPause: () -> Unit,
+    onSeek: (Long) -> Unit,
+    onVolumeChange: (Float) -> Unit,
+    onArtistSelected: (com.mrtdk.liquid_glass.ui.screens.ArtistState) -> Unit,
+    onAlbumSelected: (com.mrtdk.liquid_glass.ui.screens.AlbumState) -> Unit,
+    onSongSelected: (PlayerState) -> Unit,
+    onSongSelectedFromQueue: (PlayerState) -> Unit,
+    shuffleModeEnabled: Boolean,
+    repeatMode: Int,
+    onToggleShuffle: () -> Unit,
+    onToggleRepeat: () -> Unit,
+    showLyrics: Boolean,
+    onShowLyricsChange: (Boolean) -> Unit,
+    showQueue: Boolean,
+    onShowQueueChange: (Boolean) -> Unit,
+    volumePosition: Float,
+    onVolumePositionChange: (Float) -> Unit,
+    coverBitmap: ImageBitmap?,
+    onCoverBitmapChange: (ImageBitmap?) -> Unit,
+    dominantColor: Color,
+    onDominantColorChange: (Color) -> Unit,
+    bottomAverageColor: Color,
+    onBottomAverageColorChange: (Color) -> Unit,
+    hdArtUrl: Any?,
+    lyricsLines: List<com.mrtdk.liquid_glass.utils.LyricLine>?,
+    isRomajiEnabled: Boolean,
+    onToggleRomaji: () -> Unit,
+    isSaved: Boolean,
+    animatedArtworkUrl: String?,
+    isVideoPlaying: Boolean,
+    onVideoPlayingChange: (Boolean) -> Unit,
+    animatedImageLoader: coil.ImageLoader,
+    isLightBackground: Boolean,
+    contentColor: Color,
+    onShowOptionsMenu: () -> Unit,
+    onShowLyricsMenu: () -> Unit,
+    onShowPlaylistMenu: () -> Unit
+) {
+    val context = LocalContext.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val dragOffsetX = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(bottomAverageColor)
+            .graphicsLayer {
+                translationX = dragOffsetX.value
+            }
+            .pointerInput(showLyrics, showQueue) {
+                if (!showLyrics && !showQueue) {
+                    val maxDragDistance = size.width.toFloat()
+                    detectHorizontalDragGestures(
+                        onDragEnd = {
+                            val currentOffsetX = dragOffsetX.value
+                            if (currentOffsetX > with(density) { 150.dp.toPx() }) {
+                                scope.launch {
+                                    dragOffsetX.animateTo(
+                                        targetValue = maxDragDistance,
+                                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                                    )
+                                    onClose()
+                                }
+                            } else {
+                                scope.launch {
+                                    dragOffsetX.animateTo(0f, spring())
+                                }
+                            }
+                        }
+                    ) { change, dragAmount ->
+                        if (dragAmount > 0f || dragOffsetX.value > 0f) {
+                            val newOffset = (dragOffsetX.value + dragAmount * 0.7f).coerceAtLeast(0f)
+                            scope.launch { dragOffsetX.snapTo(newOffset) }
+                        }
+                    }
+                }
+            }
+    ) {
+        val maxWidth = maxWidth
+        val maxHeight = maxHeight
+        val audioManager = remember { context.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager }
+        val maxVolume = remember { audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC).toFloat() }
+
+        val overlapDp = 30.dp
+        val reflectionX = maxHeight - overlapDp
+        val reflectionWidth = maxWidth - reflectionX
+
+        // 0. Base Highly Blurred Background Image (Right Side)
+        Box(
+            modifier = Modifier
+                .offset(x = reflectionX, y = 0.dp)
+                .width(reflectionWidth)
+                .fillMaxHeight()
+                .blur(280.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+        ) {
+            val currentBitmap = coverBitmap
+            if (currentBitmap != null) {
+                Image(
+                    bitmap = currentBitmap,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else if (hdArtUrl != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(hdArtUrl)
+                        .crossfade(true)
+                        .build(),
+                    imageLoader = animatedImageLoader,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+
+        // 1. Horizontal 1D reflection background (fades out horizontally after slider start)
+        val currentCoverBitmap = coverBitmap
+        if (currentCoverBitmap != null) {
+            Box(
+                modifier = Modifier
+                    .offset(x = reflectionX, y = 0.dp)
+                    .width(reflectionWidth)
+                    .fillMaxHeight()
+                    .graphicsLayer {
+                        compositingStrategy = CompositingStrategy.Offscreen
+                    }
+                    .drawWithContent {
+                        drawContent()
+                        drawRect(
+                            brush = Brush.horizontalGradient(
+                                colorStops = arrayOf(
+                                    0.0f to Color.Black,
+                                    0.05f to Color.Black,
+                                    0.12f to Color.Black.copy(alpha = 0.6f),
+                                    0.22f to Color.Transparent,
+                                    1.0f to Color.Transparent
+                                )
+                            ),
+                            blendMode = BlendMode.DstIn
+                        )
+                    }
+                    .blur(25.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+            ) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val sampleWidth = 5
+                    val sampleW = sampleWidth.coerceAtMost(currentCoverBitmap.width).coerceAtLeast(1)
+                    val srcXInt = (currentCoverBitmap.width - sampleW).coerceIn(0, currentCoverBitmap.width - 1)
+                    
+                    drawImage(
+                        image = currentCoverBitmap,
+                        srcOffset = IntOffset(srcXInt, 0),
+                        srcSize = IntSize(sampleW, currentCoverBitmap.height),
+                        dstOffset = IntOffset.Zero,
+                        dstSize = IntSize(size.width.toInt(), size.height.toInt()),
+                        filterQuality = FilterQuality.Low
+                    )
+                }
+            }
+        }
+
+        // 2. Left side Album Art (full height square)
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .size(width = maxHeight, height = maxHeight)
+        ) {
+            // Sharp base cover
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(hdArtUrl)
+                    .crossfade(true)
+                    .build(),
+                imageLoader = animatedImageLoader,
+                contentDescription = "Album Art",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+
+            val currentAnimatedUrl = animatedArtworkUrl
+            if (!currentAnimatedUrl.isNullOrBlank()) {
+                DisposableEffect(Unit) {
+                    onDispose {
+                        onVideoPlayingChange(false)
+                    }
+                }
+                com.mrtdk.liquid_glass.ui.components.AnimatedArtworkPlayer(
+                    videoUrl = currentAnimatedUrl,
+                    modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (isVideoPlaying) 1f else 0f },
+                    isPaused = false,
+                    enableFrameCapture = true,
+                    onPlaybackStarted = { onVideoPlayingChange(true) },
+                    onFrameCaptured = { frameBitmap ->
+                        onCoverBitmapChange(frameBitmap.asImageBitmap())
+                        try {
+                            var r = 0L; var g = 0L; var b = 0L
+                            val yCoord = frameBitmap.height - 1
+                            val w = frameBitmap.width
+                            for (x in 0 until w) {
+                                val pixel = frameBitmap.getPixel(x, yCoord)
+                                r += android.graphics.Color.red(pixel)
+                                g += android.graphics.Color.green(pixel)
+                                b += android.graphics.Color.blue(pixel)
+                            }
+                            val avgColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
+                            onBottomAverageColorChange(avgColor)
+                            onDominantColorChange(avgColor)
+                        } catch (e: Exception) { }
+                    }
+                )
+            }
+
+            // Blurred right edge overlay
+            val currentBitmap = coverBitmap
+            if (currentBitmap != null) {
+                Image(
+                    bitmap = currentBitmap,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .cloudy(radius = 100)
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(
+                                brush = Brush.horizontalGradient(
+                                    colorStops = arrayOf(
+                                        0.75f to Color.Transparent,
+                                        0.88f to Color.Black.copy(alpha = 0.6f),
+                                        1.0f to Color.Black
+                                    )
+                                ),
+                                blendMode = BlendMode.DstIn
+                            )
+                        }
+                )
+            } else {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(hdArtUrl)
+                        .size(150)
+                        .memoryCachePolicy(coil.request.CachePolicy.READ_ONLY)
+                        .crossfade(true)
+                        .build(),
+                    imageLoader = animatedImageLoader,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .cloudy(radius = 100)
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(
+                                brush = Brush.horizontalGradient(
+                                    colorStops = arrayOf(
+                                        0.75f to Color.Transparent,
+                                        0.88f to Color.Black.copy(alpha = 0.6f),
+                                        1.0f to Color.Black
+                                    )
+                                ),
+                                blendMode = BlendMode.DstIn
+                            )
+                        }
+                )
+            }
+        }
+
+        // 3. Right side Content
+        val rightSideWidth = maxWidth - maxHeight
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .width(rightSideWidth)
+                .fillMaxHeight()
+                .padding(vertical = 16.dp, horizontal = 24.dp)
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Shared Top Header Row: Title/Artist and Star/Options buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    var dragAccumulator by remember { mutableStateOf(0f) }
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .pointerInput(playerState) {
+                                detectHorizontalDragGestures(
+                                    onDragEnd = {
+                                        if (dragAccumulator < -60f) { onSkipNext() }
+                                        else if (dragAccumulator > 60f) { onSkipPrevious() }
+                                        dragAccumulator = 0f
+                                    },
+                                    onHorizontalDrag = { change, dragAmount ->
+                                        dragAccumulator += dragAmount
+                                        change.consume()
+                                    }
+                                )
+                            }
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    if (playerState?.videoId != null) {
+                                        onArtistSelected(
+                                            com.mrtdk.liquid_glass.ui.screens.ArtistState(
+                                                id = playerState.artist,
+                                                name = playerState.artist,
+                                                thumbnail = null
+                                            )
+                                        )
+                                    }
+                                }
+                        ) {
+                            Text(
+                                text = playerState?.title ?: "",
+                                color = contentColor,
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.height(1.dp))
+                            Text(
+                                text = playerState?.artist ?: "",
+                                color = contentColor.copy(alpha = 0.7f),
+                                fontSize = 16.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (isSaved) contentColor else contentColor.copy(alpha = 0.15f)
+                                )
+                                .clickable {
+                                    if (playerState != null) {
+                                        if (!isSaved) {
+                                            LibraryManager.saveItem(
+                                                LibraryItem(
+                                                    playerState.videoId ?: "",
+                                                    playerState.title,
+                                                    playerState.artist,
+                                                    playerState.artUrl?.toString(),
+                                                    ItemType.SONG
+                                                )
+                                            )
+                                        } else {
+                                            LibraryManager.removeItem(playerState.videoId ?: "")
+                                        }
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AsyncImage(
+                                model = "file:///android_asset/img reproductor/c.png",
+                                contentDescription = "Fav",
+                                colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(
+                                    if (isSaved) (if (isLightBackground) Color.White else Color(0xFF1A1A1A)) else contentColor
+                                ),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(contentColor.copy(alpha = 0.15f))
+                                .clickable { onShowOptionsMenu() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Canvas(modifier = Modifier.size(18.dp)) {
+                                val r = 1.5.dp.toPx()
+                                val space = 4.dp.toPx()
+                                val cx = size.width / 2f
+                                val cy = size.height / 2f
+                                drawCircle(contentColor, radius = r, center = Offset(cx - space - r * 2, cy))
+                                drawCircle(contentColor, radius = r, center = Offset(cx, cy))
+                                drawCircle(contentColor, radius = r, center = Offset(cx + space + r * 2, cy))
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Switch right column contents based on showLyrics or showQueue
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    if (showLyrics) {
+                        // View 2: Lyrics View
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            val lyricsListState = rememberLazyListState()
+                            val currentLyricsLines = lyricsLines
+                            if (currentLyricsLines != null && currentLyricsLines.isNotEmpty()) {
+                                val isSynced = currentLyricsLines.any { it.timeMs > 0L }
+                                
+                                LaunchedEffect(currentPosition, currentLyricsLines) {
+                                    if (!isSynced) return@LaunchedEffect
+                                    val currentIdx = currentLyricsLines.indexOfLast { it.timeMs != -1L && it.timeMs <= currentPosition + 500 }
+                                    if (currentIdx >= 0 && !lyricsListState.isScrollInProgress) {
+                                        lyricsListState.animateScrollToItem(currentIdx.coerceAtLeast(0), scrollOffset = -100)
+                                    }
+                                }
+
+                                LazyColumn(
+                                    state = lyricsListState,
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                                ) {
+                                    item { Spacer(modifier = Modifier.height(16.dp)) }
+                                    items(currentLyricsLines.size) { i ->
+                                        val line = currentLyricsLines[i]
+                                        val isCurrent = isSynced && line.timeMs != -1L && currentPosition >= line.timeMs && 
+                                            (i == currentLyricsLines.lastIndex || currentPosition < currentLyricsLines[i+1].timeMs)
+                                        val isPast = isSynced && line.timeMs != -1L && currentPosition > line.timeMs
+                                        val distance = if (isSynced) {
+                                            val curIdx = currentLyricsLines.indexOfLast { it.timeMs != -1L && it.timeMs <= currentPosition + 500 }
+                                            if (curIdx >= 0) kotlin.math.abs(i - curIdx) else 0
+                                        } else 0
+                                        
+                                        val lineDuration = remember(line.timeMs) {
+                                            val nextLineTime = currentLyricsLines.getOrNull(i + 1)?.timeMs
+                                            if (nextLineTime != null && nextLineTime > 0 && line.timeMs > 0) nextLineTime - line.timeMs else 4000L
+                                        }
+                                        val activeDuration = (lineDuration * 0.95).toLong().coerceAtLeast(300L)
+                                        val lineRelTime = if (isCurrent && line.timeMs > 0) (currentPosition - line.timeMs).coerceAtLeast(0L) else if (isPast) activeDuration else 0L
+                                        
+                                        val targetAlpha = when {
+                                            !isSynced || isCurrent -> 1f
+                                            distance == 1 -> 0.55f
+                                            distance == 2 -> 0.4f
+                                            else -> 0.3f
+                                        }
+                                        val targetScale = when {
+                                            !isSynced || isCurrent -> 1.03f
+                                            distance == 1 -> 0.97f
+                                            distance >= 2 -> 0.88f
+                                            else -> 1f
+                                        }
+                                        val targetBlur = if (!isCurrent && isSynced) {
+                                            when (distance) {
+                                                1 -> 2f
+                                                2 -> 3f
+                                                else -> 4f
+                                            }
+                                        } else 0f
+                                        
+                                        val animAlpha by animateFloatAsState(targetAlpha, animationSpec = tween(260), label="lyricsAlpha")
+                                        val animScale by animateFloatAsState(targetScale, animationSpec = tween(320), label="lyricsScale")
+                                        val animBlur by animateFloatAsState(targetBlur, animationSpec = tween(420), label="lyricsBlur")
+                                        
+                                        val wordData = remember(line.text, activeDuration) {
+                                            val words = line.text.split(" ").filter { it.isNotEmpty() }
+                                            if (words.isEmpty()) {
+                                                listOf(Triple(line.text, 0L, activeDuration))
+                                            } else {
+                                                val totalChars = line.text.length
+                                                var accumulatedTime = 0L
+                                                words.mapIndexed { wordIndex, word ->
+                                                    val charCount = if (wordIndex < words.lastIndex) word.length + 1 else word.length
+                                                    val wordStart = accumulatedTime
+                                                    val wordDur = if (totalChars > 0) (activeDuration * charCount.toFloat() / totalChars).toLong() else activeDuration
+                                                    accumulatedTime += wordDur
+                                                    Triple(if (wordIndex < words.lastIndex) "$word " else word, wordStart, wordStart + wordDur)
+                                                }
+                                            }
+                                        }
+
+                                        @OptIn(ExperimentalLayoutApi::class)
+                                        FlowRow(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .graphicsLayer {
+                                                    scaleX = animScale; scaleY = animScale
+                                                    alpha = animAlpha
+                                                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
+                                                }
+                                                .then(if (animBlur > 0f) Modifier.blur(animBlur.dp) else Modifier)
+                                                .clickable { 
+                                                    if(line.timeMs != -1L) onSeek(line.timeMs)
+                                                },
+                                            horizontalArrangement = Arrangement.Start,
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            wordData.forEach { (wordText, startRelative, endRelative) ->
+                                                val wordDuration = (endRelative - startRelative).coerceAtLeast(1L)
+                                                val wordProgress by animateFloatAsState(
+                                                    targetValue = when {
+                                                        lineRelTime >= endRelative -> 1f
+                                                        lineRelTime < startRelative -> 0f
+                                                        else -> (lineRelTime - startRelative).toFloat() / wordDuration
+                                                    },
+                                                    animationSpec = tween(
+                                                        durationMillis = wordDuration.coerceIn(140L, 260L).toInt(),
+                                                        easing = FastOutSlowInEasing
+                                                    ),
+                                                    label = "wordProgress"
+                                                )
+                                                val finalFontWeight = if (isCurrent) FontWeight.ExtraBold else FontWeight.Bold
+                                                Text(
+                                                    text = wordText,
+                                                    fontSize = 24.sp,
+                                                    style = TextStyle(
+                                                        brush = if (isCurrent) Brush.horizontalGradient(
+                                                            0.0f to contentColor,
+                                                            (wordProgress - 0.05f).coerceAtLeast(0f) to contentColor,
+                                                            (wordProgress + 0.05f).coerceAtMost(1f) to contentColor.copy(alpha = 0.4f),
+                                                            1.0f to contentColor.copy(alpha = 0.4f)
+                                                        ) else null,
+                                                        fontWeight = finalFontWeight,
+                                                        lineHeight = 32.sp,
+                                                        shadow = if (isCurrent && wordProgress > 0.1f) Shadow(
+                                                            color = contentColor.copy(alpha = 0.6f * wordProgress),
+                                                            offset = Offset.Zero,
+                                                            blurRadius = (12f * wordProgress).coerceAtLeast(0.1f)
+                                                        ) else null
+                                                    ),
+                                                    color = if (!isCurrent) contentColor else Color.Unspecified
+                                                )
+                                            }
+                                        }
+                                    }
+                                    item { Spacer(modifier = Modifier.height(80.dp)) }
+                                }
+                            } else {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(color = contentColor)
+                                }
+                            }
+                        }
+                    } else if (showQueue) {
+                        // View 3: Queue View
+                        val queueListState = rememberLazyListState()
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            val shuffleInteraction = remember { MutableInteractionSource() }
+                            val isShuffleActive = shuffleModeEnabled
+                            val isShufflePressed by shuffleInteraction.collectIsPressedAsState()
+                            val shuffleScale by animateFloatAsState(targetValue = if (isShufflePressed) 0.85f else 1.0f, label = "shuffleScale")
+                            val shuffleBgColor by animateColorAsState(targetValue = if (isShuffleActive) Color(0xFFFA243C) else contentColor.copy(alpha=0.15f), label = "shuffleBg")
+                            val shuffleIconColor by animateColorAsState(targetValue = if (isShuffleActive) Color.White else contentColor.copy(alpha=0.5f), label = "shuffleIcon")
+
+                            val repeatInteraction = remember { MutableInteractionSource() }
+                            val isRepeatActive = repeatMode != androidx.media3.common.Player.REPEAT_MODE_OFF
+                            val isRepeatPressed by repeatInteraction.collectIsPressedAsState()
+                            val repeatScale by animateFloatAsState(targetValue = if (isRepeatPressed) 0.85f else 1.0f, label = "repeatScale")
+                            val repeatBgColor by animateColorAsState(targetValue = if (isRepeatActive) Color(0xFFFA243C) else contentColor.copy(alpha=0.15f), label = "repeatBg")
+                            val repeatIconColor by animateColorAsState(targetValue = if (isRepeatActive) Color.White else contentColor.copy(alpha=0.5f), label = "repeatIcon")
+
+                            val autoplayInteraction = remember { MutableInteractionSource() }
+                            val isAutoplayActive = playerState?.isExclusiveQueue != true
+                            val isAutoplayPressed by autoplayInteraction.collectIsPressedAsState()
+                            val autoplayScale by animateFloatAsState(targetValue = if (isAutoplayPressed) 0.85f else 1.0f, label = "autoplayScale")
+                            val autoplayBgColor by animateColorAsState(targetValue = if (isAutoplayActive) Color(0xFFFA243C) else contentColor.copy(alpha=0.15f), label = "autoplayBg")
+                            val autoplayIconColor by animateColorAsState(targetValue = if (isAutoplayActive) Color.White else contentColor.copy(alpha=0.5f), label = "autoplayIcon")
+
+                            val romajiInteraction = remember { MutableInteractionSource() }
+                            val isRomajiActive = isRomajiEnabled
+                            val isRomajiPressed by romajiInteraction.collectIsPressedAsState()
+                            val romajiScale by animateFloatAsState(targetValue = if (isRomajiPressed) 0.85f else 1.0f, label = "romajiScale")
+                            val romajiBgColor by animateColorAsState(targetValue = if (isRomajiActive) Color(0xFFFA243C) else contentColor.copy(alpha=0.15f), label = "romajiBg")
+                            val romajiIconColor by animateColorAsState(targetValue = if (isRomajiActive) Color.White else contentColor.copy(alpha=0.5f), label = "romajiIcon")
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .graphicsLayer(scaleX = shuffleScale, scaleY = shuffleScale)
+                                        .height(36.dp)
+                                        .clip(RoundedCornerShape(50))
+                                        .background(shuffleBgColor)
+                                        .clickable(
+                                            interactionSource = shuffleInteraction,
+                                            indication = null,
+                                            onClick = onToggleShuffle
+                                        ),
+                                    contentAlignment=Alignment.Center
+                                ) {
+                                    Icon(painterResource(id = R.drawable.shuffle), "Shuffle", tint=shuffleIconColor, modifier=Modifier.size(18.dp))
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .graphicsLayer(scaleX = repeatScale, scaleY = repeatScale)
+                                        .height(36.dp)
+                                        .clip(RoundedCornerShape(50))
+                                        .background(repeatBgColor)
+                                        .clickable(
+                                            interactionSource = repeatInteraction,
+                                            indication = null,
+                                            onClick = onToggleRepeat
+                                        ),
+                                    contentAlignment=Alignment.Center
+                                ) {
+                                    Icon(if (repeatMode == androidx.media3.common.Player.REPEAT_MODE_ONE) Icons.Default.RepeatOne else Icons.Default.Repeat, "Repeat", tint=repeatIconColor, modifier=Modifier.size(18.dp))
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .graphicsLayer(scaleX = autoplayScale, scaleY = autoplayScale)
+                                        .height(36.dp)
+                                        .clip(RoundedCornerShape(50))
+                                        .background(autoplayBgColor)
+                                        .clickable(
+                                            interactionSource = autoplayInteraction,
+                                            indication = null,
+                                            onClick = {
+                                                if (playerState != null) {
+                                                    onSongSelected(playerState.copy(isExclusiveQueue = !playerState.isExclusiveQueue))
+                                                }
+                                            }
+                                        ),
+                                    contentAlignment=Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.AllInclusive, "Autoplay", tint=autoplayIconColor, modifier=Modifier.size(18.dp))
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .graphicsLayer(scaleX = romajiScale, scaleY = romajiScale)
+                                        .height(36.dp)
+                                        .clip(RoundedCornerShape(50))
+                                        .background(romajiBgColor)
+                                        .clickable(
+                                            interactionSource = romajiInteraction,
+                                            indication = null,
+                                            onClick = onToggleRomaji
+                                        ),
+                                    contentAlignment=Alignment.Center
+                                ) {
+                                    Icon(if (isRomajiActive) Icons.Default.ToggleOn else Icons.Default.ToggleOff, "Toggle", tint=romajiIconColor, modifier=Modifier.size(22.dp))
+                                }
+                            }
+
+                            if (playerState != null && playerState.queue.isNotEmpty()) {
+                                Text(text = stringResource(R.string.siguiente_en_album_playlist), color=contentColor, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top=8.dp, bottom=6.dp))
+                            } else if (playerState?.isExclusiveQueue != true) {
+                                Column(modifier = Modifier.padding(top=8.dp, bottom=6.dp)) {
+                                    Text(text = stringResource(R.string.continue_playing), color=contentColor, fontSize=16.sp, fontWeight=FontWeight.Bold)
+                                    Text(text = stringResource(R.string.autoplaying_similar_music), color=contentColor.copy(alpha=0.7f), fontSize=12.sp)
+                                }
+                            }
+
+                            LazyColumn(
+                                state = queueListState,
+                                modifier = Modifier.weight(1f).fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                if (playerState != null && playerState.queue.isNotEmpty()) {
+                                    items(playerState.queue.size) { index ->
+                                        val qItem = playerState.queue[index]
+                                        val upgradedArt = qItem.artUrl?.let {
+                                            val itStr = it.toString()
+                                            if (itStr.startsWith("file:///android_asset/")) {
+                                                it
+                                            } else {
+                                                val upgraded = com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(itStr) ?: itStr
+                                                if (it is android.net.Uri) android.net.Uri.parse(upgraded) else upgraded
+                                            }
+                                        } ?: qItem.artUrl
+
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.fillMaxWidth().clickable {
+                                                val remaining = playerState.queue.drop(index + 1)
+                                                onSongSelectedFromQueue(PlayerState(
+                                                    title = qItem.title,
+                                                    artist = qItem.artist,
+                                                    artUrl = upgradedArt,
+                                                    videoId = qItem.videoId,
+                                                    queue = remaining,
+                                                    isExclusiveQueue = playerState.isExclusiveQueue,
+                                                    album = qItem.album,
+                                                    albumId = qItem.albumId
+                                                ))
+                                            }
+                                        ) {
+                                            AsyncImage(model = ImageRequest.Builder(context).data(upgradedArt).crossfade(false).build(), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp)))
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(qItem.title, color = contentColor, fontSize = 15.sp, maxLines = 1, fontWeight = FontWeight.SemiBold)
+                                                Text(qItem.artist, color = contentColor.copy(alpha=0.6f), fontSize = 13.sp, maxLines = 1)
+                                            }
+                                            Icon(Icons.Default.Menu, contentDescription=null, tint=contentColor.copy(alpha=0.6f))
+                                        }
+                                    }
+                                }
+                                if (playerState?.isExclusiveQueue != true) {
+                                    items(upNextSongs.size) { i ->
+                                        val song = upNextSongs[i]
+                                        val hdThumb = song.thumbnail?.let {
+                                            com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(it) ?: it
+                                        } ?: song.thumbnail
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.fillMaxWidth().clickable {
+                                                val upgradedArt = song.thumbnail?.let {
+                                                    com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(it) ?: it
+                                                } ?: song.thumbnail
+                                                onUpNextSongsChange(upNextSongs.drop(i + 1))
+                                                onSongSelectedFromQueue(PlayerState(
+                                                    title = song.title,
+                                                    artist = song.artists.joinToString { it.name },
+                                                    artUrl = upgradedArt,
+                                                    videoId = song.id,
+                                                    isExclusiveQueue = playerState?.isExclusiveQueue ?: false,
+                                                    album = song.album?.name,
+                                                    albumId = song.album?.id
+                                                ))
+                                            }
+                                        ) {
+                                            AsyncImage(model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp)))
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(song.title, color = contentColor, fontSize = 15.sp, maxLines = 1, fontWeight = FontWeight.SemiBold)
+                                                Text(song.artists.joinToString { it.name }, color = contentColor.copy(alpha=0.6f), fontSize = 13.sp, maxLines = 1)
+                                            }
+                                            Icon(Icons.Default.Menu, contentDescription=null, tint=contentColor.copy(alpha=0.6f))
+                                        }
+                                    }
+                                }
+                                item { Spacer(modifier = Modifier.height(40.dp)) }
+                            }
+                        }
+                    } else {
+                        // View 1: Main Controls Layout (Slider, Controls, Volume)
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            Spacer(modifier = Modifier.weight(1f))
+
+                            // Apple Music slider
+                            val progressVal = if (duration > 0) currentPosition.toFloat() / duration.toFloat() else 0f
+                            AppleMusicSlider(
+                                value = progressVal,
+                                onValueChange = { onSeek((it * duration).toLong()) },
+                                modifier = Modifier.fillMaxWidth().height(24.dp),
+                                activeColor = contentColor,
+                                inactiveColor = contentColor.copy(alpha = 0.3f),
+                                barHeightDp = 6.dp
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(formatDuration(currentPosition), color = contentColor.copy(alpha = 0.6f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                                Text("-${formatDuration(duration - currentPosition)}", color = contentColor.copy(alpha = 0.6f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // Playback controls (Prev, Play, Next)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                AnimatedSkipButton(
+                                    iconId = R.drawable.previous,
+                                    contentDescription = "Previous",
+                                    contentColor = contentColor,
+                                    onClick = onSkipPrevious
+                                )
+                                Spacer(modifier = Modifier.width(36.dp))
+                                
+                                val playPauseInteractionSource = remember { MutableInteractionSource() }
+                                val isPlayPausePressed by playPauseInteractionSource.collectIsPressedAsState()
+                                val playPauseBgColor by animateColorAsState(
+                                    targetValue = if (isPlayPausePressed) contentColor.copy(alpha = 0.12f) else Color.Transparent,
+                                    label = "playPauseBg"
+                                )
+                                val playPauseRotation by animateFloatAsState(
+                                    targetValue = if (isPlaying) 180f else 0f,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessLow
+                                    ),
+                                    label = "playPauseButtonRotation"
+                                )
+
+                                Box(
+                                    modifier = Modifier
+                                        .size(56.dp)
+                                        .clip(CircleShape)
+                                        .background(playPauseBgColor)
+                                        .clickable(
+                                            interactionSource = playPauseInteractionSource,
+                                            indication = androidx.compose.foundation.LocalIndication.current,
+                                            onClick = onTogglePlayPause
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    AnimatedContent(
+                                        targetState = isPlaying,
+                                        transitionSpec = {
+                                            (fadeIn(animationSpec = tween(220, delayMillis = 90)) + scaleIn(initialScale = 0.3f, animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)))
+                                                .togetherWith(fadeOut(animationSpec = tween(90)) + scaleOut(targetScale = 0.3f, animationSpec = tween(90)))
+                                        },
+                                        label = "playPauseIcon"
+                                    ) { playing ->
+                                        Icon(
+                                            painter = painterResource(id = if (playing) R.drawable.pause else R.drawable.resume),
+                                            contentDescription = if (playing) "Pause" else "Play",
+                                            tint = contentColor,
+                                            modifier = Modifier
+                                                .size(52.dp)
+                                                .graphicsLayer {
+                                                    rotationZ = playPauseRotation
+                                                }
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.width(36.dp))
+                                AnimatedSkipButton(
+                                    iconId = R.drawable.forward,
+                                    contentDescription = "Next",
+                                    contentColor = contentColor,
+                                    onClick = onSkipNext
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(40.dp))
+
+                            // Volume Row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.albumspeaker),
+                                    contentDescription = "Low volume",
+                                    tint = contentColor.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(16.dp))
+                                AppleMusicSlider(
+                                    value = volumePosition,
+                                    onValueChange = { v ->
+                                        onVolumePositionChange(v)
+                                        audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, (v * maxVolume).toInt(), 0)
+                                        onVolumeChange(v)
+                                    },
+                                    modifier = Modifier.weight(1f).height(24.dp),
+                                    activeColor = contentColor,
+                                    inactiveColor = contentColor.copy(alpha = 0.2f),
+                                    barHeightDp = 6.dp
+                                )
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Icon(
+                                    painter = painterResource(id = R.drawable.albumspeakerlarge),
+                                    contentDescription = "High volume",
+                                    tint = contentColor.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+
+                // Shared Bottom Bar Buttons Row (Lyrics, Cast/Format, Queue)
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(if (showLyrics) contentColor else Color.Transparent)
+                            .clickable {
+                                onShowLyricsChange(!showLyrics)
+                                onShowQueueChange(false)
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AsyncImage(
+                            model = "file:///android_asset/img reproductor/Letras.png",
+                            contentDescription = "Lyrics",
+                            colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(
+                                if (showLyrics) (if (isLightBackground) Color.White else Color(0xFF1A1A1A)) else contentColor
+                            ),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    AsyncImage(
+                        model = "file:///android_asset/img reproductor/parlante.png",
+                        contentDescription = "Format",
+                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(contentColor),
+                        modifier = Modifier
+                            .height(20.dp)
+                            .padding(horizontal = 8.dp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { /* do nothing */ }
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(if (showQueue) contentColor else Color.Transparent)
+                            .clickable {
+                                onShowQueueChange(!showQueue)
+                                onShowLyricsChange(false)
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.nextinfo),
+                            contentDescription = "Next Info",
+                            tint = if (showQueue) (if (isLightBackground) Color.White else Color(0xFF1A1A1A)) else contentColor,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
+        }
     }
 }
