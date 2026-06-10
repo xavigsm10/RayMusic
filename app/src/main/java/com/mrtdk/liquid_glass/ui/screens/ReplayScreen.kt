@@ -1427,17 +1427,6 @@ fun ReplayScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.TopCenter)
-                .drawBackdrop(
-                    backdrop = localBackdrop,
-                    shape = { androidx.compose.ui.graphics.RectangleShape },
-                    effects = {
-                        vibrancy()
-                        blur(20f.dp.toPx())
-                    },
-                    onDrawSurface = {
-                        drawRect(Color.White.copy(alpha = topBarAlpha))
-                    }
-                )
                 .statusBarsPadding()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
