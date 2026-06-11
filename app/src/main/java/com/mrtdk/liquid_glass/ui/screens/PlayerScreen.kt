@@ -265,6 +265,7 @@ fun PlayerScreen(
 
         var dominantColor by remember { mutableStateOf(Color(0xFF1E1E1E)) }
         var bottomAverageColor by remember { mutableStateOf(Color(0xFF1E1E1E)) }
+        var rightSideAverageColor by remember { mutableStateOf(Color(0xFF1E1E1E)) }
         var parentCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
         var sliderCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
 
@@ -433,6 +434,18 @@ fun PlayerScreen(
                             bottomAverageColor = avgColor
                             dominantColor = avgColor
                             onDominantColorChanged(avgColor)
+
+                            // Promedio de la columna derecha de píxeles
+                            var rRight = 0L; var gRight = 0L; var bRight = 0L
+                            val xCoord = bitmap.width - 1
+                            val h = bitmap.height
+                            for (y in 0 until h) {
+                                val pixel = bitmap.getPixel(xCoord, y)
+                                rRight += android.graphics.Color.red(pixel)
+                                gRight += android.graphics.Color.green(pixel)
+                                bRight += android.graphics.Color.blue(pixel)
+                            }
+                            rightSideAverageColor = Color((rRight / h).toInt(), (gRight / h).toInt(), (bRight / h).toInt())
                         } catch (e: Exception) { }
                     }
                 }
@@ -504,6 +517,8 @@ fun PlayerScreen(
                     onDominantColorChange = { dominantColor = it },
                     bottomAverageColor = bottomAverageColor,
                     onBottomAverageColorChange = { bottomAverageColor = it },
+                    rightSideAverageColor = rightSideAverageColor,
+                    onRightSideAverageColorChange = { rightSideAverageColor = it },
                     hdArtUrl = hdArtUrl,
                     lyricsLines = lyricsLines,
                     isRomajiEnabled = isRomajiEnabled,
@@ -663,11 +678,13 @@ fun PlayerScreen(
                                 brush = Brush.verticalGradient(
                                     colors = listOf(
                                         Color.Transparent,
-                                        bottomAverageColor.copy(alpha = 0.25f),
-                                        bottomAverageColor.copy(alpha = 0.7f),
+                                        bottomAverageColor.copy(alpha = 0.10f),
+                                        bottomAverageColor.copy(alpha = 0.30f),
+                                        bottomAverageColor.copy(alpha = 0.55f),
+                                        bottomAverageColor.copy(alpha = 0.80f),
                                         bottomAverageColor
                                     ),
-                                    startY = this.size.height * 0.55f,
+                                    startY = this.size.height * 0.42f,
                                     endY = this.size.height
                                 )
                             )
@@ -737,11 +754,13 @@ fun PlayerScreen(
                                     } else {
                                         arrayOf(
                                             0.0f to Color.Black,
-                                            0.1f to Color.Black,
-                                            0.3f to Color.Black.copy(alpha = 0.8f),
-                                            0.5f to Color.Black.copy(alpha = 0.4f),
-                                            0.7f to Color.Black.copy(alpha = 0.15f),
-                                            0.8f to Color.Transparent,
+                                            0.05f to Color.Black,
+                                            0.15f to Color.Black.copy(alpha = 0.9f),
+                                            0.30f to Color.Black.copy(alpha = 0.7f),
+                                            0.45f to Color.Black.copy(alpha = 0.45f),
+                                            0.60f to Color.Black.copy(alpha = 0.25f),
+                                            0.75f to Color.Black.copy(alpha = 0.10f),
+                                            0.88f to Color.Black.copy(alpha = 0.03f),
                                             1.0f to Color.Transparent
                                         )
                                     }
@@ -2417,6 +2436,8 @@ fun LandscapePlayerLayout(
     onDominantColorChange: (Color) -> Unit,
     bottomAverageColor: Color,
     onBottomAverageColorChange: (Color) -> Unit,
+    rightSideAverageColor: Color,
+    onRightSideAverageColorChange: (Color) -> Unit,
     hdArtUrl: Any?,
     lyricsLines: List<com.mrtdk.liquid_glass.utils.LyricLine>?,
     isRomajiEnabled: Boolean,
@@ -2434,25 +2455,33 @@ fun LandscapePlayerLayout(
 ) {
     val context = LocalContext.current
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val dragOffsetX = remember { Animatable(0f) }
+    val dragOffsetY = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
+
+    val isBadSong = remember(playerState) {
+        val title = playerState?.title ?: ""
+        val artist = playerState?.artist ?: ""
+        val album = playerState?.album ?: ""
+        (album.contains("Bad", ignoreCase = true) || title.contains("Bad", ignoreCase = true)) &&
+        artist.contains("Michael Jackson", ignoreCase = true)
+    }
 
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .background(bottomAverageColor)
+            .background(rightSideAverageColor)
             .graphicsLayer {
-                translationX = dragOffsetX.value
+                translationY = dragOffsetY.value
             }
             .pointerInput(showLyrics, showQueue) {
                 if (!showLyrics && !showQueue) {
-                    val maxDragDistance = size.width.toFloat()
-                    detectHorizontalDragGestures(
+                    val maxDragDistance = size.height.toFloat()
+                    detectVerticalDragGestures(
                         onDragEnd = {
-                            val currentOffsetX = dragOffsetX.value
-                            if (currentOffsetX > with(density) { 150.dp.toPx() }) {
+                            val currentOffsetY = dragOffsetY.value
+                            if (currentOffsetY > with(density) { 150.dp.toPx() }) {
                                 scope.launch {
-                                    dragOffsetX.animateTo(
+                                    dragOffsetY.animateTo(
                                         targetValue = maxDragDistance,
                                         animationSpec = tween(300, easing = FastOutSlowInEasing)
                                     )
@@ -2460,14 +2489,14 @@ fun LandscapePlayerLayout(
                                 }
                             } else {
                                 scope.launch {
-                                    dragOffsetX.animateTo(0f, spring())
+                                    dragOffsetY.animateTo(0f, spring())
                                 }
                             }
                         }
                     ) { change, dragAmount ->
-                        if (dragAmount > 0f || dragOffsetX.value > 0f) {
-                            val newOffset = (dragOffsetX.value + dragAmount * 0.7f).coerceAtLeast(0f)
-                            scope.launch { dragOffsetX.snapTo(newOffset) }
+                        if (dragAmount > 0f || dragOffsetY.value > 0f) {
+                            val newOffset = (dragOffsetY.value + dragAmount * 0.7f).coerceAtLeast(0f)
+                            scope.launch { dragOffsetY.snapTo(newOffset) }
                         }
                     }
                 }
@@ -2478,84 +2507,7 @@ fun LandscapePlayerLayout(
         val audioManager = remember { context.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager }
         val maxVolume = remember { audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC).toFloat() }
 
-        val overlapDp = 30.dp
-        val reflectionX = maxHeight - overlapDp
-        val reflectionWidth = maxWidth - reflectionX
 
-        // 0. Base Highly Blurred Background Image (Right Side)
-        Box(
-            modifier = Modifier
-                .offset(x = reflectionX, y = 0.dp)
-                .width(reflectionWidth)
-                .fillMaxHeight()
-                .blur(280.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
-        ) {
-            val currentBitmap = coverBitmap
-            if (currentBitmap != null) {
-                Image(
-                    bitmap = currentBitmap,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else if (hdArtUrl != null) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(hdArtUrl)
-                        .crossfade(true)
-                        .build(),
-                    imageLoader = animatedImageLoader,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-        }
-
-        // 1. Horizontal 1D reflection background (fades out horizontally after slider start)
-        val currentCoverBitmap = coverBitmap
-        if (currentCoverBitmap != null) {
-            Box(
-                modifier = Modifier
-                    .offset(x = reflectionX, y = 0.dp)
-                    .width(reflectionWidth)
-                    .fillMaxHeight()
-                    .graphicsLayer {
-                        compositingStrategy = CompositingStrategy.Offscreen
-                    }
-                    .drawWithContent {
-                        drawContent()
-                        drawRect(
-                            brush = Brush.horizontalGradient(
-                                colorStops = arrayOf(
-                                    0.0f to Color.Black,
-                                    0.05f to Color.Black,
-                                    0.12f to Color.Black.copy(alpha = 0.6f),
-                                    0.22f to Color.Transparent,
-                                    1.0f to Color.Transparent
-                                )
-                            ),
-                            blendMode = BlendMode.DstIn
-                        )
-                    }
-                    .blur(25.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
-            ) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val sampleWidth = 5
-                    val sampleW = sampleWidth.coerceAtMost(currentCoverBitmap.width).coerceAtLeast(1)
-                    val srcXInt = (currentCoverBitmap.width - sampleW).coerceIn(0, currentCoverBitmap.width - 1)
-                    
-                    drawImage(
-                        image = currentCoverBitmap,
-                        srcOffset = IntOffset(srcXInt, 0),
-                        srcSize = IntSize(sampleW, currentCoverBitmap.height),
-                        dstOffset = IntOffset.Zero,
-                        dstSize = IntSize(size.width.toInt(), size.height.toInt()),
-                        filterQuality = FilterQuality.Low
-                    )
-                }
-            }
-        }
 
         // 2. Left side Album Art (full height square)
         Box(
@@ -2603,62 +2555,44 @@ fun LandscapePlayerLayout(
                             val avgColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
                             onBottomAverageColorChange(avgColor)
                             onDominantColorChange(avgColor)
+
+                            // Promedio de la columna derecha de píxeles
+                            var rRight = 0L; var gRight = 0L; var bRight = 0L
+                            val xCoord = frameBitmap.width - 1
+                            val h = frameBitmap.height
+                            for (y in 0 until h) {
+                                val pixel = frameBitmap.getPixel(xCoord, y)
+                                rRight += android.graphics.Color.red(pixel)
+                                gRight += android.graphics.Color.green(pixel)
+                                bRight += android.graphics.Color.blue(pixel)
+                            }
+                            onRightSideAverageColorChange(Color((rRight / h).toInt(), (gRight / h).toInt(), (bRight / h).toInt()))
                         } catch (e: Exception) { }
                     }
                 )
             }
 
-            // Blurred right edge overlay
-            val currentBitmap = coverBitmap
-            if (currentBitmap != null) {
-                Image(
-                    bitmap = currentBitmap,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .cloudy(radius = 100)
-                        .drawWithContent {
-                            drawContent()
-                            drawRect(
-                                brush = Brush.horizontalGradient(
-                                    colorStops = arrayOf(
-                                        0.75f to Color.Transparent,
-                                        0.88f to Color.Black.copy(alpha = 0.6f),
-                                        1.0f to Color.Black
-                                    )
-                                ),
-                                blendMode = BlendMode.DstIn
-                            )
-                        }
-                )
-            } else {
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(hdArtUrl)
-                        .size(150)
-                        .memoryCachePolicy(coil.request.CachePolicy.READ_ONLY)
-                        .crossfade(true)
-                        .build(),
-                    imageLoader = animatedImageLoader,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .cloudy(radius = 100)
-                        .drawWithContent {
-                            drawContent()
-                            drawRect(
-                                brush = Brush.horizontalGradient(
-                                    colorStops = arrayOf(
-                                        0.75f to Color.Transparent,
-                                        0.88f to Color.Black.copy(alpha = 0.6f),
-                                        1.0f to Color.Black
-                                    )
-                                ),
-                                blendMode = BlendMode.DstIn
-                            )
-                        }
+        }
+
+        // 3b. Right edge fade: blurred background color gradient on top of the album art right edge
+        Box(
+            modifier = Modifier
+                .offset(x = maxHeight - 150.dp, y = 0.dp)
+                .width(200.dp)
+                .fillMaxHeight()
+                .blur(40.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                drawRect(
+                    brush = Brush.horizontalGradient(
+                        colorStops = arrayOf(
+                            0.0f to Color.Transparent,
+                            0.2f to Color.Transparent,
+                            0.5f to rightSideAverageColor.copy(alpha = 0.6f),
+                            0.75f to rightSideAverageColor.copy(alpha = 0.9f),
+                            1.0f to rightSideAverageColor
+                        )
+                    )
                 )
             }
         }
