@@ -46,6 +46,9 @@ import com.mrtdk.liquid_glass.data.ItemType
 import com.mrtdk.liquid_glass.data.LibraryItem
 import com.mrtdk.liquid_glass.data.LibraryManager
 import com.mrtdk.liquid_glass.data.Playlist
+import com.mrtdk.liquid_glass.data.PlaybackRecord
+import com.mrtdk.glass.GlassContainer
+import com.mrtdk.glass.GlassBox
 import com.mrtdk.liquid_glass.ui.components.LocalBackdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -63,6 +66,12 @@ import java.util.Locale
 data class ArtistStat(val id: String, val name: String, val thumbnail: String?, val minutes: Int)
 data class SongStat(val id: String, val title: String, val artist: String, val thumbnail: String?, val plays: Int)
 data class AlbumStat(val id: String, val title: String, val artist: String, val thumbnail: String?, val minutes: Int)
+data class ComparisonData(
+    val artist2026: ArtistStat,
+    val artist2025: ArtistStat,
+    val song2026: SongStat,
+    val song2025: SongStat
+)
 data class PlaylistStat(val id: String, val title: String, val author: String, val thumbnail: String?, val minutes: Int)
 data class GenreStat(val name: String, val percentage: Int, val minutes: Int)
 
@@ -89,86 +98,267 @@ fun ReplayScreen(
     // Locale Month Names
     val isEnglish = Locale.getDefault().language == "en"
     val months = if (isEnglish) {
-        listOf(selectedYear, "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+        listOf(selectedYear, "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
     } else {
-        listOf(selectedYear, "ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic")
+        listOf(selectedYear, "jun", "jul", "ago", "sep", "oct", "nov", "dic")
     }
 
     // Helper to calculate statistics scaling factor depending on the selected month
     val scaleFactor = if (selectedMonthIndex == 0) 1.0 else 0.08 + (0.04 * (selectedMonthIndex % 3))
 
+    var playbackHistory by remember { mutableStateOf<List<PlaybackRecord>>(emptyList()) }
+    LaunchedEffect(Unit) {
+        playbackHistory = LibraryManager.getPlaybackHistory()
+    }
+
+    val filteredHistory = remember(playbackHistory, selectedMonthIndex, selectedYear) {
+        val calendar = java.util.Calendar.getInstance()
+        playbackHistory.filter { record ->
+            calendar.timeInMillis = record.timestamp
+            val recordYear = calendar.get(java.util.Calendar.YEAR).toString()
+            val yearMatches = recordYear == selectedYear
+            
+            if (!yearMatches) return@filter false
+            
+            if (selectedMonthIndex == 0) {
+                true
+            } else {
+                val recordMonth = calendar.get(java.util.Calendar.MONTH) // 0-indexed
+                val targetMonth = selectedMonthIndex + 4
+                recordMonth == targetMonth
+            }
+        }
+    }
+
+    val hasEnoughMusic = playbackHistory.size >= 5
+
     // Blended Stats calculation (User database + package reference data)
-    val artistsList = remember(recentlyPlayed, scaleFactor, selectedYear) {
-        val userArtists = recentlyPlayed
-            .filter { it.type == ItemType.SONG }
-            .groupBy { it.subtitle }
-            .map { (artistName, songs) ->
+    val artistsList = remember(filteredHistory) {
+        filteredHistory
+            .groupBy { it.artist }
+            .map { (artistName, records) ->
                 ArtistStat(
-                    id = songs.first().id,
+                    id = records.first().songId,
                     name = artistName,
-                    thumbnail = songs.first().thumbnail,
-                    minutes = (songs.size * 3.5 * scaleFactor * 25).toInt().coerceAtLeast(3)
+                    thumbnail = records.firstOrNull { it.thumbnail != null }?.thumbnail,
+                    minutes = records.size * 3
                 )
             }
             .sortedByDescending { it.minutes }
-
-        val mockArtists = listOf(
-            ArtistStat("mock_art_1", "Morat", "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&fit=crop", (14436 * scaleFactor).toInt()),
-            ArtistStat("mock_art_2", "Danny Ocean", "https://images.unsplash.com/photo-1506157786151-b8491531f063?w=400&fit=crop", (10206 * scaleFactor).toInt()),
-            ArtistStat("mock_art_3", "Big Soto", "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=400&fit=crop", (8312 * scaleFactor).toInt()),
-            ArtistStat("mock_art_4", "Quevedo", "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=400&fit=crop", (6120 * scaleFactor).toInt()),
-            ArtistStat("mock_art_5", "Anuel AA", "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&fit=crop", (4890 * scaleFactor).toInt())
-        )
-        (userArtists + mockArtists).distinctBy { it.name }.sortedByDescending { it.minutes }
     }
 
-    val songsList = remember(recentlyPlayed, scaleFactor, selectedYear) {
-        val userSongs = recentlyPlayed
-            .filter { it.type == ItemType.SONG }
-            .groupBy { it.title }
-            .map { (title, songs) ->
-                val first = songs.first()
+    val songsList = remember(filteredHistory) {
+        filteredHistory
+            .groupBy { it.songId }
+            .map { (songId, records) ->
+                val first = records.first()
                 SongStat(
-                    id = first.id,
-                    title = title,
-                    artist = first.subtitle,
+                    id = songId,
+                    title = first.title,
+                    artist = first.artist,
                     thumbnail = first.thumbnail,
-                    plays = (songs.size * 8 * scaleFactor).toInt().coerceAtLeast(1)
+                    plays = records.size
                 )
             }
             .sortedByDescending { it.plays }
-
-        val mockSongs = listOf(
-            SongStat("mock_song_1", "Sin Ti", "Morat", "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&fit=crop", (401 * scaleFactor).toInt().coerceAtLeast(1)),
-            SongStat("mock_song_2", "Domingo De Bajón", "Morat", "https://images.unsplash.com/photo-1511735111819-9a3f7709049c?w=400&fit=crop", (200 * scaleFactor).toInt().coerceAtLeast(1)),
-            SongStat("mock_song_3", "Fuera del mercado", "Danny Ocean", "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&fit=crop", (175 * scaleFactor).toInt().coerceAtLeast(1)),
-            SongStat("mock_song_4", "ALOUFRENS", "Big Soto", "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=400&fit=crop", (147 * scaleFactor).toInt().coerceAtLeast(1))
-        )
-        (userSongs + mockSongs).distinctBy { it.title }.sortedByDescending { it.plays }
     }
 
-    val albumsList = remember(scaleFactor, selectedYear) {
-        listOf(
-            AlbumStat("mock_alb_1", "Ya Es Mañana", "Morat", "https://images.unsplash.com/photo-1487180142328-0c4e37023af5?w=400&fit=crop", (194 * scaleFactor).toInt().coerceAtLeast(1)),
-            AlbumStat("mock_alb_2", "Antes De Que Amanezca", "Morat", "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=400&fit=crop", (119 * scaleFactor).toInt().coerceAtLeast(1)),
-            AlbumStat("mock_alb_3", "BORGES", "Beéle", "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&fit=crop", (70 * scaleFactor).toInt().coerceAtLeast(1))
+    val albumsList = remember(filteredHistory) {
+        filteredHistory
+            .filter { it.album != null }
+            .groupBy { it.album }
+            .map { (albumName, records) ->
+                val first = records.first()
+                AlbumStat(
+                    id = first.songId,
+                    title = albumName ?: "",
+                    artist = first.artist,
+                    thumbnail = first.thumbnail,
+                    minutes = records.size * 3
+                )
+            }
+            .sortedByDescending { it.minutes }
+    }
+
+    val playlistsList = remember(filteredHistory) {
+        filteredHistory
+            .filter { it.playlistId != null && it.playlistName != null }
+            .groupBy { it.playlistId }
+            .map { (playlistId, records) ->
+                val first = records.first()
+                PlaylistStat(
+                    id = playlistId ?: "",
+                    title = first.playlistName ?: "",
+                    author = "RayMusic User",
+                    thumbnail = first.thumbnail,
+                    minutes = records.size * 3
+                )
+            }
+            .sortedByDescending { it.minutes }
+    }
+
+    val totalHistoryMinutes = filteredHistory.size * 3
+    val genresList = remember(totalHistoryMinutes) {
+        if (totalHistoryMinutes == 0) emptyList()
+        else listOf(
+            GenreStat(if (isEnglish) "Spanish Pop" else "Pop en español", 45, (totalHistoryMinutes * 0.45).toInt()),
+            GenreStat(if (isEnglish) "Latin Urban" else "Urbano latino", 35, (totalHistoryMinutes * 0.35).toInt()),
+            GenreStat(if (isEnglish) "Latin Music" else "Música latina", 20, (totalHistoryMinutes * 0.20).toInt())
         )
     }
 
-    val playlistsList = remember(scaleFactor, selectedYear) {
-        listOf(
-            PlaylistStat("mock_pl_1", "Ricks Music", "Enrique Quintero Salam...", "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&fit=crop", (6133 * scaleFactor).toInt().coerceAtLeast(10)),
-            PlaylistStat("mock_pl_2", "Relief", "Enrique Quintero Salam...", "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=400&fit=crop", (4996 * scaleFactor).toInt().coerceAtLeast(10)),
-            PlaylistStat("mock_pl_3", "Beach", "Enrique Quintero Salam...", "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&fit=crop", (4374 * scaleFactor).toInt().coerceAtLeast(10))
-        )
+    val comparisonStats = remember(playbackHistory) {
+        val calendar = java.util.Calendar.getInstance()
+        
+        fun getTopArtistForYear(year: String): ArtistStat? {
+            val yearRecords = playbackHistory.filter { record ->
+                calendar.timeInMillis = record.timestamp
+                calendar.get(java.util.Calendar.YEAR).toString() == year
+            }
+            val topArtist = yearRecords
+                .groupBy { it.artist }
+                .maxByOrNull { it.value.size }
+                ?.value?.firstOrNull()
+            return topArtist?.let {
+                ArtistStat(
+                    id = it.songId,
+                    name = it.artist,
+                    thumbnail = it.thumbnail,
+                    minutes = yearRecords.filter { r -> r.artist == it.artist }.size * 3
+                )
+            }
+        }
+
+        fun getTopSongForYear(year: String): SongStat? {
+            val yearRecords = playbackHistory.filter { record ->
+                calendar.timeInMillis = record.timestamp
+                calendar.get(java.util.Calendar.YEAR).toString() == year
+            }
+            val topSong = yearRecords
+                .groupBy { it.songId }
+                .maxByOrNull { it.value.size }
+                ?.value?.firstOrNull()
+            return topSong?.let {
+                SongStat(
+                    id = it.songId,
+                    title = it.title,
+                    artist = it.artist,
+                    thumbnail = it.thumbnail,
+                    plays = yearRecords.filter { r -> r.songId == it.songId }.size
+                )
+            }
+        }
+
+        val artist2026 = getTopArtistForYear("2026")
+        val artist2025 = getTopArtistForYear("2025")
+        val song2026 = getTopSongForYear("2026")
+        val song2025 = getTopSongForYear("2025")
+        
+        val finalArtist2026 = artist2026 ?: ArtistStat("mock_2026_art", "Morat", "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100&fit=crop", 14436)
+        val finalArtist2025 = artist2025 ?: ArtistStat("mock_2025_art", "Morat", "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=100&fit=crop", 15999)
+        val finalSong2026 = song2026 ?: SongStat("mock_2026_song", "Sin Ti", "Morat", "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=100&fit=crop", 401)
+        val finalSong2025 = song2025 ?: SongStat("mock_2025_song", "Domingo De Bajón", "Morat", "https://images.unsplash.com/photo-1511735111819-9a3f7709049c?w=100&fit=crop", 380)
+        
+        ComparisonData(finalArtist2026, finalArtist2025, finalSong2026, finalSong2025)
     }
 
-    val genresList = remember(scaleFactor, selectedYear) {
-        listOf(
-            GenreStat(if (isEnglish) "Spanish Pop" else "Pop en español", 45, (18500 * scaleFactor).toInt().coerceAtLeast(10)),
-            GenreStat(if (isEnglish) "Latin Urban" else "Urbano latino", 35, (12400 * scaleFactor).toInt().coerceAtLeast(10)),
-            GenreStat(if (isEnglish) "Latin Music" else "Música latina", 20, (7521 * scaleFactor).toInt().coerceAtLeast(10))
-        )
+    val monthlyArtists = remember(playbackHistory, selectedYear) {
+        val calendar = java.util.Calendar.getInstance()
+        val monthsRange = 5..11
+        val monthNames = if (isEnglish) {
+            listOf("JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER")
+        } else {
+            listOf("JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE")
+        }
+        
+        monthsRange.mapIndexed { idx, calendarMonth ->
+            val monthRecords = playbackHistory.filter { record ->
+                calendar.timeInMillis = record.timestamp
+                calendar.get(java.util.Calendar.YEAR).toString() == selectedYear &&
+                        calendar.get(java.util.Calendar.MONTH) == calendarMonth
+            }
+            val topArtistForMonth = monthRecords
+                .groupBy { it.artist }
+                .maxByOrNull { it.value.size }
+                ?.value?.firstOrNull()
+            
+            val artistStat = topArtistForMonth?.let {
+                ArtistStat(
+                    id = it.songId,
+                    name = it.artist,
+                    thumbnail = it.thumbnail,
+                    minutes = monthRecords.filter { r -> r.artist == it.artist }.size * 3
+                )
+            }
+            Pair(monthNames[idx], artistStat)
+        }.filter { it.second != null }
+    }
+
+    val monthlySongs = remember(playbackHistory, selectedYear) {
+        val calendar = java.util.Calendar.getInstance()
+        val monthsRange = 5..11
+        val monthNames = if (isEnglish) {
+            listOf("JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER")
+        } else {
+            listOf("JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE")
+        }
+        
+        monthsRange.mapIndexed { idx, calendarMonth ->
+            val monthRecords = playbackHistory.filter { record ->
+                calendar.timeInMillis = record.timestamp
+                calendar.get(java.util.Calendar.YEAR).toString() == selectedYear &&
+                        calendar.get(java.util.Calendar.MONTH) == calendarMonth
+            }
+            val topSongForMonth = monthRecords
+                .groupBy { it.songId }
+                .maxByOrNull { it.value.size }
+                ?.value?.firstOrNull()
+            
+            val songStat = topSongForMonth?.let {
+                SongStat(
+                    id = it.songId,
+                    title = it.title,
+                    artist = it.artist,
+                    thumbnail = it.thumbnail,
+                    plays = monthRecords.filter { r -> r.songId == it.songId }.size
+                )
+            }
+            Triple(monthNames[idx], songStat, false)
+        }.filter { it.second != null }
+    }
+
+    val monthlyAlbums = remember(playbackHistory, selectedYear) {
+        val calendar = java.util.Calendar.getInstance()
+        val monthsRange = 5..11
+        val monthNames = if (isEnglish) {
+            listOf("JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER")
+        } else {
+            listOf("JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE")
+        }
+        
+        monthsRange.mapIndexed { idx, calendarMonth ->
+            val monthRecords = playbackHistory.filter { record ->
+                calendar.timeInMillis = record.timestamp
+                calendar.get(java.util.Calendar.YEAR).toString() == selectedYear &&
+                        calendar.get(java.util.Calendar.MONTH) == calendarMonth
+            }
+            val topAlbumForMonth = monthRecords
+                .filter { it.album != null }
+                .groupBy { it.album }
+                .maxByOrNull { it.value.size }
+                ?.value?.firstOrNull()
+            
+            val albumStat = topAlbumForMonth?.let {
+                AlbumStat(
+                    id = it.songId,
+                    title = it.album ?: "",
+                    artist = it.artist,
+                    thumbnail = it.thumbnail,
+                    minutes = monthRecords.filter { r -> r.album == it.album }.size * 3
+                )
+            }
+            Triple(monthNames[idx], albumStat, false)
+        }.filter { it.second != null }
     }
 
     val localBackdrop = rememberLayerBackdrop()
@@ -177,39 +367,131 @@ fun ReplayScreen(
         targetValue = if (lazyListState.firstVisibleItemIndex > 0 || lazyListState.firstVisibleItemScrollOffset > 20) 0.85f else 0f,
         label = "topBarAlpha"
     )
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF2F2F7))
-    ) {
-        // Gradient glow at the top
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(450.dp)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xFFFF9500).copy(alpha = 0.25f), // Peach Orange
-                            Color(0xFFFFCC00).copy(alpha = 0.20f), // Yellow
-                            Color(0xFF4CD964).copy(alpha = 0.12f), // Green
-                            Color.Transparent
-                        )
+    GlassContainer(
+        modifier = Modifier.fillMaxSize(),
+        useShader = true,
+        content = {
+            if (!hasEnoughMusic) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFFF2F2F7)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(450.dp)
+                            .align(Alignment.TopCenter)
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color(0xFFFF9500).copy(alpha = 0.25f), // Peach Orange
+                                        Color(0xFFFFCC00).copy(alpha = 0.20f), // Yellow
+                                        Color(0xFF4CD964).copy(alpha = 0.12f), // Green
+                                        Color.Transparent
+                                    )
+                                )
+                            )
                     )
-                )
-        )
 
-        // Main Scroll Container
-        LazyColumn(
-            state = lazyListState,
-            modifier = Modifier
-                .fillMaxSize()
-                .layerBackdrop(localBackdrop),
-            contentPadding = PaddingValues(
-                top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 70.dp,
-                bottom = 120.dp
-            )
-        ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp)
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(Color.White.copy(alpha = 0.85f))
+                            .border(1.dp, Color.Black.copy(alpha = 0.05f), RoundedCornerShape(24.dp))
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "Replay '26",
+                                color = Color.Black,
+                                fontSize = 36.sp,
+                                fontWeight = FontWeight.Black,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = if (isEnglish) 
+                                    "Listen to at least 5 songs to unlock your personalized music history."
+                                else 
+                                    "Escucha al menos 5 canciones para desbloquear tu historia musical.",
+                                color = Color.Gray,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(0.8f)
+                                    .height(8.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.Black.copy(alpha = 0.05f))
+                            ) {
+                                val progress = (playbackHistory.size / 5f).coerceIn(0f, 1f)
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .fillMaxWidth(progress)
+                                        .background(
+                                            Brush.horizontalGradient(
+                                                colors = listOf(
+                                                    Color(0xFFFF9500),
+                                                    Color(0xFF4CD964)
+                                                )
+                                            )
+                                        )
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "${playbackHistory.size} / 5",
+                                color = Color.Black,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFFF2F2F7))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(450.dp)
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color(0xFFFF9500).copy(alpha = 0.25f), // Peach Orange
+                                        Color(0xFFFFCC00).copy(alpha = 0.20f), // Yellow
+                                        Color(0xFF4CD964).copy(alpha = 0.12f), // Green
+                                        Color.Transparent
+                                    )
+                                )
+                            )
+                    )
+
+                    LazyColumn(
+                        state = lazyListState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .layerBackdrop(localBackdrop),
+                        contentPadding = PaddingValues(
+                            top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 70.dp,
+                            bottom = 120.dp
+                        )
+                    ) {
 
             // Row 2: Title and Year Dropdown Inline
             item {
@@ -833,93 +1115,89 @@ fun ReplayScreen(
 
             // 1. Tus top artistas por mes
             item {
-                Spacer(modifier = Modifier.height(36.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = stringResource(R.string.replay_top_artists_by_month),
-                        color = Color.Black,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Icon(
-                        imageVector = Icons.Default.ArrowBackIosNew,
-                        contentDescription = null,
-                        tint = Color(0xFF8E8E93),
+                if (monthlyArtists.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(36.dp))
+                    Row(
                         modifier = Modifier
-                            .size(16.dp)
-                            .scale(-1f, 1f)
-                    )
-                }
-
-                val monthlyArtists = listOf(
-                    Pair(if (isEnglish) "JANUARY" else "ENERO", artistsList.firstOrNull() ?: ArtistStat("art_top", "Morat", "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&fit=crop", 14436)),
-                    Pair(if (isEnglish) "FEBRUARY" else "FEBRERO", artistsList.firstOrNull() ?: ArtistStat("art_top", "Morat", "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&fit=crop", 14436)),
-                    Pair(if (isEnglish) "MARCH" else "MARZO", artistsList.firstOrNull() ?: ArtistStat("art_top", "Morat", "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&fit=crop", 14436)),
-                    Pair(if (isEnglish) "APRIL" else "ABRIL", artistsList.getOrNull(1) ?: ArtistStat("art_2", "Danny Ocean", "https://images.unsplash.com/photo-1506157786151-b8491531f063?w=400&fit=crop", 10206)),
-                    Pair(if (isEnglish) "MAY" else "MAYO", artistsList.firstOrNull() ?: ArtistStat("art_top", "Morat", "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&fit=crop", 14436))
-                )
-
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    itemsIndexed(monthlyArtists) { index, itemData ->
-                        val (month, artist) = itemData
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = stringResource(R.string.replay_top_artists_by_month),
+                            color = Color.Black,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Icon(
+                            imageVector = Icons.Default.ArrowBackIosNew,
+                            contentDescription = null,
+                            tint = Color(0xFF8E8E93),
                             modifier = Modifier
-                                .width(110.dp)
-                                .clickable {
-                                    onArtistSelected(ArtistState(artist.id, artist.name, artist.thumbnail))
+                                .size(16.dp)
+                                .scale(-1f, 1f)
+                        )
+                    }
+
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        itemsIndexed(monthlyArtists) { index, itemData ->
+                            val (month, artist) = itemData
+                            if (artist != null) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier
+                                        .width(110.dp)
+                                        .clickable {
+                                            onArtistSelected(ArtistState(artist.id, artist.name, artist.thumbnail))
+                                        }
+                                ) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(context)
+                                            .data(artist.thumbnail)
+                                            .crossfade(true)
+                                            .build(),
+                                        contentDescription = artist.name,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .size(100.dp)
+                                            .clip(CircleShape)
+                                            .border(1.dp, Color.Black.copy(alpha = 0.05f), CircleShape)
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = month,
+                                        color = Color.Gray,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        Text(
+                                            text = artist.name,
+                                            color = Color.Black,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f, fill = false)
+                                        )
+                                        Spacer(modifier = Modifier.width(2.dp))
+                                        Icon(
+                                            imageVector = Icons.Default.Star,
+                                            contentDescription = "Top",
+                                            tint = Color(0xFFFA243C),
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                    }
                                 }
-                        ) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(artist.thumbnail)
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = artist.name,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(100.dp)
-                                    .clip(CircleShape)
-                                    .border(1.dp, Color.Black.copy(alpha = 0.05f), CircleShape)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = month,
-                                color = Color.Gray,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Text(
-                                    text = artist.name,
-                                    color = Color.Black,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f, fill = false)
-                                )
-                                Spacer(modifier = Modifier.width(2.dp))
-                                Icon(
-                                    imageVector = Icons.Default.Star,
-                                    contentDescription = "Top",
-                                    tint = Color(0xFFFA243C),
-                                    modifier = Modifier.size(12.dp)
-                                )
                             }
                         }
                     }
@@ -928,156 +1206,127 @@ fun ReplayScreen(
 
             // 2. Tus top canciones por mes
             item {
-                Spacer(modifier = Modifier.height(36.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = stringResource(R.string.replay_top_songs_by_month),
-                        color = Color.Black,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Icon(
-                        imageVector = Icons.Default.ArrowBackIosNew,
-                        contentDescription = null,
-                        tint = Color(0xFF8E8E93),
+                if (monthlySongs.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(36.dp))
+                    Row(
                         modifier = Modifier
-                            .size(16.dp)
-                            .scale(-1f, 1f)
-                    )
-                }
-
-                val monthlySongs = listOf(
-                    Triple(
-                        if (isEnglish) "JANUARY" else "ENERO", 
-                        SongStat("mock_song_m1", "KLoUFRENS", "Bad Bunny", "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=400&fit=crop", 120),
-                        true
-                    ),
-                    Triple(
-                        if (isEnglish) "FEBRUARY" else "FEBRERO", 
-                        SongStat("mock_song_m2", "Lienzo (feat. Ariza)", "ROBI & Sebastián Yatra", "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&fit=crop", 95),
-                        false
-                    ),
-                    Triple(
-                        if (isEnglish) "MARCH" else "MARZO", 
-                        SongStat("mock_song_m3", "La Plena (W Sound 05)", "W Sound, Beéle & Ovy On the...", "https://images.unsplash.com/photo-1511735111819-9a3f7709049c?w=400&fit=crop", 88),
-                        true
-                    )
-                )
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    monthlySongs.forEach { (month, song, isExplicit) ->
-                        Row(
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = stringResource(R.string.replay_top_songs_by_month),
+                            color = Color.Black,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Icon(
+                            imageVector = Icons.Default.ArrowBackIosNew,
+                            contentDescription = null,
+                            tint = Color(0xFF8E8E93),
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onSongSelected(PlayerState(
-                                        title = song.title,
-                                        artist = song.artist,
-                                        artUrl = song.thumbnail,
-                                        videoId = null
-                                    ))
-                                }
-                                .padding(vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(song.thumbnail)
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = song.title,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(56.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                            )
+                                .size(16.dp)
+                                .scale(-1f, 1f)
+                        )
+                    }
 
-                            Spacer(modifier = Modifier.width(14.dp))
-
-                            Column(
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(
-                                    text = month,
-                                    color = Color.Gray,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        monthlySongs.forEach { (month, song, isExplicit) ->
+                            if (song != null) {
                                 Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            onSongSelected(PlayerState(
+                                                title = song.title,
+                                                artist = song.artist,
+                                                artUrl = song.thumbnail,
+                                                videoId = null
+                                            ))
+                                        }
+                                        .padding(vertical = 2.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        text = song.title,
-                                        color = Color.Black,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.weight(1f, fill = false)
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(context)
+                                            .data(song.thumbnail)
+                                            .crossfade(true)
+                                            .build(),
+                                        contentDescription = song.title,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .size(56.dp)
+                                            .clip(RoundedCornerShape(8.dp))
                                     )
-                                    if (isExplicit) {
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Box(
-                                            modifier = Modifier
-                                                .background(Color.Gray.copy(alpha = 0.5f), RoundedCornerShape(3.dp))
-                                                .padding(horizontal = 4.dp, vertical = 1.dp)
+
+                                    Spacer(modifier = Modifier.width(14.dp))
+
+                                    Column(
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(
+                                            text = month,
+                                            color = Color.Gray,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Text(
-                                                text = "E",
+                                                text = song.title,
                                                 color = Color.Black,
-                                                fontSize = 9.sp,
-                                                fontWeight = FontWeight.Black
+                                                fontSize = 15.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.weight(1f, fill = false)
                                             )
                                         }
+                                        Text(
+                                            text = song.artist,
+                                            color = Color.Gray,
+                                            fontSize = 13.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
                                     }
-                                }
-                                Text(
-                                    text = song.artist,
-                                    color = Color.Gray,
-                                    fontSize = 13.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
 
-                            // Download icon
-                            IconButton(onClick = {}, modifier = Modifier.size(32.dp)) {
-                                Icon(
-                                    imageVector = Icons.Default.ArrowDownward,
-                                    contentDescription = "Downloaded",
-                                    tint = Color.Gray,
-                                    modifier = Modifier.size(16.dp)
-                                )
+                                    // Download icon
+                                    IconButton(onClick = {}, modifier = Modifier.size(32.dp)) {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowDownward,
+                                            contentDescription = "Downloaded",
+                                            tint = Color.Gray,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                    
+                                    // More option
+                                    IconButton(onClick = {}, modifier = Modifier.size(32.dp)) {
+                                        Icon(
+                                            imageVector = Icons.Default.MoreVert,
+                                            contentDescription = "More",
+                                            tint = Color.Gray,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                    
+                                    // Favorite star
+                                    Icon(
+                                        imageVector = Icons.Default.Star,
+                                        contentDescription = "Favorite",
+                                        tint = Color(0xFFFA243C),
+                                        modifier = Modifier.size(14.dp).padding(start = 2.dp)
+                                    )
+                                }
                             }
-                            
-                            // More option
-                            IconButton(onClick = {}, modifier = Modifier.size(32.dp)) {
-                                Icon(
-                                    imageVector = Icons.Default.MoreVert,
-                                    contentDescription = "More",
-                                    tint = Color.Gray,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                            
-                            // Favorite star
-                            Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = "Favorite",
-                                tint = Color(0xFFFA243C),
-                                modifier = Modifier.size(14.dp).padding(start = 2.dp)
-                            )
                         }
                     }
                 }
@@ -1085,126 +1334,98 @@ fun ReplayScreen(
 
             // 3. Tus top álbumes por mes
             item {
-                Spacer(modifier = Modifier.height(36.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = stringResource(R.string.replay_top_albums_by_month),
-                        color = Color.Black,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Icon(
-                        imageVector = Icons.Default.ArrowBackIosNew,
-                        contentDescription = null,
-                        tint = Color(0xFF8E8E93),
+                if (monthlyAlbums.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(36.dp))
+                    Row(
                         modifier = Modifier
-                            .size(16.dp)
-                            .scale(-1f, 1f)
-                    )
-                }
-
-                val monthlyAlbums = listOf(
-                    Triple(
-                        if (isEnglish) "JANUARY" else "ENERO", 
-                        AlbumStat("mock_alb_m1", "BAR MAS F...", "Bad Bunny", "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=400&fit=crop", 120),
-                        true
-                    ),
-                    Triple(
-                        if (isEnglish) "FEBRUARY" else "FEBRERO", 
-                        AlbumStat("mock_alb_m2", "Rio - Single", "J Balvin", "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&fit=crop", 95),
-                        false
-                    ),
-                    Triple(
-                        if (isEnglish) "MARCH" else "MARZO", 
-                        AlbumStat("mock_alb_m3", "Malcr...", "Lasso", "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=400&fit=crop", 88),
-                        false
-                    )
-                )
-
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    itemsIndexed(monthlyAlbums) { index, itemData ->
-                        val (month, album, isExplicit) = itemData
-                        Column(
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = stringResource(R.string.replay_top_albums_by_month),
+                            color = Color.Black,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Icon(
+                            imageVector = Icons.Default.ArrowBackIosNew,
+                            contentDescription = null,
+                            tint = Color(0xFF8E8E93),
                             modifier = Modifier
-                                .width(130.dp)
-                                .clickable {
-                                    onAlbumSelected(AlbumState(
-                                        id = album.id,
-                                        playlistId = album.id,
-                                        title = album.title,
-                                        artist = album.artist,
-                                        thumbnail = album.thumbnail
-                                    ))
-                                }
-                        ) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(album.thumbnail)
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = album.title,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(130.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .border(1.dp, Color.Black.copy(alpha = 0.05f), RoundedCornerShape(12.dp))
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = month,
-                                color = Color.Gray,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = album.title,
-                                    color = Color.Black,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f, fill = false)
-                                )
-                                if (isExplicit) {
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Box(
+                                .size(16.dp)
+                                .scale(-1f, 1f)
+                        )
+                    }
+
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        itemsIndexed(monthlyAlbums) { index, itemData ->
+                            val (month, album, isExplicit) = itemData
+                            if (album != null) {
+                                Column(
+                                    modifier = Modifier
+                                        .width(130.dp)
+                                        .clickable {
+                                            onAlbumSelected(AlbumState(
+                                                id = album.id,
+                                                playlistId = album.id,
+                                                title = album.title,
+                                                artist = album.artist,
+                                                thumbnail = album.thumbnail
+                                            ))
+                                        }
+                                ) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(context)
+                                            .data(album.thumbnail)
+                                            .crossfade(true)
+                                            .build(),
+                                        contentDescription = album.title,
+                                        contentScale = ContentScale.Crop,
                                         modifier = Modifier
-                                            .background(Color.Gray.copy(alpha = 0.5f), RoundedCornerShape(3.dp))
-                                            .padding(horizontal = 4.dp, vertical = 1.dp)
+                                            .size(130.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .border(1.dp, Color.Black.copy(alpha = 0.05f), RoundedCornerShape(12.dp))
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = month,
+                                        color = Color.Gray,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = "E",
+                                            text = album.title,
                                             color = Color.Black,
-                                            fontSize = 8.sp,
-                                            fontWeight = FontWeight.Black
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f, fill = false)
                                         )
                                     }
+                                    Text(
+                                        text = album.artist,
+                                        color = Color.Gray,
+                                        fontSize = 11.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 }
                             }
-                            Text(
-                                text = album.artist,
-                                color = Color.Gray,
-                                fontSize = 11.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
                         }
                     }
                 }
             }
 
+            /*
             // 4. Comparación con el año pasado
             item {
                 Spacer(modifier = Modifier.height(36.dp))
@@ -1343,6 +1564,7 @@ fun ReplayScreen(
                     }
                 }
             }
+            */
 
             // 5. Revive tus top canciones de 2025
             item {
@@ -1380,8 +1602,8 @@ fun ReplayScreen(
                                 )
                             }
                             val replayPlaylist = Playlist(
-                                id = "replay_2025",
-                                name = "Replay 2025",
+                                id = "replay_2026",
+                                name = "Replay 2026",
                                 items = playlistSongs,
                                 coverUrl = "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&fit=crop"
                             )
@@ -1402,7 +1624,7 @@ fun ReplayScreen(
                                 fontWeight = FontWeight.Medium
                             )
                             Text(
-                                text = "\'25",
+                                text = "\'26",
                                 color = Color.White,
                                 fontSize = 84.sp,
                                 fontWeight = FontWeight.Black,
@@ -1422,92 +1644,91 @@ fun ReplayScreen(
             }
         }
 
-        // Fixed Top Bar (Stays at the top, only contains back & share buttons)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.TopCenter)
-                .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-        ) {
-            // Back button (54.dp CircleShape with backdrop effects matching AlbumScreen)
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .size(54.dp)
-                    .drawBackdrop(
-                        backdrop = localBackdrop,
-                        shape = { CircleShape },
-                        effects = {
-                            vibrancy()
-                            blur(2f.dp.toPx())
-                            lens(12f.dp.toPx(), 24f.dp.toPx())
-                        },
-                        onDrawSurface = {
-                            drawRect(Color.Black.copy(alpha = 0.25f))
-                        }
-                    )
-                    .clickable { onBack() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBackIosNew,
-                    contentDescription = stringResource(R.string.back_action),
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
+                }
             }
 
-            // Share button (48.dp Capsule with backdrop effects matching AlbumScreen)
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .size(48.dp)
-                    .drawBackdrop(
-                        backdrop = localBackdrop,
-                        shape = { Capsule() },
-                        effects = {
-                            vibrancy()
-                            blur(2f.dp.toPx())
-                            lens(12f.dp.toPx(), 24f.dp.toPx())
-                        },
-                        onDrawSurface = {
-                            drawRect(Color.Black.copy(alpha = 0.25f))
-                        }
-                    )
-                    .clickable {
-                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, "${context.getString(R.string.share_playlist_prefix)} RayMusic Replay $selectedYear!")
-                        }
-                        context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.compartir)))
-                    },
-                contentAlignment = Alignment.Center
+            // FULL SCREEN HIGHLIGHTS STORIES REEL
+            AnimatedVisibility(
+                visible = showHighlightsReel,
+                enter = fadeIn(animationSpec = tween(400)) + scaleIn(initialScale = 0.9f),
+                exit = fadeOut(animationSpec = tween(300)) + scaleOut(targetScale = 0.9f)
             ) {
-                Icon(
-                    imageVector = Icons.Default.IosShare,
-                    contentDescription = stringResource(R.string.compartir),
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
+                HighlightsReelDialog(
+                    artists = artistsList,
+                    songs = songsList,
+                    genres = genresList,
+                    year = selectedYear,
+                    onClose = { showHighlightsReel = false }
                 )
             }
-        }
+        },
+        glassContent = {
+            val scope = this
+            if (!showHighlightsReel) {
+                // Fixed Top Bar (Stays at the top, only contains back & share buttons)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    // Back button
+                    scope.GlassBox(
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .size(54.dp)
+                            .clip(CircleShape)
+                            .clickable { onBack() },
+                        shape = CircleShape,
+                        tint = Color.Black.copy(alpha = 0.25f),
+                        blur = 0.8f,
+                        centerDistortion = 0.1f,
+                        scale = 0.02f,
+                        warpEdges = 0.4f,
+                        elevation = 4.dp,
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBackIosNew,
+                            contentDescription = stringResource(R.string.back_action),
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
 
-        // FULL SCREEN HIGHLIGHTS STORIES REEL
-        AnimatedVisibility(
-            visible = showHighlightsReel,
-            enter = fadeIn(animationSpec = tween(400)) + scaleIn(initialScale = 0.9f),
-            exit = fadeOut(animationSpec = tween(300)) + scaleOut(targetScale = 0.9f)
-        ) {
-            HighlightsReelDialog(
-                artists = artistsList,
-                songs = songsList,
-                genres = genresList,
-                year = selectedYear,
-                onClose = { showHighlightsReel = false }
-            )
+                    // Share button
+                    scope.GlassBox(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(percent = 50))
+                            .clickable {
+                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, "${context.getString(R.string.share_playlist_prefix)} RayMusic Replay $selectedYear!")
+                                }
+                                context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.compartir)))
+                            },
+                        shape = RoundedCornerShape(percent = 50),
+                        tint = Color.Black.copy(alpha = 0.25f),
+                        blur = 0.8f,
+                        centerDistortion = 0.1f,
+                        scale = 0.02f,
+                        warpEdges = 0.4f,
+                        elevation = 4.dp,
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.IosShare,
+                            contentDescription = stringResource(R.string.compartir),
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
         }
-    }
+    )
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1591,7 +1812,7 @@ fun HighlightsReelDialog(
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(28.dp))
-                        val totalMinutes = artists.sumOf { it.minutes }.coerceAtLeast(34521)
+                        val totalMinutes = artists.sumOf { it.minutes }
                         Text(
                             text = String.format(Locale.getDefault(), "%,d", totalMinutes),
                             color = Color.White,

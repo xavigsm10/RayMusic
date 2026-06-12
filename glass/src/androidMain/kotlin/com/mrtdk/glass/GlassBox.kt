@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -216,6 +217,7 @@ private class GlassScopeImpl(private val density: Density) : GlassScope {
         darkness: Float,
         warpEdges: Float,
     ): Modifier = this
+        .clip(shape)
         .background(color = Color.Transparent, shape = shape)
         .onGloballyPositioned { coordinates ->
             val elementId = "glass_$id"
@@ -298,6 +300,7 @@ private class GlassScopeFallbackImpl(private val density: Density) : GlassScope 
         )
 
         return this
+            .clip(shape)
             // Apply glass gradient background
             .background(
                 brush = glassGradient,
@@ -365,9 +368,8 @@ private fun GlassContainerWithShader(
         RuntimeShader(GLASS_DISPLACEMENT_SHADER)
     }
 
-    SideEffect {
-        glassScope.cleanupInactiveElements()
-    }
+    // SideEffect is removed to prevent recompositions from clearing active elements.
+    // DisposableEffect handles accurate component cleanup on destruction.
 
     DisposableEffect(Unit) {
         onDispose {
@@ -481,8 +483,9 @@ private val GLASS_DISPLACEMENT_SHADER = """
 
     // Calculate signed distance field for rounded rectangle
     float sdfRoundedRect(float2 p, float2 halfSize, float radius) {
-        float2 d = abs(p) - halfSize + radius;
-        return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - radius;
+        float r = min(radius, min(halfSize.x, halfSize.y));
+        float2 d = abs(p) - halfSize + r;
+        return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - r;
     }
 
     // Check if pixel is in warp region (0.0 = inner, 1.0 = warp zone)
@@ -575,7 +578,7 @@ private val GLASS_DISPLACEMENT_SHADER = """
         // Shadow only outside original element and within blur range
         if (originalSdf <= 0.0 || shadowSdf > shadowBlur) return 0.0;
         
-        return (1.0 - shadowSdf / shadowBlur) * 0.15;
+        return (1.0 - clamp(shadowSdf, 0.0, shadowBlur) / shadowBlur) * 0.15;
     }
 
     // Calculate rim highlight intensity
@@ -637,7 +640,13 @@ private val GLASS_DISPLACEMENT_SHADER = """
                 float epsilon = 1.0;
                 float sdfX = sdfRoundedRect(localCoord + float2(epsilon, 0.0), halfSize, cornerRadius);
                 float sdfY = sdfRoundedRect(localCoord + float2(0.0, epsilon), halfSize, cornerRadius);
-                surfaceNormal = normalize(float2(sdfX - sdf, sdfY - sdf));
+                float2 grad = float2(sdfX - sdf, sdfY - sdf);
+                float len = length(grad);
+                if (len > 0.0001) {
+                    surfaceNormal = grad / len;
+                } else {
+                    surfaceNormal = float2(0.0, 1.0);
+                }
             }
             
             // Apply tint and darkness inside element

@@ -1300,7 +1300,29 @@ private fun FeaturedSuggestionCard(
                 modifier = Modifier
                     .offset(y = 270.dp - overlapDp) // Empieza a los 216.dp
                     .size(width = 280.dp, height = 110.dp + overlapDp) // Altura es 164.dp
-                    .blur(45.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+                    .graphicsLayer {
+                        compositingStrategy = CompositingStrategy.Offscreen
+                    }
+                    .blur(25.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+                    .drawWithContent {
+                        drawContent()
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                colorStops = arrayOf(
+                                    0.0f to Color.Black,
+                                    0.05f to Color.Black,
+                                    0.15f to Color.Black.copy(alpha = 0.9f),
+                                    0.30f to Color.Black.copy(alpha = 0.7f),
+                                    0.45f to Color.Black.copy(alpha = 0.45f),
+                                    0.60f to Color.Black.copy(alpha = 0.25f),
+                                    0.75f to Color.Black.copy(alpha = 0.10f),
+                                    0.88f to Color.Black.copy(alpha = 0.03f),
+                                    1.0f to Color.Transparent
+                                )
+                            ),
+                            blendMode = BlendMode.DstIn
+                        )
+                    }
             ) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     val sampleHeight = 5

@@ -124,7 +124,9 @@ data class PlayerState(
     val queue: List<QueueItem> = emptyList(),
     val isExclusiveQueue: Boolean = false,
     val album: String? = null,
-    val albumId: String? = null
+    val albumId: String? = null,
+    val playlistId: String? = null,
+    val playlistName: String? = null
 )
 
 data class QueueItem(
@@ -133,7 +135,9 @@ data class QueueItem(
     val artUrl: Any?,
     val videoId: String? = null,
     val album: String? = null,
-    val albumId: String? = null
+    val albumId: String? = null,
+    val playlistId: String? = null,
+    val playlistName: String? = null
 )
 
 private fun extractDominantColor(bitmap: android.graphics.Bitmap, isBillieJean: Boolean): Color {
@@ -153,7 +157,7 @@ private fun extractDominantColor(bitmap: android.graphics.Bitmap, isBillieJean: 
     val extractedColor = Color(chosenRgb)
     
     return if (isBillieJean) {
-        val skinTone = Color(0xFF6E472A) // Rich brown skin tone
+        val skinTone = Color(0xFF6E472A) 
         Color(
             red = (extractedColor.red * 0.5f + skinTone.red * 0.5f),
             green = (extractedColor.green * 0.5f + skinTone.green * 0.5f),

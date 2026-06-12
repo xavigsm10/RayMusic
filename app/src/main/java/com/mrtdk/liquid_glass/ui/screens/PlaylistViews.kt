@@ -38,6 +38,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import androidx.compose.ui.res.stringResource
 import com.mrtdk.glass.GlassContainer
+import com.mrtdk.glass.GlassBox
 import com.mrtdk.liquid_glass.ui.components.LiquidButton
 import com.mrtdk.liquid_glass.ui.components.LocalBackdrop
 import com.mrtdk.liquid_glass.ui.components.SharedElementTransitionContainer
@@ -777,16 +778,20 @@ fun PlaylistDetailScreen(
     val currentPlaylist = remember(playlists, playlist.id) {
         playlists.find { it.id == playlist.id } ?: playlist
     }
-    
+    val isReplay = remember(currentPlaylist.id) { currentPlaylist.id.startsWith("replay_") }
+    val defaultDominantColor = if (isReplay) Color(0xFF12351B) else Color(0xFF2B2B2B)
     var showAddMusicOverlay by remember { mutableStateOf(false) }
-    var dominantColor by remember { mutableStateOf(Color(0xFF2B2B2B)) }
-    var contentColor by remember { mutableStateOf(Color.White) }
+    var dominantColor by remember(currentPlaylist.id) { mutableStateOf(defaultDominantColor) }
+    var contentColor by remember(currentPlaylist.id) { mutableStateOf(Color.White) }
     
     val coverUrl = currentPlaylist.coverUrl ?: (if (currentPlaylist.items.isNotEmpty()) currentPlaylist.items.first().thumbnail else null)
     
     // Exact same color extraction logic
-    LaunchedEffect(coverUrl) {
-        if (coverUrl != null) {
+    LaunchedEffect(coverUrl, isReplay) {
+        if (isReplay) {
+            dominantColor = Color(0xFF12351B)
+            contentColor = Color.White
+        } else if (coverUrl != null) {
             val hdUrl = if (coverUrl is String) {
                 when {
                     coverUrl.contains("=w") -> coverUrl.substringBefore("=w") + "=w500-h500-rj"
@@ -829,7 +834,12 @@ fun PlaylistDetailScreen(
     val localBackdrop = rememberLayerBackdrop()
 
     Box(modifier = Modifier.fillMaxSize()) {
-        SharedElementTransitionContainer(onBack = onBack) { progress, dismiss ->
+        SharedElementTransitionContainer(
+            onBack = onBack,
+            enableSwipeToDismiss = !isReplay,
+            shrinkToTarget = !isReplay,
+            slideToSide = isReplay
+        ) { progress, dismiss ->
             var showPlaylistMenu by remember { mutableStateOf(false) }
             var currentSort by remember { mutableStateOf("default") }
 
@@ -876,7 +886,40 @@ fun PlaylistDetailScreen(
                         .aspectRatio(1f / 1.15f),
                     content = {
                         Box(modifier = Modifier.fillMaxSize().layerBackdrop(localBackdrop)) {
-                            if (coverUrl != null) {
+                            if (isReplay) {
+                                val replayYearShort = currentPlaylist.id.substringAfter("replay_").takeLast(2)
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            Brush.linearGradient(
+                                                colors = listOf(
+                                                    Color(0xFFFF9500), // Yellow/orange
+                                                    Color(0xFF4CD964)  // Green
+                                                )
+                                            )
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            text = "Replay",
+                                            color = Color.White.copy(alpha = 0.9f),
+                                            fontSize = 32.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                        Text(
+                                            text = "'$replayYearShort",
+                                            color = Color.White,
+                                            fontSize = 84.sp,
+                                            fontWeight = FontWeight.Black,
+                                            lineHeight = 80.sp
+                                        )
+                                    }
+                                }
+                            } else if (coverUrl != null) {
                                 AsyncImage(
                                     model = ImageRequest.Builder(context).data(coverUrl).crossfade(true).build(),
                                     contentDescription = currentPlaylist.name,
@@ -915,7 +958,7 @@ fun PlaylistDetailScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             // Bigger circular back button
-                            Box(
+                            scope.GlassBox(
                                 modifier = Modifier
                                     .size(54.dp)
                                     .graphicsLayer {
@@ -923,19 +966,15 @@ fun PlaylistDetailScreen(
                                         scaleY = popScaleBack
                                         alpha = popScaleBack
                                     }
-                                    .drawBackdrop(
-                                        backdrop = localBackdrop,
-                                        shape = { CircleShape },
-                                        effects = {
-                                            vibrancy()
-                                            blur(2f.dp.toPx())
-                                            lens(12f.dp.toPx(), 24f.dp.toPx())
-                                        },
-                                        onDrawSurface = {
-                                            drawRect(dominantColor.copy(alpha = 0.35f))
-                                        }
-                                    )
+                                    .clip(CircleShape)
                                     .clickable { dismiss() },
+                                shape = CircleShape,
+                                tint = dominantColor.copy(alpha = 0.35f),
+                                blur = 0.8f,
+                                centerDistortion = 0.1f,
+                                scale = 0.02f,
+                                warpEdges = 0.4f,
+                                elevation = 4.dp,
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -947,61 +986,60 @@ fun PlaylistDetailScreen(
                             }
                             
                             // Capsule containing Share and More options
-                            Row(
+                            scope.GlassBox(
                                 modifier = Modifier
                                     .graphicsLayer {
                                         scaleX = popScaleShare
                                         scaleY = popScaleShare
                                         alpha = popScaleShare
                                     }
-                                    .height(48.dp)
-                                    .drawBackdrop(
-                                        backdrop = localBackdrop,
-                                        shape = { Capsule() },
-                                        effects = {
-                                            vibrancy()
-                                            blur(2f.dp.toPx())
-                                            lens(12f.dp.toPx(), 24f.dp.toPx())
-                                        },
-                                        onDrawSurface = {
-                                            drawRect(dominantColor.copy(alpha = 0.35f))
-                                        }
-                                    )
-                                    .padding(horizontal = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                    .height(48.dp),
+                                shape = RoundedCornerShape(percent = 50),
+                                tint = dominantColor.copy(alpha = 0.35f),
+                                blur = 0.8f,
+                                centerDistortion = 0.1f,
+                                scale = 0.02f,
+                                warpEdges = 0.4f,
+                                elevation = 4.dp,
+                                contentAlignment = Alignment.Center
                             ) {
-                                IconButton(
-                                    onClick = {
-                                        val shareUrl = "https://music.youtube.com/playlist?list=${currentPlaylist.id.removePrefix("VL")}"
-                                        val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                            type = "text/plain"
-                                            putExtra(android.content.Intent.EXTRA_SUBJECT, currentPlaylist.name)
-                                            putExtra(android.content.Intent.EXTRA_TEXT, "$shareUrl")
-                                        }
-                                        context.startActivity(android.content.Intent.createChooser(shareIntent, "Compartir"))
-                                    },
-                                    modifier = Modifier.size(40.dp)
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.IosShare,
-                                        contentDescription = "Share",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(22.dp)
-                                    )
-                                }
-                                IconButton(
-                                    onClick = {
-                                        showPlaylistMenu = true
-                                    },
-                                    modifier = Modifier.size(40.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.MoreVert,
-                                        contentDescription = "More",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(22.dp)
-                                    )
+                                    IconButton(
+                                        onClick = {
+                                            val shareUrl = "https://music.youtube.com/playlist?list=${currentPlaylist.id.removePrefix("VL")}"
+                                            val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                                type = "text/plain"
+                                                putExtra(android.content.Intent.EXTRA_SUBJECT, currentPlaylist.name)
+                                                putExtra(android.content.Intent.EXTRA_TEXT, "$shareUrl")
+                                            }
+                                            context.startActivity(android.content.Intent.createChooser(shareIntent, "Compartir"))
+                                        },
+                                        modifier = Modifier.size(40.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.IosShare,
+                                            contentDescription = "Share",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            showPlaylistMenu = true
+                                        },
+                                        modifier = Modifier.size(40.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.MoreVert,
+                                            contentDescription = "More",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -1061,21 +1099,27 @@ fun PlaylistDetailScreen(
                                     if (currentPlaylist.items.isNotEmpty()) {
                                         val songs = currentPlaylist.items.filter { it.type == com.mrtdk.liquid_glass.data.ItemType.SONG }
                                         if (songs.isNotEmpty()) {
+                                            val favTitle = context.getString(R.string.favorite_songs)
+                                            val isFavorites = currentPlaylist.id == "favorites"
                                             val first = songs.first()
                                             val remainingQueue = songs.drop(1).map { t ->
                                                 com.mrtdk.liquid_glass.ui.screens.QueueItem(
                                                     title = t.title,
                                                     artist = t.subtitle,
-                                                    artUrl = t.thumbnail ?: playlistCoverForPlayer,
-                                                    videoId = t.id
+                                                    artUrl = if (isFavorites) t.thumbnail else t.thumbnail ?: playlistCoverForPlayer,
+                                                    videoId = t.id,
+                                                    playlistId = if (isFavorites) "favorites" else currentPlaylist.id,
+                                                    playlistName = if (isFavorites) favTitle else currentPlaylist.name
                                                 )
                                             }
                                             onSongSelected(com.mrtdk.liquid_glass.ui.screens.PlayerState(
                                                 first.title, first.subtitle, 
-                                                first.thumbnail ?: playlistCoverForPlayer, 
+                                                if (isFavorites) first.thumbnail else first.thumbnail ?: playlistCoverForPlayer, 
                                                 first.id,
                                                 queue = remainingQueue,
-                                                isExclusiveQueue = true
+                                                isExclusiveQueue = true,
+                                                playlistId = if (isFavorites) "favorites" else currentPlaylist.id,
+                                                playlistName = if (isFavorites) favTitle else currentPlaylist.name
                                             ))
                                         }
                                     }
@@ -1119,7 +1163,9 @@ fun PlaylistDetailScreen(
                                                     title = t.title,
                                                     artist = t.subtitle,
                                                     artUrl = t.thumbnail ?: playlistCoverForPlayer,
-                                                    videoId = t.id
+                                                    videoId = t.id,
+                                                    playlistId = currentPlaylist.id,
+                                                    playlistName = currentPlaylist.name
                                                 )
                                             }
                                             onSongSelected(com.mrtdk.liquid_glass.ui.screens.PlayerState(
@@ -1127,7 +1173,9 @@ fun PlaylistDetailScreen(
                                                 first.thumbnail ?: playlistCoverForPlayer, 
                                                 first.id,
                                                 queue = remainingQueue,
-                                                isExclusiveQueue = true
+                                                isExclusiveQueue = true,
+                                                playlistId = currentPlaylist.id,
+                                                playlistName = currentPlaylist.name
                                             ))
                                         }
                                     }
@@ -1158,22 +1206,24 @@ fun PlaylistDetailScreen(
 
             // Songs list or empty recommendations
             if (currentPlaylist.items.isEmpty()) {
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    AddMusicRow(
-                        onClick = { showAddMusicOverlay = true },
-                        contentColor = contentColor
-                    )
-                }
-                item {
-                    SuggestedSongsSection(
-                        playlistId = currentPlaylist.id,
-                        playlistName = currentPlaylist.name,
-                        contentColor = contentColor,
-                        onAddSong = { song ->
-                            LibraryManager.addSongToPlaylist(currentPlaylist.id, song)
-                        }
-                    )
+                if (!isReplay) {
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        AddMusicRow(
+                            onClick = { showAddMusicOverlay = true },
+                            contentColor = contentColor
+                        )
+                    }
+                    item {
+                        SuggestedSongsSection(
+                            playlistId = currentPlaylist.id,
+                            playlistName = currentPlaylist.name,
+                            contentColor = contentColor,
+                            onAddSong = { song ->
+                                LibraryManager.addSongToPlaylist(currentPlaylist.id, song)
+                            }
+                        )
+                    }
                 }
             } else {
                 itemsIndexed(sortedItems) { trackIndex, track ->
@@ -1195,7 +1245,9 @@ fun PlaylistDetailScreen(
                                             title = t.title,
                                             artist = t.subtitle,
                                             artUrl = t.thumbnail ?: playlistCoverForPlayer,
-                                            videoId = t.id
+                                            videoId = t.id,
+                                            playlistId = currentPlaylist.id,
+                                            playlistName = currentPlaylist.name
                                         )
                                     }
                                     onSongSelected(com.mrtdk.liquid_glass.ui.screens.PlayerState(
@@ -1242,22 +1294,24 @@ fun PlaylistDetailScreen(
                 }
 
                 // Add music button and suggestions at the bottom
-                item {
-                    Spacer(modifier = Modifier.height(24.dp))
-                    AddMusicRow(
-                        onClick = { showAddMusicOverlay = true },
-                        contentColor = contentColor
-                    )
-                }
-                item {
-                    SuggestedSongsSection(
-                        playlistId = currentPlaylist.id,
-                        playlistName = currentPlaylist.name,
-                        contentColor = contentColor,
-                        onAddSong = { song ->
-                            LibraryManager.addSongToPlaylist(currentPlaylist.id, song)
-                        }
-                    )
+                if (!isReplay) {
+                    item {
+                        Spacer(modifier = Modifier.height(24.dp))
+                        AddMusicRow(
+                            onClick = { showAddMusicOverlay = true },
+                            contentColor = contentColor
+                        )
+                    }
+                    item {
+                        SuggestedSongsSection(
+                            playlistId = currentPlaylist.id,
+                            playlistName = currentPlaylist.name,
+                            contentColor = contentColor,
+                            onAddSong = { song ->
+                                LibraryManager.addSongToPlaylist(currentPlaylist.id, song)
+                            }
+                        )
+                    }
                 }
             }
             
@@ -1448,96 +1502,91 @@ fun FavoriteSongsScreen(
                                 }
                             },
                             glassContent = {
+                                val scope = this
                                 Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .statusBarsPadding()
-                                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    // ← Back button pill (left)
-                                    Box(
-                                        modifier = Modifier
-                                            .size(54.dp)
-                                            .graphicsLayer {
-                                                scaleX = popScaleBack
-                                                scaleY = popScaleBack
-                                                alpha = popScaleBack
-                                            }
-                                            .drawBackdrop(
-                                                backdrop = localBackdrop,
-                                                shape = { CircleShape },
-                                                effects = {
-                                                    vibrancy()
-                                                    blur(2f.dp.toPx())
-                                                    lens(12f.dp.toPx(), 24f.dp.toPx())
-                                                },
-                                                onDrawSurface = {
-                                                    drawRect(Color.White.copy(alpha = 0.15f))
-                                                }
-                                            )
-                                            .clickable { dismiss() },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.ArrowBackIosNew,
-                                            contentDescription = "Back",
-                                            tint = contentColor,
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                    }
-
-                                    // Right side: single capsule containing download and more options
-                                    Row(
-                                        modifier = Modifier
-                                            .graphicsLayer {
-                                                scaleX = popScaleRight
-                                                scaleY = popScaleRight
-                                                alpha = popScaleRight
-                                            }
-                                            .height(48.dp)
-                                            .drawBackdrop(
-                                                backdrop = localBackdrop,
-                                                shape = { Capsule() },
-                                                effects = {
-                                                    vibrancy()
-                                                    blur(2f.dp.toPx())
-                                                    lens(12f.dp.toPx(), 24f.dp.toPx())
-                                                },
-                                                onDrawSurface = {
-                                                    drawRect(Color.White.copy(alpha = 0.15f))
-                                                }
-                                            )
-                                            .padding(horizontal = 8.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        IconButton(
-                                            onClick = { /* TODO: download all */ },
-                                            modifier = Modifier.size(40.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.ArrowCircleDown,
-                                                contentDescription = "Download",
-                                                tint = contentColor,
-                                                modifier = Modifier.size(22.dp)
-                                            )
-                                        }
-                                        IconButton(
-                                            onClick = { /* TODO: more options */ },
-                                            modifier = Modifier.size(40.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.MoreHoriz,
-                                                contentDescription = "More",
-                                                tint = contentColor,
-                                                modifier = Modifier.size(22.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
+                                     modifier = Modifier
+                                         .fillMaxWidth()
+                                         .statusBarsPadding()
+                                         .padding(horizontal = 16.dp, vertical = 12.dp),
+                                     horizontalArrangement = Arrangement.SpaceBetween,
+                                     verticalAlignment = Alignment.CenterVertically
+                                 ) {
+                                     // ← Back button pill (left)
+                                     scope.GlassBox(
+                                         modifier = Modifier
+                                             .size(54.dp)
+                                             .graphicsLayer {
+                                                 scaleX = popScaleBack
+                                                 scaleY = popScaleBack
+                                                 alpha = popScaleBack
+                                             }
+                                             .clickable { dismiss() },
+                                         shape = CircleShape,
+                                         tint = Color.White.copy(alpha = 0.15f),
+                                         blur = 0.8f,
+                                         centerDistortion = 0.1f,
+                                         scale = 0.02f,
+                                         warpEdges = 0.4f,
+                                         elevation = 4.dp,
+                                         contentAlignment = Alignment.Center
+                                     ) {
+                                         Icon(
+                                             imageVector = Icons.Default.ArrowBackIosNew,
+                                             contentDescription = "Back",
+                                             tint = contentColor,
+                                             modifier = Modifier.size(24.dp)
+                                         )
+                                     }
+ 
+                                     // Right side: single capsule containing download and more options
+                                     scope.GlassBox(
+                                         modifier = Modifier
+                                             .graphicsLayer {
+                                                 scaleX = popScaleRight
+                                                 scaleY = popScaleRight
+                                                 alpha = popScaleRight
+                                             }
+                                             .height(48.dp),
+                                         shape = RoundedCornerShape(percent = 50),
+                                         tint = Color.White.copy(alpha = 0.15f),
+                                         blur = 0.8f,
+                                         centerDistortion = 0.1f,
+                                         scale = 0.02f,
+                                         warpEdges = 0.4f,
+                                         elevation = 4.dp,
+                                         contentAlignment = Alignment.Center
+                                     ) {
+                                         Row(
+                                             modifier = Modifier.padding(horizontal = 8.dp),
+                                             horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                             verticalAlignment = Alignment.CenterVertically
+                                         ) {
+                                             IconButton(
+                                                 onClick = { /* TODO: download all */ },
+                                                 modifier = Modifier.size(40.dp)
+                                             ) {
+                                                 Icon(
+                                                     imageVector = Icons.Default.ArrowCircleDown,
+                                                     contentDescription = "Download",
+                                                     tint = contentColor,
+                                                     modifier = Modifier.size(22.dp)
+                                                 )
+                                             }
+                                             IconButton(
+                                                 onClick = { /* TODO: more options */ },
+                                                 modifier = Modifier.size(40.dp)
+                                             ) {
+                                                 Icon(
+                                                     imageVector = Icons.Default.MoreHoriz,
+                                                     contentDescription = "More",
+                                                     tint = contentColor,
+                                                     modifier = Modifier.size(22.dp)
+                                                 )
+                                             }
+                                         }
+                                     }
+                                 }
+                             }
                         )
                     }
 
@@ -1594,12 +1643,15 @@ fun FavoriteSongsScreen(
                                     .clickable {
                                         if (songs.isNotEmpty()) {
                                             val first = songs.first()
+                                            val favTitle = context.getString(R.string.favorite_songs)
                                             val remainingQueue = songs.drop(1).map { t ->
                                                 com.mrtdk.liquid_glass.ui.screens.QueueItem(
                                                     title = t.title,
                                                     artist = t.subtitle,
                                                     artUrl = t.thumbnail,
-                                                    videoId = t.id
+                                                    videoId = t.id,
+                                                    playlistId = "favorites",
+                                                    playlistName = favTitle
                                                 )
                                             }
                                             onSongSelected(com.mrtdk.liquid_glass.ui.screens.PlayerState(
@@ -1607,7 +1659,9 @@ fun FavoriteSongsScreen(
                                                 first.thumbnail,
                                                 first.id,
                                                 queue = remainingQueue,
-                                                isExclusiveQueue = true
+                                                isExclusiveQueue = true,
+                                                playlistId = "favorites",
+                                                playlistName = favTitle
                                             ))
                                         }
                                     },
@@ -1643,12 +1697,15 @@ fun FavoriteSongsScreen(
                                         if (songs.isNotEmpty()) {
                                             val shuffledSongs = songs.shuffled()
                                             val first = shuffledSongs.first()
+                                            val favTitle = context.getString(R.string.favorite_songs)
                                             val remainingQueue = shuffledSongs.drop(1).map { t ->
                                                 com.mrtdk.liquid_glass.ui.screens.QueueItem(
                                                     title = t.title,
                                                     artist = t.subtitle,
                                                     artUrl = t.thumbnail,
-                                                    videoId = t.id
+                                                    videoId = t.id,
+                                                    playlistId = "favorites",
+                                                    playlistName = favTitle
                                                 )
                                             }
                                             onSongSelected(com.mrtdk.liquid_glass.ui.screens.PlayerState(
@@ -1656,7 +1713,9 @@ fun FavoriteSongsScreen(
                                                 first.thumbnail,
                                                 first.id,
                                                 queue = remainingQueue,
-                                                isExclusiveQueue = true
+                                                isExclusiveQueue = true,
+                                                playlistId = "favorites",
+                                                playlistName = favTitle
                                             ))
                                         }
                                     },
@@ -1717,12 +1776,15 @@ fun FavoriteSongsScreen(
                                 .fillMaxWidth()
                                 .graphicsLayer { alpha = contentAlpha }
                                 .clickable {
+                                    val favTitle = context.getString(R.string.favorite_songs)
                                     val remainingQueue = songs.drop(trackIndex + 1).map { t ->
                                         com.mrtdk.liquid_glass.ui.screens.QueueItem(
                                             title = t.title,
                                             artist = t.subtitle,
                                             artUrl = t.thumbnail,
-                                            videoId = t.id
+                                            videoId = t.id,
+                                            playlistId = "favorites",
+                                            playlistName = favTitle
                                         )
                                     }
                                     onSongSelected(com.mrtdk.liquid_glass.ui.screens.PlayerState(
@@ -1730,7 +1792,9 @@ fun FavoriteSongsScreen(
                                         track.thumbnail,
                                         track.id,
                                         queue = remainingQueue,
-                                        isExclusiveQueue = true
+                                        isExclusiveQueue = true,
+                                        playlistId = "favorites",
+                                        playlistName = favTitle
                                     ))
                                 }
                                 .padding(horizontal = 20.dp, vertical = 12.dp),

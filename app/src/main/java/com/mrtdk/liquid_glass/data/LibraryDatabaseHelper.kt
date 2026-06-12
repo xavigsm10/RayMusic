@@ -9,7 +9,7 @@ class LibraryDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABA
 
     companion object {
         private const val DATABASE_NAME = "ray_music_library.db"
-        private const val DATABASE_VERSION = 3
+        private const val DATABASE_VERSION = 4
 
         // Tables
         private const val TABLE_SAVED_ITEMS = "saved_items"
@@ -94,12 +94,24 @@ class LibraryDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABA
                 + KEY_SETTINGS_KEY + " TEXT PRIMARY KEY,"
                 + KEY_SETTINGS_VALUE + " TEXT" + ")")
 
+        val createPlaybackHistory = ("CREATE TABLE playback_history ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + "song_id TEXT,"
+                + "title TEXT,"
+                + "artist TEXT,"
+                + "thumbnail TEXT,"
+                + "album TEXT,"
+                + "playlist_id TEXT,"
+                + "playlist_name TEXT,"
+                + "timestamp INTEGER" + ")")
+
         db.execSQL(createSavedItems)
         db.execSQL(createDownloadedSongs)
         db.execSQL(createRecentlyPlayed)
         db.execSQL(createPlaylists)
         db.execSQL(createPlaylistItems)
         db.execSQL(createSettings)
+        db.execSQL(createPlaybackHistory)
         db.execSQL("CREATE INDEX idx_playlist_items_playlist_id ON " + TABLE_PLAYLIST_ITEMS + "(" + KEY_PLAYLIST_ID + ")")
     }
 
@@ -124,6 +136,20 @@ class LibraryDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABA
                 // Column may already exist
             }
             currentVersion = 3
+        }
+        if (currentVersion < 4) {
+            val createPlaybackHistory = ("CREATE TABLE IF NOT EXISTS playback_history ("
+                    + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                    + "song_id TEXT,"
+                    + "title TEXT,"
+                    + "artist TEXT,"
+                    + "thumbnail TEXT,"
+                    + "album TEXT,"
+                    + "playlist_id TEXT,"
+                    + "playlist_name TEXT,"
+                    + "timestamp INTEGER" + ")")
+            db.execSQL(createPlaybackHistory)
+            currentVersion = 4
         }
     }
 
@@ -548,5 +574,54 @@ class LibraryDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABA
             }
         }
         return items
+    }
+
+    fun insertPlaybackRecord(songId: String, title: String, artist: String, thumbnail: String?, album: String?, playlistId: String?, playlistName: String?, timestamp: Long) {
+        val db = this.writableDatabase
+        val values = ContentValues().apply {
+            put("song_id", songId)
+            put("title", title)
+            put("artist", artist)
+            put("thumbnail", thumbnail)
+            put("album", album)
+            put("playlist_id", playlistId)
+            put("playlist_name", playlistName)
+            put("timestamp", timestamp)
+        }
+        db.insert("playback_history", null, values)
+    }
+
+    fun getPlaybackHistory(): List<PlaybackRecord> {
+        val list = mutableListOf<PlaybackRecord>()
+        val db = this.readableDatabase
+        val query = "SELECT * FROM playback_history ORDER BY timestamp DESC"
+        db.rawQuery(query, null).use { cursor ->
+            if (cursor.moveToFirst()) {
+                val songIdIdx = cursor.getColumnIndex("song_id")
+                val titleIdx = cursor.getColumnIndex("title")
+                val artistIdx = cursor.getColumnIndex("artist")
+                val thumbnailIdx = cursor.getColumnIndex("thumbnail")
+                val albumIdx = cursor.getColumnIndex("album")
+                val playlistIdIdx = cursor.getColumnIndex("playlist_id")
+                val playlistNameIdx = cursor.getColumnIndex("playlist_name")
+                val timestampIdx = cursor.getColumnIndex("timestamp")
+                
+                if (songIdIdx != -1 && titleIdx != -1 && artistIdx != -1 && thumbnailIdx != -1 && albumIdx != -1 && playlistIdIdx != -1 && playlistNameIdx != -1 && timestampIdx != -1) {
+                    do {
+                        list.add(PlaybackRecord(
+                            songId = cursor.getString(songIdIdx) ?: "",
+                            title = cursor.getString(titleIdx) ?: "",
+                            artist = cursor.getString(artistIdx) ?: "",
+                            thumbnail = cursor.getString(thumbnailIdx),
+                            album = cursor.getString(albumIdx),
+                            playlistId = cursor.getString(playlistIdIdx),
+                            playlistName = cursor.getString(playlistNameIdx),
+                            timestamp = cursor.getLong(timestampIdx)
+                        ))
+                    } while (cursor.moveToNext())
+                }
+            }
+        }
+        return list
     }
 }

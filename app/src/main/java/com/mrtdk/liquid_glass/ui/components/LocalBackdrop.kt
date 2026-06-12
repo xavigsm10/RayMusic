@@ -120,6 +120,7 @@ fun SharedElementTransitionContainer(
     onBack: () -> Unit,
     shrinkToTarget: Boolean = true,
     enableSwipeToDismiss: Boolean = true,
+    slideToSide: Boolean = false,
     animate: Boolean = true,
     content: @Composable (progress: Float, dismiss: () -> Unit) -> Unit
 ) {
@@ -183,23 +184,41 @@ fun SharedElementTransitionContainer(
         val currentProgress = progress.value
         
         // Interpolated geometry values
-        val currentLeft = if (shrinkToTarget) lerpFloat(sourceBounds.left, 0f, currentProgress) else 0f
-        val currentTop = if (shrinkToTarget) {
+        val currentLeft = if (slideToSide) {
+            lerpFloat(screenWidth, 0f, currentProgress)
+        } else if (shrinkToTarget) {
+            lerpFloat(sourceBounds.left, 0f, currentProgress)
+        } else {
+            0f
+        }
+        val currentTop = if (slideToSide) {
+            0f
+        } else if (shrinkToTarget) {
             lerpFloat(sourceBounds.top, 0f, currentProgress)
         } else {
             lerpFloat(screenHeight, 0f, currentProgress)
         }
-        val currentWidth = if (shrinkToTarget) {
+        val currentWidth = if (slideToSide) {
+            screenWidth
+        } else if (shrinkToTarget) {
             lerpFloat(sourceBounds.width, screenWidth, currentProgress).coerceAtLeast(0f)
         } else {
             screenWidth
         }
-        val currentHeight = if (shrinkToTarget) {
+        val currentHeight = if (slideToSide) {
+            screenHeight
+        } else if (shrinkToTarget) {
             lerpFloat(sourceBounds.height, screenHeight, currentProgress).coerceAtLeast(0f)
         } else {
             screenHeight
         }
-        val currentCornerRadius = if (shrinkToTarget) lerpFloat(24f, 0f, currentProgress).coerceAtLeast(0f) else 0f
+        val currentCornerRadius = if (slideToSide) {
+            0f
+        } else if (shrinkToTarget) {
+            lerpFloat(24f, 0f, currentProgress).coerceAtLeast(0f)
+        } else {
+            0f
+        }
         
         val currentWidthDp = with(density) { currentWidth.toDp() }
         val currentHeightDp = with(density) { currentHeight.toDp() }

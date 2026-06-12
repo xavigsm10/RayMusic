@@ -414,4 +414,25 @@ object LibraryManager {
         if (!isInitialized) return emptyList()
         return dbHelper.getDownloadedSongsForAlbum(albumName)
     }
+
+    fun addPlaybackRecord(songId: String, title: String, artist: String, thumbnail: String?, album: String?, playlistId: String?, playlistName: String?) {
+        if (!isInitialized) return
+        dbHelper.insertPlaybackRecord(songId, title, artist, thumbnail, album, playlistId, playlistName, System.currentTimeMillis())
+    }
+
+    fun getPlaybackHistory(): List<PlaybackRecord> {
+        if (!isInitialized) return emptyList()
+        return dbHelper.getPlaybackHistory()
+    }
 }
+
+data class PlaybackRecord(
+    val songId: String,
+    val title: String,
+    val artist: String,
+    val thumbnail: String?,
+    val album: String?,
+    val playlistId: String?,
+    val playlistName: String?,
+    val timestamp: Long
+)
