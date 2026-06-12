@@ -168,23 +168,23 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 var glassStyle by remember { mutableStateOf(LibraryManager.getGlassStyle()) }
-                var playerState by remember { mutableStateOf<PlayerState?>(null) }
+                val lastSavedState = remember { com.mrtdk.liquid_glass.data.LibraryManager.getLastPlayerState() }
+                var playerState by remember { mutableStateOf<PlayerState?>(lastSavedState) }
+                var isFirstStateLoad by remember { mutableStateOf(true) }
                 var showPlayer by remember { mutableStateOf(false) }
                     var upNextSongs by remember { mutableStateOf<List<com.echo.innertube.models.SongItem>>(emptyList()) }
                     var queueSeedVideoId by remember { mutableStateOf<String?>(null) }
                     var queueContinuation by remember { mutableStateOf<String?>(null) }
                     var queueEndpoint by remember { mutableStateOf<com.echo.innertube.models.WatchEndpoint?>(null) }
                     val songHistory = remember { androidx.compose.runtime.mutableStateListOf<PlayerState>() }
-
+ 
                     LaunchedEffect(Unit) {
-                        val lastState = com.mrtdk.liquid_glass.data.LibraryManager.getLastPlayerState()
-                        playerState = lastState
-                        com.mrtdk.liquid_glass.playback.PlaybackQueue.currentSong = lastState
-                        if (lastState != null) {
-                            com.mrtdk.liquid_glass.playback.PlaybackQueue.queue = lastState.queue
-                            com.mrtdk.liquid_glass.playback.PlaybackQueue.isExclusiveQueue = lastState.isExclusiveQueue
+                        com.mrtdk.liquid_glass.playback.PlaybackQueue.currentSong = lastSavedState
+                        if (lastSavedState != null) {
+                            com.mrtdk.liquid_glass.playback.PlaybackQueue.queue = lastSavedState.queue
+                            com.mrtdk.liquid_glass.playback.PlaybackQueue.isExclusiveQueue = lastSavedState.isExclusiveQueue
                         }
-
+ 
                         com.mrtdk.liquid_glass.playback.PlaybackQueue.onCurrentSongChanged = { newSong ->
                             playerState = newSong
                         }
@@ -197,9 +197,37 @@ class MainActivity : ComponentActivity() {
                             songHistory.addAll(com.mrtdk.liquid_glass.playback.PlaybackQueue.songHistory)
                         }
                     }
-
+ 
                     LaunchedEffect(playerState) {
                         com.mrtdk.liquid_glass.data.LibraryManager.saveLastPlayerState(playerState)
+                        if (playerState != null) {
+                            if (isFirstStateLoad && playerState == lastSavedState) {
+                                isFirstStateLoad = false
+                            } else {
+                                isFirstStateLoad = false
+                                // Track recently played
+                                com.mrtdk.liquid_glass.data.LibraryManager.addRecentlyPlayed(
+                                    com.mrtdk.liquid_glass.data.LibraryItem(
+                                        id = playerState!!.videoId ?: playerState!!.title,
+                                        title = playerState!!.title,
+                                        subtitle = playerState!!.artist,
+                                        thumbnail = playerState!!.artUrl?.toString(),
+                                        type = com.mrtdk.liquid_glass.data.ItemType.SONG,
+                                        album = playerState!!.album
+                                    )
+                                )
+                                // Track in complete playback history
+                                com.mrtdk.liquid_glass.data.LibraryManager.addPlaybackRecord(
+                                    songId = playerState!!.videoId ?: playerState!!.title,
+                                    title = playerState!!.title,
+                                    artist = playerState!!.artist,
+                                    thumbnail = playerState!!.artUrl?.toString(),
+                                    album = playerState!!.album,
+                                    playlistId = playerState!!.playlistId,
+                                    playlistName = playerState!!.playlistName
+                                )
+                            }
+                        }
                     }
                     
                     var searchQuery by remember { mutableStateOf("") }
@@ -341,16 +369,6 @@ class MainActivity : ComponentActivity() {
 
                         com.mrtdk.liquid_glass.playback.PlaybackQueue.onQueueChanged?.invoke()
 
-                        // Track recently played
-                        LibraryManager.addRecentlyPlayed(
-                            com.mrtdk.liquid_glass.data.LibraryItem(
-                                id = state.videoId ?: state.title,
-                                title = state.title,
-                                subtitle = state.artist,
-                                thumbnail = state.artUrl?.toString(),
-                                type = com.mrtdk.liquid_glass.data.ItemType.SONG
-                            )
-                        )
                         if (state.contentUri != null) musicPlayer?.playLocalSong(state.contentUri, state.title, state.artist, state.artUrl?.toString())
                         else if (state.videoId != null) musicPlayer?.playOnlineSong(state.videoId, state.title, state.artist, state.artUrl?.toString())
                     }
@@ -567,7 +585,7 @@ class MainActivity : ComponentActivity() {
                                          }
 
                                          if (playlistDetail != null) {
-                                             val isReplay = playlistDetail?.id == "replay_2025"
+                                             val isReplay = playlistDetail?.id?.startsWith("replay_") == true
                                              SharedElementTransitionContainer(
                                                  onBack = { playlistDetail = null },
                                                  enableSwipeToDismiss = !isReplay,

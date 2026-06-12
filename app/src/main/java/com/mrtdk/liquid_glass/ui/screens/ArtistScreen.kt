@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.ArrowDownward
 import com.mrtdk.liquid_glass.ui.components.LiquidButton
 import com.mrtdk.glass.GlassContainer
+import com.mrtdk.glass.GlassBox
 import com.mrtdk.liquid_glass.ui.components.AppleMusicArtistMenu
 import com.skydoves.cloudy.cloudy
 import androidx.compose.ui.draw.drawWithContent
@@ -1369,6 +1370,7 @@ fun ArtistScreen(
         }
     }
 ) {
+        val scope = this
         // ── FLOATING TOP BAR ───────────────────────────
         Row(
             modifier = Modifier
@@ -1378,23 +1380,18 @@ fun ArtistScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Circular back button with drawBackdrop (same style as Replay Screen)
-            Box(
+            // Circular back button with GlassBox (same style as Replay Screen)
+            scope.GlassBox(
                 modifier = Modifier
                     .size(54.dp)
-                    .drawBackdrop(
-                        backdrop = localBackdrop,
-                        shape = { CircleShape },
-                        effects = {
-                            vibrancy()
-                            blur(2f.dp.toPx())
-                            lens(12f.dp.toPx(), 24f.dp.toPx())
-                        },
-                        onDrawSurface = {
-                            drawRect(Color.Black.copy(alpha = 0.25f))
-                        }
-                    )
                     .clickable { onBack() },
+                shape = CircleShape,
+                tint = Color.Black.copy(alpha = 0.25f),
+                blur = 0.8f,
+                centerDistortion = 0.1f,
+                scale = 0.02f,
+                warpEdges = 0.4f,
+                elevation = 4.dp,
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -1411,21 +1408,9 @@ fun ArtistScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Share Button Box
-                Box(
+                scope.GlassBox(
                     modifier = Modifier
                         .size(54.dp)
-                        .drawBackdrop(
-                            backdrop = localBackdrop,
-                            shape = { CircleShape },
-                            effects = {
-                                vibrancy()
-                                blur(2f.dp.toPx())
-                                lens(12f.dp.toPx(), 24f.dp.toPx())
-                            },
-                            onDrawSurface = {
-                                drawRect(Color.Black.copy(alpha = 0.25f))
-                            }
-                        )
                         .clickable {
                             val shareUrl = "https://music.youtube.com/channel/${artistState.id}"
                             val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
@@ -1435,6 +1420,13 @@ fun ArtistScreen(
                             }
                             context.startActivity(android.content.Intent.createChooser(shareIntent, "Compartir"))
                         },
+                    shape = CircleShape,
+                    tint = Color.Black.copy(alpha = 0.25f),
+                    blur = 0.8f,
+                    centerDistortion = 0.1f,
+                    scale = 0.02f,
+                    warpEdges = 0.4f,
+                    elevation = 4.dp,
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -1446,22 +1438,17 @@ fun ArtistScreen(
                 }
 
                 // Settings (3 dots) Button Box
-                Box(
+                scope.GlassBox(
                     modifier = Modifier
                         .size(54.dp)
-                        .drawBackdrop(
-                            backdrop = localBackdrop,
-                            shape = { CircleShape },
-                            effects = {
-                                vibrancy()
-                                blur(2f.dp.toPx())
-                                lens(12f.dp.toPx(), 24f.dp.toPx())
-                            },
-                            onDrawSurface = {
-                                drawRect(Color.Black.copy(alpha = 0.25f))
-                            }
-                        )
                         .clickable { showArtistMenu = true },
+                    shape = CircleShape,
+                    tint = Color.Black.copy(alpha = 0.25f),
+                    blur = 0.8f,
+                    centerDistortion = 0.1f,
+                    scale = 0.02f,
+                    warpEdges = 0.4f,
+                    elevation = 4.dp,
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(

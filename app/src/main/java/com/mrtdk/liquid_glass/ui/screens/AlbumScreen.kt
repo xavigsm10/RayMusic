@@ -19,6 +19,7 @@ import com.mrtdk.liquid_glass.ui.components.LiquidButton
 import com.mrtdk.liquid_glass.ui.components.LocalBackdrop
 import com.mrtdk.liquid_glass.ui.components.SharedElementTransitionContainer
 import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
+import com.mrtdk.glass.GlassBox
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
@@ -456,7 +457,7 @@ fun AlbumScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Bigger circular back button
-                        Box(
+                        scope.GlassBox(
                             modifier = Modifier
                                 .size(54.dp)
                                 .graphicsLayer {
@@ -464,19 +465,14 @@ fun AlbumScreen(
                                     scaleY = popScaleBack
                                     alpha = popScaleBack
                                 }
-                                .drawBackdrop(
-                                    backdrop = localBackdrop,
-                                    shape = { CircleShape },
-                                    effects = {
-                                        vibrancy()
-                                        blur(2f.dp.toPx())
-                                        lens(12f.dp.toPx(), 24f.dp.toPx())
-                                    },
-                                    onDrawSurface = {
-                                        drawRect(dominantColor.copy(alpha = 0.35f))
-                                    }
-                                )
                                 .clickable { dismiss() },
+                            shape = CircleShape,
+                            tint = dominantColor.copy(alpha = 0.35f),
+                            blur = 0.8f,
+                            centerDistortion = 0.1f,
+                            scale = 0.02f,
+                            warpEdges = 0.4f,
+                            elevation = 4.dp,
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -488,59 +484,58 @@ fun AlbumScreen(
                         }
                         
                         // Capsule containing Share and More options
-                        Row(
+                        scope.GlassBox(
                             modifier = Modifier
                                 .graphicsLayer {
                                     scaleX = popScaleShare
                                     scaleY = popScaleShare
                                     alpha = popScaleShare
                                 }
-                                .height(48.dp)
-                                .drawBackdrop(
-                                    backdrop = localBackdrop,
-                                    shape = { Capsule() },
-                                    effects = {
-                                        vibrancy()
-                                        blur(2f.dp.toPx())
-                                        lens(12f.dp.toPx(), 24f.dp.toPx())
-                                    },
-                                    onDrawSurface = {
-                                        drawRect(dominantColor.copy(alpha = 0.35f))
-                                    }
-                                )
-                                .padding(horizontal = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .height(48.dp),
+                            shape = RoundedCornerShape(percent = 50),
+                            tint = dominantColor.copy(alpha = 0.35f),
+                            blur = 0.8f,
+                            centerDistortion = 0.1f,
+                            scale = 0.02f,
+                            warpEdges = 0.4f,
+                            elevation = 4.dp,
+                            contentAlignment = Alignment.Center
                         ) {
-                            IconButton(
-                                onClick = {
-                                    val shareUrl = "https://music.youtube.com/playlist?list=${albumState.playlistId.ifEmpty { albumState.id }.removePrefix("VL")}"
-                                    val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                        type = "text/plain"
-                                        putExtra(android.content.Intent.EXTRA_SUBJECT, albumState.title)
-                                        putExtra(android.content.Intent.EXTRA_TEXT, "$shareUrl")
-                                    }
-                                    context.startActivity(android.content.Intent.createChooser(shareIntent, "Compartir"))
-                                },
-                                modifier = Modifier.size(40.dp)
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.IosShare,
-                                    contentDescription = "Share",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                            }
-                            IconButton(
-                                onClick = { showAlbumMenu = true },
-                                modifier = Modifier.size(40.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.MoreVert,
-                                    contentDescription = "More",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(22.dp)
-                                )
+                                IconButton(
+                                    onClick = {
+                                        val shareUrl = "https://music.youtube.com/playlist?list=${albumState.playlistId.ifEmpty { albumState.id }.removePrefix("VL")}"
+                                        val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(android.content.Intent.EXTRA_SUBJECT, albumState.title)
+                                            putExtra(android.content.Intent.EXTRA_TEXT, "$shareUrl")
+                                        }
+                                        context.startActivity(android.content.Intent.createChooser(shareIntent, "Compartir"))
+                                    },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.IosShare,
+                                        contentDescription = "Share",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { showAlbumMenu = true },
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.MoreVert,
+                                        contentDescription = "More",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
                             }
                         }
                     }
