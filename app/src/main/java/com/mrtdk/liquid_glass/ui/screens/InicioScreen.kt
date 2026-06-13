@@ -1019,7 +1019,7 @@ fun InicioScreen(
                         )
                         Text(
                             text = stringResource(R.string.replay_card_headline_3),
-                            color = Color(0xFFFF2D55), // Hot Pink/Magenta
+                            color = Color(0xFF5AC8FA), // Cyan/Light Blue
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Black,
                             lineHeight = 36.sp

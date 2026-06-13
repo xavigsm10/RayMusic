@@ -481,6 +481,11 @@ private val GLASS_DISPLACEMENT_SHADER = """
     uniform float glassWarpEdges[10];
     uniform float glassBlurs[10];
 
+    // Pseudo-random generator for jitter
+    float hash(float2 p) {
+        return fract(sin(dot(p, float2(127.1, 311.7))) * 43758.5453123);
+    }
+
     // Calculate signed distance field for rounded rectangle
     float sdfRoundedRect(float2 p, float2 halfSize, float radius) {
         float r = min(radius, min(halfSize.x, halfSize.y));
@@ -677,16 +682,34 @@ private val GLASS_DISPLACEMENT_SHADER = """
         if (blurRadius > 0.0) {
             float4 blurredColor = float4(0.0);
             float totalWeight = 0.0;
-            float invRadius = 1.0 / max(blurRadius, 1.0);
             
-            for (int dx = -2; dx <= 2; dx++) {
-                for (int dy = -2; dy <= 2; dy++) {
-                    float2 offset = float2(float(dx), float(dy)) * blurRadius * 0.8;
-                    float distance = length(offset) * invRadius;
-                    float weight = exp(-distance * distance * 2.0);
-                    blurredColor += contents.eval(finalCoord + offset) * weight;
-                    totalWeight += weight;
-                }
+            // Random angle per pixel to rotate the spiral
+            float jitterAngle = hash(fragCoord) * 6.2831853;
+            float cosJitter = cos(jitterAngle);
+            float sinJitter = sin(jitterAngle);
+            
+            // Golden angle in radians (~137.5 degrees)
+            float goldenAngle = 2.3999632;
+            
+            for (int i = 0; i < 22; i++) {
+                // Radial distance using square root distribution for even area coverage
+                float r = sqrt(float(i + 1) / 22.0) * blurRadius;
+                float theta = float(i) * goldenAngle;
+                
+                // Spiral offset
+                float2 offset = float2(cos(theta), sin(theta)) * r;
+                
+                // Rotate offset by jitter angle
+                float2 rotatedOffset = float2(
+                    offset.x * cosJitter - offset.y * sinJitter,
+                    offset.x * sinJitter + offset.y * cosJitter
+                );
+                
+                // Gaussian-like weight based on distance
+                float weight = exp(-float(i + 1) / 11.0);
+                
+                blurredColor += contents.eval(finalCoord + rotatedOffset) * weight;
+                totalWeight += weight;
             }
             color = blurredColor / totalWeight;
         }
