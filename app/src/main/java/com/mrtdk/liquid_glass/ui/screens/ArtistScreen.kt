@@ -1402,16 +1402,26 @@ fun ArtistScreen(
                 )
             }
 
-            // Row containing Share and Settings side-by-side as separate circular buttons (same style as Replay Screen)
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+            // Capsule containing Share and Settings options
+            scope.GlassBox(
+                modifier = Modifier
+                    .height(48.dp),
+                shape = RoundedCornerShape(percent = 50),
+                tint = Color.Black.copy(alpha = 0.25f),
+                blur = 0.8f,
+                centerDistortion = 0.1f,
+                scale = 0.02f,
+                warpEdges = 0.4f,
+                elevation = 4.dp,
+                contentAlignment = Alignment.Center
             ) {
-                // Share Button Box
-                scope.GlassBox(
-                    modifier = Modifier
-                        .size(54.dp)
-                        .clickable {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = {
                             val shareUrl = "https://music.youtube.com/channel/${artistState.id}"
                             val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                                 type = "text/plain"
@@ -1420,43 +1430,26 @@ fun ArtistScreen(
                             }
                             context.startActivity(android.content.Intent.createChooser(shareIntent, "Compartir"))
                         },
-                    shape = CircleShape,
-                    tint = Color.Black.copy(alpha = 0.25f),
-                    blur = 0.8f,
-                    centerDistortion = 0.1f,
-                    scale = 0.02f,
-                    warpEdges = 0.4f,
-                    elevation = 4.dp,
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.IosShare,
-                        contentDescription = "Share",
-                        tint = Color.White,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-
-                // Settings (3 dots) Button Box
-                scope.GlassBox(
-                    modifier = Modifier
-                        .size(54.dp)
-                        .clickable { showArtistMenu = true },
-                    shape = CircleShape,
-                    tint = Color.Black.copy(alpha = 0.25f),
-                    blur = 0.8f,
-                    centerDistortion = 0.1f,
-                    scale = 0.02f,
-                    warpEdges = 0.4f,
-                    elevation = 4.dp,
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Settings",
-                        tint = Color.White,
-                        modifier = Modifier.size(22.dp)
-                    )
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.IosShare,
+                            contentDescription = "Share",
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    IconButton(
+                        onClick = { showArtistMenu = true },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "Settings",
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
                 }
             }
         }

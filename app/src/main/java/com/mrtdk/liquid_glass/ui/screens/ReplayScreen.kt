@@ -887,8 +887,8 @@ fun ReplayScreen(
                                     .width(130.dp)
                                     .clickable {
                                         onAlbumSelected(AlbumState(
-                                            id = album.id,
-                                            playlistId = album.id,
+                                            id = "replay_album_${album.title}",
+                                            playlistId = "replay_album_${album.title}",
                                             title = album.title,
                                             artist = album.artist,
                                             thumbnail = album.thumbnail
@@ -1371,8 +1371,8 @@ fun ReplayScreen(
                                         .width(130.dp)
                                         .clickable {
                                             onAlbumSelected(AlbumState(
-                                                id = album.id,
-                                                playlistId = album.id,
+                                                id = "replay_album_${album.title}",
+                                                playlistId = "replay_album_${album.title}",
                                                 title = album.title,
                                                 artist = album.artist,
                                                 thumbnail = album.thumbnail
@@ -1700,8 +1700,8 @@ fun ReplayScreen(
                     scope.GlassBox(
                         modifier = Modifier
                             .align(Alignment.CenterEnd)
-                            .size(48.dp)
-                            .clip(RoundedCornerShape(percent = 50))
+                            .size(54.dp)
+                            .clip(CircleShape)
                             .clickable {
                                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                     type = "text/plain"
@@ -1709,7 +1709,7 @@ fun ReplayScreen(
                                 }
                                 context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.compartir)))
                             },
-                        shape = RoundedCornerShape(percent = 50),
+                        shape = CircleShape,
                         tint = Color.Black.copy(alpha = 0.25f),
                         blur = 0.8f,
                         centerDistortion = 0.1f,
@@ -1722,7 +1722,7 @@ fun ReplayScreen(
                             imageVector = Icons.Default.IosShare,
                             contentDescription = stringResource(R.string.compartir),
                             tint = Color.White,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 }

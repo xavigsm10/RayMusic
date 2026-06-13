@@ -246,6 +246,26 @@ fun AlbumScreen(
                         )
                     }
                 }
+            } else if (albumState.id.startsWith("replay_album_")) {
+                val albumTitle = albumState.title
+                val history = LibraryManager.getPlaybackHistory()
+                val albumSongs = history
+                    .filter { it.album != null && it.album.equals(albumTitle, ignoreCase = true) }
+                    .groupBy { it.songId }
+                    .map { (songId, records) -> Pair(songId, records) }
+                    .sortedByDescending { it.second.size }
+                    .map { (songId, records) ->
+                        val first = records.first()
+                        com.echo.innertube.models.SongItem(
+                            id = songId,
+                            title = first.title,
+                            artists = listOf(com.echo.innertube.models.Artist(name = first.artist, id = null)),
+                            album = com.echo.innertube.models.Album(name = first.album ?: albumTitle, id = albumState.id),
+                            thumbnail = first.thumbnail ?: albumState.thumbnail ?: "",
+                            explicit = false
+                        )
+                    }
+                tracks = albumSongs
             } else {
                 var loaded = false
                 val isAlbum = albumState.id.startsWith("MPREb") || albumState.id.startsWith("FEmusic")
