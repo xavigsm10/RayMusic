@@ -317,6 +317,38 @@ fun CategoriaScreen(
             }
         } else {
             val verticalScrollState = rememberScrollState()
+            var savedScrollValue by remember { mutableStateOf(-1) }
+
+            LaunchedEffect(localAlbumDetail, localArtistDetail) {
+                if (localAlbumDetail != null || localArtistDetail != null) {
+                    savedScrollValue = verticalScrollState.value
+                }
+            }
+
+            val outerOnAlbumSelected = onAlbumSelected
+            val onAlbumSelected: (AlbumState) -> Unit = { album ->
+                savedScrollValue = verticalScrollState.value
+                outerOnAlbumSelected(album)
+            }
+
+            val outerOnPlaylistSelected = onPlaylistSelected
+            val onPlaylistSelected: (AlbumState) -> Unit = { playlist ->
+                savedScrollValue = verticalScrollState.value
+                outerOnPlaylistSelected(playlist)
+            }
+
+            val outerOnArtistSelected = onArtistSelected
+            val onArtistSelected: (ArtistState) -> Unit = { artist ->
+                savedScrollValue = verticalScrollState.value
+                outerOnArtistSelected(artist)
+            }
+
+            LaunchedEffect(SharedTransitionState.isDetailOpen) {
+                if (!SharedTransitionState.isDetailOpen && savedScrollValue != -1) {
+                    verticalScrollState.scrollTo(savedScrollValue)
+                    savedScrollValue = -1
+                }
+            }
             Column(
                 modifier = Modifier
                     .fillMaxSize()

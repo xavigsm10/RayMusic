@@ -91,6 +91,9 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.LayoutCoordinates
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.mrtdk.glass.GlassContainer
+import com.mrtdk.glass.GlassBox
+import com.mrtdk.liquid_glass.ui.components.PlayerOptionsMenu
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -476,12 +479,16 @@ fun PlayerScreen(
         val isSaved = savedItems.any { it.id == playerState?.videoId }
         val starTint by androidx.compose.animation.animateColorAsState(targetValue = if(isSaved) Color(0xFFFA243C) else contentColor, label="starTint")
 
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxSize()
-                .onGloballyPositioned { parentCoordinates = it }
-                .layerBackdrop(localBackdrop)
-        ) {
+        GlassContainer(
+            modifier = Modifier.fillMaxSize(),
+            useShader = true,
+            content = {
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .onGloballyPositioned { parentCoordinates = it }
+                        .layerBackdrop(localBackdrop)
+                ) {
             val maxWidth = maxWidth
             val maxHeight = maxHeight
 
@@ -1802,38 +1809,7 @@ fun PlayerScreen(
          } // end inner Box
         } // end BoxWithConstraints
 
-        if (showOptionsMenu) {
-            com.mrtdk.liquid_glass.ui.components.PlayerOptionsMenu(
-                backdrop = localBackdrop,
-                onDismiss = { showOptionsMenu = false },
-                playerState = playerState,
-                isSaved = isSaved,
-                onToggleSaved = {
-                    if (playerState != null) {
-                        if (!isSaved) {
-                            LibraryManager.saveItem(LibraryItem(playerState.videoId ?: "", playerState.title, playerState.artist, playerState.artUrl?.toString(), ItemType.SONG))
-                        } else {
-                            LibraryManager.removeItem(playerState.videoId ?: "")
-                        }
-                    }
-                },
-                onDownload = {
-                    if (playerState?.videoId != null) {
-                        downloadSong(context, playerState.videoId, playerState.title, playerState.artist, playerState.artUrl?.toString(), playerState.album)
-                    }
-                },
-                onAddToPlaylist = {
-                    showPlaylistMenu = true
-                },
-                onSongSelected = { targetState ->
-                    onSongSelected(targetState)
-                },
-                onAlbumSelected = { album ->
-                    showOptionsMenu = false
-                    onAlbumSelected(album)
-                }
-            )
-        }
+
 
         if (showLyricsMenu) {
             ModalBottomSheet(onDismissRequest = { showLyricsMenu = false }, containerColor = Color(0xFF1E1E1E)) {
@@ -2070,7 +2046,43 @@ fun PlayerScreen(
                 containerColor = Color(0xFF2C2C2C)
             )
         }
+        }
+    },
+    glassContent = {
+        if (showOptionsMenu) {
+            PlayerOptionsMenu(
+                backdrop = localBackdrop,
+                onDismiss = { showOptionsMenu = false },
+                playerState = playerState,
+                isSaved = isSaved,
+                onToggleSaved = {
+                    if (playerState != null) {
+                        if (!isSaved) {
+                            LibraryManager.saveItem(LibraryItem(playerState.videoId ?: "", playerState.title, playerState.artist, playerState.artUrl?.toString(), ItemType.SONG))
+                        } else {
+                            LibraryManager.removeItem(playerState.videoId ?: "")
+                        }
+                    }
+                },
+                onDownload = {
+                    if (playerState?.videoId != null) {
+                        downloadSong(context, playerState.videoId, playerState.title, playerState.artist, playerState.artUrl?.toString(), playerState.album)
+                    }
+                },
+                onAddToPlaylist = {
+                    showPlaylistMenu = true
+                },
+                onSongSelected = { targetState ->
+                    onSongSelected(targetState)
+                },
+                onAlbumSelected = { album ->
+                    showOptionsMenu = false
+                    onAlbumSelected(album)
+                }
+            )
+        }
     }
+)
 }
 }
 @Composable

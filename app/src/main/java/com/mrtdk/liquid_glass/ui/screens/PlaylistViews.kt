@@ -50,6 +50,8 @@ import com.mrtdk.liquid_glass.ui.components.PlaylistsPageSortMenu
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
@@ -89,6 +91,35 @@ fun PlaylistsListScreen(
     onFavoriteSongsSelected: () -> Unit = {},
     paddingValues: PaddingValues = PaddingValues(0.dp)
 ) {
+    val gridState = rememberLazyGridState()
+    val listState = rememberLazyListState()
+    var savedGridIndex by remember { mutableStateOf(-1) }
+    var savedGridOffset by remember { mutableStateOf(0) }
+    var savedListIndex by remember { mutableStateOf(-1) }
+    var savedListOffset by remember { mutableStateOf(0) }
+
+    val outerOnPlaylistSelected = onPlaylistSelected
+    val onPlaylistSelected: (Playlist) -> Unit = { pl ->
+        savedGridIndex = gridState.firstVisibleItemIndex
+        savedGridOffset = gridState.firstVisibleItemScrollOffset
+        savedListIndex = listState.firstVisibleItemIndex
+        savedListOffset = listState.firstVisibleItemScrollOffset
+        outerOnPlaylistSelected(pl)
+    }
+
+    LaunchedEffect(SharedTransitionState.isDetailOpen) {
+        if (!SharedTransitionState.isDetailOpen) {
+            if (savedGridIndex != -1) {
+                gridState.scrollToItem(savedGridIndex, savedGridOffset)
+                savedGridIndex = -1
+            }
+            if (savedListIndex != -1) {
+                listState.scrollToItem(savedListIndex, savedListOffset)
+                savedListIndex = -1
+            }
+        }
+    }
+
     val playlists by LibraryManager.playlists.collectAsState()
     val savedItems by LibraryManager.savedItems.collectAsState()
     val favSongsCount = remember(savedItems) { savedItems.count { it.type == ItemType.SONG } }
@@ -143,6 +174,7 @@ fun PlaylistsListScreen(
                 Box(modifier = Modifier.fillMaxSize().layerBackdrop(localBackdrop)) {
                     if (viewMode.value == "grid") {
                     LazyVerticalGrid(
+                        state = gridState,
                         columns = GridCells.Fixed(2),
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
@@ -316,6 +348,7 @@ fun PlaylistsListScreen(
                     }
                 } else {
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
                             top = paddingValues.calculateTopPadding() + 8.dp,

@@ -34,6 +34,7 @@ val LocalBackdrop = staticCompositionLocalOf<Backdrop> { emptyBackdrop() }
 object SharedTransitionState {
     var lastClickBounds: Rect? = null
     var lastOpenedId: String? = null
+    var isDetailOpen: Boolean by mutableStateOf(false)
 }
 
 fun Modifier.wiggleOnScroll(
@@ -124,6 +125,12 @@ fun SharedElementTransitionContainer(
     animate: Boolean = true,
     content: @Composable (progress: Float, dismiss: () -> Unit) -> Unit
 ) {
+    DisposableEffect(Unit) {
+        SharedTransitionState.isDetailOpen = true
+        onDispose {
+            SharedTransitionState.isDetailOpen = false
+        }
+    }
     androidx.compose.foundation.layout.BoxWithConstraints(
         modifier = Modifier.fillMaxSize()
     ) {
