@@ -375,7 +375,7 @@ fun ReplayScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color(0xFFF2F2F7)),
+                        .background(Color.Black),
                     contentAlignment = Alignment.Center
                 ) {
                     Box(
@@ -400,8 +400,8 @@ fun ReplayScreen(
                             .fillMaxWidth()
                             .padding(24.dp)
                             .clip(RoundedCornerShape(24.dp))
-                            .background(Color.White.copy(alpha = 0.85f))
-                            .border(1.dp, Color.Black.copy(alpha = 0.05f), RoundedCornerShape(24.dp))
+                            .background(Color(0xFF1C1C1E).copy(alpha = 0.85f))
+                            .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(24.dp))
                             .padding(32.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -411,7 +411,7 @@ fun ReplayScreen(
                         ) {
                             Text(
                                 text = "Replay '26",
-                                color = Color.Black,
+                                color = Color.White,
                                 fontSize = 36.sp,
                                 fontWeight = FontWeight.Black,
                                 textAlign = TextAlign.Center
@@ -433,7 +433,7 @@ fun ReplayScreen(
                                     .fillMaxWidth(0.8f)
                                     .height(8.dp)
                                     .clip(CircleShape)
-                                    .background(Color.Black.copy(alpha = 0.05f))
+                                    .background(Color.White.copy(alpha = 0.1f))
                             ) {
                                 val progress = (playbackHistory.size / 5f).coerceIn(0f, 1f)
                                 Box(
@@ -453,7 +453,7 @@ fun ReplayScreen(
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
                                 text = "${playbackHistory.size} / 5",
-                                color = Color.Black,
+                                color = Color.White,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -464,7 +464,7 @@ fun ReplayScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color(0xFFF2F2F7))
+                        .background(Color.Black)
                 ) {
                     Box(
                         modifier = Modifier
@@ -503,7 +503,7 @@ fun ReplayScreen(
                 ) {
                     Text(
                         text = stringResource(R.string.replay_screen_title),
-                        color = Color.Black,
+                        color = Color.White,
                         fontSize = 34.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -513,20 +513,20 @@ fun ReplayScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFFE5E5EA))
+                                .background(Color(0xFF2C2C2E))
                                 .clickable { showYearDropdown = true }
                                 .padding(horizontal = 10.dp, vertical = 6.dp)
                         ) {
                             Text(
                                 text = selectedYear,
-                                color = Color.Black,
+                                color = Color.White,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = "▼",
-                                color = Color.Black.copy(alpha = 0.6f),
+                                color = Color.White.copy(alpha = 0.6f),
                                 fontSize = 10.sp
                             )
                         }
@@ -534,19 +534,12 @@ fun ReplayScreen(
                         DropdownMenu(
                             expanded = showYearDropdown,
                             onDismissRequest = { showYearDropdown = false },
-                            modifier = Modifier.background(Color.White)
+                            modifier = Modifier.background(Color(0xFF2C2C2E))
                         ) {
                             DropdownMenuItem(
-                                text = { Text("2026", color = Color.Black) },
+                                text = { Text("2026", color = Color.White) },
                                 onClick = {
                                     selectedYear = "2026"
-                                    showYearDropdown = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("2025", color = Color.Black) },
-                                onClick = {
-                                    selectedYear = "2025"
                                     showYearDropdown = false
                                 }
                             )
@@ -575,7 +568,7 @@ fun ReplayScreen(
                         ) {
                             Text(
                                 text = month,
-                                color = if (isSelected) Color.Black else Color(0xFF8E8E93),
+                                color = if (isSelected) Color.White else Color(0xFF8E8E93),
                                 fontSize = 17.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                             )
@@ -661,7 +654,7 @@ fun ReplayScreen(
                     ) {
                         Text(
                             text = stringResource(R.string.replay_top_artists),
-                            color = Color.Black,
+                            color = Color.White,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -684,8 +677,8 @@ fun ReplayScreen(
                                     .width(160.dp)
                                     .height(230.dp)
                                     .clip(RoundedCornerShape(16.dp))
-                                    .background(Color.White)
-                                    .border(1.dp, Color.Black.copy(alpha = 0.05f), RoundedCornerShape(16.dp))
+                                    .background(Color.Black)
+                                    .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
                                     .clickable {
                                         onArtistSelected(ArtistState(artist.id, artist.name, artist.thumbnail))
                                     }
@@ -704,7 +697,7 @@ fun ReplayScreen(
                                     ) {
                                         Text(
                                             text = "${index + 1}",
-                                            color = Color.Black.copy(alpha = 0.5f),
+                                            color = Color.White,
                                             fontSize = 24.sp,
                                             fontWeight = FontWeight.Black
                                         )
@@ -727,7 +720,7 @@ fun ReplayScreen(
                                     ) {
                                         Text(
                                             text = artist.name,
-                                            color = Color.Black,
+                                            color = Color.White,
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.Bold,
                                             maxLines = 1,
@@ -737,7 +730,7 @@ fun ReplayScreen(
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
                                             text = stringResource(R.string.replay_minutos, String.format(Locale.getDefault(), "%,d", artist.minutes)),
-                                            color = Color.Gray,
+                                            color = Color.White.copy(alpha = 0.6f),
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Medium
                                         )
@@ -762,7 +755,7 @@ fun ReplayScreen(
                     ) {
                         Text(
                             text = stringResource(R.string.replay_top_songs),
-                            color = Color.Black,
+                            color = Color.White,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -799,7 +792,7 @@ fun ReplayScreen(
                             ) {
                                 Text(
                                     text = "${index + 1}",
-                                    color = Color.Black,
+                                    color = Color.White,
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier.width(24.dp)
@@ -824,7 +817,7 @@ fun ReplayScreen(
                                 ) {
                                     Text(
                                         text = song.title,
-                                        color = Color.Black,
+                                        color = Color.White,
                                         fontSize = 15.sp,
                                         fontWeight = FontWeight.SemiBold,
                                         maxLines = 1,
@@ -832,7 +825,7 @@ fun ReplayScreen(
                                     )
                                     Text(
                                         text = song.artist,
-                                        color = Color.Gray,
+                                        color = Color.White.copy(alpha = 0.6f),
                                         fontSize = 13.sp,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
@@ -841,7 +834,7 @@ fun ReplayScreen(
 
                                 Text(
                                     text = stringResource(R.string.replay_reproducciones, song.plays),
-                                    color = Color.Gray,
+                                    color = Color.White.copy(alpha = 0.6f),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium
                                 )
@@ -864,7 +857,7 @@ fun ReplayScreen(
                     ) {
                         Text(
                             text = stringResource(R.string.replay_top_albums),
-                            color = Color.Black,
+                            color = Color.White,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -906,7 +899,7 @@ fun ReplayScreen(
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .clip(RoundedCornerShape(12.dp))
-                                            .border(1.dp, Color.Black.copy(alpha = 0.05f), RoundedCornerShape(12.dp))
+                                            .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
                                     )
                                     Text(
                                         text = "${index + 1}",
@@ -923,7 +916,7 @@ fun ReplayScreen(
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
                                     text = album.title,
-                                    color = Color.Black,
+                                    color = Color.White,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1,
@@ -931,14 +924,14 @@ fun ReplayScreen(
                                 )
                                 Text(
                                     text = album.artist,
-                                    color = Color.Gray,
+                                    color = Color.White.copy(alpha = 0.6f),
                                     fontSize = 11.sp,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
                                     text = stringResource(R.string.replay_minutos, String.format(Locale.getDefault(), "%,d", album.minutes)),
-                                    color = Color.Gray,
+                                    color = Color.White.copy(alpha = 0.6f),
                                     fontSize = 10.sp
                                 )
                             }
@@ -960,7 +953,7 @@ fun ReplayScreen(
                     ) {
                         Text(
                             text = stringResource(R.string.replay_top_playlists),
-                            color = Color.Black,
+                            color = Color.White,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -1002,7 +995,7 @@ fun ReplayScreen(
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .clip(RoundedCornerShape(12.dp))
-                                            .border(1.dp, Color.Black.copy(alpha = 0.05f), RoundedCornerShape(12.dp))
+                                            .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
                                     )
                                     Text(
                                         text = "${index + 1}",
@@ -1019,7 +1012,7 @@ fun ReplayScreen(
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
                                     text = playlist.title,
-                                    color = Color.Black,
+                                    color = Color.White,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1,
@@ -1027,14 +1020,14 @@ fun ReplayScreen(
                                 )
                                 Text(
                                     text = playlist.author,
-                                    color = Color.Gray,
+                                    color = Color.White.copy(alpha = 0.6f),
                                     fontSize = 11.sp,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
                                     text = stringResource(R.string.replay_minutos, String.format(Locale.getDefault(), "%,d", playlist.minutes)),
-                                    color = Color.Gray,
+                                    color = Color.White.copy(alpha = 0.6f),
                                     fontSize = 10.sp
                                 )
                             }
@@ -1056,7 +1049,7 @@ fun ReplayScreen(
                     ) {
                         Text(
                             text = stringResource(R.string.replay_top_genres),
-                            color = Color.Black,
+                            color = Color.White,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -1126,7 +1119,7 @@ fun ReplayScreen(
                     ) {
                         Text(
                             text = stringResource(R.string.replay_top_artists_by_month),
-                            color = Color.Black,
+                            color = Color.White,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -1165,12 +1158,12 @@ fun ReplayScreen(
                                         modifier = Modifier
                                             .size(100.dp)
                                             .clip(CircleShape)
-                                            .border(1.dp, Color.Black.copy(alpha = 0.05f), CircleShape)
+                                            .border(1.dp, Color.White.copy(alpha = 0.1f), CircleShape)
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
                                         text = month,
-                                        color = Color.Gray,
+                                        color = Color.White.copy(alpha = 0.6f),
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         maxLines = 1,
@@ -1182,7 +1175,7 @@ fun ReplayScreen(
                                     ) {
                                         Text(
                                             text = artist.name,
-                                            color = Color.Black,
+                                            color = Color.White,
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.Bold,
                                             maxLines = 1,
@@ -1217,7 +1210,7 @@ fun ReplayScreen(
                     ) {
                         Text(
                             text = stringResource(R.string.replay_top_songs_by_month),
-                            color = Color.Black,
+                            color = Color.White,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -1272,7 +1265,7 @@ fun ReplayScreen(
                                     ) {
                                         Text(
                                             text = month,
-                                            color = Color.Gray,
+                                            color = Color.White.copy(alpha = 0.6f),
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold
                                         )
@@ -1303,7 +1296,7 @@ fun ReplayScreen(
                                         Icon(
                                             imageVector = Icons.Default.ArrowDownward,
                                             contentDescription = "Downloaded",
-                                            tint = Color.Gray,
+                                            tint = Color.White.copy(alpha = 0.6f),
                                             modifier = Modifier.size(16.dp)
                                         )
                                     }
@@ -1313,7 +1306,7 @@ fun ReplayScreen(
                                         Icon(
                                             imageVector = Icons.Default.MoreVert,
                                             contentDescription = "More",
-                                            tint = Color.Gray,
+                                            tint = Color.White.copy(alpha = 0.6f),
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
@@ -1345,7 +1338,7 @@ fun ReplayScreen(
                     ) {
                         Text(
                             text = stringResource(R.string.replay_top_albums_by_month),
-                            color = Color.Black,
+                            color = Color.White,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -1389,12 +1382,12 @@ fun ReplayScreen(
                                         modifier = Modifier
                                             .size(130.dp)
                                             .clip(RoundedCornerShape(12.dp))
-                                            .border(1.dp, Color.Black.copy(alpha = 0.05f), RoundedCornerShape(12.dp))
+                                            .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
                                     )
                                     Spacer(modifier = Modifier.height(6.dp))
                                     Text(
                                         text = month,
-                                        color = Color.Gray,
+                                        color = Color.White.copy(alpha = 0.6f),
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -1413,7 +1406,7 @@ fun ReplayScreen(
                                     }
                                     Text(
                                         text = album.artist,
-                                        color = Color.Gray,
+                                        color = Color.White.copy(alpha = 0.6f),
                                         fontSize = 11.sp,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
@@ -1571,7 +1564,7 @@ fun ReplayScreen(
                 Spacer(modifier = Modifier.height(36.dp))
                 Text(
                     text = stringResource(R.string.replay_revive_last_year_songs),
-                    color = Color.Black,
+                    color = Color.White,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)

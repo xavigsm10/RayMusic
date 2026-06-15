@@ -536,7 +536,8 @@ fun PlayerScreen(
                     contentColor = contentColor,
                     onShowOptionsMenu = { showOptionsMenu = true },
                     onShowLyricsMenu = { showLyricsMenu = true },
-                    onShowPlaylistMenu = { showPlaylistMenu = true }
+                    onShowPlaylistMenu = { showPlaylistMenu = true },
+                    isBottomBarCollapsed = isBottomBarCollapsed
                 )
             } else {
                 val lyricsImageSize = 84.dp
@@ -1215,29 +1216,33 @@ fun PlayerScreen(
                             val isShuffleActive = shuffleModeEnabled
                             val isShufflePressed by shuffleInteraction.collectIsPressedAsState()
                             val shuffleScale by animateFloatAsState(targetValue = if (isShufflePressed) 0.85f else 1.0f, label = "shuffleScale")
-                            val shuffleBgColor by animateColorAsState(targetValue = if (isShuffleActive) Color(0xFFFA243C) else contentColor.copy(alpha=0.15f), label = "shuffleBg")
-                            val shuffleIconColor by animateColorAsState(targetValue = if (isShuffleActive) Color.White else contentColor.copy(alpha=0.5f), label = "shuffleIcon")
+                            
+                            val activeBg = contentColor.copy(alpha = 0.9f)
+                            val activeIcon = if (contentColor == Color.White) dominantColor else Color.White
+
+                            val shuffleBgColor by animateColorAsState(targetValue = if (isShuffleActive) activeBg else contentColor.copy(alpha=0.15f), label = "shuffleBg")
+                            val shuffleIconColor by animateColorAsState(targetValue = if (isShuffleActive) activeIcon else contentColor.copy(alpha=0.5f), label = "shuffleIcon")
 
                             val repeatInteraction = remember { MutableInteractionSource() }
                             val isRepeatActive = repeatMode != androidx.media3.common.Player.REPEAT_MODE_OFF
                             val isRepeatPressed by repeatInteraction.collectIsPressedAsState()
                             val repeatScale by animateFloatAsState(targetValue = if (isRepeatPressed) 0.85f else 1.0f, label = "repeatScale")
-                            val repeatBgColor by animateColorAsState(targetValue = if (isRepeatActive) Color(0xFFFA243C) else contentColor.copy(alpha=0.15f), label = "repeatBg")
-                            val repeatIconColor by animateColorAsState(targetValue = if (isRepeatActive) Color.White else contentColor.copy(alpha=0.5f), label = "repeatIcon")
+                            val repeatBgColor by animateColorAsState(targetValue = if (isRepeatActive) activeBg else contentColor.copy(alpha=0.15f), label = "repeatBg")
+                            val repeatIconColor by animateColorAsState(targetValue = if (isRepeatActive) activeIcon else contentColor.copy(alpha=0.5f), label = "repeatIcon")
 
                             val autoplayInteraction = remember { MutableInteractionSource() }
                             val isAutoplayActive = !playerState.isExclusiveQueue
                             val isAutoplayPressed by autoplayInteraction.collectIsPressedAsState()
                             val autoplayScale by animateFloatAsState(targetValue = if (isAutoplayPressed) 0.85f else 1.0f, label = "autoplayScale")
-                            val autoplayBgColor by animateColorAsState(targetValue = if (isAutoplayActive) Color(0xFFFA243C) else contentColor.copy(alpha=0.15f), label = "autoplayBg")
-                            val autoplayIconColor by animateColorAsState(targetValue = if (isAutoplayActive) Color.White else contentColor.copy(alpha=0.5f), label = "autoplayIcon")
+                            val autoplayBgColor by animateColorAsState(targetValue = if (isAutoplayActive) activeBg else contentColor.copy(alpha=0.15f), label = "autoplayBg")
+                            val autoplayIconColor by animateColorAsState(targetValue = if (isAutoplayActive) activeIcon else contentColor.copy(alpha=0.5f), label = "autoplayIcon")
 
                             val romajiInteraction = remember { MutableInteractionSource() }
                             val isRomajiActive = isRomajiEnabled
                             val isRomajiPressed by romajiInteraction.collectIsPressedAsState()
                             val romajiScale by animateFloatAsState(targetValue = if (isRomajiPressed) 0.85f else 1.0f, label = "romajiScale")
-                            val romajiBgColor by animateColorAsState(targetValue = if (isRomajiActive) Color(0xFFFA243C) else contentColor.copy(alpha=0.15f), label = "romajiBg")
-                            val romajiIconColor by animateColorAsState(targetValue = if (isRomajiActive) Color.White else contentColor.copy(alpha=0.5f), label = "romajiIcon")
+                            val romajiBgColor by animateColorAsState(targetValue = if (isRomajiActive) activeBg else contentColor.copy(alpha=0.15f), label = "romajiBg")
+                            val romajiIconColor by animateColorAsState(targetValue = if (isRomajiActive) activeIcon else contentColor.copy(alpha=0.5f), label = "romajiIcon")
 
                             Row(modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Box(
@@ -1321,7 +1326,7 @@ fun PlayerScreen(
                            LazyColumn(
                                 state = queueListState, 
                                 modifier = Modifier.weight(1f).padding(horizontal = 24.dp).nestedScroll(nestedScrollConnection), 
-                                contentPadding = PaddingValues(bottom = 260.dp),
+                                contentPadding = PaddingValues(bottom = 360.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                               // 1. Manual Queue Section (Album/Playlist)
@@ -1545,7 +1550,7 @@ fun PlayerScreen(
                                                  }
                                              }
                                          }
-                                         item { Spacer(modifier = Modifier.height(260.dp)) }
+                                         item { Spacer(modifier = Modifier.height(360.dp)) }
                                      }
                                  } else {
                                      Box(
@@ -1582,8 +1587,8 @@ fun PlayerScreen(
                                        Brush.verticalGradient(
                                            colorStops = arrayOf(
                                                0.0f to Color.Transparent,
-                                               0.1f to dominantColor,
-                                               1.0f to dominantColor
+                                               0.15f to bottomAverageColor,
+                                               1.0f to bottomAverageColor
                                            )
                                        )
                                    )
@@ -1600,7 +1605,7 @@ fun PlayerScreen(
                                       modifier = Modifier.fillMaxWidth().height(24.dp),
                                       activeColor = contentColor,
                                       inactiveColor = contentColor.copy(alpha = 0.3f),
-                                      barHeightDp = 6.dp
+                                      barHeightDp = 8.dp
                                   )
                                   Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                       Text(formatDuration(currentPosition), color = contentColor.copy(alpha = 0.6f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
@@ -1761,7 +1766,7 @@ fun PlayerScreen(
                               },
                           activeColor = contentColor,
                           inactiveColor = contentColor.copy(alpha = 0.3f),
-                          barHeightDp = 6.dp
+                          barHeightDp = 8.dp
                       )
                       Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                           Text(formatDuration(currentPosition), color = contentColor.copy(alpha = 0.6f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
@@ -2088,7 +2093,7 @@ fun PlayerBottomControls(
                 modifier = Modifier.fillMaxWidth().height(24.dp),
                 activeColor = contentColor,
                 inactiveColor = contentColor.copy(alpha = 0.3f),
-                barHeightDp = 6.dp
+                barHeightDp = 8.dp
             )
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(formatDuration(currentPosition), color = contentColor.copy(alpha = 0.6f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
@@ -2102,9 +2107,11 @@ fun PlayerBottomControls(
                 iconId = R.drawable.previous,
                 contentDescription = "Previous",
                 contentColor = contentColor,
+                sizeDp = 84.dp,
+                iconSizeDp = 64.dp,
                 onClick = onSkipPrevious
             )
-            Spacer(modifier = Modifier.width(36.dp))
+            Spacer(modifier = Modifier.width(16.dp))
             val playPauseInteractionSource = remember { MutableInteractionSource() }
             val isPlayPausePressed by playPauseInteractionSource.collectIsPressedAsState()
 
@@ -2124,7 +2131,7 @@ fun PlayerBottomControls(
 
             Box(
                 modifier = Modifier
-                    .size(56.dp)
+                    .size(84.dp)
                     .clip(CircleShape)
                     .background(playPauseBgColor)
                     .clickable(
@@ -2147,18 +2154,20 @@ fun PlayerBottomControls(
                         contentDescription = if (playing) "Pause" else "Play",
                         tint = contentColor,
                         modifier = Modifier
-                            .size(52.dp)
+                            .size(64.dp)
                             .graphicsLayer {
                                 rotationZ = playPauseRotation
                             }
                     )
                 }
             }
-            Spacer(modifier = Modifier.width(36.dp))
+            Spacer(modifier = Modifier.width(16.dp))
             AnimatedSkipButton(
                 iconId = R.drawable.forward,
                 contentDescription = "Next",
                 contentColor = contentColor,
+                sizeDp = 84.dp,
+                iconSizeDp = 64.dp,
                 onClick = onSkipNext
             )
         }
@@ -2172,15 +2181,15 @@ fun PlayerBottomControls(
                     tint = contentColor.copy(alpha = 0.7f),
                     modifier = Modifier.size(16.dp)
                 )
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(20.dp))
                 AppleMusicSlider(
                     value = volumePosition, onValueChange = { onVolumeChange(it) },
                     modifier = Modifier.weight(1f).height(24.dp),
                     activeColor = contentColor,
                     inactiveColor = contentColor.copy(alpha = 0.2f),
-                    barHeightDp = 6.dp
+                    barHeightDp = 8.dp
                 )
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(20.dp))
                 Icon(
                     painter = painterResource(id = R.drawable.albumspeakerlarge),
                     contentDescription = "High volume",
@@ -2253,6 +2262,8 @@ fun AnimatedSkipButton(
     iconId: Int,
     contentDescription: String,
     contentColor: Color,
+    sizeDp: androidx.compose.ui.unit.Dp = 56.dp,
+    iconSizeDp: androidx.compose.ui.unit.Dp = 52.dp,
     onClick: () -> Unit
 ) {
     var isPressed by remember { mutableStateOf(false) }
@@ -2261,7 +2272,7 @@ fun AnimatedSkipButton(
     
     Box(
         modifier = Modifier
-            .size(56.dp)
+            .size(sizeDp)
             .clip(CircleShape)
             .background(contentColor.copy(alpha = bgAlpha))
             .clickable(
@@ -2286,7 +2297,7 @@ fun AnimatedSkipButton(
             contentDescription = contentDescription,
             tint = contentColor,
             modifier = Modifier
-                .size(52.dp)
+                .size(iconSizeDp)
                 .graphicsLayer { scaleX = scale; scaleY = scale }
         )
     }
@@ -2299,7 +2310,7 @@ fun AppleMusicSlider(
     modifier: Modifier = Modifier,
     activeColor: Color = Color.White,
     inactiveColor: Color = Color.White.copy(alpha = 0.3f),
-    barHeightDp: androidx.compose.ui.unit.Dp = 6.dp
+    barHeightDp: androidx.compose.ui.unit.Dp = 8.dp
 ) {
     var isDragging by remember { mutableStateOf(false) }
     val scale by androidx.compose.animation.core.animateFloatAsState(
@@ -2455,7 +2466,8 @@ fun LandscapePlayerLayout(
     contentColor: Color,
     onShowOptionsMenu: () -> Unit,
     onShowLyricsMenu: () -> Unit,
-    onShowPlaylistMenu: () -> Unit
+    onShowPlaylistMenu: () -> Unit,
+    isBottomBarCollapsed: Boolean
 ) {
     val context = LocalContext.current
     val density = androidx.compose.ui.platform.LocalDensity.current
@@ -2473,51 +2485,107 @@ fun LandscapePlayerLayout(
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .background(rightSideAverageColor)
-            .graphicsLayer {
-                translationY = dragOffsetY.value
-            }
-            .pointerInput(showLyrics, showQueue) {
-                if (!showLyrics && !showQueue) {
-                    val maxDragDistance = size.height.toFloat()
-                    detectVerticalDragGestures(
-                        onDragEnd = {
-                            val currentOffsetY = dragOffsetY.value
-                            if (currentOffsetY > with(density) { 150.dp.toPx() }) {
-                                scope.launch {
-                                    dragOffsetY.animateTo(
-                                        targetValue = maxDragDistance,
-                                        animationSpec = tween(300, easing = FastOutSlowInEasing)
-                                    )
-                                    onClose()
-                                }
-                            } else {
-                                scope.launch {
-                                    dragOffsetY.animateTo(0f, spring())
-                                }
-                            }
-                        }
-                    ) { change, dragAmount ->
-                        if (dragAmount > 0f || dragOffsetY.value > 0f) {
-                            val newOffset = (dragOffsetY.value + dragAmount * 0.7f).coerceAtLeast(0f)
-                            scope.launch { dragOffsetY.snapTo(newOffset) }
-                        }
-                    }
-                }
-            }
     ) {
         val maxWidth = maxWidth
         val maxHeight = maxHeight
         val audioManager = remember { context.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager }
         val maxVolume = remember { audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC).toFloat() }
 
+        val normalTargetOffsetX = 28.dp
+        val collapsedTargetOffsetX = 92.dp
+        val normalTargetOffsetY = maxHeight - 148.dp
+        val collapsedTargetOffsetY = maxHeight - 64.dp
+        
+        val targetOffsetX = if (isBottomBarCollapsed) collapsedTargetOffsetX else normalTargetOffsetX
+        val targetOffsetY = if (isBottomBarCollapsed) collapsedTargetOffsetY else normalTargetOffsetY
+        
+        val maxDragDistance = with(density) { targetOffsetY.toPx() }
+        val dragProgress = if (maxDragDistance > 0f) (dragOffsetY.value / maxDragDistance).coerceIn(0f, 1f) else 0f
+        val bgAlpha = 1f - dragProgress
 
+        val startWidth = maxHeight
+        val startHeight = maxHeight
+        val startOffsetX = 0.dp
+        val startOffsetY = 0.dp
+        val startCorner = 0.dp
 
-        // 2. Left side Album Art (full height square)
+        val threshold = 0.70f
+        
+        val imgWidthTarget: androidx.compose.ui.unit.Dp
+        val imgHeightTarget: androidx.compose.ui.unit.Dp
+        val imgOffsetXTarget: androidx.compose.ui.unit.Dp
+        val imgOffsetYTarget: androidx.compose.ui.unit.Dp
+        val imageCornerTarget: androidx.compose.ui.unit.Dp
+        val contentAlpha: Float
+        
+        if (dragProgress <= threshold) {
+            val p1 = if (threshold > 0f) dragProgress / threshold else 0f
+            imgWidthTarget = startWidth
+            imgHeightTarget = startHeight
+            imgOffsetXTarget = startOffsetX
+            imgOffsetYTarget = startOffsetY
+            imageCornerTarget = startCorner
+            contentAlpha = (1f - p1).coerceIn(0f, 1f)
+        } else {
+            val p2 = if (threshold < 1f) (dragProgress - threshold) / (1f - threshold) else 1f
+            imgWidthTarget = androidx.compose.ui.unit.lerp(startWidth, 40.dp, p2)
+            imgHeightTarget = androidx.compose.ui.unit.lerp(startHeight, 40.dp, p2)
+            imgOffsetXTarget = androidx.compose.ui.unit.lerp(startOffsetX, targetOffsetX, p2)
+            imgOffsetYTarget = androidx.compose.ui.unit.lerp(startOffsetY, 0.dp, p2)
+            imageCornerTarget = androidx.compose.ui.unit.lerp(startCorner, 20.dp, p2)
+            contentAlpha = 0f
+        }
+
+        val imgWidth by androidx.compose.animation.core.animateDpAsState(imgWidthTarget, label = "imgWidth")
+        val imgHeight by androidx.compose.animation.core.animateDpAsState(imgHeightTarget, label = "imgHeight")
+        val imgOffsetX by androidx.compose.animation.core.animateDpAsState(imgOffsetXTarget, label = "imgOffsetX")
+        val imgOffsetY by androidx.compose.animation.core.animateDpAsState(imgOffsetYTarget, label = "imgOffsetY")
+        val imgCorner by androidx.compose.animation.core.animateDpAsState(imageCornerTarget, label = "imgCorner")
+
         Box(
             modifier = Modifier
-                .align(Alignment.CenterStart)
-                .size(width = maxHeight, height = maxHeight)
+                .fillMaxSize()
+                .background(rightSideAverageColor.copy(alpha = bgAlpha))
+                .graphicsLayer {
+                    translationY = dragOffsetY.value
+                }
+                .pointerInput(showLyrics, showQueue) {
+                    if (!showLyrics && !showQueue) {
+                        detectVerticalDragGestures(
+                            onDragEnd = {
+                                val currentOffsetY = dragOffsetY.value
+                                if (currentOffsetY > with(density) { 150.dp.toPx() }) {
+                                    scope.launch {
+                                        dragOffsetY.animateTo(
+                                            targetValue = maxDragDistance,
+                                            animationSpec = tween(300, easing = FastOutSlowInEasing)
+                                        )
+                                        onClose()
+                                    }
+                                } else {
+                                    scope.launch {
+                                        dragOffsetY.animateTo(0f, spring())
+                                    }
+                                }
+                            }
+                        ) { change, dragAmount ->
+                            if (dragAmount > 0f || dragOffsetY.value > 0f) {
+                                val newOffset = (dragOffsetY.value + dragAmount * 0.7f).coerceAtLeast(0f)
+                                scope.launch { dragOffsetY.snapTo(newOffset) }
+                            }
+                        }
+                    }
+                }
+        ) {
+
+
+
+        // 2. Left side Album Art (with morphing layout)
+        Box(
+            modifier = Modifier
+                .offset(x = imgOffsetX, y = imgOffsetY)
+                .size(width = imgWidth, height = imgHeight)
+                .clip(RoundedCornerShape(imgCorner))
         ) {
             // Sharp base cover
             AsyncImage(
@@ -2528,7 +2596,22 @@ fun LandscapePlayerLayout(
                 imageLoader = animatedImageLoader,
                 contentDescription = "Album Art",
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                    .drawWithContent {
+                        drawContent()
+                        drawRect(
+                            brush = Brush.horizontalGradient(
+                                colorStops = arrayOf(
+                                    0.0f to Color.Black,
+                                    (0.75f + 0.25f * (1f - contentAlpha)).coerceIn(0.75f, 1.0f) to Color.Black,
+                                    1.0f to Color.Black.copy(alpha = 1f - contentAlpha)
+                                )
+                            ),
+                            blendMode = BlendMode.DstIn
+                        )
+                    }
             )
 
             val currentAnimatedUrl = animatedArtworkUrl
@@ -2540,7 +2623,25 @@ fun LandscapePlayerLayout(
                 }
                 com.mrtdk.liquid_glass.ui.components.AnimatedArtworkPlayer(
                     videoUrl = currentAnimatedUrl,
-                    modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (isVideoPlaying) 1f else 0f },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { 
+                            alpha = if (isVideoPlaying) 1f else 0f 
+                            compositingStrategy = CompositingStrategy.Offscreen
+                        }
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(
+                                brush = Brush.horizontalGradient(
+                                    colorStops = arrayOf(
+                                        0.0f to Color.Black,
+                                        (0.75f + 0.25f * (1f - contentAlpha)).coerceIn(0.75f, 1.0f) to Color.Black,
+                                        1.0f to Color.Black.copy(alpha = 1f - contentAlpha)
+                                    )
+                                ),
+                                blendMode = BlendMode.DstIn
+                            )
+                        },
                     isPaused = false,
                     enableFrameCapture = true,
                     onPlaybackStarted = { onVideoPlayingChange(true) },
@@ -2576,27 +2677,65 @@ fun LandscapePlayerLayout(
                 )
             }
 
-        }
-
-        // 3b. Right edge fade: blurred background color gradient on top of the album art right edge
-        Box(
-            modifier = Modifier
-                .offset(x = maxHeight - 150.dp, y = 0.dp)
-                .width(200.dp)
-                .fillMaxHeight()
-                .blur(40.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
-        ) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                drawRect(
-                    brush = Brush.horizontalGradient(
-                        colorStops = arrayOf(
-                            0.0f to Color.Transparent,
-                            0.2f to Color.Transparent,
-                            0.5f to rightSideAverageColor.copy(alpha = 0.6f),
-                            0.75f to rightSideAverageColor.copy(alpha = 0.9f),
-                            1.0f to rightSideAverageColor
-                        )
-                    )
+            // Blurred overlay to smooth the transition on the right edge
+            val currentBitmap = coverBitmap
+            if (currentBitmap != null && contentAlpha > 0f) {
+                Image(
+                    bitmap = currentBitmap,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { 
+                            alpha = contentAlpha
+                            compositingStrategy = CompositingStrategy.Offscreen 
+                        }
+                        .cloudy(radius = 100)
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(
+                                brush = Brush.horizontalGradient(
+                                    colorStops = arrayOf(
+                                        0.0f to Color.Transparent,
+                                        0.70f to Color.Transparent,
+                                        0.85f to Color.Black,
+                                        1.0f to Color.Transparent
+                                    )
+                                ),
+                                blendMode = BlendMode.DstIn
+                            )
+                        }
+                )
+            } else if (contentAlpha > 0f) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(hdArtUrl)
+                        .size(150)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { 
+                            alpha = contentAlpha
+                            compositingStrategy = CompositingStrategy.Offscreen 
+                        }
+                        .cloudy(radius = 100)
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(
+                                brush = Brush.horizontalGradient(
+                                    colorStops = arrayOf(
+                                        0.0f to Color.Transparent,
+                                        0.70f to Color.Transparent,
+                                        0.85f to Color.Black,
+                                        1.0f to Color.Transparent
+                                    )
+                                ),
+                                blendMode = BlendMode.DstIn
+                            )
+                        }
                 )
             }
         }
@@ -2609,6 +2748,9 @@ fun LandscapePlayerLayout(
                 .width(rightSideWidth)
                 .fillMaxHeight()
                 .padding(vertical = 16.dp, horizontal = 24.dp)
+                .graphicsLayer {
+                    alpha = contentAlpha
+                }
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 // Shared Top Header Row: Title/Artist and Star/Options buttons
@@ -2882,29 +3024,33 @@ fun LandscapePlayerLayout(
                             val isShuffleActive = shuffleModeEnabled
                             val isShufflePressed by shuffleInteraction.collectIsPressedAsState()
                             val shuffleScale by animateFloatAsState(targetValue = if (isShufflePressed) 0.85f else 1.0f, label = "shuffleScale")
-                            val shuffleBgColor by animateColorAsState(targetValue = if (isShuffleActive) Color(0xFFFA243C) else contentColor.copy(alpha=0.15f), label = "shuffleBg")
-                            val shuffleIconColor by animateColorAsState(targetValue = if (isShuffleActive) Color.White else contentColor.copy(alpha=0.5f), label = "shuffleIcon")
+                            
+                            val activeBg = contentColor.copy(alpha = 0.9f)
+                            val activeIcon = if (contentColor == Color.White) rightSideAverageColor else Color.White
+
+                            val shuffleBgColor by animateColorAsState(targetValue = if (isShuffleActive) activeBg else contentColor.copy(alpha=0.15f), label = "shuffleBg")
+                            val shuffleIconColor by animateColorAsState(targetValue = if (isShuffleActive) activeIcon else contentColor.copy(alpha=0.5f), label = "shuffleIcon")
 
                             val repeatInteraction = remember { MutableInteractionSource() }
                             val isRepeatActive = repeatMode != androidx.media3.common.Player.REPEAT_MODE_OFF
                             val isRepeatPressed by repeatInteraction.collectIsPressedAsState()
                             val repeatScale by animateFloatAsState(targetValue = if (isRepeatPressed) 0.85f else 1.0f, label = "repeatScale")
-                            val repeatBgColor by animateColorAsState(targetValue = if (isRepeatActive) Color(0xFFFA243C) else contentColor.copy(alpha=0.15f), label = "repeatBg")
-                            val repeatIconColor by animateColorAsState(targetValue = if (isRepeatActive) Color.White else contentColor.copy(alpha=0.5f), label = "repeatIcon")
+                            val repeatBgColor by animateColorAsState(targetValue = if (isRepeatActive) activeBg else contentColor.copy(alpha=0.15f), label = "repeatBg")
+                            val repeatIconColor by animateColorAsState(targetValue = if (isRepeatActive) activeIcon else contentColor.copy(alpha=0.5f), label = "repeatIcon")
 
                             val autoplayInteraction = remember { MutableInteractionSource() }
                             val isAutoplayActive = playerState?.isExclusiveQueue != true
                             val isAutoplayPressed by autoplayInteraction.collectIsPressedAsState()
                             val autoplayScale by animateFloatAsState(targetValue = if (isAutoplayPressed) 0.85f else 1.0f, label = "autoplayScale")
-                            val autoplayBgColor by animateColorAsState(targetValue = if (isAutoplayActive) Color(0xFFFA243C) else contentColor.copy(alpha=0.15f), label = "autoplayBg")
-                            val autoplayIconColor by animateColorAsState(targetValue = if (isAutoplayActive) Color.White else contentColor.copy(alpha=0.5f), label = "autoplayIcon")
+                            val autoplayBgColor by animateColorAsState(targetValue = if (isAutoplayActive) activeBg else contentColor.copy(alpha=0.15f), label = "autoplayBg")
+                            val autoplayIconColor by animateColorAsState(targetValue = if (isAutoplayActive) activeIcon else contentColor.copy(alpha=0.5f), label = "autoplayIcon")
 
                             val romajiInteraction = remember { MutableInteractionSource() }
                             val isRomajiActive = isRomajiEnabled
                             val isRomajiPressed by romajiInteraction.collectIsPressedAsState()
                             val romajiScale by animateFloatAsState(targetValue = if (isRomajiPressed) 0.85f else 1.0f, label = "romajiScale")
-                            val romajiBgColor by animateColorAsState(targetValue = if (isRomajiActive) Color(0xFFFA243C) else contentColor.copy(alpha=0.15f), label = "romajiBg")
-                            val romajiIconColor by animateColorAsState(targetValue = if (isRomajiActive) Color.White else contentColor.copy(alpha=0.5f), label = "romajiIcon")
+                            val romajiBgColor by animateColorAsState(targetValue = if (isRomajiActive) activeBg else contentColor.copy(alpha=0.15f), label = "romajiBg")
+                            val romajiIconColor by animateColorAsState(targetValue = if (isRomajiActive) activeIcon else contentColor.copy(alpha=0.5f), label = "romajiIcon")
 
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -3083,7 +3229,7 @@ fun LandscapePlayerLayout(
                                 modifier = Modifier.fillMaxWidth().height(24.dp),
                                 activeColor = contentColor,
                                 inactiveColor = contentColor.copy(alpha = 0.3f),
-                                barHeightDp = 6.dp
+                                barHeightDp = 8.dp
                             )
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -3105,9 +3251,11 @@ fun LandscapePlayerLayout(
                                     iconId = R.drawable.previous,
                                     contentDescription = "Previous",
                                     contentColor = contentColor,
+                                    sizeDp = 84.dp,
+                                    iconSizeDp = 64.dp,
                                     onClick = onSkipPrevious
                                 )
-                                Spacer(modifier = Modifier.width(36.dp))
+                                Spacer(modifier = Modifier.width(16.dp))
                                 
                                 val playPauseInteractionSource = remember { MutableInteractionSource() }
                                 val isPlayPausePressed by playPauseInteractionSource.collectIsPressedAsState()
@@ -3126,7 +3274,7 @@ fun LandscapePlayerLayout(
 
                                 Box(
                                     modifier = Modifier
-                                        .size(56.dp)
+                                        .size(84.dp)
                                         .clip(CircleShape)
                                         .background(playPauseBgColor)
                                         .clickable(
@@ -3149,7 +3297,7 @@ fun LandscapePlayerLayout(
                                             contentDescription = if (playing) "Pause" else "Play",
                                             tint = contentColor,
                                             modifier = Modifier
-                                                .size(52.dp)
+                                                .size(64.dp)
                                                 .graphicsLayer {
                                                     rotationZ = playPauseRotation
                                                 }
@@ -3157,11 +3305,13 @@ fun LandscapePlayerLayout(
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.width(36.dp))
+                                Spacer(modifier = Modifier.width(16.dp))
                                 AnimatedSkipButton(
                                     iconId = R.drawable.forward,
                                     contentDescription = "Next",
                                     contentColor = contentColor,
+                                    sizeDp = 84.dp,
+                                    iconSizeDp = 64.dp,
                                     onClick = onSkipNext
                                 )
                             }
@@ -3179,7 +3329,7 @@ fun LandscapePlayerLayout(
                                     tint = contentColor.copy(alpha = 0.7f),
                                     modifier = Modifier.size(16.dp)
                                 )
-                                Spacer(modifier = Modifier.width(16.dp))
+                                Spacer(modifier = Modifier.width(20.dp))
                                 AppleMusicSlider(
                                     value = volumePosition,
                                     onValueChange = { v ->
@@ -3190,9 +3340,9 @@ fun LandscapePlayerLayout(
                                     modifier = Modifier.weight(1f).height(24.dp),
                                     activeColor = contentColor,
                                     inactiveColor = contentColor.copy(alpha = 0.2f),
-                                    barHeightDp = 6.dp
+                                    barHeightDp = 8.dp
                                 )
-                                Spacer(modifier = Modifier.width(16.dp))
+                                Spacer(modifier = Modifier.width(20.dp))
                                 Icon(
                                     painter = painterResource(id = R.drawable.albumspeakerlarge),
                                     contentDescription = "High volume",
@@ -3265,6 +3415,7 @@ fun LandscapePlayerLayout(
                     }
                 }
             }
+        }
         }
     }
 }

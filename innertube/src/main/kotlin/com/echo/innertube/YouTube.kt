@@ -262,10 +262,14 @@ object YouTube {
                 ?.mapNotNull(NewReleaseAlbumPage::fromMusicTwoRowItemRenderer)
                 .orEmpty()
 
+            val description = response.contents?.twoColumnBrowseResultsRenderer?.tabs?.firstOrNull()?.tabRenderer?.content?.sectionListRenderer?.contents?.mapNotNull { it.musicDescriptionShelfRenderer }?.firstOrNull()?.description?.runs?.joinToString("") { it.text }
+                ?: response.contents?.singleColumnBrowseResultsRenderer?.tabs?.firstOrNull()?.tabRenderer?.content?.sectionListRenderer?.contents?.mapNotNull { it.musicDescriptionShelfRenderer }?.firstOrNull()?.description?.runs?.joinToString("") { it.text }
+
             return@runCatching AlbumPage(
                 album = albumItem,
                 songs = songs,
-                otherVersions = otherVersions
+                otherVersions = otherVersions,
+                description = description
             )
         }
     }

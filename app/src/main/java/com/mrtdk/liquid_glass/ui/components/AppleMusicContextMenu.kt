@@ -2179,17 +2179,13 @@ fun PlayerOptionsMenu(
                 }
                 .width(280.dp)
                 .wrapContentHeight()
-                .drawBackdrop(
-                    backdrop = backdrop,
-                    shape = { RoundedCornerShape(cornerRadius.dp) },
-                    effects = {
-                        vibrancy()
-                        blur(8f.dp.toPx())
-                        lens(24f.dp.toPx(), 24f.dp.toPx())
-                    },
-                    onDrawSurface = {
-                        drawRect(tintColor)
-                    }
+                .background(
+                    color = Color(0xFF1E1E1E).copy(alpha = 0.9f),
+                    shape = RoundedCornerShape(cornerRadius.dp)
+                )
+                .background(
+                    color = tintColor.copy(alpha = 0.25f),
+                    shape = RoundedCornerShape(cornerRadius.dp)
                 )
                 .clip(RoundedCornerShape(cornerRadius.dp))
         ) {
