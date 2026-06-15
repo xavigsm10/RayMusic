@@ -68,6 +68,8 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.BlurredEdgeTreatment
+import com.skydoves.cloudy.cloudy
+import androidx.compose.foundation.Image
 import kotlinx.coroutines.coroutineScope
 import com.echo.innertube.models.ArtistItem
 import com.echo.innertube.models.SongItem
@@ -1295,15 +1297,15 @@ private fun FeaturedSuggestionCard(
         // Capa 1: Reflejo Líquido Estirado 1D
         val currentCoverBitmap = coverBitmap
         if (currentCoverBitmap != null) {
-            val overlapDp = 270.dp * 0.20f // 54.dp
+            val overlapDp = 20.dp
             Box(
                 modifier = Modifier
-                    .offset(y = 270.dp - overlapDp) // Empieza a los 216.dp
-                    .size(width = 280.dp, height = 110.dp + overlapDp) // Altura es 164.dp
+                    .offset(y = 270.dp - overlapDp) // Empieza a los 250.dp
+                    .size(width = 280.dp, height = 110.dp + overlapDp) // Altura es 130.dp
                     .graphicsLayer {
                         compositingStrategy = CompositingStrategy.Offscreen
                     }
-                    .blur(25.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+                    .blur(15.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
                     .drawWithContent {
                         drawContent()
                         drawRect(
@@ -1325,11 +1327,47 @@ private fun FeaturedSuggestionCard(
                     }
             ) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
+                    val containerW = 280.dp.toPx()
+                    val containerH = 270.dp.toPx()
+                    val bitmapW = currentCoverBitmap.width.toFloat()
+                    val bitmapH = currentCoverBitmap.height.toFloat()
+
+                    val containerRatio = containerW / containerH
+                    val bitmapRatio = bitmapW / bitmapH
+
+                    val srcX: Float
+                    val srcWidth: Float
+                    val srcY: Float
+
                     val sampleHeight = 5
+                    val sampleH = sampleHeight.coerceAtMost(currentCoverBitmap.height).coerceAtLeast(1)
+
+                    if (containerRatio < bitmapRatio) {
+                        // El contenedor es proporcionalmente más alto (se recorta izq/der)
+                        val scale = containerH / bitmapH
+                        val visibleWidth = containerW / scale
+                        srcX = (bitmapW - visibleWidth) / 2f
+                        srcWidth = visibleWidth
+                        srcY = bitmapH - sampleH
+                    } else {
+                        // El contenedor es proporcionalmente más ancho (se recorta arriba/abajo)
+                        val scale = containerW / bitmapW
+                        val visibleHeight = containerW / scale
+                        srcX = 0f
+                        srcWidth = bitmapW
+                        val cropY = (bitmapH - visibleHeight) / 2f
+                        val visibleBottomY = cropY + visibleHeight
+                        srcY = (visibleBottomY - sampleH).coerceIn(0f, bitmapH - sampleH)
+                    }
+
+                    val srcXInt = srcX.toInt().coerceIn(0, currentCoverBitmap.width - 1)
+                    val srcWInt = srcWidth.toInt().coerceIn(1, currentCoverBitmap.width - srcXInt)
+                    val srcYInt = srcY.toInt().coerceIn(0, currentCoverBitmap.height - sampleH)
+
                     drawImage(
                         image = currentCoverBitmap,
-                        srcOffset = IntOffset(0, currentCoverBitmap.height - sampleHeight),
-                        srcSize = IntSize(currentCoverBitmap.width, sampleHeight),
+                        srcOffset = IntOffset(srcXInt, srcYInt),
+                        srcSize = IntSize(srcWInt, sampleH),
                         dstOffset = IntOffset.Zero,
                         dstSize = IntSize(size.width.toInt(), size.height.toInt()),
                         filterQuality = FilterQuality.Low
@@ -1361,7 +1399,7 @@ private fun FeaturedSuggestionCard(
                         brush = Brush.verticalGradient(
                             colorStops = arrayOf(
                                 0f to Color.Black,
-                                0.80f to Color.Black,
+                                0.95f to Color.Black,
                                 1f to Color.Transparent
                             )
                         ),

@@ -331,6 +331,31 @@ fun ArtistScreen(
         }
     }
 
+    val essentialsDescriptions = remember { mutableStateMapOf<String, String>() }
+    LaunchedEffect(essentialsItems) {
+        essentialsItems.forEach { album ->
+            if (!essentialsDescriptions.containsKey(album.id)) {
+                launch(Dispatchers.IO) {
+                    val albumResult = YouTube.album(album.id).getOrNull()
+                    val desc = albumResult?.description
+                    withContext(Dispatchers.Main) {
+                        if (!desc.isNullOrBlank()) {
+                            essentialsDescriptions[album.id] = desc
+                        } else {
+                            val lang = java.util.Locale.getDefault().language
+                            val fallbackDesc = if (lang == "es") {
+                                "Un álbum imprescindible en la discografía de ${artistState.name} que define su legado musical."
+                            } else {
+                                "An essential album in the discography of ${artistState.name} that defines their musical legacy."
+                            }
+                            essentialsDescriptions[album.id] = fallbackDesc
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // Handle back for overlays
     androidx.activity.compose.BackHandler(enabled = showAllAlbumsOverlay || showAllSectionOverlay || showAllSongsOverlay || showInfoOverlay) {
         when {
@@ -777,7 +802,7 @@ fun ArtistScreen(
 
                     items(essentialsItems.size) { index ->
                         val album = essentialsItems[index]
-                        val albumDescription = getAlbumDescription(artistState.name, album.title)
+                        val albumDescription = essentialsDescriptions[album.id] ?: getAlbumDescription(artistState.name, album.title)
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -1052,6 +1077,33 @@ fun ArtistScreen(
                                 contentDescription = artistState.name,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize()
+                            )
+
+                            // Blurred bottom portion of the image (matching the main artist page)
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(hdThumb)
+                                    .size(150)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                                    .cloudy(radius = 120)
+                                    .drawWithContent {
+                                        drawContent()
+                                        drawRect(
+                                            brush = Brush.verticalGradient(
+                                                0f to Color.Transparent,
+                                                0.35f to Color.Transparent,
+                                                0.65f to Color.Black.copy(alpha = 0.7f),
+                                                1f to Color.Black
+                                            ),
+                                            blendMode = BlendMode.DstIn
+                                        )
+                                    }
                             )
 
                             // Gradient from transparent to finalBackgroundColor at the bottom
