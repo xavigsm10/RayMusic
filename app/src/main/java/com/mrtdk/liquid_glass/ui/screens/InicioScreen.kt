@@ -330,6 +330,22 @@ fun InicioScreen(
     }
 
     val listState = rememberLazyListState()
+    var savedIndex by remember { mutableStateOf(-1) }
+    var savedOffset by remember { mutableStateOf(0) }
+
+    val outerOnAlbumSelected = onAlbumSelected
+    val onAlbumSelected: (AlbumState) -> Unit = { album ->
+        savedIndex = listState.firstVisibleItemIndex
+        savedOffset = listState.firstVisibleItemScrollOffset
+        outerOnAlbumSelected(album)
+    }
+
+    LaunchedEffect(SharedTransitionState.isDetailOpen) {
+        if (!SharedTransitionState.isDetailOpen && savedIndex != -1) {
+            listState.scrollToItem(savedIndex, savedOffset)
+            savedIndex = -1
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
@@ -550,11 +566,15 @@ fun InicioScreen(
                     items(state.featuredPlaylists.size) { playlistIndex ->
                         val playlist = state.featuredPlaylists[playlistIndex]
                         val hdThumb = upgradeThumb(playlist.thumbnail)
+                        var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
                         
                         Column(
                             modifier = Modifier
                                 .width(320.dp)
+                                .wiggleOnScroll(playlist.id, lazyListState = listState)
                                 .clickable {
+                                    SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                    SharedTransitionState.lastOpenedId = playlist.id
                                     onAlbumSelected(AlbumState(
                                         id = playlist.id,
                                         playlistId = playlist.id,
@@ -584,6 +604,7 @@ fun InicioScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(320.dp)
+                                    .onGloballyPositioned { imageCoords = it }
                                     .clip(RoundedCornerShape(16.dp))
                                     .background(Color(0xFF1C1C1E))
                             ) {
@@ -654,18 +675,23 @@ fun InicioScreen(
                                 else -> ""
                             }
                             val isCircle = item is com.echo.innertube.models.ArtistItem
+                            var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
                             Column(
                                 modifier = Modifier
                                     .width(180.dp)
+                                    .wiggleOnScroll(item.id, lazyListState = listState)
                                     .clickable {
+                                        SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
                                         when (item) {
                                             is com.echo.innertube.models.ArtistItem -> {
+                                                SharedTransitionState.lastOpenedId = item.id
                                                 onArtistSelected(com.mrtdk.liquid_glass.ui.screens.ArtistState(item.id, item.title, item.thumbnail))
                                             }
                                             is com.echo.innertube.models.SongItem -> {
                                                 onSongSelected(PlayerState(item.title, item.artists.joinToString { it.name }, item.thumbnail, item.id))
                                             }
                                             is com.echo.innertube.models.AlbumItem -> {
+                                                SharedTransitionState.lastOpenedId = item.id
                                                 onAlbumSelected(com.mrtdk.liquid_glass.ui.screens.AlbumState(item.id, item.playlistId ?: item.id, item.title, item.artists?.joinToString { it.name } ?: "Varios", item.thumbnail, item.year as? Int))
                                             }
                                             else -> {}
@@ -676,7 +702,10 @@ fun InicioScreen(
                                     model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
                                     contentDescription = title,
                                     contentScale = ContentScale.Crop,
-                                    modifier = Modifier.size(180.dp).clip(if (isCircle) CircleShape else RoundedCornerShape(12.dp))
+                                    modifier = Modifier
+                                        .size(180.dp)
+                                        .onGloballyPositioned { imageCoords = it }
+                                        .clip(if (isCircle) CircleShape else RoundedCornerShape(12.dp))
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -703,11 +732,15 @@ fun InicioScreen(
                             items(state.featuredPlaylists.size) { playlistIndex ->
                                 val playlist = state.featuredPlaylists[playlistIndex]
                                 val hdThumb = upgradeThumb(playlist.thumbnail)
+                                var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
                                 
                                 Column(
                                     modifier = Modifier
                                         .width(320.dp)
+                                        .wiggleOnScroll(playlist.id, lazyListState = listState)
                                         .clickable {
+                                            SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                            SharedTransitionState.lastOpenedId = playlist.id
                                             onAlbumSelected(AlbumState(
                                                 id = playlist.id,
                                                 playlistId = playlist.id,
@@ -737,6 +770,7 @@ fun InicioScreen(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .height(320.dp)
+                                            .onGloballyPositioned { imageCoords = it }
                                             .clip(RoundedCornerShape(16.dp))
                                             .background(Color(0xFF1C1C1E))
                                     ) {
@@ -887,6 +921,7 @@ fun InicioScreen(
                                         subtitleStr = itm.artists?.joinToString { it.name } ?: "Album"
                                         thumbUrl = itm.thumbnail
                                         clickAction = {
+                                            SharedTransitionState.lastOpenedId = itm.id
                                             onAlbumSelected(AlbumState(id = itm.id, playlistId = itm.playlistId ?: itm.id, title = titleStr, artist = subtitleStr, thumbnail = thumbUrl, year = itm.year as? Int ?: itm.year?.toString()?.toIntOrNull()))
                                         }
                                     }
@@ -896,6 +931,7 @@ fun InicioScreen(
                                         thumbUrl = itm.thumbnail
                                         isCircle = true
                                         clickAction = {
+                                            SharedTransitionState.lastOpenedId = itm.id
                                             onArtistSelected(ArtistState(id = itm.id, name = titleStr, thumbnail = thumbUrl))
                                         }
                                     }
@@ -904,6 +940,7 @@ fun InicioScreen(
                                         subtitleStr = itm.author?.name ?: "Playlist"
                                         thumbUrl = itm.thumbnail
                                         clickAction = {
+                                            SharedTransitionState.lastOpenedId = itm.id
                                             onAlbumSelected(AlbumState(id = itm.id, playlistId = itm.id, title = titleStr, artist = subtitleStr, thumbnail = thumbUrl, year = null))
                                         }
                                     }
@@ -917,6 +954,7 @@ fun InicioScreen(
                                         subtitleStr = itm.author?.name ?: "Podcast"
                                         thumbUrl = itm.thumbnail
                                         clickAction = {
+                                            SharedTransitionState.lastOpenedId = itm.id
                                             onAlbumSelected(AlbumState(id = itm.id, playlistId = itm.id, title = titleStr, artist = subtitleStr, thumbnail = thumbUrl, year = null))
                                         }
                                     }
@@ -930,6 +968,7 @@ fun InicioScreen(
                                 Column(
                                     modifier = Modifier
                                         .width(180.dp)
+                                        .wiggleOnScroll(itm.id, lazyListState = listState)
                                         .clickable {
                                             SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
                                             clickAction()
@@ -1121,19 +1160,23 @@ fun InicioScreen(
                             else -> item.hashCode().toString()
                         }
 
+                        var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .wiggleOnScroll(itemId, similarGridState)
                                 .clickable {
+                                    SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
                                     when (item) {
                                         is com.echo.innertube.models.ArtistItem -> {
+                                            SharedTransitionState.lastOpenedId = item.id
                                             onArtistSelected(com.mrtdk.liquid_glass.ui.screens.ArtistState(item.id, item.title, item.thumbnail))
                                         }
                                         is com.echo.innertube.models.SongItem -> {
                                             onSongSelected(PlayerState(item.title, item.artists.joinToString { it.name }, upgradeThumbHD(item.thumbnail), item.id))
                                         }
                                         is com.echo.innertube.models.AlbumItem -> {
+                                            SharedTransitionState.lastOpenedId = item.id
                                             onAlbumSelected(com.mrtdk.liquid_glass.ui.screens.AlbumState(item.id, item.playlistId ?: item.id, item.title, item.artists?.joinToString { it.name } ?: "Varios", item.thumbnail, item.year as? Int))
                                         }
                                         else -> {}
@@ -1144,6 +1187,7 @@ fun InicioScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .aspectRatio(1f)
+                                    .onGloballyPositioned { imageCoords = it }
                                     .clip(if (isCircle) androidx.compose.foundation.shape.CircleShape else RoundedCornerShape(12.dp))
                                     .background(Color(0xFF1C1C1E))
                             ) {

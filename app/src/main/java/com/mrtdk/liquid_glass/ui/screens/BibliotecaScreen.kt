@@ -86,6 +86,41 @@ fun BibliotecaScreen(
     val context = LocalContext.current
     val mainGridState = rememberLazyGridState()
     val categoryGridState = rememberLazyGridState()
+    var savedMainIndex by remember { mutableStateOf(-1) }
+    var savedMainOffset by remember { mutableStateOf(0) }
+    var savedCategoryIndex by remember { mutableStateOf(-1) }
+    var savedCategoryOffset by remember { mutableStateOf(0) }
+
+    val outerOnAlbumSelected = onAlbumSelected
+    val onAlbumSelected: (com.mrtdk.liquid_glass.ui.screens.AlbumState) -> Unit = { album ->
+        savedMainIndex = mainGridState.firstVisibleItemIndex
+        savedMainOffset = mainGridState.firstVisibleItemScrollOffset
+        savedCategoryIndex = categoryGridState.firstVisibleItemIndex
+        savedCategoryOffset = categoryGridState.firstVisibleItemScrollOffset
+        outerOnAlbumSelected(album)
+    }
+
+    val outerOnPlaylistSelected = onPlaylistSelected
+    val onPlaylistSelected: (com.mrtdk.liquid_glass.data.Playlist) -> Unit = { playlist ->
+        savedMainIndex = mainGridState.firstVisibleItemIndex
+        savedMainOffset = mainGridState.firstVisibleItemScrollOffset
+        savedCategoryIndex = categoryGridState.firstVisibleItemIndex
+        savedCategoryOffset = categoryGridState.firstVisibleItemScrollOffset
+        outerOnPlaylistSelected(playlist)
+    }
+
+    LaunchedEffect(SharedTransitionState.isDetailOpen) {
+        if (!SharedTransitionState.isDetailOpen) {
+            if (savedMainIndex != -1) {
+                mainGridState.scrollToItem(savedMainIndex, savedMainOffset)
+                savedMainIndex = -1
+            }
+            if (savedCategoryIndex != -1) {
+                categoryGridState.scrollToItem(savedCategoryIndex, savedCategoryOffset)
+                savedCategoryIndex = -1
+            }
+        }
+    }
     val menuItems = listOf(
         Triple("Playlists", null, Icons.Default.QueueMusic),
         Triple("Artistas", ItemType.ARTIST, Icons.Default.Mic),

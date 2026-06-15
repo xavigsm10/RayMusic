@@ -39,6 +39,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.draw.scale
 import android.content.Intent
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInRoot
+import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
+import com.mrtdk.liquid_glass.ui.components.wiggleOnScroll
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.mrtdk.liquid_glass.R
@@ -363,6 +368,36 @@ fun ReplayScreen(
 
     val localBackdrop = rememberLayerBackdrop()
     val lazyListState = androidx.compose.foundation.lazy.rememberLazyListState()
+    var savedIndex by remember { mutableStateOf(-1) }
+    var savedOffset by remember { mutableStateOf(0) }
+
+    val outerOnAlbumSelected = onAlbumSelected
+    val onAlbumSelected: (AlbumState) -> Unit = { album ->
+        savedIndex = lazyListState.firstVisibleItemIndex
+        savedOffset = lazyListState.firstVisibleItemScrollOffset
+        outerOnAlbumSelected(album)
+    }
+
+    val outerOnPlaylistSelected = onPlaylistSelected
+    val onPlaylistSelected: (Playlist) -> Unit = { playlist ->
+        savedIndex = lazyListState.firstVisibleItemIndex
+        savedOffset = lazyListState.firstVisibleItemScrollOffset
+        outerOnPlaylistSelected(playlist)
+    }
+
+    val outerOnArtistSelected = onArtistSelected
+    val onArtistSelected: (ArtistState) -> Unit = { artist ->
+        savedIndex = lazyListState.firstVisibleItemIndex
+        savedOffset = lazyListState.firstVisibleItemScrollOffset
+        outerOnArtistSelected(artist)
+    }
+
+    LaunchedEffect(SharedTransitionState.isDetailOpen) {
+        if (!SharedTransitionState.isDetailOpen && savedIndex != -1) {
+            lazyListState.scrollToItem(savedIndex, savedOffset)
+            savedIndex = -1
+        }
+    }
     val topBarAlpha by animateFloatAsState(
         targetValue = if (lazyListState.firstVisibleItemIndex > 0 || lazyListState.firstVisibleItemScrollOffset > 20) 0.85f else 0f,
         label = "topBarAlpha"
@@ -875,20 +910,29 @@ fun ReplayScreen(
                         horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         itemsIndexed(albumsList) { index, album ->
+                            val albumId = "replay_album_${album.title}"
+                            var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
                             Column(
                                 modifier = Modifier
                                     .width(130.dp)
+                                    .wiggleOnScroll(albumId, lazyListState = lazyListState)
                                     .clickable {
+                                        SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                        SharedTransitionState.lastOpenedId = albumId
                                         onAlbumSelected(AlbumState(
-                                            id = "replay_album_${album.title}",
-                                            playlistId = "replay_album_${album.title}",
+                                            id = albumId,
+                                            playlistId = albumId,
                                             title = album.title,
                                             artist = album.artist,
                                             thumbnail = album.thumbnail
                                         ))
                                     }
                             ) {
-                                Box(modifier = Modifier.size(130.dp)) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(130.dp)
+                                        .onGloballyPositioned { imageCoords = it }
+                                ) {
                                     AsyncImage(
                                         model = ImageRequest.Builder(context)
                                             .data(album.thumbnail)
@@ -971,10 +1015,14 @@ fun ReplayScreen(
                         horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         itemsIndexed(playlistsList) { index, playlist ->
+                            var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
                             Column(
                                 modifier = Modifier
                                     .width(130.dp)
+                                    .wiggleOnScroll(playlist.id, lazyListState = lazyListState)
                                     .clickable {
+                                        SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                        SharedTransitionState.lastOpenedId = playlist.id
                                         onAlbumSelected(AlbumState(
                                             id = playlist.id,
                                             playlistId = playlist.id,
@@ -984,7 +1032,11 @@ fun ReplayScreen(
                                         ))
                                     }
                             ) {
-                                Box(modifier = Modifier.size(130.dp)) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(130.dp)
+                                        .onGloballyPositioned { imageCoords = it }
+                                ) {
                                     AsyncImage(
                                         model = ImageRequest.Builder(context)
                                             .data(playlist.thumbnail)
@@ -1570,11 +1622,13 @@ fun ReplayScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
 
+                var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
                         .aspectRatio(1.2f)
+                        .onGloballyPositioned { imageCoords = it }
                         .clip(RoundedCornerShape(24.dp))
                         .background(
                             Brush.linearGradient(
@@ -1584,7 +1638,10 @@ fun ReplayScreen(
                                 )
                             )
                         )
+                        .wiggleOnScroll("replay_2026", lazyListState = lazyListState)
                         .clickable {
+                            SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                            SharedTransitionState.lastOpenedId = "replay_2026"
                             val playlistSongs = songsList.map { song ->
                                 LibraryItem(
                                     id = song.id,

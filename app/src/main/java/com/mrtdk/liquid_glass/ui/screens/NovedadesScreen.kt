@@ -278,6 +278,22 @@ fun NovedadesScreen(
     }
 
     val listState = rememberLazyListState()
+    var savedIndex by remember { mutableStateOf(-1) }
+    var savedOffset by remember { mutableStateOf(0) }
+
+    val outerOnAlbumSelected = onAlbumSelected
+    val onAlbumSelected: (AlbumState) -> Unit = { album ->
+        savedIndex = listState.firstVisibleItemIndex
+        savedOffset = listState.firstVisibleItemScrollOffset
+        outerOnAlbumSelected(album)
+    }
+
+    LaunchedEffect(SharedTransitionState.isDetailOpen) {
+        if (!SharedTransitionState.isDetailOpen && savedIndex != -1) {
+            listState.scrollToItem(savedIndex, savedOffset)
+            savedIndex = -1
+        }
+    }
 
     LazyColumn(
         state = listState,

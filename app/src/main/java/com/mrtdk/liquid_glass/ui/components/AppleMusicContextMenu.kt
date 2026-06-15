@@ -2102,7 +2102,7 @@ fun GlassBoxScope.PlaylistsPageSortMenu(
 }
 
 @Composable
-fun PlayerOptionsMenu(
+fun GlassBoxScope.PlayerOptionsMenu(
     backdrop: com.kyant.backdrop.backdrops.LayerBackdrop,
     onDismiss: () -> Unit,
     playerState: PlayerState?,
@@ -2170,7 +2170,7 @@ fun PlayerOptionsMenu(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        Box(
+        this@PlayerOptionsMenu.GlassBox(
             modifier = Modifier
                 .graphicsLayer {
                     scaleX = scale
@@ -2178,16 +2178,15 @@ fun PlayerOptionsMenu(
                     this.alpha = alpha
                 }
                 .width(280.dp)
-                .wrapContentHeight()
-                .background(
-                    color = Color(0xFF1E1E1E).copy(alpha = 0.9f),
-                    shape = RoundedCornerShape(cornerRadius.dp)
-                )
-                .background(
-                    color = tintColor.copy(alpha = 0.25f),
-                    shape = RoundedCornerShape(cornerRadius.dp)
-                )
-                .clip(RoundedCornerShape(cornerRadius.dp))
+                .wrapContentHeight(),
+            blur = 0.8f,
+            scale = 0.02f,
+            centerDistortion = 0.1f,
+            warpEdges = 0.4f,
+            elevation = 4.dp,
+            shape = RoundedCornerShape(cornerRadius.dp),
+            tint = dominantColor.copy(alpha = 0.25f),
+            darkness = 0.2f
         ) {
             Column(
                 modifier = Modifier
