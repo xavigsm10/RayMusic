@@ -152,6 +152,7 @@ fun SharedElementTransitionContainer(
         
         val dismissAction = remember(scope, progress, onBack, animate) {
             {
+                SharedTransitionState.isDetailOpen = false
                 scope.launch {
                     if (animate) {
                         progress.animateTo(
@@ -271,6 +272,7 @@ fun SharedElementTransitionContainer(
                     if (dragY > 0f) {
                         scope.launch {
                             if (dragY > screenHeight * 0.2f) {
+                                SharedTransitionState.isDetailOpen = false
                                 progress.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 500f))
                                 onBack()
                             } else {
@@ -294,6 +296,7 @@ fun SharedElementTransitionContainer(
                         onDragEnd = {
                             scope.launch {
                                 if (dragY > screenHeight * 0.2f) {
+                                    SharedTransitionState.isDetailOpen = false
                                     progress.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 500f))
                                     onBack()
                                 } else {
