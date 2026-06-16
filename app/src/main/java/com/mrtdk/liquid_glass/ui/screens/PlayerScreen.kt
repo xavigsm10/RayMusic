@@ -91,8 +91,19 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.LayoutCoordinates
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
 import com.mrtdk.glass.GlassContainer
 import com.mrtdk.glass.GlassBox
+import com.mrtdk.glass.GlassBoxScope
+import androidx.activity.compose.BackHandler
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Smartphone
+import androidx.compose.material.icons.filled.Speaker
+import androidx.compose.material.icons.filled.Laptop
+import androidx.compose.material.icons.filled.Wifi
 import com.mrtdk.liquid_glass.ui.components.PlayerOptionsMenu
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
@@ -142,6 +153,361 @@ data class QueueItem(
     val playlistId: String? = null,
     val playlistName: String? = null
 )
+
+object AudioRoutingState {
+    var connectedDeviceName: String? by mutableStateOf(null)
+    var showAudioRoutingMenu by mutableStateOf(false)
+}
+
+object ArtistSelectionState {
+    var artistsToShowDialog: List<String>? by mutableStateOf(null)
+}
+
+@Composable
+fun BluetoothIcon(modifier: Modifier = Modifier, tint: Color = Color.White) {
+    Canvas(modifier = modifier.size(24.dp)) {
+        val w = size.width
+        val h = size.height
+        val path = Path().apply {
+            moveTo(w * 0.25f, h * 0.75f)
+            lineTo(w * 0.75f, h * 0.25f)
+            lineTo(w * 0.5f, h * 0.05f)
+            lineTo(w * 0.5f, h * 0.95f)
+            lineTo(w * 0.75f, h * 0.75f)
+            lineTo(w * 0.25f, h * 0.25f)
+        }
+        drawPath(
+            path = path,
+            color = tint,
+            style = Stroke(width = 2.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round)
+        )
+    }
+}
+
+@Composable
+fun RoutingDeviceRow(
+    icon: @Composable (tint: Color) -> Unit,
+    text: String,
+    isActive: Boolean,
+    volumePosition: Float,
+    onVolumeChange: (Float) -> Unit,
+    onClick: () -> Unit
+) {
+    val currentVolumePosition by rememberUpdatedState(volumePosition)
+    val currentOnVolumeChange by rememberUpdatedState(onVolumeChange)
+    
+    if (isActive) {
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .background(Color.White.copy(alpha = 0.08f))
+                .pointerInput(Unit) {
+                    detectTapGestures { offset ->
+                        val progress = (offset.x / size.width).coerceIn(0f, 1f)
+                        currentOnVolumeChange(progress)
+                    }
+                }
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures { change, dragAmount ->
+                        val newVolume = (currentVolumePosition + (dragAmount / size.width)).coerceIn(0f, 1f)
+                        currentOnVolumeChange(newVolume)
+                    }
+                }
+        ) {
+            val widthPx = maxWidth
+            
+            // 1. Unfilled layer (Dark background, white text)
+            Row(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                icon(Color.White)
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(text, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Icon(Icons.Default.Check, null, tint = Color.White, modifier = Modifier.size(18.dp))
+            }
+
+            // 2. Filled layer (White background, dark text), clipped to volumePosition
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(volumePosition)
+                    .clipToBounds()
+                    .background(Color.White)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .width(widthPx)
+                        .fillMaxHeight()
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    icon(Color.Black)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(text, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    Icon(Icons.Default.Check, null, tint = Color.Black, modifier = Modifier.size(18.dp))
+                }
+            }
+        }
+    } else {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .background(Color.White.copy(alpha = 0.04f))
+                .clickable { onClick() }
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            icon(Color.White.copy(alpha = 0.7f))
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(text, color = Color.White.copy(alpha = 0.7f), fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+fun GlassBoxScope.AudioRoutingMenu(
+    backdrop: com.kyant.backdrop.backdrops.LayerBackdrop,
+    onDismiss: () -> Unit,
+    playerState: PlayerState?,
+    volumePosition: Float,
+    onVolumeChange: (Float) -> Unit
+) {
+    var visible by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        visible = true
+    }
+
+    val scale by animateFloatAsState(
+        targetValue = if (visible) 1f else 0.4f,
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
+        label = "routingScale"
+    )
+    val alpha by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(durationMillis = 200),
+        label = "routingAlpha"
+    )
+    val cornerRadius by animateFloatAsState(
+        targetValue = if (visible) 28f else 80f,
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
+        label = "routingCornerRadius"
+    )
+    val blurPx by animateFloatAsState(
+        targetValue = if (visible) 0f else 15f,
+        animationSpec = tween(durationMillis = 180),
+        label = "routingContentBlur"
+    )
+
+    val context = LocalContext.current
+    var connectedBluetoothDeviceName by remember { mutableStateOf<String?>(null) }
+
+    // Query bonded/connected Bluetooth devices
+    fun checkConnectedA2dp() {
+        try {
+            val bluetoothAdapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter()
+            if (bluetoothAdapter != null && bluetoothAdapter.isEnabled &&
+                (context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED ||
+                 android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S)) {
+                
+                bluetoothAdapter.getProfileProxy(context, object : android.bluetooth.BluetoothProfile.ServiceListener {
+                    override fun onServiceConnected(profile: Int, proxy: android.bluetooth.BluetoothProfile) {
+                        if (profile == android.bluetooth.BluetoothProfile.A2DP) {
+                            val a2dp = proxy as android.bluetooth.BluetoothA2dp
+                            val connectedDevices = a2dp.connectedDevices
+                            if (connectedDevices.isNotEmpty()) {
+                                val devName = connectedDevices.firstOrNull()?.name
+                                if (devName != null) {
+                                    connectedBluetoothDeviceName = devName
+                                    if (AudioRoutingState.connectedDeviceName == null) {
+                                        AudioRoutingState.connectedDeviceName = devName
+                                    }
+                                }
+                            } else {
+                                connectedBluetoothDeviceName = null
+                            }
+                        }
+                        bluetoothAdapter.closeProfileProxy(profile, proxy)
+                    }
+                    override fun onServiceDisconnected(profile: Int) {
+                        if (profile == android.bluetooth.BluetoothProfile.A2DP) {
+                            connectedBluetoothDeviceName = null
+                        }
+                    }
+                }, android.bluetooth.BluetoothProfile.A2DP)
+            }
+        } catch (e: Exception) {
+            // ignore
+        }
+    }
+
+    DisposableEffect(context) {
+        val filter = android.content.IntentFilter().apply {
+            addAction(android.bluetooth.BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED)
+            addAction(android.bluetooth.BluetoothAdapter.ACTION_STATE_CHANGED)
+        }
+        val receiver = object : android.content.BroadcastReceiver() {
+            override fun onReceive(context: android.content.Context, intent: android.content.Intent) {
+                checkConnectedA2dp()
+            }
+        }
+        context.registerReceiver(receiver, filter)
+        checkConnectedA2dp()
+        onDispose {
+            context.unregisterReceiver(receiver)
+        }
+    }
+
+    fun handleDismiss() {
+        visible = false
+        onDismiss()
+    }
+
+    BackHandler(enabled = visible) {
+        handleDismiss()
+    }
+
+    val dominantColor by LibraryManager.currentDominantColor.collectAsState()
+    val tintColor = remember(dominantColor) { dominantColor.copy(alpha = 0.35f) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.4f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { handleDismiss() }
+    )
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(bottom = 120.dp)
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    this.alpha = alpha
+                }
+                .width(320.dp)
+                .wrapContentHeight()
+                .drawBackdrop(
+                    backdrop = backdrop,
+                    shape = { RoundedCornerShape(cornerRadius.dp) },
+                    effects = {
+                        vibrancy()
+                        blur(8f.dp.toPx())
+                        lens(24f.dp.toPx(), 24f.dp.toPx())
+                    },
+                    onDrawSurface = {
+                        drawRect(tintColor)
+                    }
+                )
+                .clip(RoundedCornerShape(cornerRadius.dp))
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .let { if (blurPx > 0.1f) it.blur(blurPx.dp) else it }
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // 1. Cellular Speaker row
+                RoutingDeviceRow(
+                    icon = { tint -> Icon(Icons.Default.Smartphone, null, tint = tint, modifier = Modifier.size(20.dp)) },
+                    text = stringResource(R.string.celular_speaker),
+                    isActive = AudioRoutingState.connectedDeviceName == null,
+                    volumePosition = volumePosition,
+                    onVolumeChange = onVolumeChange,
+                    onClick = { AudioRoutingState.connectedDeviceName = null }
+                )
+
+                // 2. Real connected Bluetooth device row (if active/connected)
+                val isBtActive = connectedBluetoothDeviceName != null
+                if (isBtActive && connectedBluetoothDeviceName != null) {
+                    val devName = connectedBluetoothDeviceName!!
+                    RoutingDeviceRow(
+                        icon = { tint -> BluetoothIcon(modifier = Modifier.size(20.dp), tint = tint) },
+                        text = devName,
+                        isActive = AudioRoutingState.connectedDeviceName == devName,
+                        volumePosition = volumePosition,
+                        onVolumeChange = onVolumeChange,
+                        onClick = { AudioRoutingState.connectedDeviceName = devName }
+                    )
+                }
+
+                HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 4.dp))
+
+                // 3. Search WiFi devices action
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .clickable {
+                            try {
+                                val intent = android.content.Intent(android.provider.Settings.ACTION_WIFI_SETTINGS)
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "No se pudieron abrir los ajustes de WiFi", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Wifi, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = stringResource(R.string.wifi_settings_action),
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                // 4. Search Bluetooth devices action
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .clickable {
+                            try {
+                                val intent = android.content.Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS)
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "No se pudieron abrir los ajustes de Bluetooth", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    BluetoothIcon(modifier = Modifier.size(20.dp), tint = Color.White)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = stringResource(R.string.bluetooth_settings_action),
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+    }
+}
 
 private fun extractDominantColor(bitmap: android.graphics.Bitmap, isBillieJean: Boolean): Color {
     val palette = androidx.palette.graphics.Palette.from(bitmap).maximumColorCount(8).generate()
@@ -1647,18 +2013,19 @@ fun PlayerScreen(
             // DETAILS AND CONTROLS (WHEN NO QUEUE AND NO LYRICS)
             AnimatedVisibility(
                  visible = !isOverlayActive,
-                 modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+                 modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth().offset(y = imgOffsetY + imgHeight),
                  enter = fadeIn(),
                  exit = fadeOut()
             ) {
                  Box(
                       modifier = Modifier
                           .fillMaxWidth()
+                          .height(maxHeight - (imgOffsetY + imgHeight))
                           .graphicsLayer { alpha = contentAlpha }
                   ) {
                      Column(
                           modifier = Modifier
-                              .fillMaxWidth()
+                              .fillMaxSize()
                               .padding(horizontal = 24.dp)
                      ) {
                       Row(
@@ -1761,7 +2128,7 @@ fun PlayerScreen(
                           }
                       }
                       
-                      Spacer(modifier = Modifier.height(24.dp))
+                      Spacer(modifier = Modifier.height(12.dp))
                       
                       AppleMusicSlider(
                           value = progress, onValueChange = { onSeek((it * duration).toLong()) },
@@ -1780,11 +2147,12 @@ fun PlayerScreen(
                           Text("-${formatDuration(duration - currentPosition)}", color = contentColor.copy(alpha = 0.6f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
                       }
                       
-                      Spacer(modifier = Modifier.height(32.dp))
+                      Spacer(modifier = Modifier.height(16.dp))
                       
                       Box(
                           modifier = Modifier
                               .fillMaxWidth()
+                              .weight(1f)
                               .padding(bottom = 32.dp)
                       ) {
                           PlayerBottomControls( // We only want the icons, volume and stuff here, NO PROGRESS
@@ -1800,7 +2168,8 @@ fun PlayerScreen(
                               includeVolumeAndIcons = true,
                               includeProgress = false,
                               onSkipNext = { swipeDirection = 1; onSkipNext() },
-                              onSkipPrevious = { swipeDirection = -1; onSkipPrevious() }
+                              onSkipPrevious = { swipeDirection = -1; onSkipPrevious() },
+                              fillHeight = true
                            )
                        }
                    }
@@ -2081,6 +2450,19 @@ fun PlayerScreen(
                 }
             )
         }
+        if (AudioRoutingState.showAudioRoutingMenu) {
+            AudioRoutingMenu(
+                backdrop = localBackdrop,
+                onDismiss = { AudioRoutingState.showAudioRoutingMenu = false },
+                playerState = playerState,
+                volumePosition = volumePosition,
+                onVolumeChange = { v ->
+                    volumePosition = v
+                    audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, (v * maxVolume).toInt(), 0)
+                    onVolumeChange(v)
+                }
+            )
+        }
     }
 )
 }
@@ -2095,10 +2477,11 @@ fun PlayerBottomControls(
     includeVolumeAndIcons: Boolean = true,
     includeProgress: Boolean = true,
     onSkipNext: () -> Unit = {},
-    onSkipPrevious: () -> Unit = {}
+    onSkipPrevious: () -> Unit = {},
+    fillHeight: Boolean = false
 ) {
     val isLightBackground = contentColor != Color.White
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).then(if (fillHeight) Modifier.fillMaxHeight() else Modifier)) {
         if (includeProgress) {
             AppleMusicSlider(
                 value = progress, onValueChange = { onSeek((it * duration).toLong()) },
@@ -2112,6 +2495,10 @@ fun PlayerBottomControls(
                 Text("-${formatDuration(duration - currentPosition)}", color = contentColor.copy(alpha = 0.6f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
             }
             Spacer(modifier = Modifier.height(30.dp))
+        }
+        
+        if (fillHeight) {
+            Spacer(modifier = Modifier.weight(0.7f))
         }
         
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
@@ -2184,8 +2571,22 @@ fun PlayerBottomControls(
             )
         }
         
+        if (fillHeight) {
+            Spacer(modifier = Modifier.weight(1.3f))
+        }
+        
         if (includeVolumeAndIcons) {
-            Spacer(modifier = Modifier.height(70.dp))
+            if (!fillHeight) {
+                Spacer(modifier = Modifier.height(70.dp))
+            }
+            val deviceLabel = AudioRoutingState.connectedDeviceName ?: stringResource(R.string.celular_speaker)
+            Text(
+                text = deviceLabel,
+                color = contentColor.copy(alpha = 0.5f),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 8.dp)
+            )
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     painter = painterResource(id = R.drawable.albumspeaker),
@@ -2209,7 +2610,11 @@ fun PlayerBottomControls(
                     modifier = Modifier.size(24.dp)
                 )
             }
-            Spacer(modifier = Modifier.height(32.dp))
+            if (!fillHeight) {
+                Spacer(modifier = Modifier.height(32.dp))
+            } else {
+                Spacer(modifier = Modifier.height(24.dp))
+            }
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
@@ -2238,7 +2643,7 @@ fun PlayerBottomControls(
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
-                        ) { /* do nothing */ }
+                        ) { AudioRoutingState.showAudioRoutingMenu = true }
                 )
                 Box(
                     modifier = Modifier
@@ -2256,9 +2661,9 @@ fun PlayerBottomControls(
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
-        } else {
-             Spacer(modifier = Modifier.height(24.dp))
+            if (fillHeight) {
+                Spacer(modifier = Modifier.height(16.dp))
+            }
         }
     }
 }
@@ -3328,7 +3733,16 @@ fun LandscapePlayerLayout(
                                 )
                             }
 
-                            Spacer(modifier = Modifier.height(40.dp))
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            val deviceLabel = AudioRoutingState.connectedDeviceName ?: stringResource(R.string.celular_speaker)
+                            Text(
+                                text = deviceLabel,
+                                color = contentColor.copy(alpha = 0.5f),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 8.dp)
+                            )
 
                             // Volume Row
                             Row(
@@ -3404,7 +3818,7 @@ fun LandscapePlayerLayout(
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
-                            ) { /* do nothing */ }
+                            ) { AudioRoutingState.showAudioRoutingMenu = true }
                     )
 
                     Box(

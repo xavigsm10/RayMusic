@@ -1411,31 +1411,42 @@ fun ReplayScreen(
                         itemsIndexed(monthlyAlbums) { index, itemData ->
                             val (month, album, isExplicit) = itemData
                             if (album != null) {
+                                val albumId = "replay_album_${album.title}"
+                                var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
                                 Column(
                                     modifier = Modifier
                                         .width(130.dp)
+                                        .wiggleOnScroll(albumId, lazyListState = lazyListState)
                                         .clickable {
+                                            SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                            SharedTransitionState.lastOpenedId = albumId
                                             onAlbumSelected(AlbumState(
-                                                id = "replay_album_${album.title}",
-                                                playlistId = "replay_album_${album.title}",
+                                                id = albumId,
+                                                playlistId = albumId,
                                                 title = album.title,
                                                 artist = album.artist,
                                                 thumbnail = album.thumbnail
                                             ))
                                         }
                                 ) {
-                                    AsyncImage(
-                                        model = ImageRequest.Builder(context)
-                                            .data(album.thumbnail)
-                                            .crossfade(true)
-                                            .build(),
-                                        contentDescription = album.title,
-                                        contentScale = ContentScale.Crop,
+                                    Box(
                                         modifier = Modifier
                                             .size(130.dp)
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
-                                    )
+                                            .onGloballyPositioned { imageCoords = it }
+                                    ) {
+                                        AsyncImage(
+                                            model = ImageRequest.Builder(context)
+                                                .data(album.thumbnail)
+                                                .crossfade(true)
+                                                .build(),
+                                            contentDescription = album.title,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+                                        )
+                                    }
                                     Spacer(modifier = Modifier.height(6.dp))
                                     Text(
                                         text = month,
