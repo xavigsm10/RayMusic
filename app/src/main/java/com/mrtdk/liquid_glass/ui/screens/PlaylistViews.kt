@@ -76,6 +76,9 @@ import kotlinx.coroutines.withContext
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.roundToInt
 import com.echo.innertube.YouTube
 import com.echo.innertube.models.SongItem
 import com.echo.innertube.models.ArtistItem
@@ -869,10 +872,27 @@ fun PlaylistDetailScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         SharedElementTransitionContainer(
             onBack = onBack,
-            enableSwipeToDismiss = !isReplay,
-            shrinkToTarget = !isReplay,
-            slideToSide = isReplay
+            enableSwipeToDismiss = false,
+            shrinkToTarget = false,
+            slideToSide = true
         ) { progress, dismiss ->
+            val density = LocalDensity.current
+            val configuration = LocalConfiguration.current
+            val screenWidth = with(density) { configuration.screenWidthDp.dp.toPx() }
+            val screenHeight = with(density) { configuration.screenHeightDp.dp.toPx() }
+
+            val lastClickBounds = SharedTransitionState.lastClickBounds
+            val sourceX = lastClickBounds?.left ?: 0f
+            val sourceY = lastClickBounds?.top ?: 0f
+            val sourceW = lastClickBounds?.width ?: 0f
+            val sourceH = lastClickBounds?.height ?: 0f
+
+            val currentLeft = (1f - progress) * screenWidth
+            val curX = (sourceX + progress * (0f - sourceX)) - currentLeft
+            val curY = sourceY + progress * (0f - sourceY)
+            val curW = sourceW + progress * (screenWidth - sourceW)
+            val curH = sourceH + progress * (screenWidth - sourceH)
+            val curCorner = 24f * (1f - progress)
             var showPlaylistMenu by remember { mutableStateOf(false) }
             var currentSort by remember { mutableStateOf("default") }
 
@@ -902,10 +922,19 @@ fun PlaylistDetailScreen(
             )
             val contentAlpha = ((progress - 0.4f).coerceAtLeast(0f) / 0.6f)
 
-            GlassContainer(
-                modifier = Modifier.fillMaxSize(),
-                useShader = true,
-                content = {
+            Box(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                val translationXVal = with(density) { ((1f - progress) * 150f).dp.toPx() }
+                GlassContainer(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            alpha = contentAlpha
+                            translationX = translationXVal
+                        },
+                    useShader = true,
+                    content = {
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
@@ -918,7 +947,14 @@ fun PlaylistDetailScreen(
                         .fillMaxWidth()
                         .aspectRatio(1f / 1.15f),
                     content = {
-                        Box(modifier = Modifier.fillMaxSize().layerBackdrop(localBackdrop)) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .layerBackdrop(localBackdrop)
+                                .graphicsLayer {
+                                    alpha = if (progress < 0.99f) 0f else 1f
+                                }
+                        ) {
                             if (isReplay) {
                                 val replayYearShort = currentPlaylist.id.substringAfter("replay_").takeLast(2)
                                 Box(
@@ -1365,6 +1401,146 @@ fun PlaylistDetailScreen(
             }
         }
         )
+            if (progress < 0.99f) {
+                Box(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .offset { IntOffset(curX.roundToInt(), curY.roundToInt()) }
+                            .size(with(density) { curW.toDp() }, with(density) { curH.toDp() })
+                            .clip(RoundedCornerShape(curCorner.dp))
+                            .background(Color.DarkGray)
+                    ) {
+                        if (isReplay) {
+                            val replayYearShort = currentPlaylist.id.substringAfter("replay_").takeLast(2)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.linearGradient(
+                                            colors = listOf(
+                                                Color(0xFFFF9500), // Yellow/orange
+                                                Color(0xFF4CD964)  // Green
+                                            )
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "Replay",
+                                        color = Color.White.copy(alpha = 0.9f),
+                                        fontSize = 32.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = "'$replayYearShort",
+                                        color = Color.White,
+                                        fontSize = 84.sp,
+                                        fontWeight = FontWeight.Black,
+                                        lineHeight = 80.sp
+                                    )
+                                }
+                            }
+                        } else if (coverUrl != null) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context).data(coverUrl).crossfade(false).build(),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+                    
+                    val transitionTopBar = @Composable {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .statusBarsPadding()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(54.dp)
+                                    .graphicsLayer {
+                                        scaleX = popScaleBack
+                                        scaleY = popScaleBack
+                                        alpha = popScaleBack
+                                    }
+                                    .clip(CircleShape)
+                                    .background(dominantColor.copy(alpha = 0.35f))
+                                    .clickable { dismiss() },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ArrowBackIosNew,
+                                    contentDescription = "Back",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            
+                            Box(
+                                modifier = Modifier
+                                    .graphicsLayer {
+                                        scaleX = popScaleShare
+                                        scaleY = popScaleShare
+                                        alpha = popScaleShare
+                                    }
+                                    .height(48.dp)
+                                    .clip(RoundedCornerShape(percent = 50))
+                                    .background(dominantColor.copy(alpha = 0.35f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    IconButton(
+                                        onClick = {
+                                            val shareUrl = "https://music.youtube.com/playlist?list=${currentPlaylist.id.removePrefix("VL")}"
+                                            val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                                type = "text/plain"
+                                                putExtra(android.content.Intent.EXTRA_SUBJECT, currentPlaylist.name)
+                                                putExtra(android.content.Intent.EXTRA_TEXT, "$shareUrl")
+                                            }
+                                            context.startActivity(android.content.Intent.createChooser(shareIntent, "Compartir"))
+                                        },
+                                        modifier = Modifier.size(40.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.IosShare,
+                                            contentDescription = "Share",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = { showPlaylistMenu = true },
+                                        modifier = Modifier.size(40.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.MoreVert,
+                                            contentDescription = "More",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    transitionTopBar()
+                }
+            }
+        }
+    }
     }
 
     if (showAddMusicOverlay) {
@@ -1375,7 +1551,7 @@ fun PlaylistDetailScreen(
         )
     }
 }
-}
+
 
 @Composable
 fun FavoriteSongsScreen(

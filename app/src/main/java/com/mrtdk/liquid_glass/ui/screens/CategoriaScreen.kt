@@ -765,19 +765,14 @@ fun CategoriaScreen(
 
     // ── Local Album overlay (shown on top of the category page) ──
     if (localAlbumDetail != null) {
-        SharedElementTransitionContainer(
+        AlbumScreen(
+            albumState = localAlbumDetail!!,
             onBack = { localAlbumDetail = null },
-            enableSwipeToDismiss = false
-        ) { _, _ ->
-            AlbumScreen(
-                albumState = localAlbumDetail!!,
-                onBack = { localAlbumDetail = null },
-                onSongSelected = onSongSelected,
-                onArtistSelected = { artist -> localArtistDetail = artist },
-                onAlbumSelected = { album -> localAlbumDetail = album },
-                onDominantColorChanged = {}
-            )
-        }
+            onSongSelected = onSongSelected,
+            onArtistSelected = { artist -> localArtistDetail = artist },
+            onAlbumSelected = { album -> localAlbumDetail = album },
+            onDominantColorChanged = {}
+        )
     }
 
     // ── Local Artist overlay (shown on top of the category page) ──
