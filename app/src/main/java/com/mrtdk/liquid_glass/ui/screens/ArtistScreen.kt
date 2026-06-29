@@ -55,6 +55,7 @@ import com.mrtdk.liquid_glass.ui.components.trackClickBounds
 import com.mrtdk.liquid_glass.ui.components.trackTapBounds
 import com.mrtdk.liquid_glass.ui.components.wiggleOnScroll
 import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
+import com.mrtdk.liquid_glass.ui.components.sharedTransitionElement
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
@@ -1057,16 +1058,35 @@ fun ArtistScreen(
                 val plItems = playlistsSection.items.filterIsInstance<PlaylistItem>()
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(stringResource(R.string.playlists), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.playlists), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        if (plItems.size > 4 || playlistsSection.moreEndpoint != null) {
+                            val coroutineScope = rememberCoroutineScope()
+                            Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = 0.12f)).clickable {
+                                allSectionTitle = context.getString(R.string.playlists)
+                                allSectionIsVideo = false
+                                allSectionData = playlistsSection
+                                showAllSectionOverlay = true
+                                if (playlistsSection.moreEndpoint != null) {
+                                    coroutineScope.launch(Dispatchers.IO) {
+                                        val result = YouTube.artistItems(playlistsSection.moreEndpoint!!).getOrNull()
+                                        if (result != null) allSectionData = allSectionData?.copy(items = result.items)
+                                    }
+                                }
+                            }.padding(horizontal = 12.dp, vertical = 6.dp)) {
+                                Text(stringResource(R.string.ver_todo), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                            }
+                        }
+                    }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .horizontalScroll(rememberScrollState())
                     ) {
                         Spacer(modifier = Modifier.width(20.dp))
-                        plItems.forEachIndexed { index, item ->
+                        plItems.take(8).forEachIndexed { index, item ->
                             ItemCard(context, item, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, scrollState = listState)
-                            if (index < plItems.lastIndex) {
+                            if (index < plItems.take(8).lastIndex) {
                                 Spacer(modifier = Modifier.width(12.dp))
                             }
                         }
@@ -1672,14 +1692,13 @@ private fun ItemCard(
                     }
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color.DarkGray)
+                    .sharedTransitionElement(item.id)
                 ) {
                     AsyncImage(
                         model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
                         contentDescription = item.title,
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize().graphicsLayer {
-                            alpha = if (!fillWidth && SharedTransitionState.animatingItemIds.contains(item.id)) 0f else 1f
-                        }
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -1747,14 +1766,13 @@ private fun ItemCard(
                     }
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color.DarkGray)
+                    .sharedTransitionElement(item.id)
                 ) {
                     AsyncImage(
                         model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
                         contentDescription = item.title,
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize().graphicsLayer {
-                            alpha = if (!fillWidth && SharedTransitionState.animatingItemIds.contains(item.id)) 0f else 1f
-                        }
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))

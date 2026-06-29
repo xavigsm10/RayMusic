@@ -114,6 +114,23 @@ fun Modifier.trackTapBounds(
         }
 }
 
+fun Modifier.sharedTransitionElement(itemId: String): Modifier = composed {
+    val isDetailOpen = SharedTransitionState.isDetailOpen
+    val lastOpenedId = SharedTransitionState.lastOpenedId
+    val isOpened = isDetailOpen && lastOpenedId == itemId
+    
+    this
+        .onGloballyPositioned { coords ->
+            val bounds = coords.boundsInRoot()
+            if (bounds.width > 0f && bounds.height > 0f) {
+                SharedTransitionState.carouselItemBounds[itemId] = bounds
+            }
+        }
+        .graphicsLayer {
+            alpha = if (isOpened) 0f else 1f
+        }
+}
+
 private fun lerpFloat(start: Float, stop: Float, fraction: Float): Float {
     return start + fraction * (stop - start)
 }
@@ -124,8 +141,8 @@ val DetailEntrySpringSpec = spring<Float>(
 )
 
 val DetailExitSpringSpec = spring<Float>(
-    dampingRatio = 0.58f,
-    stiffness = 220f
+    dampingRatio = 0.78f,
+    stiffness = 165f
 )
 
 @Composable
@@ -135,6 +152,7 @@ fun SharedElementTransitionContainer(
     enableSwipeToDismiss: Boolean = true,
     slideToSide: Boolean = false,
     animate: Boolean = true,
+    staticContainer: Boolean = false,
     content: @Composable (progress: Float, dismiss: () -> Unit) -> Unit
 ) {
     DisposableEffect(Unit) {
@@ -164,7 +182,6 @@ fun SharedElementTransitionContainer(
         
         val dismissAction = remember(scope, progress, onBack, animate) {
             {
-                SharedTransitionState.isDetailOpen = false
                 scope.launch {
                     if (animate) {
                         progress.animateTo(
@@ -174,6 +191,7 @@ fun SharedElementTransitionContainer(
                     } else {
                         progress.snapTo(0f)
                     }
+                    SharedTransitionState.isDetailOpen = false
                     onBack()
                 }
                 Unit
@@ -198,35 +216,45 @@ fun SharedElementTransitionContainer(
         val currentProgress = progress.value
         
         // Interpolated geometry values
-        val currentLeft = if (slideToSide) {
+        val currentLeft = if (staticContainer) {
+            0f
+        } else if (slideToSide) {
             lerpFloat(screenWidth, 0f, currentProgress)
         } else if (shrinkToTarget) {
             lerpFloat(sourceBounds.left, 0f, currentProgress)
         } else {
             0f
         }
-        val currentTop = if (slideToSide) {
+        val currentTop = if (staticContainer) {
+            0f
+        } else if (slideToSide) {
             0f
         } else if (shrinkToTarget) {
             lerpFloat(sourceBounds.top, 0f, currentProgress)
         } else {
             lerpFloat(screenHeight, 0f, currentProgress)
         }
-        val currentWidth = if (slideToSide) {
+        val currentWidth = if (staticContainer) {
+            screenWidth
+        } else if (slideToSide) {
             screenWidth
         } else if (shrinkToTarget) {
             lerpFloat(sourceBounds.width, screenWidth, currentProgress).coerceAtLeast(0f)
         } else {
             screenWidth
         }
-        val currentHeight = if (slideToSide) {
+        val currentHeight = if (staticContainer) {
+            screenHeight
+        } else if (slideToSide) {
             screenHeight
         } else if (shrinkToTarget) {
             lerpFloat(sourceBounds.height, screenHeight, currentProgress).coerceAtLeast(0f)
         } else {
             screenHeight
         }
-        val currentCornerRadius = if (slideToSide) {
+        val currentCornerRadius = if (staticContainer) {
+            0f
+        } else if (slideToSide) {
             0f
         } else if (shrinkToTarget) {
             lerpFloat(24f, 0f, currentProgress).coerceAtLeast(0f)
@@ -278,8 +306,8 @@ fun SharedElementTransitionContainer(
                     if (dragY > 0f) {
                         scope.launch {
                             if (dragY > screenHeight * 0.2f) {
-                                SharedTransitionState.isDetailOpen = false
                                 progress.animateTo(0f, DetailExitSpringSpec)
+                                SharedTransitionState.isDetailOpen = false
                                 onBack()
                             } else {
                                 progress.animateTo(1f, DetailEntrySpringSpec)
@@ -302,8 +330,8 @@ fun SharedElementTransitionContainer(
                         onDragEnd = {
                             scope.launch {
                                 if (dragY > screenHeight * 0.2f) {
-                                    SharedTransitionState.isDetailOpen = false
                                     progress.animateTo(0f, DetailExitSpringSpec)
+                                    SharedTransitionState.isDetailOpen = false
                                     onBack()
                                 } else {
                                     progress.animateTo(1f, DetailEntrySpringSpec)

@@ -48,6 +48,7 @@ import com.mrtdk.liquid_glass.R
 import com.mrtdk.liquid_glass.ui.components.trackClickBounds
 import com.mrtdk.liquid_glass.ui.components.trackTapBounds
 import com.mrtdk.liquid_glass.ui.components.wiggleOnScroll
+import com.mrtdk.liquid_glass.ui.components.sharedTransitionElement
 import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.ui.platform.LocalUriHandler
@@ -875,6 +876,7 @@ fun BibliotecaScreen(
                                     .aspectRatio(1f)
                                     .clip(if (item.type == ItemType.ARTIST) androidx.compose.foundation.shape.CircleShape else RoundedCornerShape(12.dp))
                                     .background(Color(0xFF1C1C1E))
+                                    .sharedTransitionElement(item.id)
                             ) {
                                 AsyncImage(
                                     model = ImageRequest.Builder(context)
@@ -1111,6 +1113,7 @@ fun BibliotecaScreen(
                             .aspectRatio(1f)
                             .clip(if (item.type == ItemType.ARTIST) androidx.compose.foundation.shape.CircleShape else RoundedCornerShape(12.dp))
                             .background(Color(0xFF1C1C1E))
+                            .sharedTransitionElement(item.id)
                     ) {
                         AsyncImage(
                             model = ImageRequest.Builder(context)
