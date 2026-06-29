@@ -45,6 +45,7 @@ import com.mrtdk.liquid_glass.ui.components.SharedElementTransitionContainer
 import com.mrtdk.liquid_glass.ui.components.AppleMusicPlaylistMenu
 import com.mrtdk.liquid_glass.ui.components.AppleMusicCreateMenu
 import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
+import com.mrtdk.liquid_glass.ui.components.sharedTransitionElement
 import com.mrtdk.liquid_glass.ui.components.PlaylistsPageMoreMenu
 import com.mrtdk.liquid_glass.ui.components.PlaylistsPageSortMenu
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -267,7 +268,8 @@ fun PlaylistsListScreen(
                                                 colors = listOf(Color(0xFF8B0000), Color(0xFFFA243C))
                                             )
                                         )
-                                        .onGloballyPositioned { imageCoords = it },
+                                        .onGloballyPositioned { imageCoords = it }
+                                        .sharedTransitionElement("favorite_songs"),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(Icons.Default.Star, contentDescription = null, tint = Color.White, modifier = Modifier.size(56.dp))
@@ -318,7 +320,8 @@ fun PlaylistsListScreen(
                                         .aspectRatio(1f)
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(Color(0xFF1C1C1E))
-                                        .onGloballyPositioned { imageCoords = it },
+                                        .onGloballyPositioned { imageCoords = it }
+                                        .sharedTransitionElement(pl.id),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     val imageUrl = pl.coverUrl ?: (if (pl.items.isNotEmpty()) pl.items.first().thumbnail else null)
@@ -437,7 +440,8 @@ fun PlaylistsListScreen(
                                             Brush.linearGradient(
                                                 colors = listOf(Color(0xFF8B0000), Color(0xFFFA243C))
                                             )
-                                        ),
+                                        )
+                                        .sharedTransitionElement("favorite_songs"),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(Icons.Default.Star, contentDescription = null, tint = Color.White, modifier = Modifier.size(36.dp))
@@ -486,7 +490,8 @@ fun PlaylistsListScreen(
                                         .onGloballyPositioned { imageCoords = it }
                                         .size(64.dp)
                                         .clip(RoundedCornerShape(8.dp))
-                                        .background(Color(0xFF1C1C1E)),
+                                        .background(Color(0xFF1C1C1E))
+                                        .sharedTransitionElement(pl.id),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     val imageUrl = pl.coverUrl ?: (if (pl.items.isNotEmpty()) pl.items.first().thumbnail else null)
@@ -874,24 +879,24 @@ fun PlaylistDetailScreen(
             onBack = onBack,
             enableSwipeToDismiss = false,
             shrinkToTarget = false,
-            slideToSide = true
+            slideToSide = false,
+            staticContainer = true
         ) { progress, dismiss ->
             val density = LocalDensity.current
             val configuration = LocalConfiguration.current
             val screenWidth = with(density) { configuration.screenWidthDp.dp.toPx() }
             val screenHeight = with(density) { configuration.screenHeightDp.dp.toPx() }
 
-            val lastClickBounds = SharedTransitionState.lastClickBounds
-            val sourceX = lastClickBounds?.left ?: 0f
-            val sourceY = lastClickBounds?.top ?: 0f
-            val sourceW = lastClickBounds?.width ?: 0f
-            val sourceH = lastClickBounds?.height ?: 0f
+            val lastClickBounds = SharedTransitionState.carouselItemBounds[currentPlaylist.id] ?: SharedTransitionState.lastClickBounds
+            val sourceX = lastClickBounds?.left ?: (screenWidth / 2f - 100f)
+            val sourceY = lastClickBounds?.top ?: (screenHeight / 2f - 100f)
+            val sourceW = lastClickBounds?.width ?: 200f
+            val sourceH = lastClickBounds?.height ?: 200f
 
-            val currentLeft = (1f - progress) * screenWidth
-            val curX = (sourceX + progress * (0f - sourceX)) - currentLeft
+            val curX = sourceX + progress * (0f - sourceX)
             val curY = sourceY + progress * (0f - sourceY)
             val curW = sourceW + progress * (screenWidth - sourceW)
-            val curH = sourceH + progress * (screenWidth - sourceH)
+            val curH = sourceH + progress * (screenHeight - sourceH)
             val curCorner = 24f * (1f - progress)
             var showPlaylistMenu by remember { mutableStateOf(false) }
             var currentSort by remember { mutableStateOf("default") }
@@ -925,13 +930,20 @@ fun PlaylistDetailScreen(
             Box(
                 modifier = Modifier.fillMaxSize()
             ) {
-                val translationXVal = with(density) { ((1f - progress) * 150f).dp.toPx() }
+                // Static parent screen dimming overlay
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = progress * 0.6f))
+                )
+
+                val translationYVal = with(density) { ((1f - progress) * 80f).dp.toPx() }
                 GlassContainer(
                     modifier = Modifier
                         .fillMaxSize()
                         .graphicsLayer {
                             alpha = contentAlpha
-                            translationX = translationXVal
+                            translationY = translationYVal
                         },
                     useShader = true,
                     content = {
@@ -1146,24 +1158,70 @@ fun PlaylistDetailScreen(
             // Play and Shuffle buttons
             if (currentPlaylist.items.isNotEmpty()) {
                 item {
+                    val isSaved = playlists.any { it.id == currentPlaylist.id }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 12.dp)
+                            .padding(horizontal = 20.dp, vertical = 12.dp)
                             .graphicsLayer { alpha = contentAlpha },
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val buttonBg = Color.White
-                        val redColor = Color(0xFFFA243C)
+                        val darkTranslucent = Color.Black.copy(alpha = 0.35f)
+
+                        // Shuffle button
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(darkTranslucent)
+                                .clickable {
+                                    if (currentPlaylist.items.isNotEmpty()) {
+                                        val songs = currentPlaylist.items.filter { it.type == com.mrtdk.liquid_glass.data.ItemType.SONG }
+                                        if (songs.isNotEmpty()) {
+                                            val shuffledSongs = songs.shuffled()
+                                            val first = shuffledSongs.first()
+                                            val remainingQueue = shuffledSongs.drop(1).map { t ->
+                                                com.mrtdk.liquid_glass.ui.screens.QueueItem(
+                                                    title = t.title,
+                                                    artist = t.subtitle,
+                                                    artUrl = t.thumbnail ?: playlistCoverForPlayer,
+                                                    videoId = t.id,
+                                                    playlistId = currentPlaylist.id,
+                                                    playlistName = currentPlaylist.name
+                                                )
+                                            }
+                                            onSongSelected(com.mrtdk.liquid_glass.ui.screens.PlayerState(
+                                                first.title, first.subtitle, 
+                                                first.thumbnail ?: playlistCoverForPlayer, 
+                                                first.id,
+                                                queue = remainingQueue,
+                                                isExclusiveQueue = true,
+                                                playlistId = currentPlaylist.id,
+                                                playlistName = currentPlaylist.name
+                                            ))
+                                        }
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Shuffle,
+                                contentDescription = "Shuffle",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(16.dp))
 
                         // Play button
                         Box(
                             modifier = Modifier
-                                .weight(1f)
+                                .width(180.dp)
                                 .height(48.dp)
                                 .clip(RoundedCornerShape(24.dp))
-                                .background(buttonBg)
+                                .background(Color.White)
                                 .clickable {
                                     if (currentPlaylist.items.isNotEmpty()) {
                                         val songs = currentPlaylist.items.filter { it.type == com.mrtdk.liquid_glass.data.ItemType.SONG }
@@ -1197,77 +1255,47 @@ fun PlaylistDetailScreen(
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.PlayArrow,
                                     contentDescription = "Play",
-                                    tint = redColor,
-                                    modifier = Modifier.size(20.dp)
+                                    tint = Color.Black,
+                                    modifier = Modifier.size(24.dp)
                                 )
                                 Text(
-                                    text = stringResource(R.string.reproducir),
-                                    color = redColor,
-                                    fontSize = 16.sp,
+                                    text = "Play",
+                                    color = Color.Black,
+                                    fontSize = 17.sp,
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }
                         }
 
-                        // Shuffle button
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        // Add button
                         Box(
                             modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp)
-                                .clip(RoundedCornerShape(24.dp))
-                                .background(buttonBg)
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(darkTranslucent)
                                 .clickable {
-                                    if (currentPlaylist.items.isNotEmpty()) {
-                                        val songs = currentPlaylist.items.filter { it.type == com.mrtdk.liquid_glass.data.ItemType.SONG }
-                                        if (songs.isNotEmpty()) {
-                                            val shuffledSongs = songs.shuffled()
-                                            val first = shuffledSongs.first()
-                                            val remainingQueue = shuffledSongs.drop(1).map { t ->
-                                                com.mrtdk.liquid_glass.ui.screens.QueueItem(
-                                                    title = t.title,
-                                                    artist = t.subtitle,
-                                                    artUrl = t.thumbnail ?: playlistCoverForPlayer,
-                                                    videoId = t.id,
-                                                    playlistId = currentPlaylist.id,
-                                                    playlistName = currentPlaylist.name
-                                                )
-                                            }
-                                            onSongSelected(com.mrtdk.liquid_glass.ui.screens.PlayerState(
-                                                first.title, first.subtitle, 
-                                                first.thumbnail ?: playlistCoverForPlayer, 
-                                                first.id,
-                                                queue = remainingQueue,
-                                                isExclusiveQueue = true,
-                                                playlistId = currentPlaylist.id,
-                                                playlistName = currentPlaylist.name
-                                            ))
-                                        }
+                                    if (isSaved) {
+                                        android.widget.Toast.makeText(context, "Playlist ya guardada", android.widget.Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        LibraryManager.createPlaylist(currentPlaylist.name, coverUrl)
+                                        android.widget.Toast.makeText(context, "Playlist guardada", android.widget.Toast.LENGTH_SHORT).show()
                                     }
                                 },
                             contentAlignment = Alignment.Center
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Shuffle,
-                                    contentDescription = "Shuffle",
-                                    tint = redColor,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Text(
-                                    text = stringResource(R.string.shuffle_label),
-                                    color = redColor,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
+                            Icon(
+                                imageVector = if (isSaved) Icons.Default.Check else Icons.Default.Add,
+                                contentDescription = "Add/Remove",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
                         }
                     }
                 }
@@ -1410,48 +1438,189 @@ fun PlaylistDetailScreen(
                             .offset { IntOffset(curX.roundToInt(), curY.roundToInt()) }
                             .size(with(density) { curW.toDp() }, with(density) { curH.toDp() })
                             .clip(RoundedCornerShape(curCorner.dp))
-                            .background(Color.DarkGray)
+                            .background(dominantColor)
                     ) {
-                        if (isReplay) {
-                            val replayYearShort = currentPlaylist.id.substringAfter("replay_").takeLast(2)
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            // Cover Art at the top of the card
+                            val coverHeightRatio = 1f + progress * 0.15f
+                            val coverHeight = curW * coverHeightRatio
+                            
                             Box(
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.linearGradient(
-                                            colors = listOf(
-                                                Color(0xFFFF9500), // Yellow/orange
-                                                Color(0xFF4CD964)  // Green
+                                    .fillMaxWidth()
+                                    .height(with(density) { coverHeight.toDp() })
+                            ) {
+                                if (isReplay) {
+                                    val replayYearShort = currentPlaylist.id.substringAfter("replay_").takeLast(2)
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(
+                                                Brush.linearGradient(
+                                                    colors = listOf(
+                                                        Color(0xFFFF9500),
+                                                        Color(0xFF4CD964)
+                                                    )
+                                                )
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            Text(
+                                                text = "Replay",
+                                                color = Color.White.copy(alpha = 0.9f),
+                                                fontSize = 24.sp * progress,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                            Text(
+                                                text = "'$replayYearShort",
+                                                color = Color.White,
+                                                fontSize = 64.sp * progress,
+                                                fontWeight = FontWeight.Black,
+                                                lineHeight = 60.sp * progress
+                                            )
+                                        }
+                                    }
+                                } else if (coverUrl != null) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(context).data(coverUrl).crossfade(false).build(),
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                } else {
+                                    Box(
+                                        modifier = Modifier.fillMaxSize().background(Color(0xFF1C1C1E)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(Icons.Default.MusicNote, null, tint = Color.Gray, modifier = Modifier.size(48.dp))
+                                    }
+                                }
+                                
+                                // Gradient fade at the bottom of the cover art
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            Brush.verticalGradient(
+                                                0.0f to Color.Transparent,
+                                                0.75f to Color.Transparent,
+                                                1.0f to dominantColor
                                             )
                                         )
-                                    ),
-                                contentAlignment = Alignment.Center
+                                )
+                            }
+                            
+                            // Details below the cover art (Title, Artist/Subtitle, Action Buttons)
+                            val detailsAlpha = ((progress - 0.1f) / 0.9f).coerceIn(0f, 1f)
+                            val detailsTranslationY = with(density) { ((1f - progress) * 20f).dp.toPx() }
+                            val isSaved = playlists.any { it.id == currentPlaylist.id }
+                            
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f)
+                                    .graphicsLayer {
+                                        alpha = detailsAlpha
+                                        translationY = detailsTranslationY
+                                    }
+                                    .padding(horizontal = 20.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
                             ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally
+                                Text(
+                                    text = currentPlaylist.name,
+                                    color = contentColor,
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = stringResource(R.string.my_playlist_subtitle),
+                                    color = contentColor.copy(alpha = 0.8f),
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                
+                                // Buttons Row (Shuffle, Play, Add)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center,
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Text(
-                                        text = "Replay",
-                                        color = Color.White.copy(alpha = 0.9f),
-                                        fontSize = 32.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = "'$replayYearShort",
-                                        color = Color.White,
-                                        fontSize = 84.sp,
-                                        fontWeight = FontWeight.Black,
-                                        lineHeight = 80.sp
-                                    )
+                                    val darkTranslucent = Color.Black.copy(alpha = 0.35f)
+                                    
+                                    // Shuffle button
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(CircleShape)
+                                            .background(darkTranslucent),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Shuffle,
+                                            contentDescription = "Shuffle",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                    
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    
+                                    // Play button
+                                    Box(
+                                        modifier = Modifier
+                                            .width(140.dp)
+                                            .height(40.dp)
+                                            .clip(RoundedCornerShape(20.dp))
+                                            .background(Color.White),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.PlayArrow,
+                                                contentDescription = "Play",
+                                                tint = Color.Black,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Text("Play", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                                        }
+                                    }
+                                    
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    
+                                    // Add button
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(CircleShape)
+                                            .background(darkTranslucent),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isSaved) Icons.Default.Check else Icons.Default.Add,
+                                            contentDescription = "Add/Remove",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
                                 }
                             }
-                        } else if (coverUrl != null) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(context).data(coverUrl).crossfade(false).build(),
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
                         }
                     }
                     
