@@ -35,6 +35,8 @@ object SharedTransitionState {
     var lastClickBounds: Rect? = null
     var lastOpenedId: String? = null
     var isDetailOpen: Boolean by mutableStateOf(false)
+    val carouselItemBounds = mutableStateMapOf<String, Rect>()
+    val animatingItemIds = mutableStateListOf<String>()
 }
 
 fun Modifier.wiggleOnScroll(
@@ -116,6 +118,16 @@ private fun lerpFloat(start: Float, stop: Float, fraction: Float): Float {
     return start + fraction * (stop - start)
 }
 
+val DetailEntrySpringSpec = spring<Float>(
+    dampingRatio = 0.85f,
+    stiffness = 200f
+)
+
+val DetailExitSpringSpec = spring<Float>(
+    dampingRatio = 0.58f,
+    stiffness = 220f
+)
+
 @Composable
 fun SharedElementTransitionContainer(
     onBack: () -> Unit,
@@ -157,10 +169,7 @@ fun SharedElementTransitionContainer(
                     if (animate) {
                         progress.animateTo(
                             targetValue = 0f,
-                            animationSpec = spring(
-                                dampingRatio = 0.8f,
-                                stiffness = 500f
-                            )
+                            animationSpec = DetailExitSpringSpec
                         )
                     } else {
                         progress.snapTo(0f)
@@ -179,10 +188,7 @@ fun SharedElementTransitionContainer(
             if (animate) {
                 progress.animateTo(
                     targetValue = 1f,
-                    animationSpec = spring(
-                        dampingRatio = 0.75f,
-                        stiffness = 400f
-                    )
+                    animationSpec = DetailEntrySpringSpec
                 )
             } else {
                 progress.snapTo(1f)
@@ -273,10 +279,10 @@ fun SharedElementTransitionContainer(
                         scope.launch {
                             if (dragY > screenHeight * 0.2f) {
                                 SharedTransitionState.isDetailOpen = false
-                                progress.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 500f))
+                                progress.animateTo(0f, DetailExitSpringSpec)
                                 onBack()
                             } else {
-                                progress.animateTo(1f, spring(dampingRatio = 0.75f, stiffness = 400f))
+                                progress.animateTo(1f, DetailEntrySpringSpec)
                             }
                             dragY = 0f
                         }
@@ -297,17 +303,17 @@ fun SharedElementTransitionContainer(
                             scope.launch {
                                 if (dragY > screenHeight * 0.2f) {
                                     SharedTransitionState.isDetailOpen = false
-                                    progress.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 500f))
+                                    progress.animateTo(0f, DetailExitSpringSpec)
                                     onBack()
                                 } else {
-                                    progress.animateTo(1f, spring(dampingRatio = 0.75f, stiffness = 400f))
+                                    progress.animateTo(1f, DetailEntrySpringSpec)
                                 }
                                 dragY = 0f
                             }
                         },
                         onDragCancel = {
                             scope.launch {
-                                progress.animateTo(1f, spring(dampingRatio = 0.75f, stiffness = 400f))
+                                progress.animateTo(1f, DetailEntrySpringSpec)
                                 dragY = 0f
                             }
                         },

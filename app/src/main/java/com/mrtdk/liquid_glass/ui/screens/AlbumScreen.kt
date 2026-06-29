@@ -54,6 +54,9 @@ import com.mrtdk.liquid_glass.R
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.roundToInt
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -318,7 +321,25 @@ fun AlbumScreen(
     val isLightBackground = dominantColor.luminance() > 0.5f
     val contentColor = if (isLightBackground) Color(0xFF1E1E1E) else Color.White
 
-    SharedElementTransitionContainer(onBack = onBack, enableSwipeToDismiss = false) { progress, dismiss ->
+    SharedElementTransitionContainer(onBack = onBack, shrinkToTarget = false, enableSwipeToDismiss = false, slideToSide = true) { progress, dismiss ->
+        val density = LocalDensity.current
+        val configuration = LocalConfiguration.current
+        val screenWidth = with(density) { configuration.screenWidthDp.dp.toPx() }
+        val screenHeight = with(density) { configuration.screenHeightDp.dp.toPx() }
+
+        val lastClickBounds = SharedTransitionState.lastClickBounds
+        val sourceX = lastClickBounds?.left ?: 0f
+        val sourceY = lastClickBounds?.top ?: 0f
+        val sourceW = lastClickBounds?.width ?: 0f
+        val sourceH = lastClickBounds?.height ?: 0f
+
+        val currentLeft = (1f - progress) * screenWidth
+        val curX = (sourceX + progress * (0f - sourceX)) - currentLeft
+        val curY = sourceY + progress * (0f - sourceY)
+        val curW = sourceW + progress * (screenWidth - sourceW)
+        val curH = sourceH + progress * (screenWidth - sourceH)
+        val curCorner = 24f * (1f - progress)
+
         val popScaleBack by animateFloatAsState(
             targetValue = if (progress > 0.80f) 1f else 0f,
             animationSpec = spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMediumLow),
@@ -336,10 +357,19 @@ fun AlbumScreen(
         )
         val contentAlpha = ((progress - 0.4f).coerceAtLeast(0f) / 0.6f)
 
-        com.mrtdk.glass.GlassContainer(
-            modifier = Modifier.fillMaxSize(),
-        useShader = true,
-        content = {
+        Box(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            val translationXVal = with(density) { ((1f - progress) * 150f).dp.toPx() }
+            com.mrtdk.glass.GlassContainer(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        alpha = contentAlpha
+                        translationX = translationXVal
+                    },
+                useShader = true,
+                content = {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -353,7 +383,14 @@ fun AlbumScreen(
                     .aspectRatio(1f / albumHeightRatio),
                 useShader = true,
                 content = {
-                    Box(modifier = Modifier.fillMaxSize().layerBackdrop(localBackdrop)) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .layerBackdrop(localBackdrop)
+                            .graphicsLayer {
+                                alpha = if (progress < 0.99f) 0f else 1f
+                            }
+                    ) {
                         // Base sharp album cover (always drawn in background to prevent black flashes)
                         AsyncImage(
                             model = ImageRequest.Builder(context)
@@ -911,5 +948,113 @@ glassContent = {
         )
     }
 })
+            if (progress < 0.99f) {
+                Box(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .offset { IntOffset(curX.roundToInt(), curY.roundToInt()) }
+                            .size(with(density) { curW.toDp() }, with(density) { curH.toDp() })
+                            .clip(RoundedCornerShape(curCorner.dp))
+                            .background(Color.DarkGray)
+                    ) {
+                        if (headerArt != null) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context).data(headerArt).crossfade(false).build(),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+                    
+                    val transitionTopBar = @Composable {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .statusBarsPadding()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(54.dp)
+                                    .graphicsLayer {
+                                        scaleX = popScaleBack
+                                        scaleY = popScaleBack
+                                        alpha = popScaleBack
+                                    }
+                                    .clip(CircleShape)
+                                    .background(dominantColor.copy(alpha = 0.35f))
+                                    .clickable { dismiss() },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ArrowBackIosNew,
+                                    contentDescription = "Back",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            
+                            Box(
+                                modifier = Modifier
+                                    .graphicsLayer {
+                                        scaleX = popScaleShare
+                                        scaleY = popScaleShare
+                                        alpha = popScaleShare
+                                    }
+                                    .height(48.dp)
+                                    .clip(RoundedCornerShape(percent = 50))
+                                    .background(dominantColor.copy(alpha = 0.35f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    IconButton(
+                                        onClick = {
+                                            val shareUrl = "https://music.youtube.com/album/${albumState.id}"
+                                            val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                                type = "text/plain"
+                                                putExtra(android.content.Intent.EXTRA_SUBJECT, albumState.title)
+                                                putExtra(android.content.Intent.EXTRA_TEXT, "$shareUrl")
+                                            }
+                                            context.startActivity(android.content.Intent.createChooser(shareIntent, "Compartir"))
+                                        },
+                                        modifier = Modifier.size(40.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.IosShare,
+                                            contentDescription = "Share",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = { showAlbumMenu = true },
+                                        modifier = Modifier.size(40.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.MoreVert,
+                                            contentDescription = "More",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    transitionTopBar()
+                }
+            }
+        }
     }
 }
+
+

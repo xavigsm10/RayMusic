@@ -570,36 +570,26 @@ class MainActivity : ComponentActivity() {
                                              }
                                          }
 
-                                         if (albumDetail != null) {
-                                             SharedElementTransitionContainer(onBack = { albumDetail = null }, enableSwipeToDismiss = false) { _, _ ->
-                                                 AlbumScreen(
-                                                     albumState = albumDetail!!,
-                                                     onBack = { albumDetail = null },
-                                                     onSongSelected = playSong,
-                                                     onArtistSelected = { artist -> artistDetail = artist },
-                                                     onAlbumSelected = { album -> albumDetail = album },
-                                                     onDominantColorChanged = { color -> globalDominantColor = color },
-                                                     isPaused = showPlayer
-                                                 )
-                                             }
-                                         }
+                                          if (albumDetail != null) {
+                                              AlbumScreen(
+                                                  albumState = albumDetail!!,
+                                                  onBack = { albumDetail = null },
+                                                  onSongSelected = playSong,
+                                                  onArtistSelected = { artist -> artistDetail = artist },
+                                                  onAlbumSelected = { album -> albumDetail = album },
+                                                  onDominantColorChanged = { color -> globalDominantColor = color },
+                                                  isPaused = showPlayer
+                                              )
+                                          }
 
-                                         if (playlistDetail != null) {
-                                             val isReplay = playlistDetail?.id?.startsWith("replay_") == true
-                                             SharedElementTransitionContainer(
-                                                 onBack = { playlistDetail = null },
-                                                 enableSwipeToDismiss = !isReplay,
-                                                 animate = !isReplay
-                                             ) { _, _ ->
-                                                 PlaylistDetailScreen(
-                                                     playlist = playlistDetail!!,
-                                                     onBack = { playlistDetail = null },
-                                                     onSongSelected = playSong,
-                                                     onArtistSelected = { artistDetail = it }
-                                                 )
-                                             }
-                                         }
-
+                                          if (playlistDetail != null) {
+                                              PlaylistDetailScreen(
+                                                  playlist = playlistDetail!!,
+                                                  onBack = { playlistDetail = null },
+                                                  onSongSelected = playSong,
+                                                  onArtistSelected = { artistDetail = it }
+                                              )
+                                          }
 
                                          androidx.compose.animation.AnimatedVisibility(
                                              visible = categoryDetail != null,

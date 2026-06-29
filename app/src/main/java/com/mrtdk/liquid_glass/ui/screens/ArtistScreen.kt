@@ -58,6 +58,19 @@ import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.ui.platform.LocalDensity
+import kotlin.math.roundToInt
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -915,8 +928,19 @@ fun ArtistScreen(
                             }
                         }
                     }
-                    LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(albumItems.take(8).size) { idx -> ItemCard(context, albumItems[idx], artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, scrollState = listState) }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                    ) {
+                        Spacer(modifier = Modifier.width(20.dp))
+                        albumItems.take(8).forEachIndexed { index, item ->
+                            ItemCard(context, item, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, scrollState = listState)
+                            if (index < albumItems.take(8).lastIndex) {
+                                Spacer(modifier = Modifier.width(12.dp))
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(20.dp))
                     }
                 }
             }
@@ -926,9 +950,39 @@ fun ArtistScreen(
                 val singleItems = singlesSection.items.filterIsInstance<AlbumItem>()
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(stringResource(R.string.sencillos_y_ep), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
-                    LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(singleItems.size) { idx -> ItemCard(context, singleItems[idx], artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, scrollState = listState) }
+                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.sencillos_y_ep), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        if (singleItems.size > 4 || singlesSection.moreEndpoint != null) {
+                            val coroutineScope = rememberCoroutineScope()
+                            Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = 0.12f)).clickable {
+                                allSectionTitle = context.getString(R.string.sencillos_y_ep)
+                                allSectionIsVideo = false
+                                allSectionData = singlesSection
+                                showAllSectionOverlay = true
+                                if (singlesSection.moreEndpoint != null) {
+                                    coroutineScope.launch(Dispatchers.IO) {
+                                        val result = YouTube.artistItems(singlesSection.moreEndpoint!!).getOrNull()
+                                        if (result != null) allSectionData = allSectionData?.copy(items = result.items)
+                                    }
+                                }
+                            }.padding(horizontal = 12.dp, vertical = 6.dp)) {
+                                Text(stringResource(R.string.ver_todo), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                            }
+                        }
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                    ) {
+                        Spacer(modifier = Modifier.width(20.dp))
+                        singleItems.take(8).forEachIndexed { index, item ->
+                            ItemCard(context, item, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, scrollState = listState)
+                            if (index < singleItems.take(8).lastIndex) {
+                                Spacer(modifier = Modifier.width(12.dp))
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(20.dp))
                     }
                 }
             }
@@ -958,11 +1012,19 @@ fun ArtistScreen(
                             }
                         }
                     }
-                    LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(videoItems.size) { idx ->
-                            val v = videoItems[idx]
-                            ItemCard(context, v, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, onVideoSelected = onVideoSelected, isVideo = true, scrollState = listState)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                    ) {
+                        Spacer(modifier = Modifier.width(20.dp))
+                        videoItems.forEachIndexed { index, item ->
+                            ItemCard(context, item, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, onVideoSelected = onVideoSelected, isVideo = true, scrollState = listState)
+                            if (index < videoItems.lastIndex) {
+                                Spacer(modifier = Modifier.width(12.dp))
+                            }
                         }
+                        Spacer(modifier = Modifier.width(20.dp))
                     }
                 }
             }
@@ -973,8 +1035,19 @@ fun ArtistScreen(
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(stringResource(R.string.destacado_en), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
-                    LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(featuredItems.size) { idx -> ItemCard(context, featuredItems[idx], artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, scrollState = listState) }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                    ) {
+                        Spacer(modifier = Modifier.width(20.dp))
+                        featuredItems.forEachIndexed { index, item ->
+                            ItemCard(context, item, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, scrollState = listState)
+                            if (index < featuredItems.lastIndex) {
+                                Spacer(modifier = Modifier.width(12.dp))
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(20.dp))
                     }
                 }
             }
@@ -985,11 +1058,19 @@ fun ArtistScreen(
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(stringResource(R.string.playlists), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
-                    LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(plItems.size) { idx ->
-                            val pl = plItems[idx]
-                            ItemCard(context, pl, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, scrollState = listState)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                    ) {
+                        Spacer(modifier = Modifier.width(20.dp))
+                        plItems.forEachIndexed { index, item ->
+                            ItemCard(context, item, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, scrollState = listState)
+                            if (index < plItems.lastIndex) {
+                                Spacer(modifier = Modifier.width(12.dp))
+                            }
                         }
+                        Spacer(modifier = Modifier.width(20.dp))
                     }
                 }
             }
@@ -1043,8 +1124,19 @@ fun ArtistScreen(
                             }
                         }
                     }
-                    LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(section.items.size) { idx -> ItemCard(context, section.items[idx], artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, onVideoSelected = onVideoSelected, isVideo = isVideoSection, scrollState = listState) }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                    ) {
+                        Spacer(modifier = Modifier.width(20.dp))
+                        section.items.forEachIndexed { index, item ->
+                            ItemCard(context, item, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, onVideoSelected = onVideoSelected, isVideo = isVideoSection, scrollState = listState)
+                            if (index < section.items.lastIndex) {
+                                Spacer(modifier = Modifier.width(12.dp))
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(20.dp))
                     }
                 }
             }
@@ -1267,7 +1359,13 @@ fun ArtistScreen(
         }
 
         // ── ALL ALBUMS OVERLAY PAGE ────────────────────
-        if (showAllAlbumsOverlay && allAlbumsSection != null) {
+        CarouselToGridTransitionOverlay(
+            visible = showAllAlbumsOverlay && allAlbumsSection != null,
+            title = stringResource(R.string.albumes),
+            items = allAlbumsSection?.items?.filterIsInstance<AlbumItem>() ?: emptyList(),
+            isVideo = false,
+            onClose = { showAllAlbumsOverlay = false }
+        ) { dismiss ->
             val allAlbums = allAlbumsSection!!.items.filterIsInstance<AlbumItem>()
             Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -1275,7 +1373,7 @@ fun ArtistScreen(
                     // Pill back button
                     item {
                         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.12f)).clickable { showAllAlbumsOverlay = false }, contentAlignment = Alignment.Center) {
+                            Box(modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.12f)).clickable { dismiss() }, contentAlignment = Alignment.Center) {
                                 Icon(Icons.Default.ArrowBackIosNew, "Back", tint = Color(0xFFFA243C), modifier = Modifier.size(22.dp))
                             }
                             Spacer(modifier = Modifier.width(16.dp))
@@ -1303,14 +1401,20 @@ fun ArtistScreen(
         }
 
         // ── GENERIC SECTION OVERLAY PAGE ────────────────
-        if (showAllSectionOverlay && allSectionData != null) {
+        CarouselToGridTransitionOverlay(
+            visible = showAllSectionOverlay && allSectionData != null,
+            title = allSectionTitle,
+            items = allSectionData?.items ?: emptyList(),
+            isVideo = allSectionIsVideo,
+            onClose = { showAllSectionOverlay = false }
+        ) { dismiss ->
             val overlayItems = allSectionData!!.items
             Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     item { Spacer(modifier = Modifier.statusBarsPadding().height(16.dp)) }
                     item {
                         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.12f)).clickable { showAllSectionOverlay = false }, contentAlignment = Alignment.Center) {
+                            Box(modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.12f)).clickable { dismiss() }, contentAlignment = Alignment.Center) {
                                 Icon(Icons.Default.ArrowBackIosNew, "Back", tint = Color(0xFFFA243C), modifier = Modifier.size(22.dp))
                             }
                             Spacer(modifier = Modifier.width(16.dp))
@@ -1423,15 +1527,17 @@ fun ArtistScreen(
     }
 ) {
         val scope = this
-        // ── FLOATING TOP BAR ───────────────────────────
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        val isAnyOverlayActive = showAllAlbumsOverlay || showAllSectionOverlay || showAllSongsOverlay || showInfoOverlay
+        if (!isAnyOverlayActive) {
+            // ── FLOATING TOP BAR ───────────────────────────
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
             // Circular back button with GlassBox (same style as Replay Screen)
             scope.GlassBox(
                 modifier = Modifier
@@ -1505,6 +1611,7 @@ fun ArtistScreen(
                 }
             }
         }
+    }
 
         if (showArtistMenu) {
             AppleMusicArtistMenu(
@@ -1554,11 +1661,26 @@ private fun ItemCard(
                 }
             ) {
                 Box(modifier = imgMod
-                    .onGloballyPositioned { imageCoords = it }
+                    .onGloballyPositioned { coords ->
+                        imageCoords = coords
+                        if (!fillWidth) {
+                            val bounds = coords.boundsInRoot()
+                            if (bounds.width > 0f && bounds.height > 0f) {
+                                SharedTransitionState.carouselItemBounds[item.id] = bounds
+                            }
+                        }
+                    }
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color.DarkGray)
                 ) {
-                    AsyncImage(model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(), contentDescription = item.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                    AsyncImage(
+                        model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                        contentDescription = item.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().graphicsLayer {
+                            alpha = if (!fillWidth && SharedTransitionState.animatingItemIds.contains(item.id)) 0f else 1f
+                        }
+                    )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(item.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -1567,6 +1689,7 @@ private fun ItemCard(
         }
         is SongItem -> {
             val hdThumb = item.thumbnail?.replace("=w226-h226", "=w540-h540")?.replace("=w120-h120", "=w540-h540")
+            var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
             Column(modifier = cardMod.clickable { 
                 if (isVideo) {
                     onVideoSelected(item.id)
@@ -1574,8 +1697,27 @@ private fun ItemCard(
                     onSongSelected(PlayerState(title = item.title, artist = item.artists.joinToString { it.name }, artUrl = item.thumbnail, videoId = item.id)) 
                 }
             }) {
-                Box(modifier = imgMod.clip(RoundedCornerShape(12.dp)).background(Color.DarkGray)) {
-                    AsyncImage(model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(), contentDescription = item.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                Box(modifier = imgMod
+                    .onGloballyPositioned { coords ->
+                        imageCoords = coords
+                        if (!fillWidth) {
+                            val bounds = coords.boundsInRoot()
+                            if (bounds.width > 0f && bounds.height > 0f) {
+                                SharedTransitionState.carouselItemBounds[item.id] = bounds
+                            }
+                        }
+                    }
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.DarkGray)
+                ) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                        contentDescription = item.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().graphicsLayer {
+                            alpha = if (!fillWidth && SharedTransitionState.animatingItemIds.contains(item.id)) 0f else 1f
+                        }
+                    )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(item.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -1594,11 +1736,26 @@ private fun ItemCard(
                 }
             ) {
                 Box(modifier = imgMod
-                    .onGloballyPositioned { imageCoords = it }
+                    .onGloballyPositioned { coords ->
+                        imageCoords = coords
+                        if (!fillWidth) {
+                            val bounds = coords.boundsInRoot()
+                            if (bounds.width > 0f && bounds.height > 0f) {
+                                SharedTransitionState.carouselItemBounds[item.id] = bounds
+                            }
+                        }
+                    }
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color.DarkGray)
                 ) {
-                    AsyncImage(model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(), contentDescription = item.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                    AsyncImage(
+                        model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                        contentDescription = item.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().graphicsLayer {
+                            alpha = if (!fillWidth && SharedTransitionState.animatingItemIds.contains(item.id)) 0f else 1f
+                        }
+                    )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(item.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -1773,5 +1930,207 @@ private fun getAlbumDescription(artistName: String, albumTitle: String): String 
             }
         }
         else -> "Un álbum imprescindible en la discografía de $artistName que define su sonido y legado musical."
+    }
+}
+
+private fun lerpFloat(start: Float, stop: Float, fraction: Float): Float {
+    return start + fraction * (stop - start)
+}
+
+@Composable
+fun CarouselToGridTransitionOverlay(
+    visible: Boolean,
+    title: String,
+    items: List<YTItem>,
+    isVideo: Boolean,
+    onClose: () -> Unit,
+    content: @Composable (dismiss: () -> Unit) -> Unit
+) {
+    if (!visible) return
+
+    val density = LocalDensity.current
+    val scope = rememberCoroutineScope()
+    
+    var isOverlayVisible by remember { mutableStateOf(visible) }
+    var isClosing by remember { mutableStateOf(false) }
+    val progress = remember { Animatable(0f) }
+    
+    // Stable capture of carousel bounds
+    val capturedCarouselBounds = remember { mutableStateMapOf<String, Rect>() }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            SharedTransitionState.animatingItemIds.clear()
+        }
+    }
+
+    LaunchedEffect(visible) {
+        if (visible) {
+            isOverlayVisible = true
+            isClosing = false
+            
+            // Populate animatingItemIds so their carousel cards hide static covers
+            SharedTransitionState.animatingItemIds.clear()
+            items.take(6).forEach {
+                SharedTransitionState.animatingItemIds.add(it.id)
+            }
+            
+            capturedCarouselBounds.clear()
+            SharedTransitionState.carouselItemBounds.forEach { (key, value) ->
+                if (value.width > 0f && value.height > 0f) {
+                    capturedCarouselBounds[key] = value
+                }
+            }
+            
+            progress.animateTo(
+                targetValue = 1f,
+                animationSpec = spring(
+                    dampingRatio = 0.85f,
+                    stiffness = 110f
+                )
+            )
+        }
+    }
+
+    val dismissAction = remember(scope, progress) {
+        {
+            if (!isClosing) {
+                isClosing = true
+                scope.launch {
+                    progress.animateTo(
+                        targetValue = 0f,
+                        animationSpec = spring(
+                            dampingRatio = 0.68f, // Bounce on return
+                            stiffness = 130f
+                        )
+                    )
+                    SharedTransitionState.animatingItemIds.clear()
+                    isOverlayVisible = false
+                    onClose()
+                }
+            }
+            Unit
+        }
+    }
+
+    // Intercept back button
+    androidx.activity.compose.BackHandler(enabled = isOverlayVisible) {
+        dismissAction()
+    }
+
+    if (isOverlayVisible) {
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val screenWidthPx = constraints.maxWidth.toFloat()
+            val screenHeightPx = constraints.maxHeight.toFloat()
+            val statusBarsDp = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+            
+            val spacingPx = with(density) { 12.dp.toPx() }
+            val paddingPx = with(density) { 20.dp.toPx() }
+            val gridItemWidthPx = (screenWidthPx - paddingPx * 2f - spacingPx) / 2f
+            
+            val thumbnailRatio = if (isVideo) 16f / 9f else 1f
+            val gridItemHeightPx = gridItemWidthPx / thumbnailRatio
+            
+            val rowSpacingPx = with(density) { 16.dp.toPx() }
+            val gridStartY = with(density) { (80.dp + statusBarsDp).toPx() }
+            
+            // Text padding + height is approximately 46.dp
+            val textContainerHeightPx = with(density) { 46.dp.toPx() }
+            val rowHeightPx = gridItemHeightPx + textContainerHeightPx + rowSpacingPx
+
+            val currentProgress = progress.value
+
+            if (currentProgress < 1f || isClosing) {
+                // Background fade
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = currentProgress))
+                ) {
+                    // Header title and back button
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .graphicsLayer { alpha = currentProgress },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.12f))
+                                .clickable { dismissAction() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.ArrowBackIosNew, "Back", tint = Color(0xFFFA243C), modifier = Modifier.size(22.dp))
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(title, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    // Render the flying cover images for the first 6 items
+                    val referenceY = capturedCarouselBounds.values.firstOrNull { it.top > 0f }?.top
+                        ?: (screenHeightPx / 2f)
+
+                    val itemsToAnimate = items.take(6)
+                    itemsToAnimate.forEachIndexed { i, item ->
+                        val startBounds = capturedCarouselBounds[item.id]
+                        
+                        val col = i % 2
+                        val row = i / 2
+                        val targetGridX = paddingPx + col * (gridItemWidthPx + spacingPx)
+                        val targetGridY = gridStartY + row * rowHeightPx
+
+                        // Determine source dimensions: items from the 4th (index >= 3) and onwards simply slide to/from the right
+                        val isForcedRight = i >= 3
+                        val sourceX = if (isForcedRight) screenWidthPx else (startBounds?.left ?: screenWidthPx)
+                        val sourceY = if (isForcedRight) referenceY else (startBounds?.top ?: referenceY)
+                        val sourceW = if (isForcedRight) gridItemWidthPx else (startBounds?.width ?: gridItemWidthPx)
+                        val sourceH = if (isForcedRight) gridItemHeightPx else (startBounds?.height ?: gridItemHeightPx)
+
+                        // Interpolate coordinates
+                        val curX = lerpFloat(sourceX, targetGridX, currentProgress)
+                        val curY = lerpFloat(sourceY, targetGridY, currentProgress)
+                        val curW = lerpFloat(sourceW, gridItemWidthPx, currentProgress).coerceAtLeast(0f)
+                        val curH = lerpFloat(sourceH, gridItemHeightPx, currentProgress).coerceAtLeast(0f)
+                        val curCorner = lerpFloat(if (startBounds != null) 12f else 0f, 12f, currentProgress).coerceAtLeast(0f)
+
+                        val hdThumb = when (item) {
+                            is AlbumItem -> item.thumbnail?.replace("=w226-h226", "=w540-h540")?.replace("=w120-h120", "=w540-h540")
+                            is SongItem -> item.thumbnail?.replace("=w226-h226", "=w540-h540")?.replace("=w120-h120", "=w540-h540")
+                            is PlaylistItem -> item.thumbnail?.replace("=w226-h226", "=w540-h540")?.replace("=w120-h120", "=w540-h540")
+                            else -> null
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .offset { IntOffset(curX.roundToInt(), curY.roundToInt()) }
+                                .size(with(density) { curW.toDp() }, with(density) { curH.toDp() })
+                                .clip(RoundedCornerShape(curCorner.dp))
+                                .background(Color.DarkGray)
+                        ) {
+                            if (hdThumb != null) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(hdThumb)
+                                        .crossfade(false)
+                                        .build(),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Static content when animation is complete
+                Box(modifier = Modifier.fillMaxSize()) {
+                    content(dismissAction)
+                }
+            }
+        }
     }
 }
