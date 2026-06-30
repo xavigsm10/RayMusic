@@ -63,6 +63,7 @@ class DownloadUtil private constructor(private val context: Context) {
                                     .build()
                             } ?: response.request
                         }
+                        .fastFallback(true)
                         .build()
                 )
             )

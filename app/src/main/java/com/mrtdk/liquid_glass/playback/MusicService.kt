@@ -94,6 +94,7 @@ class MusicService : MediaSessionService() {
         val okHttpDataSourceFactory = androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(
             OkHttpClient.Builder()
                 .proxy(YouTube.proxy)
+                .fastFallback(true)
                 .addInterceptor { chain ->
                     val request = chain.request()
                     val clientParam = request.url.queryParameter("c")

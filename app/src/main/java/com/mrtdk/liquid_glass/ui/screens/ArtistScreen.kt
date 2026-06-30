@@ -1698,7 +1698,9 @@ private fun ItemCard(
                         model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
                         contentDescription = item.title,
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize().graphicsLayer {
+                            alpha = if (!fillWidth && SharedTransitionState.animatingItemIds.contains(item.id)) 0f else 1f
+                        }
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -1772,7 +1774,9 @@ private fun ItemCard(
                         model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
                         contentDescription = item.title,
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize().graphicsLayer {
+                            alpha = if (!fillWidth && SharedTransitionState.animatingItemIds.contains(item.id)) 0f else 1f
+                        }
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
