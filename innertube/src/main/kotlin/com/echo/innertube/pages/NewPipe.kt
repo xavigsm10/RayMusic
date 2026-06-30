@@ -29,6 +29,7 @@ private class NewPipeDownloaderImpl(proxy: Proxy?, proxyAuth: String?) : Downloa
                     .build()
             } ?: response.request
         }
+        .fastFallback(true)
         .build()
 
     @Throws(IOException::class, ReCaptchaException::class)

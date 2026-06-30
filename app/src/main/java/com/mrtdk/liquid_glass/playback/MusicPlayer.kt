@@ -268,8 +268,9 @@ class MusicPlayer(private val context: Context) {
                 
                 val httpClient = okhttp3.OkHttpClient.Builder()
                     .proxy(YouTube.proxy)
-                    .connectTimeout(3, java.util.concurrent.TimeUnit.SECONDS)
-                    .readTimeout(3, java.util.concurrent.TimeUnit.SECONDS)
+                    .connectTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+                    .readTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
+                    .fastFallback(true)
                     .build()
                     
                 val channel = kotlinx.coroutines.channels.Channel<Pair<String, String>?>(clientsToTry.size + 1)

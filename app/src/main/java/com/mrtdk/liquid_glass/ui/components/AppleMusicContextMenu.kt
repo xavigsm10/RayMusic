@@ -819,13 +819,14 @@ fun VerticalMenuActionItem(
     label: String,
     iconTint: Color = Color.White.copy(alpha = 0.7f),
     textColor: Color = Color.White,
+    trailingContent: (@Composable () -> Unit)? = null,
     onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(vertical = 12.dp, horizontal = 8.dp),
+            .padding(vertical = 12.dp, horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -839,8 +840,13 @@ fun VerticalMenuActionItem(
             text = label,
             color = textColor,
             fontSize = 15.sp,
-            fontWeight = FontWeight.Normal
+            fontWeight = FontWeight.Normal,
+            modifier = Modifier.weight(1f)
         )
+        if (trailingContent != null) {
+            Spacer(modifier = Modifier.width(8.dp))
+            trailingContent()
+        }
     }
 }
 
@@ -2111,7 +2117,8 @@ fun GlassBoxScope.PlayerOptionsMenu(
     onDownload: () -> Unit,
     onAddToPlaylist: () -> Unit,
     onSongSelected: (PlayerState) -> Unit,
-    onAlbumSelected: (com.mrtdk.liquid_glass.ui.screens.AlbumState) -> Unit
+    onAlbumSelected: (com.mrtdk.liquid_glass.ui.screens.AlbumState) -> Unit,
+    pivotBounds: androidx.compose.ui.geometry.Rect? = null
 ) {
     var visible by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -2156,7 +2163,7 @@ fun GlassBoxScope.PlayerOptionsMenu(
     val dominantColor by LibraryManager.currentDominantColor.collectAsState()
     val tintColor = remember(dominantColor) { dominantColor.copy(alpha = 0.35f) }
 
-    Box(
+        Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.4f))
@@ -2166,16 +2173,24 @@ fun GlassBoxScope.PlayerOptionsMenu(
             ) { handleDismiss() }
     )
 
-    Box(
+    BoxWithConstraints(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
+        val screenCenterX = constraints.maxWidth.toFloat() / 2f
+        val screenCenterY = constraints.maxHeight.toFloat() / 2f
+        val progress = ((scale - 0.4f) / 0.6f).coerceIn(0f, 1f)
+
         this@PlayerOptionsMenu.GlassBox(
             modifier = Modifier
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
                     this.alpha = alpha
+                    if (pivotBounds != null) {
+                        translationX = (1f - progress) * (pivotBounds.center.x - screenCenterX)
+                        translationY = (1f - progress) * (pivotBounds.center.y - screenCenterY)
+                    }
                 }
                 .width(280.dp)
                 .wrapContentHeight(),
@@ -2461,4 +2476,297 @@ fun GlassBoxScope.PlayerOptionsMenu(
     }
 }
 
+@Composable
+fun GlassBoxScope.LyricsOptionsMenu(
+    backdrop: com.kyant.backdrop.backdrops.LayerBackdrop,
+    onDismiss: () -> Unit,
+    playerState: PlayerState?,
+    selectedProvider: String,
+    onSelectProvider: (String) -> Unit,
+    isRomajiEnabled: Boolean,
+    onToggleRomaji: () -> Unit,
+    lyricsOffset: Int,
+    onAdjustOffset: () -> Unit,
+    onEditLyrics: () -> Unit,
+    onReloadLyrics: () -> Unit,
+    onSearchManually: () -> Unit,
+    onSearchOnline: () -> Unit,
+    pivotBounds: androidx.compose.ui.geometry.Rect? = null
+) {
+    var visible by remember { mutableStateOf(false) }
+    var showProviderSelection by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
+    LaunchedEffect(Unit) {
+        visible = true
+    }
+
+    val scale by animateFloatAsState(
+        targetValue = if (visible) 1f else 0.4f,
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
+        label = "menuScale"
+    )
+    val alpha by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(durationMillis = 200),
+        label = "menuAlpha"
+    )
+    val cornerRadius by animateFloatAsState(
+        targetValue = if (visible) 24f else 80f,
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
+        label = "menuCornerRadius"
+    )
+    val blurPx by animateFloatAsState(
+        targetValue = if (visible) 0f else 15f,
+        animationSpec = tween(durationMillis = 180),
+        label = "menuContentBlur"
+    )
+
+    val context = LocalContext.current
+
+    fun handleDismiss() {
+        visible = false
+        onDismiss()
+    }
+
+    BackHandler(enabled = visible) {
+        if (showProviderSelection) {
+            showProviderSelection = false
+        } else {
+            handleDismiss()
+        }
+    }
+
+    val dominantColor by LibraryManager.currentDominantColor.collectAsState()
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.4f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { handleDismiss() }
+    )
+
+    BoxWithConstraints(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        val screenCenterX = constraints.maxWidth.toFloat() / 2f
+        val screenCenterY = constraints.maxHeight.toFloat() / 2f
+        val progress = ((scale - 0.4f) / 0.6f).coerceIn(0f, 1f)
+
+        this@LyricsOptionsMenu.GlassBox(
+            modifier = Modifier
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    this.alpha = alpha
+                    if (pivotBounds != null) {
+                        translationX = (1f - progress) * (pivotBounds.center.x - screenCenterX)
+                        translationY = (1f - progress) * (pivotBounds.center.y - screenCenterY)
+                    }
+                }
+                .width(280.dp)
+                .wrapContentHeight(),
+            blur = 0.8f,
+            scale = 0.02f,
+            centerDistortion = 0.1f,
+            warpEdges = 0.4f,
+            elevation = 4.dp,
+            shape = RoundedCornerShape(cornerRadius.dp),
+            tint = dominantColor.copy(alpha = 0.25f),
+            darkness = 0.2f
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .let { if (blurPx > 0.1f) it.blur(blurPx.dp) else it }
+                    .padding(vertical = 12.dp)
+            ) {
+                if (showProviderSelection) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { showProviderSelection = false }) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Atrás", tint = Color.White)
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Proveedor de Letras",
+                            color = Color.White,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 8.dp))
+
+                    val providers = listOf(
+                        "LRCLIB",
+                        "KuGou",
+                        "BetterLyrics",
+                        "LyricsPlus",
+                        "SimpMusic",
+                        "YouTube Music",
+                        "YouTube Subtitle"
+                    )
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp)
+                    ) {
+                        providers.forEach { provider ->
+                            val isSelected = provider == selectedProvider
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onSelectProvider(provider)
+                                        showProviderSelection = false
+                                    }
+                                    .padding(vertical = 12.dp, horizontal = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = if (isSelected) "$provider (Activo)" else provider,
+                                    color = if (isSelected) Color(0xFFFA243C) else Color.White,
+                                    fontSize = 15.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Seleccionado",
+                                        tint = Color(0xFFFA243C),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable {
+                                    onEditLyrics()
+                                    handleDismiss()
+                                }
+                                .padding(vertical = 8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = "Editar", tint = Color.White, modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("Editar", color = Color.White, fontSize = 11.sp, textAlign = TextAlign.Center)
+                        }
+
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable {
+                                    onReloadLyrics()
+                                    handleDismiss()
+                                }
+                                .padding(vertical = 8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Recargar", tint = Color.White, modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("Recargar", color = Color.White, fontSize = 11.sp, textAlign = TextAlign.Center)
+                        }
+
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable {
+                                    onSearchManually()
+                                    handleDismiss()
+                                }
+                                .padding(vertical = 8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(Icons.Default.Search, contentDescription = "Buscar", tint = Color.White, modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("Buscar", color = Color.White, fontSize = 11.sp, textAlign = TextAlign.Center)
+                        }
+                    }
+
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 8.dp))
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                    ) {
+                        VerticalMenuActionItem(
+                            icon = Icons.Default.QueueMusic,
+                            label = "Proveedor: $selectedProvider",
+                            onClick = {
+                                showProviderSelection = true
+                            }
+                        )
+
+                        VerticalMenuActionItem(
+                            icon = Icons.Default.History,
+                            label = "Ajustar desfase",
+                            trailingContent = {
+                                Text(
+                                    text = "${if (lyricsOffset >= 0) "+" else ""}${lyricsOffset}ms",
+                                    color = Color.White.copy(alpha = 0.6f),
+                                    fontSize = 14.sp
+                                )
+                            },
+                            onClick = {
+                                onAdjustOffset()
+                                handleDismiss()
+                            }
+                        )
+
+                        VerticalMenuActionItem(
+                            icon = Icons.Default.Translate,
+                            label = "Romanizar pista actual",
+                            trailingContent = {
+                                androidx.compose.material3.Switch(
+                                    checked = isRomajiEnabled,
+                                    onCheckedChange = {
+                                        onToggleRomaji()
+                                    },
+                                    colors = androidx.compose.material3.SwitchDefaults.colors(
+                                        checkedThumbColor = Color(0xFFFA243C),
+                                        checkedTrackColor = Color(0xFFFA243C).copy(alpha = 0.4f)
+                                    ),
+                                    modifier = Modifier.graphicsLayer { scaleX = 0.8f; scaleY = 0.8f }
+                                )
+                            },
+                            onClick = {
+                                onToggleRomaji()
+                            }
+                        )
+
+                        VerticalMenuActionItem(
+                            icon = Icons.Default.Language,
+                            label = "Buscar en Internet",
+                            onClick = {
+                                onSearchOnline()
+                                handleDismiss()
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}

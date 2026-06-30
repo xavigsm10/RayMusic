@@ -73,8 +73,14 @@ class InnerTube {
             deflate(0.8F)
         }
 
-        proxy?.let {
-            engine {
+        engine {
+            config {
+                fastFallback(true)
+                connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+                readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+                writeTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            }
+            proxy?.let {
                 proxy = this@InnerTube.proxy
                 proxyAuth?.let {
                     config {
@@ -83,6 +89,10 @@ class InnerTube {
                                 .header("Proxy-Authorization", proxyAuth!!)
                                 .build()
                         }
+                        fastFallback(true)
+                        connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+                        readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+                        writeTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
                     }
                 }
             }
