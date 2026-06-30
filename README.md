@@ -62,11 +62,12 @@ Disfruta de un vistazo a la cuidada y premium interfaz de usuario:
   <img src="Capturas%20de%20Pantalla/Reproductor%20en%20Detalle%202.png" width="30%" alt="Reproductor en Detalle 2">
 </p>
 <p align="center">
+  <img src="Capturas%20de%20Pantalla/Artistas.png" width="30%" alt="Artistas">
   <img src="Capturas%20de%20Pantalla/Letras.png" width="30%" alt="Letras">
   <img src="Capturas%20de%20Pantalla/Novedades.png" width="30%" alt="Novedades">
-  <img src="Capturas%20de%20Pantalla/Playlist.png" width="30%" alt="Playlist">
 </p>
 <p align="center">
+  <img src="Capturas%20de%20Pantalla/Playlist.png" width="30%" alt="Playlist">
   <img src="Capturas%20de%20Pantalla/Biblioteca.png" width="30%" alt="Biblioteca">
 </p>
 
