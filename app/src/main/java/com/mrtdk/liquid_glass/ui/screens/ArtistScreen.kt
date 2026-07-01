@@ -4,6 +4,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -61,11 +62,14 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.ScrollState
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
@@ -147,6 +151,30 @@ fun ArtistScreen(
     var allSectionTitle by remember { mutableStateOf("") }
     var allSectionIsVideo by remember { mutableStateOf(false) }
     var showInfoOverlay by remember { mutableStateOf(false) }
+    // Snapshot of carousel item bounds captured at click time for accurate animation origins
+    var allSectionSnapshotBounds by remember { mutableStateOf<Map<String, androidx.compose.ui.geometry.Rect>>(emptyMap()) }
+    var allAlbumsSnapshotBounds by remember { mutableStateOf<Map<String, androidx.compose.ui.geometry.Rect>>(emptyMap()) }
+
+    // Persistent cache for prefetched continuation items to show full lists immediately
+    val prefetchedSections = remember { mutableStateMapOf<String, List<YTItem>>() }
+    // Persistent scroll states for carousels to prevent them from resetting to 0 when scrolled or overlaid
+    val carouselScrollStates = remember { mutableStateMapOf<String, ScrollState>() }
+
+    // Prefetch all sections containing a moreEndpoint in the background
+    LaunchedEffect(artistPage) {
+        val page = artistPage ?: return@LaunchedEffect
+        page.sections.forEach { section ->
+            if (section.moreEndpoint != null) {
+                launch(Dispatchers.IO) {
+                    val result = YouTube.artistItems(section.moreEndpoint!!).getOrNull()
+                    if (result != null) {
+                        prefetchedSections[section.title] = result.items
+                    }
+                }
+            }
+        }
+    }
+
 
     val artistThumb = artistPage?.artist?.thumbnail ?: artistState.thumbnail
     val hdThumb = artistThumb?.let { url ->
@@ -425,12 +453,13 @@ fun ArtistScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(480.dp)
+                        .height(510.dp)
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(560.dp)
+                            .height(460.dp)
+                            .align(Alignment.TopCenter)
                             .layerBackdrop(localBackdrop)
                     ) {
                         // Sharp cover image - full size
@@ -486,12 +515,12 @@ fun ArtistScreen(
                         )
                     }
 
-                    // Artist Name + Buttons overlaid at the bottom of the visible area
+                    // Artist Name + Buttons overlaid at the bottom of the image (over the gradient)
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .align(Alignment.BottomCenter)
-                            .padding(bottom = 16.dp),
+                            .padding(bottom = 12.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
@@ -505,7 +534,50 @@ fun ArtistScreen(
                                 .padding(horizontal = 24.dp)
                         )
 
-                        Spacer(modifier = Modifier.height(14.dp))
+                        // Subscriber and monthly listener counts in elegant translucent border chips
+                        if (artistPage?.subscriberCountText != null || artistPage?.monthlyListenerCount != null) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(top = 8.dp)
+                            ) {
+                                artistPage?.subscriberCountText?.let { subscribers ->
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(Color.White.copy(alpha = 0.08f))
+                                            .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                                    ) {
+                                        Text(
+                                            text = "$subscribers ${stringResource(R.string.suscriptores)}",
+                                            color = Color.White.copy(alpha = 0.7f),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+
+                                artistPage?.monthlyListenerCount?.let { listeners ->
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(Color.White.copy(alpha = 0.08f))
+                                            .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                                    ) {
+                                        Text(
+                                            text = "$listeners ${stringResource(R.string.oyentes_mensuales)}",
+                                            color = Color.White.copy(alpha = 0.7f),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
 
                         val isSaved = savedItems.any { it.id == artistState.id }
 
@@ -731,12 +803,13 @@ fun ArtistScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                allSongsSection = topSongsSection
+                                allSongsSection = topSongsSection.copy(items = prefetchedSections[topSongsSection.title] ?: topSongsSection.items)
                                 showAllSongsOverlay = true
-                                if (topSongsSection.moreEndpoint != null && allSongsSection?.items?.size == topSongsSection.items.size) {
+                                if (topSongsSection.moreEndpoint != null && prefetchedSections[topSongsSection.title] == null) {
                                     coroutineScope.launch(Dispatchers.IO) {
                                         val result = YouTube.artistItems(topSongsSection.moreEndpoint!!).getOrNull()
                                         if (result != null) {
+                                            prefetchedSections[topSongsSection.title] = result.items
                                             allSongsSection = allSongsSection?.copy(items = result.items)
                                         }
                                     }
@@ -907,6 +980,7 @@ fun ArtistScreen(
             // ── ALBUMS ─────────────────────────────────────
             if (albumsSection != null) {
                 val albumItems = albumsSection.items.filterIsInstance<AlbumItem>()
+                val scrollState = carouselScrollStates.getOrPut(albumsSection.title) { ScrollState(0) }
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -914,12 +988,15 @@ fun ArtistScreen(
                         if (albumItems.size > 4 || albumsSection.moreEndpoint != null) {
                             val coroutineScope = rememberCoroutineScope()
                             Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = 0.12f)).clickable {
-                                allAlbumsSection = albumsSection; 
+                                // Snapshot current carousel bounds before opening overlay
+                                allAlbumsSnapshotBounds = SharedTransitionState.carouselItemBounds.toMap()
+                                allAlbumsSection = albumsSection.copy(items = prefetchedSections[albumsSection.title] ?: albumsSection.items)
                                 showAllAlbumsOverlay = true
-                                if (albumsSection.moreEndpoint != null && allAlbumsSection?.items?.size == albumsSection.items.size) {
+                                if (albumsSection.moreEndpoint != null && prefetchedSections[albumsSection.title] == null) {
                                     coroutineScope.launch(Dispatchers.IO) {
                                         val result = YouTube.artistItems(albumsSection.moreEndpoint!!).getOrNull()
                                         if (result != null) {
+                                            prefetchedSections[albumsSection.title] = result.items
                                             allAlbumsSection = allAlbumsSection?.copy(items = result.items)
                                         }
                                     }
@@ -932,7 +1009,7 @@ fun ArtistScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
+                            .horizontalScroll(scrollState)
                     ) {
                         Spacer(modifier = Modifier.width(20.dp))
                         albumItems.take(8).forEachIndexed { index, item ->
@@ -949,6 +1026,7 @@ fun ArtistScreen(
             // ── SINGLES Y EP ───────────────────────────────
             if (singlesSection != null) {
                 val singleItems = singlesSection.items.filterIsInstance<AlbumItem>()
+                val scrollState = carouselScrollStates.getOrPut(singlesSection.title) { ScrollState(0) }
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -958,12 +1036,16 @@ fun ArtistScreen(
                             Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = 0.12f)).clickable {
                                 allSectionTitle = context.getString(R.string.sencillos_y_ep)
                                 allSectionIsVideo = false
-                                allSectionData = singlesSection
+                                allSectionData = singlesSection.copy(items = prefetchedSections[singlesSection.title] ?: singlesSection.items)
+                                allSectionSnapshotBounds = SharedTransitionState.carouselItemBounds.toMap()
                                 showAllSectionOverlay = true
-                                if (singlesSection.moreEndpoint != null) {
+                                if (singlesSection.moreEndpoint != null && prefetchedSections[singlesSection.title] == null) {
                                     coroutineScope.launch(Dispatchers.IO) {
                                         val result = YouTube.artistItems(singlesSection.moreEndpoint!!).getOrNull()
-                                        if (result != null) allSectionData = allSectionData?.copy(items = result.items)
+                                        if (result != null) {
+                                            prefetchedSections[singlesSection.title] = result.items
+                                            allSectionData = allSectionData?.copy(items = result.items)
+                                        }
                                     }
                                 }
                             }.padding(horizontal = 12.dp, vertical = 6.dp)) {
@@ -974,7 +1056,7 @@ fun ArtistScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
+                            .horizontalScroll(scrollState)
                     ) {
                         Spacer(modifier = Modifier.width(20.dp))
                         singleItems.take(8).forEachIndexed { index, item ->
@@ -991,6 +1073,7 @@ fun ArtistScreen(
             // ── VIDEOS ─────────────────────────────────────
             if (videosSection != null) {
                 val videoItems = videosSection.items.filterIsInstance<SongItem>()
+                val scrollState = carouselScrollStates.getOrPut(videosSection.title) { ScrollState(0) }
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -1000,12 +1083,16 @@ fun ArtistScreen(
                             Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = 0.12f)).clickable {
                                 allSectionTitle = "Videos"
                                 allSectionIsVideo = true
-                                allSectionData = videosSection
+                                allSectionData = videosSection.copy(items = prefetchedSections[videosSection.title] ?: videosSection.items)
+                                allSectionSnapshotBounds = SharedTransitionState.carouselItemBounds.toMap()
                                 showAllSectionOverlay = true
-                                if (videosSection.moreEndpoint != null) {
+                                if (videosSection.moreEndpoint != null && prefetchedSections[videosSection.title] == null) {
                                     coroutineScope.launch(Dispatchers.IO) {
                                         val result = YouTube.artistItems(videosSection.moreEndpoint!!).getOrNull()
-                                        if (result != null) allSectionData = allSectionData?.copy(items = result.items)
+                                        if (result != null) {
+                                            prefetchedSections[videosSection.title] = result.items
+                                            allSectionData = allSectionData?.copy(items = result.items)
+                                        }
                                     }
                                 }
                             }.padding(horizontal = 12.dp, vertical = 6.dp)) {
@@ -1016,7 +1103,7 @@ fun ArtistScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
+                            .horizontalScroll(scrollState)
                     ) {
                         Spacer(modifier = Modifier.width(20.dp))
                         videoItems.forEachIndexed { index, item ->
@@ -1031,20 +1118,20 @@ fun ArtistScreen(
             }
 
             // ── DESTACADO EN ───────────────────────────────
-            if (featuredSection != null) {
-                val featuredItems = featuredSection.items.filterIsInstance<AlbumItem>()
+            if (featuredSection != null && featuredSection.items.isNotEmpty()) {
+                val scrollState = carouselScrollStates.getOrPut(featuredSection.title) { ScrollState(0) }
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(stringResource(R.string.destacado_en), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
+                            .horizontalScroll(scrollState)
                     ) {
                         Spacer(modifier = Modifier.width(20.dp))
-                        featuredItems.forEachIndexed { index, item ->
+                        featuredSection.items.forEachIndexed { index, item ->
                             ItemCard(context, item, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, scrollState = listState)
-                            if (index < featuredItems.lastIndex) {
+                            if (index < featuredSection.items.lastIndex) {
                                 Spacer(modifier = Modifier.width(12.dp))
                             }
                         }
@@ -1056,6 +1143,7 @@ fun ArtistScreen(
             // ── PLAYLISTS ──────────────────────────────────
             if (playlistsSection != null) {
                 val plItems = playlistsSection.items.filterIsInstance<PlaylistItem>()
+                val scrollState = carouselScrollStates.getOrPut(playlistsSection.title) { ScrollState(0) }
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -1065,12 +1153,16 @@ fun ArtistScreen(
                             Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = 0.12f)).clickable {
                                 allSectionTitle = context.getString(R.string.playlists)
                                 allSectionIsVideo = false
-                                allSectionData = playlistsSection
+                                allSectionData = playlistsSection.copy(items = prefetchedSections[playlistsSection.title] ?: playlistsSection.items)
+                                allSectionSnapshotBounds = SharedTransitionState.carouselItemBounds.toMap()
                                 showAllSectionOverlay = true
-                                if (playlistsSection.moreEndpoint != null) {
+                                if (playlistsSection.moreEndpoint != null && prefetchedSections[playlistsSection.title] == null) {
                                     coroutineScope.launch(Dispatchers.IO) {
                                         val result = YouTube.artistItems(playlistsSection.moreEndpoint!!).getOrNull()
-                                        if (result != null) allSectionData = allSectionData?.copy(items = result.items)
+                                        if (result != null) {
+                                            prefetchedSections[playlistsSection.title] = result.items
+                                            allSectionData = allSectionData?.copy(items = result.items)
+                                        }
                                     }
                                 }
                             }.padding(horizontal = 12.dp, vertical = 6.dp)) {
@@ -1081,7 +1173,7 @@ fun ArtistScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
+                            .horizontalScroll(scrollState)
                     ) {
                         Spacer(modifier = Modifier.width(20.dp))
                         plItems.take(8).forEachIndexed { index, item ->
@@ -1122,6 +1214,7 @@ fun ArtistScreen(
             // Also show any remaining sections not matched above
             sections.filter { it != topSongsSection && it != albumsSection && it != singlesSection && it != videosSection && it != featuredSection && it != playlistsSection && it != fansSection }.forEach { section ->
                 val isVideoSection = section.title.contains("video", true) || section.title.contains("vídeo", true) || section.title.contains("presentacion", true) || section.title.contains("live", true) || section.title.contains("vivo", true) || section.title.contains("concierto", true)
+                val scrollState = carouselScrollStates.getOrPut(section.title) { ScrollState(0) }
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -1131,12 +1224,16 @@ fun ArtistScreen(
                             Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = 0.12f)).clickable {
                                 allSectionTitle = section.title
                                 allSectionIsVideo = isVideoSection
-                                allSectionData = section
+                                allSectionData = section.copy(items = prefetchedSections[section.title] ?: section.items)
+                                allSectionSnapshotBounds = SharedTransitionState.carouselItemBounds.toMap()
                                 showAllSectionOverlay = true
-                                if (section.moreEndpoint != null) {
+                                if (section.moreEndpoint != null && prefetchedSections[section.title] == null) {
                                     coroutineScope.launch(Dispatchers.IO) {
                                         val result = YouTube.artistItems(section.moreEndpoint!!).getOrNull()
-                                        if (result != null) allSectionData = allSectionData?.copy(items = result.items)
+                                        if (result != null) {
+                                            prefetchedSections[section.title] = result.items
+                                            allSectionData = allSectionData?.copy(items = result.items)
+                                        }
                                     }
                                 }
                             }.padding(horizontal = 12.dp, vertical = 6.dp)) {
@@ -1147,7 +1244,7 @@ fun ArtistScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
+                            .horizontalScroll(scrollState)
                     ) {
                         Spacer(modifier = Modifier.width(20.dp))
                         section.items.forEachIndexed { index, item ->
@@ -1160,6 +1257,8 @@ fun ArtistScreen(
                     }
                 }
             }
+
+            // Biography removed per user request
 
             item { Spacer(modifier = Modifier.height(100.dp)) }
         }
@@ -1384,6 +1483,7 @@ fun ArtistScreen(
             title = stringResource(R.string.albumes),
             items = allAlbumsSection?.items?.filterIsInstance<AlbumItem>() ?: emptyList(),
             isVideo = false,
+            snapshotBounds = allAlbumsSnapshotBounds,
             onClose = { showAllAlbumsOverlay = false }
         ) { dismiss ->
             val allAlbums = allAlbumsSection!!.items.filterIsInstance<AlbumItem>()
@@ -1426,6 +1526,7 @@ fun ArtistScreen(
             title = allSectionTitle,
             items = allSectionData?.items ?: emptyList(),
             isVideo = allSectionIsVideo,
+            snapshotBounds = allSectionSnapshotBounds,
             onClose = { showAllSectionOverlay = false }
         ) { dismiss ->
             val overlayItems = allSectionData!!.items
@@ -1965,6 +2066,7 @@ fun CarouselToGridTransitionOverlay(
     title: String,
     items: List<YTItem>,
     isVideo: Boolean,
+    snapshotBounds: Map<String, androidx.compose.ui.geometry.Rect> = emptyMap(),
     onClose: () -> Unit,
     content: @Composable (dismiss: () -> Unit) -> Unit
 ) {
@@ -1998,7 +2100,9 @@ fun CarouselToGridTransitionOverlay(
             }
             
             capturedCarouselBounds.clear()
-            SharedTransitionState.carouselItemBounds.forEach { (key, value) ->
+            // Use snapshot bounds passed at click time (prefer over global state for scrolled carousels)
+            val boundsSource = if (snapshotBounds.isNotEmpty()) snapshotBounds else SharedTransitionState.carouselItemBounds
+            boundsSource.forEach { (key, value) ->
                 if (value.width > 0f && value.height > 0f) {
                     capturedCarouselBounds[key] = value
                 }
@@ -2021,10 +2125,7 @@ fun CarouselToGridTransitionOverlay(
                 scope.launch {
                     progress.animateTo(
                         targetValue = 0f,
-                        animationSpec = spring(
-                            dampingRatio = 0.68f, // Bounce on return
-                            stiffness = 130f
-                        )
+                        animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing)
                     )
                     SharedTransitionState.animatingItemIds.clear()
                     isOverlayVisible = false
@@ -2063,7 +2164,7 @@ fun CarouselToGridTransitionOverlay(
             val currentProgress = progress.value
 
             if (currentProgress < 1f || isClosing) {
-                // Background fade
+                // Opening or Closing: background fade + flying cards animation
                 Box(
                     modifier = Modifier
                         .fillMaxSize()

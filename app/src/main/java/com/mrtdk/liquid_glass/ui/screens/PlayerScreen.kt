@@ -214,6 +214,7 @@ import androidx.compose.material.icons.filled.Wifi
 
 import com.mrtdk.liquid_glass.ui.components.PlayerOptionsMenu
 import com.mrtdk.liquid_glass.ui.components.LyricsOptionsMenu
+import com.mrtdk.liquid_glass.ui.components.ArtistOptionsMenu
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.ui.layout.boundsInRoot
@@ -1245,6 +1246,9 @@ fun PlayerScreen(
         var menuPivotBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
         var showPlaylistMenu by remember { mutableStateOf(false) }
         var showNewPlaylistDialog by remember { mutableStateOf(false) }
+        var showArtistOptionsMenu by remember { mutableStateOf(false) }
+        var artistMenuOptions by remember { mutableStateOf<List<String>>(emptyList()) }
+        var artistPivotBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
 
         
 
@@ -1820,6 +1824,11 @@ fun PlayerScreen(
                     onShowOptionsMenu = { bounds -> menuPivotBounds = bounds; showOptionsMenu = true },
                     onShowLyricsMenu = { showLyricsOptionsMenu = true },
                     onShowPlaylistMenu = { showPlaylistMenu = true },
+                    onShowArtistMenu = { artists, bounds ->
+                        artistMenuOptions = artists
+                        artistPivotBounds = bounds
+                        showArtistOptionsMenu = true
+                    },
                     isBottomBarCollapsed = isBottomBarCollapsed,
                     isAutoScrollEnabled = isAutoScrollEnabled,
                     scrollToCurrentTrigger = scrollToCurrentTrigger,
@@ -4216,24 +4225,6 @@ fun PlayerScreen(
 
                                  .fillMaxWidth()
 
-                                 .clickable { 
-
-                                     if (state?.videoId != null) {
-
-                                         onArtistSelected(com.mrtdk.liquid_glass.ui.screens.ArtistState(
-
-                                             id = state.artist,
-
-                                             name = state.artist,
-
-                                             thumbnail = null
-
-                                         ))
-
-                                     }
-
-                                 }
-
                          ) {
 
                              Text(
@@ -4254,18 +4245,32 @@ fun PlayerScreen(
 
                              Spacer(modifier = Modifier.height(2.dp))
 
+                             var artistCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
                              Text(
-
                                  text = state?.artist ?: "",
-
                                  color = contentColor.copy(alpha = 0.7f),
-
                                  fontSize = artistFontSize,
-
                                  maxLines = 1,
-
-                                 overflow = TextOverflow.Ellipsis
-
+                                 overflow = TextOverflow.Ellipsis,
+                                 modifier = Modifier
+                                     .onGloballyPositioned { artistCoords = it }
+                                     .clickable {
+                                         if (state?.artist != null) {
+                                             val artistList = state.artist.split(", ").filter { it.isNotEmpty() }
+                                             if (artistList.isNotEmpty()) {
+                                                 val parentCoords = parentCoordinates
+                                                 if (parentCoords != null && artistCoords != null && parentCoords.isAttached && artistCoords!!.isAttached) {
+                                                     val localOffset = parentCoords.localPositionOf(artistCoords!!, Offset.Zero)
+                                                     val size = artistCoords!!.size
+                                                     artistPivotBounds = androidx.compose.ui.geometry.Rect(localOffset, androidx.compose.ui.geometry.Size(size.width.toFloat(), size.height.toFloat()))
+                                                 } else {
+                                                     artistPivotBounds = artistCoords?.boundsInRoot()
+                                                 }
+                                                 artistMenuOptions = artistList
+                                                 showArtistOptionsMenu = true
+                                             }
+                                         }
+                                     }
                              )
 
                          }
@@ -4330,12 +4335,19 @@ fun PlayerScreen(
 
                      }
 
-                                           var threeDotsCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
+                                                         var threeDotsCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
                       Box(
                           modifier = Modifier
                               .onGloballyPositioned { threeDotsCoords = it }
                               .size(32.dp).clip(CircleShape).background(contentColor.copy(alpha = 0.15f)).clickable { 
-                                  menuPivotBounds = threeDotsCoords?.boundsInRoot()
+                                  val parentCoords = parentCoordinates
+                                  if (parentCoords != null && threeDotsCoords != null && parentCoords.isAttached && threeDotsCoords!!.isAttached) {
+                                      val localOffset = parentCoords.localPositionOf(threeDotsCoords!!, Offset.Zero)
+                                      val size = threeDotsCoords!!.size
+                                      menuPivotBounds = androidx.compose.ui.geometry.Rect(localOffset, androidx.compose.ui.geometry.Size(size.width.toFloat(), size.height.toFloat()))
+                                  } else {
+                                      menuPivotBounds = threeDotsCoords?.boundsInRoot()
+                                  }
                                   if (showLyrics) {
                                       showLyricsOptionsMenu = true
                                   } else {
@@ -5038,6 +5050,21 @@ fun PlayerScreen(
                     onAlbumSelected(album)
                 },
                 pivotBounds = menuPivotBounds
+            )
+        }
+        if (showArtistOptionsMenu) {
+            ArtistOptionsMenu(
+                backdrop = localBackdrop,
+                artists = artistMenuOptions,
+                onDismiss = { showArtistOptionsMenu = false },
+                onArtistSelected = { artistName ->
+                    onArtistSelected(com.mrtdk.liquid_glass.ui.screens.ArtistState(
+                        id = artistName,
+                        name = artistName,
+                        thumbnail = null
+                    ))
+                },
+                pivotBounds = artistPivotBounds
             )
         }
 
@@ -5909,6 +5936,8 @@ fun LandscapePlayerLayout(
 
     onShowPlaylistMenu: () -> Unit,
 
+    onShowArtistMenu: (List<String>, androidx.compose.ui.geometry.Rect?) -> Unit,
+
     isBottomBarCollapsed: Boolean,
 
     isAutoScrollEnabled: Boolean = true,
@@ -6541,28 +6570,6 @@ fun LandscapePlayerLayout(
 
                                 .fillMaxWidth()
 
-                                .clickable {
-
-                                    if (playerState?.videoId != null) {
-
-                                        onArtistSelected(
-
-                                            com.mrtdk.liquid_glass.ui.screens.ArtistState(
-
-                                                id = playerState.artist,
-
-                                                name = playerState.artist,
-
-                                                thumbnail = null
-
-                                            )
-
-                                        )
-
-                                    }
-
-                                }
-
                         ) {
 
                             Text(
@@ -6581,20 +6588,29 @@ fun LandscapePlayerLayout(
 
                             )
 
+
+
                             Spacer(modifier = Modifier.height(1.dp))
 
+
+
+                            var artistCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
                             Text(
-
                                 text = playerState?.artist ?: "",
-
                                 color = contentColor.copy(alpha = 0.7f),
-
                                 fontSize = 16.sp,
-
                                 maxLines = 1,
-
-                                overflow = TextOverflow.Ellipsis
-
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier
+                                    .onGloballyPositioned { artistCoords = it }
+                                    .clickable {
+                                        if (playerState?.artist != null) {
+                                            val artistList = playerState.artist.split(", ").filter { it.isNotEmpty() }
+                                            if (artistList.isNotEmpty()) {
+                                                onShowArtistMenu(artistList, artistCoords?.boundsInRoot())
+                                            }
+                                        }
+                                    }
                             )
 
                         }

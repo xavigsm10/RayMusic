@@ -27,6 +27,9 @@ data class ArtistPage(
     val artist: ArtistItem,
     val sections: List<ArtistSection>,
     val description: String?,
+    val subscriberCountText: String? = null,
+    val monthlyListenerCount: String? = null,
+    val descriptionRuns: List<com.echo.innertube.models.Run>? = null,
 ) {
     companion object {
         fun fromSectionListRendererContent(content: SectionListRenderer.Content): ArtistSection? {

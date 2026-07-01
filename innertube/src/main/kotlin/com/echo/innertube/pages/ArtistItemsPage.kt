@@ -19,8 +19,14 @@ data class ArtistItemsPage(
 ) {
     companion object {
         fun fromMusicResponsiveListItemRenderer(renderer: MusicResponsiveListItemRenderer): SongItem? {
+            val videoId = renderer.playlistItemData?.videoId
+                ?: renderer.overlay?.musicItemThumbnailOverlayRenderer?.content?.musicPlayButtonRenderer
+                    ?.playNavigationEndpoint?.watchEndpoint?.videoId
+                ?: renderer.flexColumns.firstOrNull()?.musicResponsiveListItemFlexColumnRenderer?.text
+                    ?.runs?.firstOrNull()?.navigationEndpoint?.watchEndpoint?.videoId
+                ?: return null
             return SongItem(
-                id = renderer.playlistItemData?.videoId ?: return null,
+                id = videoId,
                 title = renderer.flexColumns.firstOrNull()
                     ?.musicResponsiveListItemFlexColumnRenderer?.text
                     ?.runs?.firstOrNull()?.text ?: return null,
@@ -39,7 +45,7 @@ data class ArtistItemsPage(
                 duration = renderer.fixedColumns?.firstOrNull()
                     ?.musicResponsiveListItemFlexColumnRenderer?.text
                     ?.runs?.firstOrNull()
-                    ?.text?.parseTime() ?: return null,
+                    ?.text?.parseTime(),
                 thumbnail = renderer.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
                 explicit = renderer.badges?.find {
                     it.musicInlineBadgeRenderer?.icon?.iconType == "MUSIC_EXPLICIT_BADGE"

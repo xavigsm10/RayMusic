@@ -26,7 +26,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -2163,7 +2165,7 @@ fun GlassBoxScope.PlayerOptionsMenu(
     val dominantColor by LibraryManager.currentDominantColor.collectAsState()
     val tintColor = remember(dominantColor) { dominantColor.copy(alpha = 0.35f) }
 
-        Box(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.4f))
@@ -2174,25 +2176,29 @@ fun GlassBoxScope.PlayerOptionsMenu(
     )
 
     BoxWithConstraints(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        modifier = Modifier.fillMaxSize()
     ) {
-        val screenCenterX = constraints.maxWidth.toFloat() / 2f
-        val screenCenterY = constraints.maxHeight.toFloat() / 2f
-        val progress = ((scale - 0.4f) / 0.6f).coerceIn(0f, 1f)
+        val density = LocalDensity.current
+        val menuWidth = 280.dp
+        val padding = 16.dp
+        val estimatedHeight = 470.dp
+
+        val screenWidthDp = maxWidth
+        val screenHeightDp = maxHeight
+
+        var targetLeft = (screenWidthDp - menuWidth) / 2
+        var targetTop = (screenHeightDp - estimatedHeight) / 2
 
         this@PlayerOptionsMenu.GlassBox(
             modifier = Modifier
+                .align(Alignment.TopStart)
+                .offset(x = targetLeft, y = targetTop)
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
                     this.alpha = alpha
-                    if (pivotBounds != null) {
-                        translationX = (1f - progress) * (pivotBounds.center.x - screenCenterX)
-                        translationY = (1f - progress) * (pivotBounds.center.y - screenCenterY)
-                    }
                 }
-                .width(280.dp)
+                .width(menuWidth)
                 .wrapContentHeight(),
             blur = 0.8f,
             scale = 0.02f,
@@ -2550,25 +2556,57 @@ fun GlassBoxScope.LyricsOptionsMenu(
     )
 
     BoxWithConstraints(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        modifier = Modifier.fillMaxSize()
     ) {
-        val screenCenterX = constraints.maxWidth.toFloat() / 2f
-        val screenCenterY = constraints.maxHeight.toFloat() / 2f
-        val progress = ((scale - 0.4f) / 0.6f).coerceIn(0f, 1f)
+        val density = LocalDensity.current
+        val menuWidth = 280.dp
+        val padding = 16.dp
+        val estimatedHeight = 240.dp
+
+        val screenWidthDp = maxWidth
+        val screenHeightDp = maxHeight
+
+        var targetLeft = (screenWidthDp - menuWidth) / 2
+        var targetTop = (screenHeightDp - estimatedHeight) / 2
+
+        if (pivotBounds != null) {
+            with(density) {
+                val pivotLeftDp = pivotBounds.left.toDp()
+                val pivotRightDp = pivotBounds.right.toDp()
+                val pivotTopDp = pivotBounds.top.toDp()
+                val pivotBottomDp = pivotBounds.bottom.toDp()
+
+                targetLeft = (pivotRightDp - menuWidth).coerceIn(padding, screenWidthDp - menuWidth - padding)
+
+                targetTop = pivotBottomDp + 8.dp
+                if (targetTop + estimatedHeight > screenHeightDp - padding) {
+                    targetTop = pivotTopDp - estimatedHeight - 8.dp
+                }
+                targetTop = targetTop.coerceIn(padding, screenHeightDp - estimatedHeight - padding)
+            }
+        }
 
         this@LyricsOptionsMenu.GlassBox(
             modifier = Modifier
+                .align(Alignment.TopStart)
+                .offset(x = targetLeft, y = targetTop)
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
                     this.alpha = alpha
                     if (pivotBounds != null) {
-                        translationX = (1f - progress) * (pivotBounds.center.x - screenCenterX)
-                        translationY = (1f - progress) * (pivotBounds.center.y - screenCenterY)
+                        val menuWidthPx = if (size.width > 0f) size.width else with(density) { menuWidth.toPx() }
+                        val menuHeightPx = if (size.height > 0f) size.height else with(density) { estimatedHeight.toPx() }
+
+                        val targetLeftPx = with(density) { targetLeft.toPx() }
+                        val targetTopPx = with(density) { targetTop.toPx() }
+
+                        val pivotFractionX = ((pivotBounds.center.x - targetLeftPx) / menuWidthPx).coerceIn(0f, 1f)
+                        val pivotFractionY = ((pivotBounds.center.y - targetTopPx) / menuHeightPx).coerceIn(0f, 1f)
+                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(pivotFractionX, pivotFractionY)
                     }
                 }
-                .width(280.dp)
+                .width(menuWidth)
                 .wrapContentHeight(),
             blur = 0.8f,
             scale = 0.02f,
@@ -2593,11 +2631,11 @@ fun GlassBoxScope.LyricsOptionsMenu(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(onClick = { showProviderSelection = false }) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Atrás", tint = Color.White)
+                            Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.lyrics_menu_back), tint = Color.White)
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Proveedor de Letras",
+                            text = stringResource(R.string.lyrics_menu_provider_title),
                             color = Color.White,
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Bold
@@ -2634,7 +2672,7 @@ fun GlassBoxScope.LyricsOptionsMenu(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = if (isSelected) "$provider (Activo)" else provider,
+                                    text = if (isSelected) "$provider (${stringResource(R.string.lyrics_menu_active)})" else provider,
                                     color = if (isSelected) Color(0xFFFA243C) else Color.White,
                                     fontSize = 15.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
@@ -2643,7 +2681,7 @@ fun GlassBoxScope.LyricsOptionsMenu(
                                 if (isSelected) {
                                     Icon(
                                         imageVector = Icons.Default.Check,
-                                        contentDescription = "Seleccionado",
+                                        contentDescription = stringResource(R.string.lyrics_menu_selected),
                                         tint = Color(0xFFFA243C),
                                         modifier = Modifier.size(18.dp)
                                     )
@@ -2669,9 +2707,9 @@ fun GlassBoxScope.LyricsOptionsMenu(
                                 .padding(vertical = 8.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Icon(Icons.Default.Edit, contentDescription = "Editar", tint = Color.White, modifier = Modifier.size(24.dp))
+                            Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.lyrics_menu_edit), tint = Color.White, modifier = Modifier.size(24.dp))
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text("Editar", color = Color.White, fontSize = 11.sp, textAlign = TextAlign.Center)
+                            Text(stringResource(R.string.lyrics_menu_edit), color = Color.White, fontSize = 11.sp, textAlign = TextAlign.Center)
                         }
 
                         Column(
@@ -2684,9 +2722,9 @@ fun GlassBoxScope.LyricsOptionsMenu(
                                 .padding(vertical = 8.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Recargar", tint = Color.White, modifier = Modifier.size(24.dp))
+                            Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.lyrics_menu_reload), tint = Color.White, modifier = Modifier.size(24.dp))
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text("Recargar", color = Color.White, fontSize = 11.sp, textAlign = TextAlign.Center)
+                            Text(stringResource(R.string.lyrics_menu_reload), color = Color.White, fontSize = 11.sp, textAlign = TextAlign.Center)
                         }
 
                         Column(
@@ -2699,9 +2737,9 @@ fun GlassBoxScope.LyricsOptionsMenu(
                                 .padding(vertical = 8.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Icon(Icons.Default.Search, contentDescription = "Buscar", tint = Color.White, modifier = Modifier.size(24.dp))
+                            Icon(Icons.Default.Search, contentDescription = stringResource(R.string.lyrics_menu_search), tint = Color.White, modifier = Modifier.size(24.dp))
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text("Buscar", color = Color.White, fontSize = 11.sp, textAlign = TextAlign.Center)
+                            Text(stringResource(R.string.lyrics_menu_search), color = Color.White, fontSize = 11.sp, textAlign = TextAlign.Center)
                         }
                     }
 
@@ -2713,7 +2751,7 @@ fun GlassBoxScope.LyricsOptionsMenu(
                     ) {
                         VerticalMenuActionItem(
                             icon = Icons.Default.QueueMusic,
-                            label = "Proveedor: $selectedProvider",
+                            label = stringResource(R.string.lyrics_menu_provider_label, selectedProvider),
                             onClick = {
                                 showProviderSelection = true
                             }
@@ -2721,7 +2759,7 @@ fun GlassBoxScope.LyricsOptionsMenu(
 
                         VerticalMenuActionItem(
                             icon = Icons.Default.History,
-                            label = "Ajustar desfase",
+                            label = stringResource(R.string.lyrics_menu_adjust_offset),
                             trailingContent = {
                                 Text(
                                     text = "${if (lyricsOffset >= 0) "+" else ""}${lyricsOffset}ms",
@@ -2737,7 +2775,7 @@ fun GlassBoxScope.LyricsOptionsMenu(
 
                         VerticalMenuActionItem(
                             icon = Icons.Default.Translate,
-                            label = "Romanizar pista actual",
+                            label = stringResource(R.string.lyrics_menu_romanize),
                             trailingContent = {
                                 androidx.compose.material3.Switch(
                                     checked = isRomajiEnabled,
@@ -2758,9 +2796,172 @@ fun GlassBoxScope.LyricsOptionsMenu(
 
                         VerticalMenuActionItem(
                             icon = Icons.Default.Language,
-                            label = "Buscar en Internet",
+                            label = stringResource(R.string.lyrics_menu_search_online),
                             onClick = {
                                 onSearchOnline()
+                                handleDismiss()
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun GlassBoxScope.ArtistOptionsMenu(
+    backdrop: com.kyant.backdrop.backdrops.LayerBackdrop,
+    artists: List<String>,
+    onDismiss: () -> Unit,
+    onArtistSelected: (String) -> Unit,
+    pivotBounds: androidx.compose.ui.geometry.Rect? = null
+) {
+    var visible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        visible = true
+    }
+
+    val scale by animateFloatAsState(
+        targetValue = if (visible) 1f else 0.4f,
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
+        label = "menuScale"
+    )
+    val alpha by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(durationMillis = 200),
+        label = "menuAlpha"
+    )
+    val cornerRadius by animateFloatAsState(
+        targetValue = if (visible) 24f else 80f,
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
+        label = "menuCornerRadius"
+    )
+    val blurPx by animateFloatAsState(
+        targetValue = if (visible) 0f else 15f,
+        animationSpec = tween(durationMillis = 180),
+        label = "menuContentBlur"
+    )
+
+    val context = LocalContext.current
+
+    fun handleDismiss() {
+        visible = false
+        onDismiss()
+    }
+
+    BackHandler(enabled = visible) {
+        handleDismiss()
+    }
+
+    val dominantColor by LibraryManager.currentDominantColor.collectAsState()
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.4f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { handleDismiss() }
+    )
+
+    BoxWithConstraints(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        val density = LocalDensity.current
+        val menuWidth = 280.dp
+        val padding = 16.dp
+        val estimatedHeight = (88 + artists.size * 48).dp
+
+        val screenWidthDp = maxWidth
+        val screenHeightDp = maxHeight
+
+        var targetLeft = (screenWidthDp - menuWidth) / 2
+        var targetTop = (screenHeightDp - estimatedHeight) / 2
+
+        if (pivotBounds != null) {
+            with(density) {
+                val pivotLeftDp = pivotBounds.left.toDp()
+                val pivotRightDp = pivotBounds.right.toDp()
+                val pivotTopDp = pivotBounds.top.toDp()
+                val pivotBottomDp = pivotBounds.bottom.toDp()
+                val pivotCenterXDp = (pivotLeftDp + pivotRightDp) / 2f
+
+                targetLeft = (pivotCenterXDp - menuWidth / 2).coerceIn(padding, screenWidthDp - menuWidth - padding)
+
+                targetTop = pivotBottomDp + 8.dp
+                if (targetTop + estimatedHeight > screenHeightDp - padding) {
+                    targetTop = pivotTopDp - estimatedHeight - 8.dp
+                }
+                targetTop = targetTop.coerceIn(padding, screenHeightDp - estimatedHeight - padding)
+            }
+        }
+
+        this@ArtistOptionsMenu.GlassBox(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .offset(x = targetLeft, y = targetTop)
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    this.alpha = alpha
+                    if (pivotBounds != null) {
+                        val menuWidthPx = if (size.width > 0f) size.width else with(density) { menuWidth.toPx() }
+                        val menuHeightPx = if (size.height > 0f) size.height else with(density) { estimatedHeight.toPx() }
+
+                        val targetLeftPx = with(density) { targetLeft.toPx() }
+                        val targetTopPx = with(density) { targetTop.toPx() }
+
+                        val pivotFractionX = ((pivotBounds.center.x - targetLeftPx) / menuWidthPx).coerceIn(0f, 1f)
+                        val pivotFractionY = ((pivotBounds.center.y - targetTopPx) / menuHeightPx).coerceIn(0f, 1f)
+                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(pivotFractionX, pivotFractionY)
+                    }
+                }
+                .width(menuWidth)
+                .wrapContentHeight(),
+            blur = 0.8f,
+            scale = 0.02f,
+            centerDistortion = 0.1f,
+            warpEdges = 0.4f,
+            elevation = 4.dp,
+            shape = RoundedCornerShape(cornerRadius.dp),
+            tint = dominantColor.copy(alpha = 0.25f),
+            darkness = 0.2f
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .let { if (blurPx > 0.1f) it.blur(blurPx.dp) else it }
+                    .padding(vertical = 12.dp)
+            ) {
+                // Header Title
+                Text(
+                    text = if (artists.size > 1) stringResource(R.string.artist_menu_select_title) else stringResource(R.string.artist_menu_single_title),
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    textAlign = TextAlign.Center
+                )
+
+                HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 8.dp))
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    artists.forEach { artist ->
+                        val labelText = if (artists.size > 1) stringResource(R.string.artist_menu_view_artist_format, artist) else stringResource(R.string.artist_menu_view_artist)
+                        VerticalMenuActionItem(
+                            icon = Icons.Default.Person,
+                            label = labelText,
+                            onClick = {
+                                onArtistSelected(artist)
                                 handleDismiss()
                             }
                         )

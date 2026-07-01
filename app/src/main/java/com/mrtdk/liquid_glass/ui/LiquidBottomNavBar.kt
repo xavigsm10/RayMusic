@@ -7,7 +7,10 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.clickable
@@ -86,6 +89,8 @@ fun LiquidBottomNavBar(
         animationSpec = navSpringSpec
     )
     
+    val isTransitioning = (searchProgress > 0.001f && searchProgress < 0.999f) || isCollapsing
+    
     val xWidth by animateDpAsState(
         targetValue = if (isSearchActive && isKeyboardOpen) 64.dp else 0.dp,
         animationSpec = navDpSpringSpec
@@ -116,14 +121,6 @@ fun LiquidBottomNavBar(
     ) {
         val parentWidth = maxWidth
         val mainTabsMaxWidth = parentWidth - 56.dp - 12.dp
-        val closeWidth = xWidth
-        val availableWidth = parentWidth - closeWidth - spacingSearchX - 12.dp
-
-        val mainPillWidth = availableWidth - 56.dp - (availableWidth - 112.dp) * combineProgress
-        val searchPillWidth = 56.dp + (availableWidth - 112.dp) * searchProgress * (1f - collapseProgress)
-        val spacerWidth = parentWidth - closeWidth - spacingSearchX - mainPillWidth - searchPillWidth
-        val mainPillHeight = 84.dp - 28.dp * combineProgress
-        val searchPillHeight = 56.dp + 8.dp * searchProgress * (1f - collapseProgress)
 
         Row(
             modifier = Modifier.fillMaxSize(),
@@ -132,11 +129,38 @@ fun LiquidBottomNavBar(
             // Main Navigation Pill (shrinks smoothly to become circular Home button)
             Box(
                 modifier = Modifier
-                    .width(mainPillWidth)
-                    .height(mainPillHeight)
+                    .layout { measurable, constraints ->
+                        val progress = if (searchProgress > collapseProgress) searchProgress else collapseProgress
+                        val currentAvailableWidth = parentWidth - xWidth - spacingSearchX - 12.dp
+                        val widthDp = currentAvailableWidth - 56.dp - (currentAvailableWidth - 112.dp) * progress
+                        val widthPx = widthDp.roundToPx()
+                        val heightPx = (84.dp - 28.dp * progress).roundToPx()
+                        val placeable = measurable.measure(
+                            constraints.copy(
+                                minWidth = widthPx, maxWidth = widthPx,
+                                minHeight = heightPx, maxHeight = heightPx
+                            )
+                        )
+                        layout(widthPx, heightPx) {
+                            placeable.place(0, 0)
+                        }
+                    }
                     .let { mod ->
-                        if (combineProgress > 0f) {
-                            mod.clip(Capsule()).clipToBounds()
+                        if (isSearchActive || collapseProgress > 0f || searchProgress > 0.001f) {
+                            mod
+                                .clip(Capsule())
+                                .clipToBounds()
+                                .drawWithContent {
+                                    drawContent()
+                                    val strokeWidth = 1.dp.toPx()
+                                    drawRoundRect(
+                                        color = Color.White.copy(alpha = 0.15f),
+                                        topLeft = androidx.compose.ui.geometry.Offset(strokeWidth / 2f, strokeWidth / 2f),
+                                        size = androidx.compose.ui.geometry.Size(size.width - strokeWidth, size.height - strokeWidth),
+                                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2f, size.height / 2f),
+                                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth)
+                                    )
+                                }
                         } else {
                             mod
                         }
@@ -150,26 +174,44 @@ fun LiquidBottomNavBar(
                 }
             }
 
-            Spacer(modifier = Modifier.width(spacerWidth))
+            Spacer(modifier = Modifier.weight(1f))
 
             // Search Pill (expands smoothly to become the search bar)
             Box(
                 modifier = Modifier
-                    .width(searchPillWidth)
-                    .height(searchPillHeight)
+                    .layout { measurable, constraints ->
+                        val progress = searchProgress
+                        val currentAvailableWidth = parentWidth - xWidth - spacingSearchX - 12.dp
+                        val widthDp = 56.dp + (currentAvailableWidth - 112.dp) * progress * (1f - collapseProgress)
+                        val widthPx = widthDp.roundToPx()
+                        val heightPx = (56.dp + 8.dp * progress * (1f - collapseProgress)).roundToPx()
+                        val placeable = measurable.measure(
+                            constraints.copy(
+                                minWidth = widthPx, maxWidth = widthPx,
+                                minHeight = heightPx, maxHeight = heightPx
+                            )
+                        )
+                        layout(widthPx, heightPx) {
+                            placeable.place(0, 0)
+                        }
+                    }
                     .clip(Capsule())
                     .clipToBounds()
-                    .drawBackdrop(
-                        backdrop = backdrop,
-                        shape = { Capsule() },
-                        effects = {
-                            if (!isCollapsing) {
-                                vibrancy()
-                                blur(8f.dp.toPx())
-                                lens(24f.dp.toPx(), 24f.dp.toPx())
-                            }
-                        },
-                        onDrawSurface = { drawRect(tintColor) }
+                    .then(
+                        if (isTransitioning) {
+                            Modifier.background(tintColor)
+                        } else {
+                            Modifier.drawBackdrop(
+                                backdrop = backdrop,
+                                shape = { Capsule() },
+                                effects = {
+                                    vibrancy()
+                                    blur(8f.dp.toPx())
+                                    lens(24f.dp.toPx(), 24f.dp.toPx())
+                                },
+                                onDrawSurface = { drawRect(tintColor) }
+                            )
+                        }
                     )
             ) {
                 val showSearchInput = isSearchActive && collapseProgress < 0.5f
@@ -253,19 +295,35 @@ fun LiquidBottomNavBar(
                 Spacer(modifier = Modifier.width(spacingSearchX))
                 Box(
                     modifier = Modifier
-                        .width(xWidth)
-                        .height(searchPillHeight)
-                        .drawBackdrop(
-                            backdrop = backdrop,
-                            shape = { Capsule() },
-                            effects = {
-                                if (!isCollapsing) {
-                                    vibrancy()
-                                    blur(8f.dp.toPx())
-                                    lens(24f.dp.toPx(), 24f.dp.toPx())
-                                }
-                            },
-                            onDrawSurface = { drawRect(tintColor) }
+                        .layout { measurable, constraints ->
+                            val progress = searchProgress
+                            val widthPx = xWidth.roundToPx()
+                            val heightPx = (56.dp + 8.dp * progress * (1f - collapseProgress)).roundToPx()
+                            val placeable = measurable.measure(
+                                constraints.copy(
+                                    minWidth = widthPx, maxWidth = widthPx,
+                                    minHeight = heightPx, maxHeight = heightPx
+                                )
+                            )
+                            layout(widthPx, heightPx) {
+                                placeable.place(0, 0)
+                            }
+                        }
+                        .then(
+                            if (isTransitioning) {
+                                Modifier.background(tintColor)
+                            } else {
+                                Modifier.drawBackdrop(
+                                    backdrop = backdrop,
+                                    shape = { Capsule() },
+                                    effects = {
+                                        vibrancy()
+                                        blur(8f.dp.toPx())
+                                        lens(24f.dp.toPx(), 24f.dp.toPx())
+                                    },
+                                    onDrawSurface = { drawRect(tintColor) }
+                                )
+                            }
                         )
                         .clip(Capsule())
                         .clickable { 

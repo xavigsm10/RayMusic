@@ -13,9 +13,13 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import com.mrtdk.glass.GlassBox
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Settings
+import androidx.media3.exoplayer.source.MergingMediaSource
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -43,6 +48,13 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 import android.util.Log
 
+data class VideoResolution(
+    val qualityLabel: String,
+    val height: Int,
+    val format: com.echo.innertube.models.response.PlayerResponse.StreamingData.Format,
+    val isAdaptive: Boolean
+)
+
 @OptIn(UnstableApi::class)
 @Composable
 fun VideoPlayerScreen(
@@ -56,6 +68,11 @@ fun VideoPlayerScreen(
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var videoUrl by remember { mutableStateOf<String?>(null) }
+    
+    var availableResolutions by remember { mutableStateOf<List<VideoResolution>>(emptyList()) }
+    var selectedResolution by remember { mutableStateOf<VideoResolution?>(null) }
+    var streamingDataState by remember { mutableStateOf<PlayerResponse.StreamingData?>(null) }
+    var userAgentState by remember { mutableStateOf<String>("Mozilla/5.0") }
     
     // Force landscape orientation and enable fullscreen immersive mode
     DisposableEffect(Unit) {
@@ -110,6 +127,9 @@ fun VideoPlayerScreen(
     LaunchedEffect(videoId) {
         isLoading = true
         errorMessage = null
+        streamingDataState = null
+        availableResolutions = emptyList()
+        selectedResolution = null
         
         try {
             // Fetch video stream URL from YouTube using parallel requests for faster loading
@@ -144,7 +164,7 @@ fun VideoPlayerScreen(
                 // Wait for all requests to complete
                 val results = deferredResults.awaitAll()
                 
-                var bestUrl: String? = null
+                var bestPlayerResponse: PlayerResponse? = null
                 var lastError: String? = null
                 var usedClientName = "IOS"
                 
@@ -167,51 +187,21 @@ fun VideoPlayerScreen(
                             return@onSuccess
                         }
                         
-                        val formats = streamingData.formats ?: emptyList()
-                        val adaptiveFormats = streamingData.adaptiveFormats ?: emptyList()
-                        
-                        Log.d("VideoPlayer", "Found ${formats.size} regular formats and ${adaptiveFormats.size} adaptive formats")
-                        
-                        // Prefer formats with both video and audio (regular formats)
-                        val formatsToTry = formats.filter { format ->
-                            format.mimeType?.contains("video") == true
-                        }.sortedByDescending { it.width ?: 0 } // Try highest resolution first
-                        
-                        for (format in formatsToTry) {
-                            val decipheredUrl = try {
-                                com.echo.innertube.NewPipeUtils.getStreamUrl(format, videoId).getOrNull()
-                            } catch (e: Exception) {
-                                null
-                            }
-                            
-                            val candidateUrl = decipheredUrl ?: format.url
-                            
-                            if (candidateUrl != null) {
-                                bestUrl = candidateUrl
-                                usedClientName = client.clientName
-                                Log.d("VideoPlayer", "Found format with ${client.clientName}: ${format.mimeType}, quality: ${format.qualityLabel}")
-                                break
-                            }
-                        }
-                        
-                        if (bestUrl == null) {
-                            Log.d("VideoPlayer", "No valid format found with ${client.clientName}")
-                            lastError = "No playable format found"
-                        }
+                        bestPlayerResponse = playerResponse
+                        usedClientName = client.clientName
                     }.onFailure { error ->
                         lastError = error.message ?: "Failed to load video"
                         Log.e("VideoPlayer", "Error with ${client.clientName}: $lastError")
                     }
                     
-                    // If we found a working URL, stop trying other clients
-                    if (bestUrl != null) {
-                        Log.d("VideoPlayer", "Successfully got stream URL from ${client.clientName}")
+                    if (bestPlayerResponse != null) {
+                        Log.d("VideoPlayer", "Successfully got streaming data from ${client.clientName}")
                         break
                     }
                 }
                 
                 // If parallel requests failed, try fallback clients sequentially
-                if (bestUrl == null) {
+                if (bestPlayerResponse == null) {
                     Log.d("VideoPlayer", "Trying fallback clients")
                     val fallbackClients = listOf(
                         YouTubeClient.TVHTML5_SIMPLY_EMBEDDED_PLAYER,
@@ -223,66 +213,73 @@ fun VideoPlayerScreen(
                         
                         val result = YouTube.player(videoId, client = client)
                         result.onSuccess { playerResponse ->
-                            if (playerResponse.playabilityStatus.status == "OK") {
-                                val streamingData = playerResponse.streamingData
-                                if (streamingData != null) {
-                                    val formats = streamingData.formats ?: emptyList()
-                                    val adaptiveFormats = streamingData.adaptiveFormats ?: emptyList()
-                                    
-                                    val formatsToTry = formats.filter { format ->
-                                        format.mimeType?.contains("video") == true
-                                    }.sortedByDescending { it.width ?: 0 }
-                                    
-                                    for (format in formatsToTry) {
-                                        val decipheredUrl = try {
-                                            com.echo.innertube.NewPipeUtils.getStreamUrl(format, videoId).getOrNull()
-                                        } catch (e: Exception) {
-                                            null
-                                        }
-                                        
-                                        val candidateUrl = decipheredUrl ?: format.url
-                                        
-                                        if (candidateUrl != null) {
-                                            bestUrl = candidateUrl
-                                            Log.d("VideoPlayer", "Found format with fallback ${client.clientName}")
-                                            break
-                                        }
-                                    }
-                                }
+                            if (playerResponse.playabilityStatus.status == "OK" && playerResponse.streamingData != null) {
+                                bestPlayerResponse = playerResponse
                             }
                         }
                         
-                        if (bestUrl != null) break
+                        if (bestPlayerResponse != null) break
+                    }
+                }
+                
+                // Decipher entire PlayerResponse using NewPipe extractor (same as audio player)
+                if (bestPlayerResponse != null) {
+                    Log.d("VideoPlayer", "Deciphering PlayerResponse using YouTube.newPipePlayer")
+                    val deciphered = try {
+                        YouTube.newPipePlayer(videoId, bestPlayerResponse!!)
+                    } catch (e: Exception) {
+                        Log.e("VideoPlayer", "Error during newPipePlayer deciphering: ${e.message}")
+                        null
+                    }
+                    if (deciphered != null) {
+                        bestPlayerResponse = deciphered
+                        Log.d("VideoPlayer", "Deciphering successful via newPipePlayer")
                     }
                 }
                 
                 withContext(Dispatchers.Main) {
-                    if (bestUrl != null) {
-                        // Append client name if missing to prevent 403
-                        val finalUrl = if (bestUrl!!.contains("c=")) bestUrl!! else {
-                            bestUrl!! + (if (bestUrl!!.contains("?")) "&" else "?") + "c=IOS"
+                    val streamingData = bestPlayerResponse?.streamingData
+                    if (streamingData != null) {
+                        val resolutions = mutableListOf<VideoResolution>()
+                        val seenHeights = mutableSetOf<Int>()
+                        
+                        // Process formats (muxed)
+                        streamingData.formats?.forEach { format ->
+                            val height = format.height ?: return@forEach
+                            val label = format.qualityLabel ?: "${height}p"
+                            if (height > 0 && seenHeights.add(height)) {
+                                resolutions.add(VideoResolution(label, height, format, isAdaptive = false))
+                            }
                         }
                         
-                        videoUrl = finalUrl
-                        val mediaItem = MediaItem.fromUri(finalUrl)
-                        
-                        val ua = when {
-                            usedClientName.contains("IOS", ignoreCase = true) -> "com.google.ios.youtube/19.29.1 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X; en_US)"
-                            usedClientName.contains("ANDROID", ignoreCase = true) -> "com.google.android.youtube/19.25.39 (Linux; U; Android 14; en_US; Pixel 8 Pro; Build/AP1A.240305.019)"
-                            else -> "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+                        // Process adaptiveFormats (video only)
+                        streamingData.adaptiveFormats.filter { it.mimeType.contains("video") }.forEach { format ->
+                            val height = format.height ?: return@forEach
+                            val label = format.qualityLabel ?: "${height}p"
+                            if (height > 0 && !seenHeights.contains(height)) {
+                                seenHeights.add(height)
+                                resolutions.add(VideoResolution(label, height, format, isAdaptive = true))
+                            }
                         }
                         
-                        val dataSourceFactory = DefaultHttpDataSource.Factory()
-                            .setUserAgent(ua)
-                            .setConnectTimeoutMs(10000)
-                            .setReadTimeoutMs(10000)
+                        resolutions.sortByDescending { it.height }
                         
-                        val mediaSource = ProgressiveMediaSource.Factory(dataSourceFactory)
-                            .createMediaSource(mediaItem)
-                        
-                        exoPlayer.setMediaSource(mediaSource)
-                        exoPlayer.prepare()
-                        Log.d("VideoPlayer", "Player prepared and ready")
+                        if (resolutions.isNotEmpty()) {
+                            val ua = when {
+                                usedClientName.contains("IOS", ignoreCase = true) -> "com.google.ios.youtube/19.29.1 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X; en_US)"
+                                usedClientName.contains("ANDROID", ignoreCase = true) -> "com.google.android.youtube/19.25.39 (Linux; U; Android 14; en_US; Pixel 8 Pro; Build/AP1A.240305.019)"
+                                else -> "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+                            }
+                            
+                            userAgentState = ua
+                            availableResolutions = resolutions
+                            streamingDataState = streamingData
+                            // Default to highest resolution
+                            selectedResolution = resolutions.first()
+                        } else {
+                            errorMessage = "No playable formats found"
+                            isLoading = false
+                        }
                     } else {
                         errorMessage = lastError ?: "No video stream found"
                         isLoading = false
@@ -294,6 +291,91 @@ fun VideoPlayerScreen(
             errorMessage = e.message ?: "Error loading video"
             isLoading = false
             Log.e("VideoPlayer", "Exception while loading video", e)
+        }
+    }
+
+    // Prepare and play the selected resolution
+    LaunchedEffect(selectedResolution, videoId) {
+        val currentRes = selectedResolution ?: return@LaunchedEffect
+        isLoading = true
+        errorMessage = null
+        
+        try {
+            withContext(Dispatchers.IO) {
+                Log.d("VideoPlayer", "Preparing playback for quality: ${currentRes.qualityLabel}")
+                val videoFormat = currentRes.format
+                
+                // Always decipher URL using NewPipe extractor to bypass signature checks and speed throttling (matching audio player)
+                var finalVideoUrl = try {
+                    com.echo.innertube.NewPipeUtils.getStreamUrl(videoFormat, videoId).getOrNull()
+                } catch (e: Exception) {
+                    null
+                }
+                if (finalVideoUrl == null) {
+                    finalVideoUrl = videoFormat.url
+                }
+                if (finalVideoUrl != null && !finalVideoUrl.contains("c=")) {
+                    finalVideoUrl += (if (finalVideoUrl.contains("?")) "&" else "?") + "c=IOS"
+                }
+                
+                // If it is adaptive (video-only), we need the audio format URL as well
+                var finalAudioUrl: String? = null
+                if (currentRes.isAdaptive) {
+                    val bestAudio = streamingDataState?.adaptiveFormats?.filter { it.mimeType.contains("audio") }?.maxByOrNull { it.bitrate }
+                    if (bestAudio != null) {
+                        finalAudioUrl = try {
+                            com.echo.innertube.NewPipeUtils.getStreamUrl(bestAudio, videoId).getOrNull()
+                        } catch (e: Exception) {
+                            null
+                        }
+                        if (finalAudioUrl == null) {
+                            finalAudioUrl = bestAudio.url
+                        }
+                        if (finalAudioUrl != null && !finalAudioUrl.contains("c=")) {
+                            finalAudioUrl += (if (finalAudioUrl.contains("?")) "&" else "?") + "c=IOS"
+                        }
+                    }
+                }
+                
+                withContext(Dispatchers.Main) {
+                    if (finalVideoUrl != null) {
+                        videoUrl = finalVideoUrl
+                        val dataSourceFactory = DefaultHttpDataSource.Factory()
+                            .setUserAgent(userAgentState)
+                            .setConnectTimeoutMs(10000)
+                            .setReadTimeoutMs(10000)
+                            
+                        val videoMediaSource = ProgressiveMediaSource.Factory(dataSourceFactory)
+                            .createMediaSource(MediaItem.fromUri(finalVideoUrl))
+                            
+                        val currentPos = exoPlayer.currentPosition
+                        val wasPlaying = exoPlayer.isPlaying || exoPlayer.playWhenReady
+                        
+                        if (currentRes.isAdaptive && finalAudioUrl != null) {
+                            val audioMediaSource = ProgressiveMediaSource.Factory(dataSourceFactory)
+                                .createMediaSource(MediaItem.fromUri(finalAudioUrl))
+                            val mergedSource = MergingMediaSource(videoMediaSource, audioMediaSource)
+                            exoPlayer.setMediaSource(mergedSource)
+                        } else {
+                            exoPlayer.setMediaSource(videoMediaSource)
+                        }
+                        
+                        if (currentPos > 0) {
+                            exoPlayer.seekTo(currentPos)
+                        }
+                        exoPlayer.prepare()
+                        exoPlayer.playWhenReady = wasPlaying
+                        Log.d("VideoPlayer", "ExoPlayer prepared with format: ${currentRes.qualityLabel}")
+                    } else {
+                        errorMessage = "Failed to resolve stream URL"
+                        isLoading = false
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            errorMessage = e.message ?: "Error preparing video stream"
+            isLoading = false
+            Log.e("VideoPlayer", "Exception preparing video stream", e)
         }
     }
 
@@ -384,6 +466,103 @@ fun VideoPlayerScreen(
                         ) {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                 Icon(Icons.Default.ArrowBackIosNew, "Back", tint = Color(0xFFFA243C), modifier = Modifier.size(24.dp))
+                            }
+                        }
+
+                        // ── Quality Settings button (top-right) ──
+                        var showQualityMenu by remember { mutableStateOf(false) }
+                        if (availableResolutions.isNotEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(16.dp)
+                            ) {
+                                scope.GlassBox(
+                                    modifier = Modifier
+                                        .height(48.dp)
+                                        .clip(RoundedCornerShape(24.dp))
+                                        .clickable { showQualityMenu = !showQualityMenu },
+                                    shape = RoundedCornerShape(24.dp),
+                                    tint = Color.White.copy(alpha = 0.2f),
+                                    blur = 0.8f,
+                                    centerDistortion = 0.1f,
+                                    scale = 0.02f,
+                                    warpEdges = 0.4f,
+                                    elevation = 4.dp
+                                ) {
+                                    Box(
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Settings,
+                                                contentDescription = "Quality",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Text(
+                                                text = selectedResolution?.qualityLabel ?: "Auto",
+                                                color = Color.White,
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // Custom Dropdown Menu with premium glass style
+                                if (showQualityMenu) {
+                                    Box(
+                                        modifier = Modifier
+                                            .padding(top = 56.dp)
+                                            .width(140.dp)
+                                            .align(Alignment.TopEnd)
+                                    ) {
+                                        scope.GlassBox(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            shape = RoundedCornerShape(16.dp),
+                                            tint = Color.Black.copy(alpha = 0.65f),
+                                            blur = 0.9f,
+                                            centerDistortion = 0.1f,
+                                            scale = 0.02f,
+                                            warpEdges = 0.4f,
+                                            elevation = 8.dp
+                                        ) {
+                                            Column(
+                                                modifier = Modifier.padding(8.dp),
+                                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                availableResolutions.forEach { res ->
+                                                    val isSelected = res.qualityLabel == selectedResolution?.qualityLabel
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .clip(RoundedCornerShape(8.dp))
+                                                            .background(if (isSelected) Color.White.copy(alpha = 0.15f) else Color.Transparent)
+                                                            .clickable {
+                                                                showQualityMenu = false
+                                                                if (!isSelected) {
+                                                                    selectedResolution = res
+                                                                }
+                                                            }
+                                                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = res.qualityLabel,
+                                                            color = if (isSelected) Color(0xFFFA243C) else Color.White,
+                                                            fontSize = 14.sp,
+                                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
 
