@@ -257,6 +257,15 @@ class MainActivity : ComponentActivity() {
                     var categoryDetail by remember { mutableStateOf<com.mrtdk.liquid_glass.ui.screens.SearchCategory?>(null) }
                     var showFavoriteSongs by remember { mutableStateOf(false) }
                     var showReplay by remember { mutableStateOf(false) }
+                    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+                    val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+
+                    LaunchedEffect(showPlayer, videoDetail, artistDetail, albumDetail, playlistDetail) {
+                        if (showPlayer || videoDetail != null || artistDetail != null || albumDetail != null || playlistDetail != null) {
+                            focusManager.clearFocus()
+                            keyboardController?.hide()
+                        }
+                    }
 
                     // Handle system back navigation
                     androidx.activity.compose.BackHandler(
