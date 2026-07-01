@@ -72,6 +72,8 @@
     <string name="destacado_en">Featured in</string>
     <string name="puede_gustar">You might also like</string>
     <string name="ver_todo">See all</string>
+    <string name="suscriptores">subscribers</string>
+    <string name="oyentes_mensuales">monthly listeners</string>
     <string name="permission_needed">Permission is required to read your local music</string>
     <string name="grant_permission">Grant Permission</string>
     <string name="update_dialog_desc">Version %1$s has been found. Do you want to update now?</string>
@@ -223,4 +225,23 @@
     <string name="wifi_settings_action">Search WiFi devices</string>
     <string name="bluetooth_settings_action">Search Bluetooth devices</string>
     <string name="seleccionar_artista">Select artist</string>
+
+    <!-- Lyrics Options Menu -->
+    <string name="lyrics_menu_provider_title">Lyrics Provider</string>
+    <string name="lyrics_menu_back">Back</string>
+    <string name="lyrics_menu_active">Active</string>
+    <string name="lyrics_menu_selected">Selected</string>
+    <string name="lyrics_menu_edit">Edit</string>
+    <string name="lyrics_menu_reload">Reload</string>
+    <string name="lyrics_menu_search">Search</string>
+    <string name="lyrics_menu_provider_label">Provider: %1$s</string>
+    <string name="lyrics_menu_adjust_offset">Adjust offset</string>
+    <string name="lyrics_menu_romanize">Romanize current track</string>
+    <string name="lyrics_menu_search_online">Search online</string>
+
+    <!-- Artist Options Menu -->
+    <string name="artist_menu_select_title">Select Artist</string>
+    <string name="artist_menu_single_title">Artist</string>
+    <string name="artist_menu_view_artist_format">View artist: %1$s</string>
+    <string name="artist_menu_view_artist">View artist</string>
 </resources>
