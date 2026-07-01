@@ -1793,7 +1793,7 @@ private fun ItemCard(
                     }
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color.DarkGray)
-                    .sharedTransitionElement(item.id)
+                    .let { if (!fillWidth) it.sharedTransitionElement(item.id) else it }
                 ) {
                     AsyncImage(
                         model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
@@ -1869,7 +1869,7 @@ private fun ItemCard(
                     }
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color.DarkGray)
-                    .sharedTransitionElement(item.id)
+                    .let { if (!fillWidth) it.sharedTransitionElement(item.id) else it }
                 ) {
                     AsyncImage(
                         model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
@@ -2095,7 +2095,7 @@ fun CarouselToGridTransitionOverlay(
             
             // Populate animatingItemIds so their carousel cards hide static covers
             SharedTransitionState.animatingItemIds.clear()
-            items.take(6).forEach {
+            items.take(8).forEach {
                 SharedTransitionState.animatingItemIds.add(it.id)
             }
             
@@ -2125,7 +2125,10 @@ fun CarouselToGridTransitionOverlay(
                 scope.launch {
                     progress.animateTo(
                         targetValue = 0f,
-                        animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing)
+                        animationSpec = spring(
+                            dampingRatio = 0.7f,
+                            stiffness = 110f
+                        )
                     )
                     SharedTransitionState.animatingItemIds.clear()
                     isOverlayVisible = false
@@ -2193,11 +2196,25 @@ fun CarouselToGridTransitionOverlay(
                         Text(title, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                     }
 
-                    // Render the flying cover images for the first 6 items
+                    // Render the flying cover images for the first 8 items
                     val referenceY = capturedCarouselBounds.values.firstOrNull { it.top > 0f }?.top
                         ?: (screenHeightPx / 2f)
 
-                    val itemsToAnimate = items.take(6)
+                    val itemsToAnimate = items.take(8)
+                    
+                    // Find the index of the first visible item in the carousel among itemsToAnimate to determine direction for missing bounds
+                    var firstVisibleIdx = -1
+                    for (idx in itemsToAnimate.indices) {
+                        val b = capturedCarouselBounds[itemsToAnimate[idx].id]
+                        if (b != null && b.right > 0f && b.left < screenWidthPx) {
+                            firstVisibleIdx = idx
+                            break
+                        }
+                    }
+                    if (firstVisibleIdx == -1) {
+                        firstVisibleIdx = 0
+                    }
+
                     itemsToAnimate.forEachIndexed { i, item ->
                         val startBounds = capturedCarouselBounds[item.id]
                         
@@ -2206,19 +2223,34 @@ fun CarouselToGridTransitionOverlay(
                         val targetGridX = paddingPx + col * (gridItemWidthPx + spacingPx)
                         val targetGridY = gridStartY + row * rowHeightPx
 
-                        // Determine source dimensions: items from the 4th (index >= 3) and onwards simply slide to/from the right
-                        val isForcedRight = i >= 3
-                        val sourceX = if (isForcedRight) screenWidthPx else (startBounds?.left ?: screenWidthPx)
-                        val sourceY = if (isForcedRight) referenceY else (startBounds?.top ?: referenceY)
-                        val sourceW = if (isForcedRight) gridItemWidthPx else (startBounds?.width ?: gridItemWidthPx)
-                        val sourceH = if (isForcedRight) gridItemHeightPx else (startBounds?.height ?: gridItemHeightPx)
+                        val sourceX: Float
+                        val sourceY: Float
+                        val sourceW: Float
+                        val sourceH: Float
+                        val startCorner: Float
+
+                        if (startBounds != null) {
+                            sourceX = startBounds.left
+                            sourceY = startBounds.top
+                            sourceW = startBounds.width
+                            sourceH = startBounds.height
+                            startCorner = 12f
+                        } else {
+                            // If we don't have bounds, items before the first visible item slide left, and items after slide right
+                            val isLeft = i < firstVisibleIdx
+                            sourceW = gridItemWidthPx
+                            sourceH = gridItemHeightPx
+                            sourceX = if (isLeft) -sourceW else screenWidthPx
+                            sourceY = referenceY
+                            startCorner = 0f
+                        }
 
                         // Interpolate coordinates
                         val curX = lerpFloat(sourceX, targetGridX, currentProgress)
                         val curY = lerpFloat(sourceY, targetGridY, currentProgress)
                         val curW = lerpFloat(sourceW, gridItemWidthPx, currentProgress).coerceAtLeast(0f)
                         val curH = lerpFloat(sourceH, gridItemHeightPx, currentProgress).coerceAtLeast(0f)
-                        val curCorner = lerpFloat(if (startBounds != null) 12f else 0f, 12f, currentProgress).coerceAtLeast(0f)
+                        val curCorner = lerpFloat(startCorner, 12f, currentProgress).coerceAtLeast(0f)
 
                         val hdThumb = when (item) {
                             is AlbumItem -> item.thumbnail?.replace("=w226-h226", "=w540-h540")?.replace("=w120-h120", "=w540-h540")
