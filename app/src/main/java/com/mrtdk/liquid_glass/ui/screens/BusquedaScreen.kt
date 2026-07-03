@@ -74,8 +74,14 @@ fun loadCategories(context: android.content.Context): List<SearchCategory> {
         for (i in 0 until jsonArray.length()) {
             val obj = jsonArray.getJSONObject(i)
             val name = obj.getString("name")
-            val fileName = name.replace("&", "").replace(",", "") + ".webp"
-            result.add(SearchCategory(name, "file:///android_asset/img/$fileName"))
+            val remoteUrl = obj.optString("url")
+            val finalUrl = if (!remoteUrl.isNullOrEmpty() && remoteUrl.startsWith("http")) {
+                remoteUrl
+            } else {
+                val fileName = name.replace("&", "").replace(",", "") + ".webp"
+                "file:///android_asset/img/$fileName"
+            }
+            result.add(SearchCategory(name, finalUrl))
         }
         result
     } catch (e: Exception) {

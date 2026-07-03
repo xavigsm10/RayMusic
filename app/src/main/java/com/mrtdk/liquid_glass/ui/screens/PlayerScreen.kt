@@ -2276,6 +2276,8 @@ fun PlayerScreen(
 
             val currentCoverBitmap = coverBitmap
 
+            val overlapDp = 35.dp
+
             // Keep the blur height frozen: restore original formula but only update it when in main view,
 
             // so it doesn't change when returning from overlay views.
@@ -2284,11 +2286,11 @@ fun PlayerScreen(
 
             val dynamicBlurHeight = if (stableSliderYDp > 0.dp) {
 
-                (stableSliderYDp - (expandedY + expandedHeight - 30.dp)).coerceAtLeast(0.dp)
+                (stableSliderYDp - (expandedY + expandedHeight - overlapDp)).coerceAtLeast(0.dp)
 
             } else {
 
-                maxHeight - (expandedY + expandedHeight) + 30.dp
+                maxHeight - (expandedY + expandedHeight) + overlapDp
 
             }
 
@@ -2299,8 +2301,6 @@ fun PlayerScreen(
             }
 
             if (currentCoverBitmap != null && dragProgress < 1f && !isOverlayActive) {
-
-                val overlapDp = 30.dp
 
                 val blurHeight = if (frozenBlurHeight > 0.dp) frozenBlurHeight else dynamicBlurHeight
 
@@ -3775,7 +3775,7 @@ fun PlayerScreen(
 
                                             0f to Color.Black,
 
-                                            0.97f to Color.Black,
+                                            0.96f to Color.Black,
 
                                             1f to Color.Transparent
 
