@@ -107,6 +107,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 
 import androidx.compose.foundation.lazy.rememberLazyListState
+import kotlin.math.roundToInt
 
 import androidx.compose.animation.animateColorAsState
 
@@ -3148,6 +3149,45 @@ fun PlayerScreen(
 
                             ) {
 
+                              if (playerState != null) {
+                                  item {
+                                      Text(
+                                          text = "Reproduciendo",
+                                          color = contentColor,
+                                          fontSize = 18.sp,
+                                          fontWeight = FontWeight.Bold,
+                                          modifier = Modifier.padding(top = 14.dp, bottom = 8.dp)
+                                      )
+                                      Row(
+                                          verticalAlignment = Alignment.CenterVertically,
+                                          modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                                      ) {
+                                          val upgradedArt = playerState.artUrl?.let {
+                                              val itStr = it.toString()
+                                              if (itStr.startsWith("file:///android_asset/")) {
+                                                  it
+                                              } else {
+                                                  val upgraded = com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(itStr) ?: itStr
+                                                  if (it is android.net.Uri) android.net.Uri.parse(upgraded) else upgraded
+                                              }
+                                          } ?: playerState.artUrl
+
+                                          AsyncImage(
+                                              model = ImageRequest.Builder(context).data(upgradedArt).crossfade(false).build(),
+                                              contentDescription = null,
+                                              modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp))
+                                          )
+                                          Spacer(modifier = Modifier.width(12.dp))
+                                          Column(modifier = Modifier.weight(1f)) {
+                                              Text(playerState.title ?: "", color = contentColor, fontSize = 16.sp, maxLines = 1, fontWeight = FontWeight.Bold)
+                                              Text(playerState.artist ?: "", color = contentColor.copy(alpha=0.6f), fontSize = 14.sp, maxLines = 1)
+                                          }
+                                          PlayingEqualizer(color = contentColor, isPlaying = isPlaying, modifier = Modifier.size(24.dp))
+                                      }
+                                      androidx.compose.material3.Divider(color = Color.DarkGray.copy(alpha = 0.5f))
+                                  }
+                              }
+
                               // 1. Manual Queue Section (Album/Playlist)
 
                               if (playerState != null && playerState.queue.isNotEmpty()) {
@@ -3217,7 +3257,7 @@ fun PlayerScreen(
                                             }
 
                                             if (playerState != null && qItem.videoId == playerState.videoId) {
-                                                PlayingEqualizer(color = Color(0xFFFA243C), isPlaying = isPlaying, modifier = Modifier.size(24.dp))
+                                                PlayingEqualizer(color = contentColor, isPlaying = isPlaying, modifier = Modifier.size(24.dp))
                                             } else {
                                                 Icon(Icons.Default.Menu, contentDescription=null, tint=contentColor.copy(alpha=0.6f))
                                             }
@@ -3285,7 +3325,7 @@ fun PlayerScreen(
                                       }
 
                                       if (playerState != null && song.id == playerState.videoId) {
-                                          PlayingEqualizer(color = Color(0xFFFA243C), isPlaying = isPlaying, modifier = Modifier.size(24.dp))
+                                          PlayingEqualizer(color = contentColor, isPlaying = isPlaying, modifier = Modifier.size(24.dp))
                                       } else {
                                           Icon(Icons.Default.Menu, contentDescription=null, tint=contentColor.copy(alpha=0.6f))
                                       }
@@ -3401,7 +3441,7 @@ fun PlayerScreen(
                                               lyricsListState.animateScrollToItem(currentIdx.coerceAtLeast(0), scrollOffset = -100)
                                           }
                                       }
-                                      
+
                                       LazyColumn(state = lyricsListState, modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp).nestedScroll(lyricsScrollConnection).nestedScroll(nestedScrollConnection), verticalArrangement = Arrangement.spacedBy(24.dp)) {
                                           item { Spacer(modifier = Modifier.height(60.dp)) }
                                           items(currentLyricsLines.size) { i ->
@@ -4467,15 +4507,13 @@ fun PlayerScreen(
 
         }
 
-
-
                 if (showLyricsOffsetDialog) {
             var tempOffset by remember { mutableStateOf(lyricsOffset) }
             var textFieldVal by remember { mutableStateOf(tempOffset.toString()) }
             androidx.compose.material3.AlertDialog(
                 onDismissRequest = { showLyricsOffsetDialog = false },
                 containerColor = Color(0xFF1E1E1E),
-                title = { Text("Compensación de letras", color = Color.White, fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.lyrics_offset_title), color = Color.White, fontWeight = FontWeight.Bold) },
                 text = {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -4528,7 +4566,7 @@ fun PlayerScreen(
                                     tempOffset = 0
                                     textFieldVal = "0"
                                 }) {
-                                    Icon(Icons.Default.Refresh, contentDescription = "Reset", tint = Color(0xFFFA243C))
+                                    Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.lyrics_offset_reset), tint = Color(0xFFFA243C))
                                 }
                             }
                         }
@@ -4543,13 +4581,13 @@ fun PlayerScreen(
                                 tempOffset = (tempOffset - 50).coerceIn(-3000, 3000)
                                 textFieldVal = tempOffset.toString()
                             }) {
-                                Icon(Icons.Default.Remove, contentDescription = "Decrease", tint = Color.White)
+                                Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.lyrics_offset_decrease), tint = Color.White)
                             }
                             
                             androidx.compose.material3.Slider(
-                                value = tempOffset.toFloat(),
+                                value = tempOffset.toFloat().coerceIn(-3000f, 3000f),
                                 onValueChange = { newValue ->
-                                    val rounded = (newValue / 100).toInt() * 100
+                                    val rounded = (newValue / 100f).roundToInt() * 100
                                     tempOffset = rounded
                                     textFieldVal = rounded.toString()
                                 },
@@ -4567,7 +4605,7 @@ fun PlayerScreen(
                                 tempOffset = (tempOffset + 50).coerceIn(-3000, 3000)
                                 textFieldVal = tempOffset.toString()
                             }) {
-                                Icon(Icons.Default.Add, contentDescription = "Increase", tint = Color.White)
+                                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.lyrics_offset_increase), tint = Color.White)
                             }
                         }
                         
@@ -4590,12 +4628,12 @@ fun PlayerScreen(
                             com.mrtdk.liquid_glass.data.LibraryManager.saveString("lyrics_offset_${playerState.videoId}", tempOffset.toString())
                         }
                     }) {
-                        Text("Aceptar", color = Color(0xFFFA243C))
+                        Text(stringResource(R.string.lyrics_offset_accept), color = Color(0xFFFA243C))
                     }
                 },
                 dismissButton = {
                     androidx.compose.material3.TextButton(onClick = { showLyricsOffsetDialog = false }) {
-                        Text("Cancelar", color = Color.Gray)
+                        Text(stringResource(R.string.cancelar), color = Color.Gray)
                     }
                 }
             )
@@ -7277,6 +7315,45 @@ fun LandscapePlayerLayout(
 
                             ) {
 
+                                if (playerState != null) {
+                                    item {
+                                        Text(
+                                            text = "Reproduciendo",
+                                            color = contentColor,
+                                            fontSize = 17.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(top = 10.dp, bottom = 6.dp)
+                                        )
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                                        ) {
+                                            val upgradedArt = playerState.artUrl?.let {
+                                                val itStr = it.toString()
+                                                if (itStr.startsWith("file:///android_asset/")) {
+                                                    it
+                                                } else {
+                                                    val upgraded = com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(itStr) ?: itStr
+                                                    if (it is android.net.Uri) android.net.Uri.parse(upgraded) else upgraded
+                                                }
+                                            } ?: playerState.artUrl
+
+                                            AsyncImage(
+                                                model = ImageRequest.Builder(context).data(upgradedArt).crossfade(false).build(),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp))
+                                            )
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(playerState.title ?: "", color = contentColor, fontSize = 15.sp, maxLines = 1, fontWeight = FontWeight.Bold)
+                                                Text(playerState.artist ?: "", color = contentColor.copy(alpha=0.6f), fontSize = 13.sp, maxLines = 1)
+                                            }
+                                            PlayingEqualizer(color = contentColor, isPlaying = isPlaying, modifier = Modifier.size(24.dp))
+                                        }
+                                        androidx.compose.material3.Divider(color = Color.DarkGray.copy(alpha = 0.5f))
+                                    }
+                                }
+
                                 if (playerState != null && playerState.queue.isNotEmpty()) {
 
                                     items(playerState.queue.size) { index ->
@@ -7348,7 +7425,7 @@ fun LandscapePlayerLayout(
                                             }
 
                                             if (playerState != null && qItem.videoId == playerState.videoId) {
-                                                PlayingEqualizer(color = Color(0xFFFA243C), isPlaying = isPlaying, modifier = Modifier.size(24.dp))
+                                                PlayingEqualizer(color = contentColor, isPlaying = isPlaying, modifier = Modifier.size(24.dp))
                                             } else {
                                                 Icon(Icons.Default.Menu, contentDescription=null, tint=contentColor.copy(alpha=0.6f))
                                             }
@@ -7420,7 +7497,7 @@ fun LandscapePlayerLayout(
                                             }
 
                                             if (playerState != null && song.id == playerState.videoId) {
-                                                PlayingEqualizer(color = Color(0xFFFA243C), isPlaying = isPlaying, modifier = Modifier.size(24.dp))
+                                                PlayingEqualizer(color = contentColor, isPlaying = isPlaying, modifier = Modifier.size(24.dp))
                                             } else {
                                                 Icon(Icons.Default.Menu, contentDescription=null, tint=contentColor.copy(alpha=0.6f))
                                             }
