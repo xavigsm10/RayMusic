@@ -244,4 +244,11 @@
     <string name="artist_menu_single_title">Artist</string>
     <string name="artist_menu_view_artist_format">View artist: %1$s</string>
     <string name="artist_menu_view_artist">View artist</string>
+
+    <!-- Lyrics Offset Dialog -->
+    <string name="lyrics_offset_title">Lyrics offset</string>
+    <string name="lyrics_offset_accept">Accept</string>
+    <string name="lyrics_offset_reset">Reset</string>
+    <string name="lyrics_offset_decrease">Decrease</string>
+    <string name="lyrics_offset_increase">Increase</string>
 </resources>

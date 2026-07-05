@@ -53,6 +53,7 @@ import com.mrtdk.liquid_glass.ui.LiquidBottomNavBar
 import com.mrtdk.liquid_glass.ui.components.MiniPlayer
 import com.mrtdk.liquid_glass.ui.components.LocalBackdrop
 import com.mrtdk.liquid_glass.ui.components.SharedElementTransitionContainer
+import com.mrtdk.liquid_glass.ui.components.UpdateDialog
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
@@ -518,7 +519,8 @@ class MainActivity : ComponentActivity() {
                                                     initialCategoryKey = initialLibraryCategory,
                                                     onCategoryConsumed = { initialLibraryCategory = null },
                                                     onGlassStyleChanged = { glassStyle = it },
-                                                    onFavoriteSongsSelected = { showFavoriteSongs = true }
+                                                    onFavoriteSongsSelected = { showFavoriteSongs = true },
+                                                    onUpdateAvailable = { updateReleaseInfo = it }
                                                 )
                                                 4 -> BusquedaScreen(
                                                     innerPadding = innerPadding,
@@ -822,6 +824,12 @@ class MainActivity : ComponentActivity() {
                                                     }
                                                 }
                                             }
+                                            if (updateReleaseInfo != null) {
+                                                scope.UpdateDialog(
+                                                    releaseInfo = updateReleaseInfo!!,
+                                                    onDismiss = { updateReleaseInfo = null }
+                                                )
+                                            }
                                         }
                                         } // end CompositionLocalProvider(LocalBackdrop)
                                     }
@@ -895,12 +903,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                     
-                    updateReleaseInfo?.let { info ->
-                        com.mrtdk.liquid_glass.ui.components.UpdateDialog(
-                            releaseInfo = info,
-                            onDismiss = { updateReleaseInfo = null }
-                        )
-                    }
+                    
             }
         }
     }

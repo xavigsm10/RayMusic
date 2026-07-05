@@ -983,27 +983,43 @@ fun ArtistScreen(
                 val scrollState = carouselScrollStates.getOrPut(albumsSection.title) { ScrollState(0) }
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
-                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.albumes), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                        if (albumItems.size > 4 || albumsSection.moreEndpoint != null) {
-                            val coroutineScope = rememberCoroutineScope()
-                            Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = 0.12f)).clickable {
-                                // Snapshot current carousel bounds before opening overlay
-                                allAlbumsSnapshotBounds = SharedTransitionState.carouselItemBounds.toMap()
-                                allAlbumsSection = albumsSection.copy(items = prefetchedSections[albumsSection.title] ?: albumsSection.items)
-                                showAllAlbumsOverlay = true
-                                if (albumsSection.moreEndpoint != null && prefetchedSections[albumsSection.title] == null) {
-                                    coroutineScope.launch(Dispatchers.IO) {
-                                        val result = YouTube.artistItems(albumsSection.moreEndpoint!!).getOrNull()
-                                        if (result != null) {
-                                            prefetchedSections[albumsSection.title] = result.items
-                                            allAlbumsSection = allAlbumsSection?.copy(items = result.items)
+                    val isClickable = albumItems.size > 4 || albumsSection.moreEndpoint != null
+                    val coroutineScope = rememberCoroutineScope()
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(
+                                if (isClickable) {
+                                    Modifier.clickable {
+                                        // Snapshot current carousel bounds before opening overlay
+                                        allAlbumsSnapshotBounds = SharedTransitionState.carouselItemBounds.toMap()
+                                        allAlbumsSection = albumsSection.copy(items = prefetchedSections[albumsSection.title] ?: albumsSection.items)
+                                        showAllAlbumsOverlay = true
+                                        if (albumsSection.moreEndpoint != null && prefetchedSections[albumsSection.title] == null) {
+                                            coroutineScope.launch(Dispatchers.IO) {
+                                                val result = YouTube.artistItems(albumsSection.moreEndpoint!!).getOrNull()
+                                                if (result != null) {
+                                                    prefetchedSections[albumsSection.title] = result.items
+                                                    allAlbumsSection = allAlbumsSection?.copy(items = result.items)
+                                                }
+                                            }
                                         }
                                     }
-                                }
-                            }.padding(horizontal = 12.dp, vertical = 6.dp)) {
-                                Text(stringResource(R.string.ver_todo), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                            }
+                                } else Modifier
+                            )
+                            .padding(horizontal = 20.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.Start,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(stringResource(R.string.albumes), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        if (isClickable) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = "Ver todo",
+                                tint = Color.White.copy(alpha = 0.6f),
+                                modifier = Modifier.size(28.dp)
+                            )
                         }
                     }
                     Row(
@@ -1029,28 +1045,44 @@ fun ArtistScreen(
                 val scrollState = carouselScrollStates.getOrPut(singlesSection.title) { ScrollState(0) }
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
-                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.sencillos_y_ep), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                        if (singleItems.size > 4 || singlesSection.moreEndpoint != null) {
-                            val coroutineScope = rememberCoroutineScope()
-                            Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = 0.12f)).clickable {
-                                allSectionTitle = context.getString(R.string.sencillos_y_ep)
-                                allSectionIsVideo = false
-                                allSectionData = singlesSection.copy(items = prefetchedSections[singlesSection.title] ?: singlesSection.items)
-                                allSectionSnapshotBounds = SharedTransitionState.carouselItemBounds.toMap()
-                                showAllSectionOverlay = true
-                                if (singlesSection.moreEndpoint != null && prefetchedSections[singlesSection.title] == null) {
-                                    coroutineScope.launch(Dispatchers.IO) {
-                                        val result = YouTube.artistItems(singlesSection.moreEndpoint!!).getOrNull()
-                                        if (result != null) {
-                                            prefetchedSections[singlesSection.title] = result.items
-                                            allSectionData = allSectionData?.copy(items = result.items)
+                    val isClickable = singleItems.size > 4 || singlesSection.moreEndpoint != null
+                    val coroutineScope = rememberCoroutineScope()
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(
+                                if (isClickable) {
+                                    Modifier.clickable {
+                                        allSectionTitle = context.getString(R.string.sencillos_y_ep)
+                                        allSectionIsVideo = false
+                                        allSectionData = singlesSection.copy(items = prefetchedSections[singlesSection.title] ?: singlesSection.items)
+                                        allSectionSnapshotBounds = SharedTransitionState.carouselItemBounds.toMap()
+                                        showAllSectionOverlay = true
+                                        if (singlesSection.moreEndpoint != null && prefetchedSections[singlesSection.title] == null) {
+                                            coroutineScope.launch(Dispatchers.IO) {
+                                                val result = YouTube.artistItems(singlesSection.moreEndpoint!!).getOrNull()
+                                                if (result != null) {
+                                                    prefetchedSections[singlesSection.title] = result.items
+                                                    allSectionData = allSectionData?.copy(items = result.items)
+                                                }
+                                            }
                                         }
                                     }
-                                }
-                            }.padding(horizontal = 12.dp, vertical = 6.dp)) {
-                                Text(stringResource(R.string.ver_todo), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                            }
+                                } else Modifier
+                            )
+                            .padding(horizontal = 20.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.Start,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(stringResource(R.string.sencillos_y_ep), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        if (isClickable) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = "Ver todo",
+                                tint = Color.White.copy(alpha = 0.6f),
+                                modifier = Modifier.size(28.dp)
+                            )
                         }
                     }
                     Row(
@@ -1076,28 +1108,44 @@ fun ArtistScreen(
                 val scrollState = carouselScrollStates.getOrPut(videosSection.title) { ScrollState(0) }
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
-                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.videos), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                        if (videoItems.size > 4 || videosSection.moreEndpoint != null) {
-                            val coroutineScope = rememberCoroutineScope()
-                            Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = 0.12f)).clickable {
-                                allSectionTitle = "Videos"
-                                allSectionIsVideo = true
-                                allSectionData = videosSection.copy(items = prefetchedSections[videosSection.title] ?: videosSection.items)
-                                allSectionSnapshotBounds = SharedTransitionState.carouselItemBounds.toMap()
-                                showAllSectionOverlay = true
-                                if (videosSection.moreEndpoint != null && prefetchedSections[videosSection.title] == null) {
-                                    coroutineScope.launch(Dispatchers.IO) {
-                                        val result = YouTube.artistItems(videosSection.moreEndpoint!!).getOrNull()
-                                        if (result != null) {
-                                            prefetchedSections[videosSection.title] = result.items
-                                            allSectionData = allSectionData?.copy(items = result.items)
+                    val isClickable = videoItems.size > 4 || videosSection.moreEndpoint != null
+                    val coroutineScope = rememberCoroutineScope()
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(
+                                if (isClickable) {
+                                    Modifier.clickable {
+                                        allSectionTitle = "Videos"
+                                        allSectionIsVideo = true
+                                        allSectionData = videosSection.copy(items = prefetchedSections[videosSection.title] ?: videosSection.items)
+                                        allSectionSnapshotBounds = SharedTransitionState.carouselItemBounds.toMap()
+                                        showAllSectionOverlay = true
+                                        if (videosSection.moreEndpoint != null && prefetchedSections[videosSection.title] == null) {
+                                            coroutineScope.launch(Dispatchers.IO) {
+                                                val result = YouTube.artistItems(videosSection.moreEndpoint!!).getOrNull()
+                                                if (result != null) {
+                                                    prefetchedSections[videosSection.title] = result.items
+                                                    allSectionData = allSectionData?.copy(items = result.items)
+                                                }
+                                            }
                                         }
                                     }
-                                }
-                            }.padding(horizontal = 12.dp, vertical = 6.dp)) {
-                                Text(stringResource(R.string.ver_todo), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                            }
+                                } else Modifier
+                            )
+                            .padding(horizontal = 20.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.Start,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(stringResource(R.string.videos), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        if (isClickable) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = "Ver todo",
+                                tint = Color.White.copy(alpha = 0.6f),
+                                modifier = Modifier.size(28.dp)
+                            )
                         }
                     }
                     Row(
@@ -1146,28 +1194,44 @@ fun ArtistScreen(
                 val scrollState = carouselScrollStates.getOrPut(playlistsSection.title) { ScrollState(0) }
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
-                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.playlists), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                        if (plItems.size > 4 || playlistsSection.moreEndpoint != null) {
-                            val coroutineScope = rememberCoroutineScope()
-                            Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = 0.12f)).clickable {
-                                allSectionTitle = context.getString(R.string.playlists)
-                                allSectionIsVideo = false
-                                allSectionData = playlistsSection.copy(items = prefetchedSections[playlistsSection.title] ?: playlistsSection.items)
-                                allSectionSnapshotBounds = SharedTransitionState.carouselItemBounds.toMap()
-                                showAllSectionOverlay = true
-                                if (playlistsSection.moreEndpoint != null && prefetchedSections[playlistsSection.title] == null) {
-                                    coroutineScope.launch(Dispatchers.IO) {
-                                        val result = YouTube.artistItems(playlistsSection.moreEndpoint!!).getOrNull()
-                                        if (result != null) {
-                                            prefetchedSections[playlistsSection.title] = result.items
-                                            allSectionData = allSectionData?.copy(items = result.items)
+                    val isClickable = plItems.size > 4 || playlistsSection.moreEndpoint != null
+                    val coroutineScope = rememberCoroutineScope()
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(
+                                if (isClickable) {
+                                    Modifier.clickable {
+                                        allSectionTitle = context.getString(R.string.playlists)
+                                        allSectionIsVideo = false
+                                        allSectionData = playlistsSection.copy(items = prefetchedSections[playlistsSection.title] ?: playlistsSection.items)
+                                        allSectionSnapshotBounds = SharedTransitionState.carouselItemBounds.toMap()
+                                        showAllSectionOverlay = true
+                                        if (playlistsSection.moreEndpoint != null && prefetchedSections[playlistsSection.title] == null) {
+                                            coroutineScope.launch(Dispatchers.IO) {
+                                                val result = YouTube.artistItems(playlistsSection.moreEndpoint!!).getOrNull()
+                                                if (result != null) {
+                                                    prefetchedSections[playlistsSection.title] = result.items
+                                                    allSectionData = allSectionData?.copy(items = result.items)
+                                                }
+                                            }
                                         }
                                     }
-                                }
-                            }.padding(horizontal = 12.dp, vertical = 6.dp)) {
-                                Text(stringResource(R.string.ver_todo), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                            }
+                                } else Modifier
+                            )
+                            .padding(horizontal = 20.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.Start,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(stringResource(R.string.playlists), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        if (isClickable) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = "Ver todo",
+                                tint = Color.White.copy(alpha = 0.6f),
+                                modifier = Modifier.size(28.dp)
+                            )
                         }
                     }
                     Row(
@@ -1217,28 +1281,44 @@ fun ArtistScreen(
                 val scrollState = carouselScrollStates.getOrPut(section.title) { ScrollState(0) }
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
-                    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text(section.title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                        if (section.items.size > 4 || section.moreEndpoint != null) {
-                            val coroutineScope = rememberCoroutineScope()
-                            Box(modifier = Modifier.clip(RoundedCornerShape(20.dp)).background(Color.White.copy(alpha = 0.12f)).clickable {
-                                allSectionTitle = section.title
-                                allSectionIsVideo = isVideoSection
-                                allSectionData = section.copy(items = prefetchedSections[section.title] ?: section.items)
-                                allSectionSnapshotBounds = SharedTransitionState.carouselItemBounds.toMap()
-                                showAllSectionOverlay = true
-                                if (section.moreEndpoint != null && prefetchedSections[section.title] == null) {
-                                    coroutineScope.launch(Dispatchers.IO) {
-                                        val result = YouTube.artistItems(section.moreEndpoint!!).getOrNull()
-                                        if (result != null) {
-                                            prefetchedSections[section.title] = result.items
-                                            allSectionData = allSectionData?.copy(items = result.items)
+                    val isClickable = section.items.size > 4 || section.moreEndpoint != null
+                    val coroutineScope = rememberCoroutineScope()
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(
+                                if (isClickable) {
+                                    Modifier.clickable {
+                                        allSectionTitle = section.title
+                                        allSectionIsVideo = isVideoSection
+                                        allSectionData = section.copy(items = prefetchedSections[section.title] ?: section.items)
+                                        allSectionSnapshotBounds = SharedTransitionState.carouselItemBounds.toMap()
+                                        showAllSectionOverlay = true
+                                        if (section.moreEndpoint != null && prefetchedSections[section.title] == null) {
+                                            coroutineScope.launch(Dispatchers.IO) {
+                                                val result = YouTube.artistItems(section.moreEndpoint!!).getOrNull()
+                                                if (result != null) {
+                                                    prefetchedSections[section.title] = result.items
+                                                    allSectionData = allSectionData?.copy(items = result.items)
+                                                }
+                                            }
                                         }
                                     }
-                                }
-                            }.padding(horizontal = 12.dp, vertical = 6.dp)) {
-                                Text(stringResource(R.string.ver_todo), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                            }
+                                } else Modifier
+                            )
+                            .padding(horizontal = 20.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.Start,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(section.title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        if (isClickable) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = "Ver todo",
+                                tint = Color.White.copy(alpha = 0.6f),
+                                modifier = Modifier.size(28.dp)
+                            )
                         }
                     }
                     Row(

@@ -82,7 +82,8 @@ fun BibliotecaScreen(
     initialCategoryKey: String? = null,
     onCategoryConsumed: () -> Unit = {},
     onGlassStyleChanged: (String) -> Unit = {},
-    onFavoriteSongsSelected: () -> Unit = {}
+    onFavoriteSongsSelected: () -> Unit = {},
+    onUpdateAvailable: (com.mrtdk.liquid_glass.utils.Updater.ReleaseInfo) -> Unit = {}
 ) {
     val context = LocalContext.current
     val mainGridState = rememberLazyGridState()
@@ -141,7 +142,6 @@ fun BibliotecaScreen(
     var showSettings by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showGlassStyleDialog by remember { mutableStateOf(false) }
-    var updateReleaseInfo by remember { mutableStateOf<com.mrtdk.liquid_glass.utils.Updater.ReleaseInfo?>(null) }
     var selectedCategoryKey by remember { mutableStateOf("") }
     var showEqualizer by remember { mutableStateOf(false) }
     var showQualityDialog by remember { mutableStateOf(false) }
@@ -417,7 +417,7 @@ fun BibliotecaScreen(
                                 com.mrtdk.liquid_glass.utils.Updater.checkUpdate { info ->
                                     CoroutineScope(Dispatchers.Main).launch {
                                         if (info != null) {
-                                            updateReleaseInfo = info
+                                            onUpdateAvailable(info)
                                         } else {
                                             Toast.makeText(context, context.getString(R.string.ultima_version_ok), Toast.LENGTH_SHORT).show()
                                         }
@@ -747,12 +747,7 @@ fun BibliotecaScreen(
             }
         }
 
-        updateReleaseInfo?.let { info ->
-            com.mrtdk.liquid_glass.ui.components.UpdateDialog(
-                releaseInfo = info,
-                onDismiss = { updateReleaseInfo = null }
-            )
-        }
+        
         return
     }
     
