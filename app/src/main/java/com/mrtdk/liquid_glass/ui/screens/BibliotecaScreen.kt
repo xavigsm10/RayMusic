@@ -493,6 +493,51 @@ fun BibliotecaScreen(
                             modifier = Modifier.size(16.dp)
                         )
                     }
+                    
+                    androidx.compose.material3.HorizontalDivider(
+                        modifier = Modifier.padding(start = 16.dp),
+                        color = Color.DarkGray.copy(alpha = 0.5f),
+                        thickness = 0.5.dp
+                    )
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                uriHandler.openUri("https://www.paypal.me/XaviGranja")
+                            }
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                painter = androidx.compose.ui.res.painterResource(id = com.mrtdk.liquid_glass.R.drawable.ic_paypal),
+                                contentDescription = "PayPal",
+                                tint = Color.Unspecified,
+                                modifier = Modifier.size(32.dp).padding(end = 12.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = "PayPal",
+                                    color = Color.White,
+                                    fontSize = 16.sp
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Apoya el desarrollo de la aplicación",
+                                    color = Color.Gray,
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                        Icon(
+                            imageVector = Icons.Default.ArrowForwardIos,
+                            contentDescription = null,
+                            tint = Color.Gray,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding() + 180.dp))
             }
