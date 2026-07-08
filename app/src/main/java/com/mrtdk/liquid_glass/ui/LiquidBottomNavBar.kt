@@ -209,77 +209,81 @@ fun LiquidBottomNavBar(
                     }
                     .clip(Capsule())
                     .clipToBounds()
-                    .then(
-                        if (isTransitioning) {
-                            Modifier.background(tintColor)
-                        } else {
-                            Modifier.drawBackdrop(
-                                backdrop = backdrop,
-                                shape = { Capsule() },
-                                effects = {
-                                    vibrancy()
-                                    blur(8f.dp.toPx())
-                                    lens(24f.dp.toPx(), 24f.dp.toPx())
-                                },
-                                onDrawSurface = { drawRect(tintColor) }
-                            )
-                        }
+                    .drawBackdrop(
+                        backdrop = backdrop,
+                        shape = { Capsule() },
+                        effects = {
+                            vibrancy()
+                            blur(8f.dp.toPx())
+                            lens(24f.dp.toPx(), 24f.dp.toPx())
+                        },
+                        onDrawSurface = { drawRect(tintColor) }
                     )
             ) {
-                val showSearchInput = isSearchActive && collapseProgress < 0.5f
+                val progress = searchProgress * (1f - collapseProgress)
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
+                        .graphicsLayer {
+                            val offsetDp = -4.dp * (1f - progress)
+                            translationX = offsetDp.toPx()
+                        }
                         .clickable { 
                             if (collapseProgress > 0.5f || !isSearchActive) {
                                 onTabSelected(4)
                             }
                         },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = if (!showSearchInput) Arrangement.Center else Arrangement.Start
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (!showSearchInput) {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = stringResource(R.string.search_action),
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = stringResource(R.string.search_action),
-                            tint = Color.White,
-                            modifier = Modifier
-                                .padding(start = 20.dp, end = 12.dp)
-                                .size(24.dp)
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
-                                ) { onTabSelected(4) }
-                        )
-                        val textAlpha = (1f - collapseProgress * 2f).coerceIn(0f, 1f)
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = stringResource(R.string.search_action),
+                        tint = Color.White,
+                        modifier = Modifier
+                            .padding(start = 20.dp, end = 12.dp)
+                            .size(24.dp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { 
+                                if (collapseProgress > 0.5f || !isSearchActive) {
+                                    onTabSelected(4)
+                                }
+                            }
+                    )
+                    
+                    val textAlpha = progress.coerceIn(0f, 1f)
+                    
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .graphicsLayer { 
+                                alpha = textAlpha
+                                translationX = if (textAlpha < 0.01f) 10000f else 0f
+                            },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         BasicTextField(
                             value = searchQuery,
                             onValueChange = onSearchQueryChange,
                             modifier = Modifier
                                 .weight(1f)
                                 .focusRequester(focusRequester)
-                                .padding(end = 8.dp)
-                                .graphicsLayer { alpha = textAlpha },
+                                .padding(end = 8.dp),
                             textStyle = TextStyle(color = contentColor, fontSize = 16.sp),
                             cursorBrush = SolidColor(contentColor),
                             singleLine = true,
+                            enabled = textAlpha > 0.5f,
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                             keyboardActions = KeyboardActions(onSearch = { onSearchSubmit(searchQuery) }),
                             decorationBox = { innerTextField ->
                                 if (searchQuery.isEmpty()) {
-                                    Text(stringResource(R.string.search_placeholder), color = contentColor.copy(alpha = 0.5f * textAlpha), fontSize = 16.sp)
+                                    Text(stringResource(R.string.search_placeholder), color = contentColor.copy(alpha = 0.5f), fontSize = 16.sp)
                                 }
                                 innerTextField()
                             }
                         )
-                        if (searchQuery.isNotEmpty() && textAlpha > 0.1f) {
+                        if (searchQuery.isNotEmpty()) {
                             Box(
                                 modifier = Modifier
                                     .padding(end = 12.dp)
@@ -290,8 +294,7 @@ fun LiquidBottomNavBar(
                                         indication = null
                                     ) {
                                         onSearchQueryChange("")
-                                    }
-                                    .graphicsLayer { alpha = textAlpha },
+                                    },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -325,21 +328,15 @@ fun LiquidBottomNavBar(
                                 placeable.place(0, 0)
                             }
                         }
-                        .then(
-                            if (isTransitioning) {
-                                Modifier.background(tintColor)
-                            } else {
-                                Modifier.drawBackdrop(
-                                    backdrop = backdrop,
-                                    shape = { Capsule() },
-                                    effects = {
-                                        vibrancy()
-                                        blur(8f.dp.toPx())
-                                        lens(24f.dp.toPx(), 24f.dp.toPx())
-                                    },
-                                    onDrawSurface = { drawRect(tintColor) }
-                                )
-                            }
+                        .drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { Capsule() },
+                            effects = {
+                                vibrancy()
+                                blur(8f.dp.toPx())
+                                lens(24f.dp.toPx(), 24f.dp.toPx())
+                            },
+                            onDrawSurface = { drawRect(tintColor) }
                         )
                         .clip(Capsule())
                         .clickable { 
