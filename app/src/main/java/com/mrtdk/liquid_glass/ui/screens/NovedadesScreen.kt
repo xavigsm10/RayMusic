@@ -20,7 +20,7 @@ import com.mrtdk.liquid_glass.ui.components.wiggleOnScroll
 import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.boundsInRoot
+import com.mrtdk.liquid_glass.ui.components.unclippedBoundsInRoot
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -412,7 +412,7 @@ fun NovedadesScreen(
                                     .fillMaxWidth()
                                     .wiggleOnScroll(album.id, lazyListState = listState)
                                     .clickable {
-                                        SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                        SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
                                         SharedTransitionState.lastOpenedId = album.id
                                         onAlbumSelected(AlbumState(id = album.id, playlistId = album.playlistId ?: album.id, title = album.title, artist = album.artists?.joinToString { it.name } ?: "", thumbnail = hdThumb, year = album.year as? Int ?: album.year?.toString()?.toIntOrNull()))
                                     }

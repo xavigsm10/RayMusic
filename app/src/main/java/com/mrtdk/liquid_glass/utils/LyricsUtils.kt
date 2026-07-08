@@ -931,4 +931,52 @@ object LyricsUtils {
     private fun isCyrillicVowel(char: Char): Boolean {
         return "АаЕеЄєИиІіЇїОоУуЮюЯяЫыЭэ".contains(char)
     }
+
+    suspend fun romanizeSyncedLyrics(
+        lyrics: com.mocharealm.accompanist.lyrics.core.model.SyncedLyrics,
+        preferences: LyricsRomanizationPreferences
+    ): com.mocharealm.accompanist.lyrics.core.model.SyncedLyrics {
+        val updatedLines = lyrics.lines.map { line ->
+            when (line) {
+                is com.mocharealm.accompanist.lyrics.core.model.synced.SyncedLine -> {
+                    val romanizedContent = romanizeLyricsLine(line.content, preferences) ?: line.content
+                    val romanizedTranslation = line.translation?.let { romanizeLyricsLine(it, preferences) ?: it }
+                    line.copy(content = romanizedContent, translation = romanizedTranslation)
+                }
+                is com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeLine.MainKaraokeLine -> {
+                    val romanizedSyllables = line.syllables.map { syllable ->
+                        val romanized = romanizeLyricsLine(syllable.content, preferences) ?: syllable.content
+                        syllable.copy(content = romanized)
+                    }
+                    val romanizedTranslation = line.translation?.let { romanizeLyricsLine(it, preferences) ?: it }
+                    val romanizedAccompaniments = line.accompanimentLines?.map { accLine ->
+                        val accSyllables = accLine.syllables.map { syllable ->
+                            val romanized = romanizeLyricsLine(syllable.content, preferences) ?: syllable.content
+                            syllable.copy(content = romanized)
+                        }
+                        val accTranslation = accLine.translation?.let { romanizeLyricsLine(it, preferences) ?: it }
+                        accLine.copy(syllables = accSyllables, translation = accTranslation)
+                    }
+                    line.copy(
+                        syllables = romanizedSyllables,
+                        translation = romanizedTranslation,
+                        accompanimentLines = romanizedAccompaniments
+                    )
+                }
+                is com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeLine.AccompanimentKaraokeLine -> {
+                    val romanizedSyllables = line.syllables.map { syllable ->
+                        val romanized = romanizeLyricsLine(syllable.content, preferences) ?: syllable.content
+                        syllable.copy(content = romanized)
+                    }
+                    val romanizedTranslation = line.translation?.let { romanizeLyricsLine(it, preferences) ?: it }
+                    line.copy(
+                        syllables = romanizedSyllables,
+                        translation = romanizedTranslation
+                    )
+                }
+                else -> line
+            }
+        }
+        return lyrics.copy(lines = updatedLines)
+    }
 }

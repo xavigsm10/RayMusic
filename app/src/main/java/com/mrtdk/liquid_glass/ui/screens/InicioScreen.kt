@@ -29,7 +29,7 @@ import com.mrtdk.liquid_glass.ui.components.wiggleOnScroll
 import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.boundsInRoot
+import com.mrtdk.liquid_glass.ui.components.unclippedBoundsInRoot
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -109,11 +109,17 @@ fun InicioScreen(
 ) {
     val context = LocalContext.current
     var activeSimilarSection by remember { mutableStateOf<SimilarSection?>(null) }
+    var similarSectionSnapshotBounds by remember { mutableStateOf<Map<String, androidx.compose.ui.geometry.Rect>>(emptyMap()) }
     val similarGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
 
-    androidx.activity.compose.BackHandler(enabled = activeSimilarSection != null) {
-        activeSimilarSection = null
-    }
+    var activeRecentlyPlayedSection by remember { mutableStateOf(false) }
+    var recentlyPlayedSnapshotBounds by remember { mutableStateOf<Map<String, androidx.compose.ui.geometry.Rect>>(emptyMap()) }
+
+    var activePorqueEscuchasteSection by remember { mutableStateOf<PorqueEscuchasteSection?>(null) }
+    var porqueEscuchasteSnapshotBounds by remember { mutableStateOf<Map<String, androidx.compose.ui.geometry.Rect>>(emptyMap()) }
+
+    var activeSeleccionesSection by remember { mutableStateOf(false) }
+    var seleccionesSnapshotBounds by remember { mutableStateOf<Map<String, androidx.compose.ui.geometry.Rect>>(emptyMap()) }
 
     // Recently played from LibraryManager
     val recentlyPlayed by LibraryManager.recentlyPlayed.collectAsState()
@@ -482,11 +488,18 @@ fun InicioScreen(
         if (recentlyPlayed.isNotEmpty()) {
             item {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            recentlyPlayedSnapshotBounds = SharedTransitionState.carouselItemBounds.toMap()
+                            activeRecentlyPlayedSection = true
+                        }
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(stringResource(R.string.sigue_escuchando), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Icon(Icons.Default.ChevronRight, contentDescription = "More", tint = Color.Gray)
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 LazyRow(
@@ -504,7 +517,7 @@ fun InicioScreen(
                                 .width(180.dp)
                                 .wiggleOnScroll(item.id, lazyListState = listState)
                                 .clickable {
-                                    SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                    SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
                                     if (item.type == ItemType.SONG) {
                                         onSongSelected(PlayerState(
                                             title = item.title,
@@ -531,8 +544,17 @@ fun InicioScreen(
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
                                     .size(180.dp)
-                                    .onGloballyPositioned { imageCoords = it }
+                                    .onGloballyPositioned { coords ->
+                                        imageCoords = coords
+                                        val bounds = coords.unclippedBoundsInRoot()
+                                        if (bounds.width > 0f && bounds.height > 0f) {
+                                            SharedTransitionState.carouselItemBounds[item.id] = bounds
+                                        }
+                                    }
                                     .clip(if (isCircle) CircleShape else RoundedCornerShape(12.dp))
+                                    .graphicsLayer {
+                                        alpha = if (SharedTransitionState.animatingItemIds.contains(item.id)) 0f else 1f
+                                    }
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(item.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -573,7 +595,7 @@ fun InicioScreen(
                                 .width(320.dp)
                                 .wiggleOnScroll(playlist.id, lazyListState = listState)
                                 .clickable {
-                                    SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                    SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
                                     SharedTransitionState.lastOpenedId = playlist.id
                                     onAlbumSelected(AlbumState(
                                         id = playlist.id,
@@ -640,7 +662,10 @@ fun InicioScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { activeSimilarSection = section }
+                            .clickable {
+                                similarSectionSnapshotBounds = SharedTransitionState.carouselItemBounds.toMap()
+                                activeSimilarSection = section
+                            }
                             .padding(horizontal = 16.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -681,7 +706,7 @@ fun InicioScreen(
                                     .width(180.dp)
                                     .wiggleOnScroll(item.id, lazyListState = listState)
                                     .clickable {
-                                        SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                        SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
                                         when (item) {
                                             is com.echo.innertube.models.ArtistItem -> {
                                                 SharedTransitionState.lastOpenedId = item.id
@@ -704,8 +729,17 @@ fun InicioScreen(
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier
                                         .size(180.dp)
-                                        .onGloballyPositioned { imageCoords = it }
+                                        .onGloballyPositioned { coords ->
+                                            imageCoords = coords
+                                            val bounds = coords.unclippedBoundsInRoot()
+                                            if (bounds.width > 0f && bounds.height > 0f) {
+                                                SharedTransitionState.carouselItemBounds[item.id] = bounds
+                                            }
+                                        }
                                         .clip(if (isCircle) CircleShape else RoundedCornerShape(12.dp))
+                                        .graphicsLayer {
+                                            alpha = if (SharedTransitionState.animatingItemIds.contains(item.id)) 0f else 1f
+                                        }
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -739,7 +773,7 @@ fun InicioScreen(
                                         .width(320.dp)
                                         .wiggleOnScroll(playlist.id, lazyListState = listState)
                                         .clickable {
-                                            SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                            SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
                                             SharedTransitionState.lastOpenedId = playlist.id
                                             onAlbumSelected(AlbumState(
                                                 id = playlist.id,
@@ -811,9 +845,22 @@ fun InicioScreen(
         if (state.porqueEscuchasteSections.isNotEmpty()) {
             state.porqueEscuchasteSections.forEach { section ->
                 item {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        Text(stringResource(R.string.porque_escuchaste), color = Color.Gray, fontSize = 13.sp)
-                        Text(section.artistName, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                porqueEscuchasteSnapshotBounds = SharedTransitionState.carouselItemBounds.toMap()
+                                activePorqueEscuchasteSection = section
+                            }
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(stringResource(R.string.porque_escuchaste), color = Color.Gray, fontSize = 13.sp)
+                            Text(section.artistName, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        Icon(Icons.Default.ChevronRight, contentDescription = "More", tint = Color.Gray)
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                     LazyRow(
@@ -823,19 +870,35 @@ fun InicioScreen(
                         items(section.songs.size) { index ->
                             val song = section.songs[index]
                             val hdThumb = upgradeThumb(song.thumbnail)
+                            var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
                             Column(
                                 modifier = Modifier.width(180.dp).clickable {
+                                    SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
                                     onSongSelected(PlayerState(title = song.title, artist = song.artists.joinToString { it.name }, artUrl = upgradeThumbHD(song.thumbnail), videoId = song.id))
                                 }
                             ) {
                                 Box(
-                                    modifier = Modifier.size(180.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFF1C1C1E))
+                                    modifier = Modifier
+                                        .size(180.dp)
+                                        .onGloballyPositioned { coords ->
+                                            imageCoords = coords
+                                            val bounds = coords.unclippedBoundsInRoot()
+                                            if (bounds.width > 0f && bounds.height > 0f) {
+                                                SharedTransitionState.carouselItemBounds[song.id] = bounds
+                                            }
+                                        }
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color(0xFF1C1C1E))
                                 ) {
                                     AsyncImage(
                                         model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
                                         contentDescription = song.title,
                                         contentScale = ContentScale.Crop,
-                                        modifier = Modifier.fillMaxSize()
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .graphicsLayer {
+                                                alpha = if (SharedTransitionState.animatingItemIds.contains(song.id)) 0f else 1f
+                                            }
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
@@ -849,9 +912,22 @@ fun InicioScreen(
             }
         } else if (state.seleccionesParaTi.isNotEmpty() && state.seleccionesTitle != null) {
             item {
-                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Text(stringResource(R.string.porque_escuchaste), color = Color.Gray, fontSize = 13.sp)
-                    Text(state.seleccionesTitle!!, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            seleccionesSnapshotBounds = SharedTransitionState.carouselItemBounds.toMap()
+                            activeSeleccionesSection = true
+                        }
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(stringResource(R.string.porque_escuchaste), color = Color.Gray, fontSize = 13.sp)
+                        Text(state.seleccionesTitle!!, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    Icon(Icons.Default.ChevronRight, contentDescription = "More", tint = Color.Gray)
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 LazyRow(
@@ -861,19 +937,35 @@ fun InicioScreen(
                     items(state.seleccionesParaTi.size) { index ->
                         val song = state.seleccionesParaTi[index]
                         val hdThumb = upgradeThumb(song.thumbnail)
+                        var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
                         Column(
                             modifier = Modifier.width(180.dp).clickable {
+                                SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
                                 onSongSelected(PlayerState(title = song.title, artist = song.artists.joinToString { it.name }, artUrl = upgradeThumbHD(song.thumbnail), videoId = song.id))
                             }
                         ) {
                             Box(
-                                modifier = Modifier.size(180.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFF1C1C1E))
+                                modifier = Modifier
+                                    .size(180.dp)
+                                    .onGloballyPositioned { coords ->
+                                        imageCoords = coords
+                                        val bounds = coords.unclippedBoundsInRoot()
+                                        if (bounds.width > 0f && bounds.height > 0f) {
+                                            SharedTransitionState.carouselItemBounds[song.id] = bounds
+                                        }
+                                    }
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFF1C1C1E))
                             ) {
                                 AsyncImage(
                                     model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
                                     contentDescription = song.title,
                                     contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .graphicsLayer {
+                                            alpha = if (SharedTransitionState.animatingItemIds.contains(song.id)) 0f else 1f
+                                        }
                                 )
                             }
                             Spacer(modifier = Modifier.height(8.dp))
@@ -970,7 +1062,7 @@ fun InicioScreen(
                                         .width(180.dp)
                                         .wiggleOnScroll(itm.id, lazyListState = listState)
                                         .clickable {
-                                            SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                            SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
                                             clickAction()
                                         }
                                 ) {
@@ -1081,27 +1173,23 @@ fun InicioScreen(
     } // Cierra LazyColumn
 
     // Overlay similar
-    androidx.compose.animation.AnimatedVisibility(
-        visible = activeSimilarSection != null,
-        enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInHorizontally(initialOffsetX = { it }),
-        exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutHorizontally(targetOffsetX = { it }),
-        modifier = Modifier.fillMaxSize()
-    ) {
-        val section = activeSimilarSection
-        if (section != null) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black)
-                    .padding(top = innerPadding.calculateTopPadding())
-            ) {
+    val activeSection = activeSimilarSection
+    CarouselToGridTransitionOverlay(
+        visible = activeSection != null,
+        title = activeSection?.artistName ?: "",
+        items = activeSection?.items ?: emptyList(),
+        isVideo = false,
+        snapshotBounds = similarSectionSnapshotBounds,
+        onClose = { activeSimilarSection = null }
+    ) { dismiss ->
+        val overlayItems = activeSection!!.items
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+            Column(modifier = Modifier.fillMaxSize().padding(top = innerPadding.calculateTopPadding())) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 4.dp, vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    androidx.compose.material3.IconButton(onClick = { activeSimilarSection = null }) {
+                    androidx.compose.material3.IconButton(onClick = { dismiss() }) {
                         Icon(
                             imageVector = androidx.compose.material.icons.Icons.Default.ArrowBackIosNew,
                             contentDescription = stringResource(R.string.back_action),
@@ -1109,7 +1197,7 @@ fun InicioScreen(
                         )
                     }
                     Text(
-                        text = section.artistName,
+                        text = activeSection.artistName,
                         color = Color.White,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
@@ -1130,8 +1218,8 @@ fun InicioScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    items(section.items.size) { index ->
-                        val item = section.items[index]
+                    items(overlayItems.size) { index ->
+                        val item = overlayItems[index]
                         val hdThumb = upgradeThumb(
                             when (item) {
                                 is com.echo.innertube.models.ArtistItem -> item.thumbnail
@@ -1166,7 +1254,7 @@ fun InicioScreen(
                                 .fillMaxWidth()
                                 .wiggleOnScroll(itemId, similarGridState)
                                 .clickable {
-                                    SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                    SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
                                     when (item) {
                                         is com.echo.innertube.models.ArtistItem -> {
                                             SharedTransitionState.lastOpenedId = item.id
@@ -1220,7 +1308,363 @@ fun InicioScreen(
             }
         }
     }
+
+    // Overlay recently played
+    val mappedRecentlyPlayed = remember(recentlyPlayed) {
+        recentlyPlayed.map { it.toYTItem() }
+    }
+    val recentlyPlayedGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    CarouselToGridTransitionOverlay(
+        visible = activeRecentlyPlayedSection,
+        title = stringResource(R.string.sigue_escuchando),
+        items = mappedRecentlyPlayed,
+        isVideo = false,
+        snapshotBounds = recentlyPlayedSnapshotBounds,
+        onClose = { activeRecentlyPlayedSection = false }
+    ) { dismiss ->
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+            Column(modifier = Modifier.fillMaxSize().padding(top = innerPadding.calculateTopPadding())) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    androidx.compose.material3.IconButton(onClick = { dismiss() }) {
+                        Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Default.ArrowBackIosNew,
+                            contentDescription = stringResource(R.string.back_action),
+                            tint = Color(0xFFFA243C)
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.sigue_escuchando),
+                        color = Color.White,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
+
+                androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                    state = recentlyPlayedGridState,
+                    columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = 16.dp,
+                        bottom = innerPadding.calculateBottomPadding() + 180.dp
+                    ),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(mappedRecentlyPlayed.size) { index ->
+                        val item = mappedRecentlyPlayed[index]
+                        val origItem = recentlyPlayed[index]
+                        val hdThumb = upgradeThumb(item.thumbnail)
+                        val isCircle = origItem.type == ItemType.ARTIST
+                        
+                        var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .wiggleOnScroll(item.id, recentlyPlayedGridState)
+                                .clickable {
+                                    SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
+                                    if (origItem.type == ItemType.SONG) {
+                                        onSongSelected(PlayerState(
+                                            title = origItem.title,
+                                            artist = origItem.subtitle,
+                                            artUrl = upgradeThumbHD(origItem.thumbnail),
+                                            videoId = origItem.id
+                                        ))
+                                    } else {
+                                        SharedTransitionState.lastOpenedId = origItem.id
+                                        onAlbumSelected(AlbumState(
+                                            id = origItem.id,
+                                            playlistId = origItem.id,
+                                            title = origItem.title,
+                                            artist = origItem.subtitle,
+                                            thumbnail = origItem.thumbnail,
+                                            year = null
+                                        ))
+                                    }
+                                }
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(1f)
+                                    .onGloballyPositioned { imageCoords = it }
+                                    .clip(if (isCircle) CircleShape else RoundedCornerShape(12.dp))
+                                    .background(Color(0xFF1C1C1E))
+                            ) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(),
+                                    contentDescription = item.title,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = item.title,
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = if (isCircle) "Artista" else origItem.subtitle,
+                                color = Color.Gray,
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Overlay porque escuchaste
+    val activePorqueEscuchaste = activePorqueEscuchasteSection
+    val porqueEscuchasteGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    CarouselToGridTransitionOverlay(
+        visible = activePorqueEscuchaste != null,
+        title = activePorqueEscuchaste?.artistName ?: "",
+        items = activePorqueEscuchaste?.songs ?: emptyList(),
+        isVideo = false,
+        snapshotBounds = porqueEscuchasteSnapshotBounds,
+        onClose = { activePorqueEscuchasteSection = null }
+    ) { dismiss ->
+        val overlayItems = activePorqueEscuchaste!!.songs
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+            Column(modifier = Modifier.fillMaxSize().padding(top = innerPadding.calculateTopPadding())) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    androidx.compose.material3.IconButton(onClick = { dismiss() }) {
+                        Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Default.ArrowBackIosNew,
+                            contentDescription = stringResource(R.string.back_action),
+                            tint = Color(0xFFFA243C)
+                        )
+                    }
+                    Column(modifier = Modifier.padding(start = 8.dp)) {
+                        Text(
+                            text = stringResource(R.string.porque_escuchaste),
+                            color = Color.Gray,
+                            fontSize = 11.sp
+                        )
+                        Text(
+                            text = activePorqueEscuchaste.artistName,
+                            color = Color.White,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                    state = porqueEscuchasteGridState,
+                    columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = 16.dp,
+                        bottom = innerPadding.calculateBottomPadding() + 180.dp
+                    ),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(overlayItems.size) { index ->
+                        val item = overlayItems[index]
+                        val hdThumb = upgradeThumb(item.thumbnail)
+                        
+                        var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .wiggleOnScroll(item.id, porqueEscuchasteGridState)
+                                .clickable {
+                                    SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
+                                    onSongSelected(PlayerState(item.title, item.artists.joinToString { it.name }, upgradeThumbHD(item.thumbnail), item.id))
+                                }
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(1f)
+                                    .onGloballyPositioned { imageCoords = it }
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFF1C1C1E))
+                            ) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(),
+                                    contentDescription = item.title,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = item.title,
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = "Canción • ${item.artists.joinToString { it.name }}",
+                                color = Color.Gray,
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Overlay throwback jams
+    val seleccionesGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    CarouselToGridTransitionOverlay(
+        visible = activeSeleccionesSection,
+        title = state.seleccionesTitle ?: "",
+        items = state.seleccionesParaTi,
+        isVideo = false,
+        snapshotBounds = seleccionesSnapshotBounds,
+        onClose = { activeSeleccionesSection = false }
+    ) { dismiss ->
+        val overlayItems = state.seleccionesParaTi
+        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+            Column(modifier = Modifier.fillMaxSize().padding(top = innerPadding.calculateTopPadding())) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    androidx.compose.material3.IconButton(onClick = { dismiss() }) {
+                        Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Default.ArrowBackIosNew,
+                            contentDescription = stringResource(R.string.back_action),
+                            tint = Color(0xFFFA243C)
+                        )
+                    }
+                    Column(modifier = Modifier.padding(start = 8.dp)) {
+                        Text(
+                            text = stringResource(R.string.porque_escuchaste),
+                            color = Color.Gray,
+                            fontSize = 11.sp
+                        )
+                        Text(
+                            text = state.seleccionesTitle ?: "",
+                            color = Color.White,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                    state = seleccionesGridState,
+                    columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = 16.dp,
+                        bottom = innerPadding.calculateBottomPadding() + 180.dp
+                    ),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(overlayItems.size) { index ->
+                        val item = overlayItems[index]
+                        val hdThumb = upgradeThumb(item.thumbnail)
+                        
+                        var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .wiggleOnScroll(item.id, seleccionesGridState)
+                                .clickable {
+                                    SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
+                                    onSongSelected(PlayerState(item.title, item.artists.joinToString { it.name }, upgradeThumbHD(item.thumbnail), item.id))
+                                }
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(1f)
+                                    .onGloballyPositioned { imageCoords = it }
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFF1C1C1E))
+                            ) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(),
+                                    contentDescription = item.title,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = item.title,
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = "Canción • ${item.artists.joinToString { it.name }}",
+                                color = Color.Gray,
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
+}
+
+private fun LibraryItem.toYTItem(): com.echo.innertube.models.YTItem {
+    return when (type) {
+        ItemType.ARTIST -> com.echo.innertube.models.ArtistItem(
+            id = id,
+            title = title,
+            thumbnail = thumbnail ?: "",
+            shuffleEndpoint = null,
+            radioEndpoint = null
+        )
+        ItemType.SONG -> com.echo.innertube.models.SongItem(
+            id = id,
+            title = title,
+            artists = listOf(com.echo.innertube.models.Artist(subtitle ?: "", null)),
+            thumbnail = thumbnail ?: "",
+            explicit = false
+        )
+        ItemType.ALBUM -> com.echo.innertube.models.AlbumItem(
+            browseId = id,
+            playlistId = id,
+            title = title,
+            artists = listOf(com.echo.innertube.models.Artist(subtitle ?: "", null)),
+            year = null,
+            thumbnail = thumbnail ?: "",
+            explicit = false
+        )
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1334,7 +1778,7 @@ private fun FeaturedSuggestionCard(
             .background(dominantColor)
             .wiggleOnScroll(item.id, lazyListState = scrollState)
             .clickable {
-                SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
                 clickAction()
             }
     ) {

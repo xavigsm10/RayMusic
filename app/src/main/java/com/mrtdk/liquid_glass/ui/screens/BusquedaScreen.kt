@@ -32,7 +32,7 @@ import com.mrtdk.liquid_glass.ui.components.wiggleOnScroll
 import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.boundsInRoot
+import com.mrtdk.liquid_glass.ui.components.unclippedBoundsInRoot
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -434,7 +434,7 @@ fun BusquedaScreen(
                                 .fillMaxWidth()
                                 .wiggleOnScroll(item.browseId, lazyListState = listState)
                                 .clickable {
-                                    SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                    SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
                                     SharedTransitionState.lastOpenedId = item.browseId
                                     onAlbumSelected(
                                         AlbumState(

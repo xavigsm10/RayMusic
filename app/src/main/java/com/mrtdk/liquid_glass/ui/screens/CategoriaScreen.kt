@@ -40,7 +40,7 @@ import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
 import com.mrtdk.liquid_glass.ui.components.SharedElementTransitionContainer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.boundsInRoot
+import com.mrtdk.liquid_glass.ui.components.unclippedBoundsInRoot
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -483,7 +483,7 @@ fun CategoriaScreen(
                                                     pressScale.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = 400f))
                                                 }
                                                 if (released) {
-                                                    SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                                    SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
                                                     SharedTransitionState.lastOpenedId = item.id
                                                     localAlbumDetail = AlbumState(
                                                         id = item.id,
@@ -640,7 +640,7 @@ fun CategoriaScreen(
                                                     pressScale.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = 400f))
                                                 }
                                                 if (released) {
-                                                    SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                                    SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
                                                     SharedTransitionState.lastOpenedId = item.browseId
                                                     localAlbumDetail = AlbumState(
                                                         id = item.browseId,

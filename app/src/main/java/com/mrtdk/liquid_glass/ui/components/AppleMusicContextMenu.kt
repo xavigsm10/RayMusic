@@ -1,4 +1,4 @@
-package com.mrtdk.liquid_glass.ui.components
+﻿package com.mrtdk.liquid_glass.ui.components
 
 import android.content.Context
 import android.content.Intent
@@ -1452,7 +1452,7 @@ fun GlassBoxScope.AppleMusicPlaylistMenu(
                                         playlist.items.forEach { song ->
                                             LibraryManager.addSongToPlaylist(targetPl.id, song)
                                         }
-                                        Toast.makeText(context, "${context.getString(R.string.añadir_a_playlist)}: ${targetPl.name}", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "${context.getString(R.string.anadir_a_playlist)}: ${targetPl.name}", Toast.LENGTH_SHORT).show()
                                         showAddToPlaylistDialog = false
                                         handleDismiss()
                                     }
@@ -2497,10 +2497,20 @@ fun GlassBoxScope.LyricsOptionsMenu(
     onReloadLyrics: () -> Unit,
     onSearchManually: () -> Unit,
     onSearchOnline: () -> Unit,
+    isTranslationEnabled: Boolean = true,
+    onToggleTranslation: () -> Unit = {},
+    isAccompanimentEnabled: Boolean = true,
+    onToggleAccompaniment: () -> Unit = {},
+    isKaraokeEnabled: Boolean = true,
+    onToggleKaraoke: () -> Unit = {},
+    isDuetEnabled: Boolean = true,
+    onToggleDuet: () -> Unit = {},
+    onCopyLyricsAsFormat: (String) -> Unit = {},
     pivotBounds: androidx.compose.ui.geometry.Rect? = null
 ) {
     var visible by remember { mutableStateOf(false) }
     var showProviderSelection by remember { mutableStateOf(false) }
+    var showExportFormatSelection by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
@@ -2538,6 +2548,8 @@ fun GlassBoxScope.LyricsOptionsMenu(
     BackHandler(enabled = visible) {
         if (showProviderSelection) {
             showProviderSelection = false
+        } else if (showExportFormatSelection) {
+            showExportFormatSelection = false
         } else {
             handleDismiss()
         }
@@ -2689,6 +2701,66 @@ fun GlassBoxScope.LyricsOptionsMenu(
                             }
                         }
                     }
+                } else if (showExportFormatSelection) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { showExportFormatSelection = false }) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.lyrics_menu_back), tint = Color.White)
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.lyrics_menu_export_lyrics),
+                            color = Color.White,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 8.dp))
+
+                    val formats = listOf("LRC", "ELRC", "TTML")
+                    val formatLabels = listOf(
+                        stringResource(R.string.lyrics_menu_export_lrc),
+                        stringResource(R.string.lyrics_menu_export_elrc),
+                        stringResource(R.string.lyrics_menu_export_ttml)
+                    )
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp)
+                    ) {
+                        formats.forEachIndexed { index, format ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onCopyLyricsAsFormat(format)
+                                        handleDismiss()
+                                    }
+                                    .padding(vertical = 12.dp, horizontal = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = formatLabels[index],
+                                    color = Color.White,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.ContentCopy,
+                                    contentDescription = "Copy",
+                                    tint = Color.White.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
                 } else {
                     Row(
                         modifier = Modifier
@@ -2791,6 +2863,98 @@ fun GlassBoxScope.LyricsOptionsMenu(
                             },
                             onClick = {
                                 onToggleRomaji()
+                            }
+                        )
+
+                        VerticalMenuActionItem(
+                            icon = Icons.Default.Language,
+                            label = stringResource(R.string.lyrics_menu_show_translation),
+                            trailingContent = {
+                                androidx.compose.material3.Switch(
+                                    checked = isTranslationEnabled,
+                                    onCheckedChange = {
+                                        onToggleTranslation()
+                                    },
+                                    colors = androidx.compose.material3.SwitchDefaults.colors(
+                                        checkedThumbColor = Color(0xFFFA243C),
+                                        checkedTrackColor = Color(0xFFFA243C).copy(alpha = 0.4f)
+                                    ),
+                                    modifier = Modifier.graphicsLayer { scaleX = 0.8f; scaleY = 0.8f }
+                                )
+                            },
+                            onClick = {
+                                onToggleTranslation()
+                            }
+                        )
+
+                        VerticalMenuActionItem(
+                            icon = Icons.Default.MusicNote,
+                            label = stringResource(R.string.lyrics_menu_show_accompaniment),
+                            trailingContent = {
+                                androidx.compose.material3.Switch(
+                                    checked = isAccompanimentEnabled,
+                                    onCheckedChange = {
+                                        onToggleAccompaniment()
+                                    },
+                                    colors = androidx.compose.material3.SwitchDefaults.colors(
+                                        checkedThumbColor = Color(0xFFFA243C),
+                                        checkedTrackColor = Color(0xFFFA243C).copy(alpha = 0.4f)
+                                    ),
+                                    modifier = Modifier.graphicsLayer { scaleX = 0.8f; scaleY = 0.8f }
+                                )
+                            },
+                            onClick = {
+                                onToggleAccompaniment()
+                            }
+                        )
+
+                        VerticalMenuActionItem(
+                            icon = Icons.Default.Mic,
+                            label = stringResource(R.string.lyrics_menu_enable_karaoke),
+                            trailingContent = {
+                                androidx.compose.material3.Switch(
+                                    checked = isKaraokeEnabled,
+                                    onCheckedChange = {
+                                        onToggleKaraoke()
+                                    },
+                                    colors = androidx.compose.material3.SwitchDefaults.colors(
+                                        checkedThumbColor = Color(0xFFFA243C),
+                                        checkedTrackColor = Color(0xFFFA243C).copy(alpha = 0.4f)
+                                    ),
+                                    modifier = Modifier.graphicsLayer { scaleX = 0.8f; scaleY = 0.8f }
+                                )
+                            },
+                            onClick = {
+                                onToggleKaraoke()
+                            }
+                        )
+
+                        VerticalMenuActionItem(
+                            icon = Icons.Default.People,
+                            label = stringResource(R.string.lyrics_menu_enable_duet),
+                            trailingContent = {
+                                androidx.compose.material3.Switch(
+                                    checked = isDuetEnabled,
+                                    onCheckedChange = {
+                                        onToggleDuet()
+                                    },
+                                    colors = androidx.compose.material3.SwitchDefaults.colors(
+                                        checkedThumbColor = Color(0xFFFA243C),
+                                        checkedTrackColor = Color(0xFFFA243C).copy(alpha = 0.4f)
+                                    ),
+                                    modifier = Modifier.graphicsLayer { scaleX = 0.8f; scaleY = 0.8f }
+                                )
+                            },
+                            onClick = {
+                                onToggleDuet()
+                            }
+                        )
+
+                        VerticalMenuActionItem(
+                            icon = Icons.Default.ContentCopy,
+                            label = stringResource(R.string.lyrics_menu_export_lyrics),
+                            onClick = {
+                                showExportFormatSelection = true
                             }
                         )
 

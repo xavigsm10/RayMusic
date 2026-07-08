@@ -624,4 +624,11 @@ class LibraryDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABA
         }
         return list
     }
+
+    fun clearPlaybackHistory() {
+        val db = this.writableDatabase
+        try {
+            db.delete("playback_history", null, null)
+        } catch (e: Exception) {}
+    }
 }

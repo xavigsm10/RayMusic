@@ -89,7 +89,7 @@ fun LiquidBottomNavBar(
         animationSpec = navSpringSpec
     )
     
-    val isTransitioning = (searchProgress > 0.001f && searchProgress < 0.999f) || isCollapsing
+    val isTransitioning = (searchProgress > 0.001f && searchProgress < 0.999f)
     
     val xWidth by animateDpAsState(
         targetValue = if (isSearchActive && isKeyboardOpen) 64.dp else 0.dp,
@@ -126,6 +126,10 @@ fun LiquidBottomNavBar(
             modifier = Modifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val tabWidthDp = (mainTabsMaxWidth - 8.dp) / 4
+            val homeTabCenterX = 4.dp + tabWidthDp / 2
+            val targetCenterX = 28.dp
+
             // Main Navigation Pill (shrinks smoothly to become circular Home button)
             Box(
                 modifier = Modifier
@@ -168,7 +172,15 @@ fun LiquidBottomNavBar(
                 contentAlignment = Alignment.Center
             ) {
                 Box(
-                    modifier = Modifier.requiredWidth(mainTabsMaxWidth)
+                    modifier = Modifier
+                        .requiredWidth(mainTabsMaxWidth)
+                        .graphicsLayer {
+                            val progress = if (searchProgress > collapseProgress) searchProgress else collapseProgress
+                            val currentAvailableWidth = parentWidth - xWidth - spacingSearchX - 12.dp
+                            val widthDp = currentAvailableWidth - 56.dp - (currentAvailableWidth - 112.dp) * progress
+                            val offsetDp = (targetCenterX - homeTabCenterX) * progress - (widthDp - mainTabsMaxWidth) / 2
+                            translationX = offsetDp.toPx()
+                        }
                 ) {
                     MainTabs(selectedIndex, onTabSelected, contentColor, tintColor, searchProgress, collapseProgress)
                 }
@@ -218,7 +230,11 @@ fun LiquidBottomNavBar(
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
-                        .clickable { if (!isSearchActive) onTabSelected(4) },
+                        .clickable { 
+                            if (collapseProgress > 0.5f || !isSearchActive) {
+                                onTabSelected(4)
+                            }
+                        },
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = if (!showSearchInput) Arrangement.Center else Arrangement.Start
                 ) {
@@ -387,7 +403,7 @@ fun MainTabs(
             }
             val iconSize = 26.dp
 
-            val tabWeight = if (index == 0) 1f else (1f - combineProgress).coerceAtLeast(0.0001f)
+            val tabWeight = 1f
             val tabAlpha = if (index == 0) 1f else (1f - combineProgress)
             val textAlpha = 1f - combineProgress
 

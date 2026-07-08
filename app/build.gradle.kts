@@ -88,6 +88,7 @@ dependencies {
     // Romaji translation
     implementation("com.atilika.kuromoji:kuromoji-ipadic:0.9.0")
     implementation("com.anyascii:anyascii:0.3.2")
+    implementation("com.mocharealm.accompanist:lyrics-core:0.4.7")
     
     // Permissions
     implementation("com.google.accompanist:accompanist-permissions:0.35.0-alpha")
@@ -104,3 +105,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation(libs.compose.cloudy)
 }
+
+
+

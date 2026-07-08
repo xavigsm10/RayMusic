@@ -424,6 +424,11 @@ object LibraryManager {
         if (!isInitialized) return emptyList()
         return dbHelper.getPlaybackHistory()
     }
+
+    fun clearPlaybackHistory() {
+        if (!isInitialized) return
+        dbHelper.clearPlaybackHistory()
+    }
 }
 
 data class PlaybackRecord(

@@ -1,4 +1,4 @@
-<resources>
+﻿<resources>
     <string name="app_name">RayMusic</string>
     <string name="nav_inicio">Inicio</string>
     <string name="nav_novedades">Novedades</string>
@@ -11,27 +11,27 @@
     <string name="ajustes">Ajustes</string>
     <string name="acerca_de">ACERCA DE</string>
     <string name="buscar_actualizaciones">Buscar actualizaciones</string>
-    <string name="version_actual">Versión actual: %1$s</string>
-    <string name="repositorio_app">Repositorio de la aplicación</string>
-    <string name="ver_codigo_github">Ver el código fuente en GitHub</string>
+    <string name="version_actual">VersiÃ³n actual: %1$s</string>
+    <string name="repositorio_app">Repositorio de la aplicaciÃ³n</string>
+    <string name="ver_codigo_github">Ver el cÃ³digo fuente en GitHub</string>
     <string name="buscando_actualizaciones">Buscando actualizaciones...</string>
-    <string name="ultima_version_ok">Ya tienes la última versión</string>
-    <string name="idioma_app_section">IDIOMA DE LA APLICACIÓN</string>
-    <string name="idioma_app">Idioma de la aplicación</string>
-    <string name="cambiar_idioma">Cambiar el idioma de la aplicación</string>
+    <string name="ultima_version_ok">Ya tienes la Ãºltima versiÃ³n</string>
+    <string name="idioma_app_section">IDIOMA DE LA APLICACIÃ“N</string>
+    <string name="idioma_app">Idioma de la aplicaciÃ³n</string>
+    <string name="cambiar_idioma">Cambiar el idioma de la aplicaciÃ³n</string>
     <string name="predeterminado_sistema">Predeterminado del sistema</string>
     <string name="language_dialog_title">Selecciona un idioma</string>
     <string name="cancelar">Cancelar</string>
-    <string name="actualizacion_disponible">Actualización Disponible</string>
+    <string name="actualizacion_disponible">ActualizaciÃ³n Disponible</string>
     <string name="playlists">Playlists</string>
     <string name="artistas">Artistas</string>
-    <string name="albumes">Álbumes</string>
+    <string name="albumes">Ãlbumes</string>
     <string name="canciones">Canciones</string>
     <string name="descargados">Descargados</string>
-    <string name="buenos_dias">Buenos días</string>
+    <string name="buenos_dias">Buenos dÃ­as</string>
     <string name="buenas_tardes">Buenas tardes</string>
     <string name="buenas_noches">Buenas noches</string>
-    <string name="selecciones_rapidas">Selecciones rápidas</string>
+    <string name="selecciones_rapidas">Selecciones rÃ¡pidas</string>
     <string name="play_all">Reproducir todo</string>
     <string name="sigue_escuchando">Sigue escuchando</string>
     <string name="similar_a">Similar a</string>
@@ -40,15 +40,15 @@
     <string name="nos_encanta">NOS ENCANTA</string>
     <string name="siguiente_en_album_playlist">Siguiente en Album/Playlist</string>
     <string name="continue_playing">Seguir reproduciendo</string>
-    <string name="autoplaying_similar_music">Reproduciendo música similar</string>
-    <string name="añadir_a_playlist">Añadir a playlist</string>
+    <string name="autoplaying_similar_music">Reproduciendo mÃºsica similar</string>
+    <string name="anadir_a_playlist">AÃ±adir a playlist</string>
     <string name="proveedor_letras">Proveedor de letras</string>
     <string name="buscar_letra_internet">Buscar letra en internet</string>
     <string name="desactivar_romaji">Desactivar Romaji</string>
     <string name="activar_romaji">Activar Romaji</string>
     <string name="buscar_letra_manualmente">Buscar letra manualmente</string>
     <string name="buscar_letra">Buscar letra</string>
-    <string name="titulo_cancion">Título de la canción</string>
+    <string name="titulo_cancion">TÃ­tulo de la canciÃ³n</string>
     <string name="artista">Artista</string>
     <string name="nueva_playlist_ellipsis">Nueva playlist...</string>
     <string name="num_canciones">%1$d canciones</string>
@@ -58,25 +58,25 @@
     <string name="no_resultados_para">No hay resultados para \"%1$s\"</string>
     <string name="search_tab_top">Resultados principales</string>
     <string name="search_tab_artists">Artistas</string>
-    <string name="search_tab_albums">Álbumes</string>
+    <string name="search_tab_albums">Ãlbumes</string>
     <string name="search_tab_songs">Canciones</string>
-    <string name="search_type_song">Canción</string>
+    <string name="search_type_song">CanciÃ³n</string>
     <string name="search_type_artist">Artista</string>
-    <string name="search_type_album">Álbum</string>
-    <string name="ver_mas">Ver más</string>
+    <string name="search_type_album">Ãlbum</string>
+    <string name="ver_mas">Ver mÃ¡s</string>
     <string name="ocultar">Ocultar</string>
     <string name="reproducir">Reproducir</string>
     <string name="top_songs">Canciones populares</string>
     <string name="sencillos_y_ep">Sencillos y EP</string>
     <string name="videos">Videos</string>
     <string name="destacado_en">Destacado en</string>
-    <string name="puede_gustar">Puede que también te guste</string>
+    <string name="puede_gustar">Puede que tambiÃ©n te guste</string>
     <string name="ver_todo">Ver todo</string>
     <string name="suscriptores">suscriptores</string>
     <string name="oyentes_mensuales">oyentes mensuales</string>
-    <string name="permission_needed">Se necesita permiso para leer tu música local</string>
+    <string name="permission_needed">Se necesita permiso para leer tu mÃºsica local</string>
     <string name="grant_permission">Conceder Permiso</string>
-    <string name="update_dialog_desc">Se ha encontrado la versión %1$s. ¿Deseas actualizar ahora?</string>
+    <string name="update_dialog_desc">Se ha encontrado la versiÃ³n %1$s. Â¿Deseas actualizar ahora?</string>
     <string name="actualizar">Actualizar</string>
     <string name="descargando">Descargando: %1$d%%</string>
     <string name="descargando_ellipsis">Descargando...</string>
@@ -84,57 +84,57 @@
     <string name="play">Reproducir</string>
     <string name="canciones_nuevas_destacadas">Canciones nuevas destacadas</string>
     <string name="canciones_momento">Canciones del momento</string>
-    <string name="toda_gente_escuchando">Toda la gente está escuchando...</string>
-    <string name="recently_added">Añadido recientemente</string>
+    <string name="toda_gente_escuchando">Toda la gente estÃ¡ escuchando...</string>
+    <string name="recently_added">AÃ±adido recientemente</string>
     <string name="sugerencias_destacadas">Sugerencias destacadas para ti</string>
     
     <string name="create_new_playlist">Crear nueva playlist</string>
     <string name="create_new_folder">Crear nueva carpeta</string>
     <string name="favorite_songs">Canciones favoritas</string>
-    <string name="no_favorite_songs">Aún no tienes canciones favoritas.\nToca la estrella ★ en cualquier canción para guardarla aquí.</string>
+    <string name="no_favorite_songs">AÃºn no tienes canciones favoritas.\nToca la estrella â˜… en cualquier canciÃ³n para guardarla aquÃ­.</string>
     <string name="new_playlist_title">Nueva playlist</string>
     <string name="pinch_drag_position">Pellizca y arrastra para posicionar</string>
     <string name="take_photo">Tomar foto</string>
     <string name="choose_photo">Elegir foto</string>
     <string name="choose_file">Elegir archivo</string>
-    <string name="playlist_title_placeholder">Título de la playlist</string>
-    <string name="show_profile_search">Mostrar en mi perfil y en la búsqueda</string>
+    <string name="playlist_title_placeholder">TÃ­tulo de la playlist</string>
+    <string name="show_profile_search">Mostrar en mi perfil y en la bÃºsqueda</string>
     <string name="my_playlist_subtitle">Mi playlist</string>
     <string name="play_label">Reproducir</string>
     <string name="shuffle_label">Aleatorio</string>
     <string name="apariencia">Apariencia</string>
     <string name="liquid_glass">Liquid Glass</string>
-    <string name="vidrio_liquido_transparente">Vidrio líquido transparente</string>
+    <string name="vidrio_liquido_transparente">Vidrio lÃ­quido transparente</string>
     <string name="semitransparente">Semitransparente</string>
     <string name="apariencia_dialog_title">Selecciona el estilo de Liquid Glass</string>
     <string name="audio_settings_section">AUDIO</string>
     <string name="audio_quality_label">Calidad de audio</string>
     <string name="audio_quality_high">Alta (160 kbps Opus / 128 kbps AAC)</string>
     <string name="audio_quality_low">Baja (48 kbps AAC / 50 kbps Opus)</string>
-    <string name="audio_quality_dialog_title">Calidad de reproducción</string>
+    <string name="audio_quality_dialog_title">Calidad de reproducciÃ³n</string>
 
     <!-- Playlist Context Menu Options -->
     <string name="menu_favorite">Favorita</string>
     <string name="menu_share">Compartir</string>
     <string name="menu_pin_playlist">Fijar playlist</string>
     <string name="menu_unpin_playlist">Desfijar playlist</string>
-    <string name="menu_add_to_playlist">Añadir a playlist</string>
+    <string name="menu_add_to_playlist">AÃ±adir a playlist</string>
     <string name="menu_edit">Editar</string>
-    <string name="menu_start_collaboration">Iniciar colaboración</string>
+    <string name="menu_start_collaboration">Iniciar colaboraciÃ³n</string>
     <string name="menu_sort_by">Ordenar por</string>
     <string name="menu_move_to_folder">Mover a carpeta</string>
     <string name="menu_play_next">Reproducir siguiente</string>
     <string name="menu_suggest_less">Sugerir menos</string>
     <string name="menu_download">Descargar</string>
     <string name="menu_remove_download">Eliminar descarga</string>
-    <string name="menu_toast_collaboration">Enlace de colaboración copiado al portapapeles</string>
+    <string name="menu_toast_collaboration">Enlace de colaboraciÃ³n copiado al portapapeles</string>
     <string name="menu_toast_suggest_less">Sugeriremos menos contenido como este</string>
-    <string name="menu_toast_added_fav">Playlist añadida a favoritas</string>
+    <string name="menu_toast_added_fav">Playlist aÃ±adida a favoritas</string>
     <string name="menu_toast_removed_fav">Playlist eliminada de favoritas</string>
     <string name="menu_sort_default">Predeterminado</string>
-    <string name="menu_sort_title">Título</string>
+    <string name="menu_sort_title">TÃ­tulo</string>
     <string name="menu_sort_artist">Artista</string>
-    <string name="menu_sort_album">Álbum</string>
+    <string name="menu_sort_album">Ãlbum</string>
     <string name="menu_move_folder_title">Mover a carpeta</string>
     <string name="menu_move_folder_desc">Elige una carpeta o crea una nueva para organizar tus playlists.</string>
     <string name="menu_folder_created">Carpeta creada y playlist movida</string>
@@ -145,79 +145,79 @@
     <string name="compartir">Compartir</string>
 
     <!-- Artist Context Menu Options -->
-    <string name="menu_artist_add_favorite">Añadir a favoritos</string>
+    <string name="menu_artist_add_favorite">AÃ±adir a favoritos</string>
     <string name="menu_artist_remove_favorite">Quitar de favoritos</string>
     <string name="menu_artist_share">Compartir</string>
     <string name="menu_artist_create_radio">Crear emisora</string>
-    <string name="menu_artist_open_classical">Abrir en Clásica</string>
+    <string name="menu_artist_open_classical">Abrir en ClÃ¡sica</string>
     <string name="menu_artist_suggest_less">Sugerir menos</string>
-    <string name="menu_artist_toast_added">Artista añadido a favoritos</string>
+    <string name="menu_artist_toast_added">Artista aÃ±adido a favoritos</string>
     <string name="menu_artist_toast_removed">Artista eliminado de favoritos</string>
     <string name="menu_artist_toast_suggest_less">Sugeriremos menos contenido de este artista</string>
-    <string name="menu_artist_toast_classical">Abriendo versión clásica...</string>
+    <string name="menu_artist_toast_classical">Abriendo versiÃ³n clÃ¡sica...</string>
     <plurals name="n_song">
-        <item quantity="one">%1$d canción</item>
+        <item quantity="one">%1$d canciÃ³n</item>
         <item quantity="other">%1$d canciones</item>
     </plurals>
 
     <!-- Player Options Menu -->
     <string name="player_menu_download">Descargar</string>
-    <string name="player_menu_add_favorite">Añadir a fav.</string>
+    <string name="player_menu_add_favorite">AÃ±adir a fav.</string>
     <string name="player_menu_favorite">Favorito</string>
     <string name="player_menu_share">Compartir</string>
-    <string name="player_menu_pin_song">Fijar canción</string>
-    <string name="player_menu_unpin_song">Eliminar fijación</string>
-    <string name="player_menu_add_to_playlist">Añadir a una playlist</string>
+    <string name="player_menu_pin_song">Fijar canciÃ³n</string>
+    <string name="player_menu_unpin_song">Eliminar fijaciÃ³n</string>
+    <string name="player_menu_add_to_playlist">AÃ±adir a una playlist</string>
     <string name="player_menu_create_station">Crear emisora</string>
-    <string name="player_menu_go_to_album">Ir al álbum</string>
-    <string name="player_menu_view_credits">Ver créditos</string>
+    <string name="player_menu_go_to_album">Ir al Ã¡lbum</string>
+    <string name="player_menu_view_credits">Ver crÃ©ditos</string>
     <string name="player_menu_share_lyrics">Compartir letra</string>
     <string name="player_menu_suggest_less">Sugerir menos</string>
     <string name="player_menu_delete_library">Eliminar de la biblioteca</string>
     
-    <string name="toast_song_pinned">Canción fijada</string>
-    <string name="toast_song_unpinned">Fijación eliminada</string>
+    <string name="toast_song_pinned">CanciÃ³n fijada</string>
+    <string name="toast_song_unpinned">FijaciÃ³n eliminada</string>
     <string name="toast_starting_station">Iniciando emisora para: %1$s</string>
-    <string name="toast_searching_album">Buscando álbum...</string>
-    <string name="toast_album_info_unavailable">Información de álbum no disponible</string>
-    <string name="toast_credits_perf_by">Créditos: interpretado por %1$s</string>
+    <string name="toast_searching_album">Buscando Ã¡lbum...</string>
+    <string name="toast_album_info_unavailable">InformaciÃ³n de Ã¡lbum no disponible</string>
+    <string name="toast_credits_perf_by">CrÃ©ditos: interpretado por %1$s</string>
     <string name="toast_lyrics_shared">Letra compartida</string>
     <string name="toast_suggestion_saved">Sugerencia guardada</string>
     <string name="toast_removed_favorites">Eliminado de favoritos</string>
-    <string name="toast_not_in_library">No está en la biblioteca</string>
+    <string name="toast_not_in_library">No estÃ¡ en la biblioteca</string>
 
     <!-- Radio Screen -->
     <string name="radio_listening">Escuchando...</string>
     <string name="radio_processing">Buscando coincidencias...</string>
-    <string name="radio_tap_to_identify">Toca para identificar música</string>
-    <string name="radio_hear_clearly">Asegúrate de que tu dispositivo pueda\noír la música claramente.</string>
+    <string name="radio_tap_to_identify">Toca para identificar mÃºsica</string>
+    <string name="radio_hear_clearly">AsegÃºrate de que tu dispositivo pueda\noÃ­r la mÃºsica claramente.</string>
     <string name="radio_no_matches">No se encontraron coincidencias</string>
     <string name="radio_failed_signature">No se pudo generar la firma</string>
     <string name="radio_error_listening">Error al escuchar</string>
 
     <!-- Replay Screen -->
-    <string name="replay_title">Replay: La música que más escuchas</string>
+    <string name="replay_title">Replay: La mÃºsica que mÃ¡s escuchas</string>
     <string name="replay_subtitle">Un viaje al pasado.</string>
     <string name="replay_card_headline_1">Tu</string>
     <string name="replay_card_headline_2">historia musical</string>
-    <string name="replay_card_headline_3">está aquí.</string>
-    <string name="replay_card_footer">Vuelve a escuchar artistas, canciones y álbumes que definieron tu 2026.</string>
+    <string name="replay_card_headline_3">estÃ¡ aquÃ­.</string>
+    <string name="replay_card_footer">Vuelve a escuchar artistas, canciones y Ã¡lbumes que definieron tu 2026.</string>
     <string name="replay_screen_title">Replay</string>
     <string name="replay_highlights_reel">Reel de momentos destacados</string>
-    <string name="replay_revive_this_year">Revive tu música de este año</string>
+    <string name="replay_revive_this_year">Revive tu mÃºsica de este aÃ±o</string>
     <string name="replay_top_artists">Tus top artistas de 2026</string>
     <string name="replay_top_songs">Tus top canciones de 2026</string>
-    <string name="replay_top_albums">Tus top álbumes de 2026</string>
+    <string name="replay_top_albums">Tus top Ã¡lbumes de 2026</string>
     <string name="replay_top_playlists">Tus top playlists de 2026</string>
-    <string name="replay_top_genres">Tus top géneros de 2026</string>
+    <string name="replay_top_genres">Tus top gÃ©neros de 2026</string>
     <string name="replay_minutos">%1$s minutos</string>
     <string name="replay_reproducciones">%1$s reproducciones</string>
     <string name="replay_top_artists_by_month">Tus top artistas por mes</string>
     <string name="replay_top_songs_by_month">Tus top canciones por mes</string>
-    <string name="replay_top_albums_by_month">Tus top álbumes por mes</string>
-    <string name="replay_comparison_title">¿Cómo se compara con el año pasado?</string>
-    <string name="replay_comparison_artists">Top artistas: Comparación</string>
-    <string name="replay_comparison_songs">Top canciones: Comparación</string>
+    <string name="replay_top_albums_by_month">Tus top Ã¡lbumes por mes</string>
+    <string name="replay_comparison_title">Â¿CÃ³mo se compara con el aÃ±o pasado?</string>
+    <string name="replay_comparison_artists">Top artistas: ComparaciÃ³n</string>
+    <string name="replay_comparison_songs">Top canciones: ComparaciÃ³n</string>
     <string name="replay_revive_last_year_songs">Revive tus top canciones de 2026</string>
     <string name="celular_speaker">Altavoz del celular</string>
     <string name="wifi_device">WiFi (Conectar a dispositivo)</string>
@@ -228,7 +228,7 @@
 
     <!-- Lyrics Options Menu -->
     <string name="lyrics_menu_provider_title">Proveedor de Letras</string>
-    <string name="lyrics_menu_back">Atrás</string>
+    <string name="lyrics_menu_back">AtrÃ¡s</string>
     <string name="lyrics_menu_active">Activo</string>
     <string name="lyrics_menu_selected">Seleccionado</string>
     <string name="lyrics_menu_edit">Editar</string>
@@ -238,6 +238,14 @@
     <string name="lyrics_menu_adjust_offset">Ajustar desfase</string>
     <string name="lyrics_menu_romanize">Romanizar pista actual</string>
     <string name="lyrics_menu_search_online">Buscar en Internet</string>
+    <string name="lyrics_menu_show_translation">Mostrar traducciones</string>
+    <string name="lyrics_menu_show_accompaniment">Mostrar coros de fondo</string>
+    <string name="lyrics_menu_export_lyrics">Copiar letras formateadas</string>
+    <string name="lyrics_menu_export_lrc">LRC estÃ¡ndar</string>
+    <string name="lyrics_menu_export_elrc">LRC mejorado (karaoke)</string>
+    <string name="lyrics_menu_export_ttml">TTML (Apple Music)</string>
+    <string name="lyrics_menu_enable_karaoke">Modo Karaoke</string>
+    <string name="lyrics_menu_enable_duet">Modo Dueto</string>
 
     <!-- Artist Options Menu -->
     <string name="artist_menu_select_title">Seleccionar Artista</string>
@@ -246,9 +254,128 @@
     <string name="artist_menu_view_artist">Ver artista</string>
 
     <!-- Lyrics Offset Dialog -->
-    <string name="lyrics_offset_title">Compensación de letras</string>
+    <string name="lyrics_offset_title">CompensaciÃ³n de letras</string>
     <string name="lyrics_offset_accept">Aceptar</string>
     <string name="lyrics_offset_reset">Restablecer</string>
     <string name="lyrics_offset_decrease">Disminuir</string>
     <string name="lyrics_offset_increase">Aumentar</string>
+
+    <!-- ConfiguraciÃ³n del sistema de Ajustes -->
+    <string name="settings_lyrics">Letras</string>
+    <string name="settings_lyrics_desc">Ajustar visualizaciÃ³n y comportamiento de letras</string>
+    <string name="settings_player_sound">Reproductor y sonido</string>
+    <string name="settings_player_sound_desc">Calidad de audio y preferencias del reproductor</string>
+    <string name="settings_listen_together">Escuchar juntos</string>
+    <string name="settings_listen_together_desc">Ajustar parÃ¡metros de sala de reproducciÃ³n compartida</string>
+    <string name="settings_content">Contenido</string>
+    <string name="settings_content_desc">Idioma, restricciones de edad y filtros</string>
+    <string name="settings_privacy">Privacidad</string>
+    <string name="settings_privacy_desc">Pausar o borrar historial de bÃºsquedas y reproducciones</string>
+    <string name="settings_about_desc">InformaciÃ³n sobre el desarrollador y actualizaciones</string>
+
+    <string name="lyrics_align_title">AlineaciÃ³n del texto</string>
+    <string name="lyrics_align_left">Izquierda</string>
+    <string name="lyrics_align_center">Centro</string>
+    <string name="lyrics_align_right">Derecha</string>
+
+    <string name="lyrics_anim_title">Estilo de animaciÃ³n</string>
+    <string name="lyrics_anim_none">Ninguno</string>
+    <string name="lyrics_anim_fade">Desvanecer</string>
+    <string name="lyrics_anim_glow">Brillo</string>
+    <string name="lyrics_anim_slide">Desplazamiento</string>
+    <string name="lyrics_anim_karaoke">Karaoke</string>
+    <string name="lyrics_anim_echo_fluid">Echo Fluid v1</string>
+    <string name="lyrics_anim_apple">Apple Music Estilo</string>
+    <string name="lyrics_anim_apple_v2">Apple Music v2</string>
+    <string name="lyrics_anim_fluid_v2">Letras Fluidas v2</string>
+    <string name="lyrics_anim_metro">Letras Estilo Metro</string>
+
+    <string name="lyrics_glow_title">Efecto de resplandor (Glow)</string>
+    <string name="lyrics_glow_desc">AÃ±ade un halo brillante a la lÃ­nea actual activa</string>
+    <string name="lyrics_size_title">TamaÃ±o de texto</string>
+    <string name="lyrics_spacing_title">Espacio entre lÃ­neas</string>
+
+    <string name="lyrics_blur_bg_title">Desfoque de fondo estilo Apple Music</string>
+    <string name="lyrics_blur_bg_desc">Efecto translÃºcido fluido y difuminado en la carÃ¡tula</string>
+    <string name="lyrics_blur_std_title">Desenfoque de letras estÃ¡ndar</string>
+    <string name="lyrics_blur_std_desc">Aplica un desenfoque sutil general en el panel de letras</string>
+
+    <string name="lyrics_seek_title">Buscar al pulsar (Clic)</string>
+    <string name="lyrics_seek_desc">Permite saltar a una parte de la canciÃ³n al pulsar una frase</string>
+    <string name="lyrics_autoscroll_title">Desplazamiento automÃ¡tico</string>
+    <string name="lyrics_autoscroll_desc">Desplazar automÃ¡ticamente las letras al compÃ¡s de la mÃºsica</string>
+    <string name="lyrics_swipe_title">Deslizar para cambiar canciÃ³n</string>
+    <string name="lyrics_swipe_desc">Permite cambiar de canciÃ³n deslizando horizontalmente sobre las letras</string>
+    <string name="lyrics_thumb_play_title">Pulsar miniatura para Reproducir/Pausa</string>
+    <string name="lyrics_thumb_play_desc">Tocar la carÃ¡tula en la pantalla de letras pausarÃ¡/reanudarÃ¡ la mÃºsica</string>
+    <string name="lyrics_statusbar_title">Ocultar barra de estado</string>
+    <string name="lyrics_statusbar_desc">Ocultar la barra de estado superior al abrir el reproductor</string>
+
+    <string name="player_quality_title">Calidad de audio</string>
+    <string name="player_quality_low">Baja (Ahorro de datos)</string>
+    <string name="player_quality_high">Alta (Recomendada)</string>
+    <string name="player_quality_low_desc">Baja (48 kbps AAC / 50 kbps Opus)</string>
+    <string name="player_quality_high_desc">Alta (160 kbps Opus / 128 kbps AAC)</string>
+    <string name="player_eq_title">Ecualizador</string>
+    <string name="player_eq_desc">Configurar efectos de sonido y ecualizador</string>
+
+    <string name="player_autoplay_title">Reproducir mÃºsica similar</string>
+    <string name="player_autoplay_desc">AÃ±ade automÃ¡ticamente mÃºsica similar cuando termine la cola</string>
+    <string name="player_like_download_title">Descargar al marcar Me Gusta</string>
+    <string name="player_like_download_desc">Descarga automÃ¡ticamente la canciÃ³n cuando se marque favorita</string>
+    <string name="player_persistent_queue_title">Cola persistente</string>
+    <string name="player_persistent_queue_desc">Mantiene guardada la lista de reproducciÃ³n al cerrar la app</string>
+
+    <string name="together_username_title">Nombre de usuario</string>
+    <string name="together_server_title">Servidor de WebSockets</string>
+    <string name="together_resync_title">ResincronizaciÃ³n inteligente</string>
+    <string name="together_resync_desc">Compensar latencia y sincronizar con precisiÃ³n de milisegundos</string>
+    <string name="together_volume_title">Sincronizar volumen del anfitriÃ³n</string>
+    <string name="together_volume_desc">Alinear tu nivel de volumen al cambiarlo en la sala</string>
+    <string name="together_approval_title">Auto-aprobar peticiones</string>
+    <string name="together_approval_desc">Permite ingresar automÃ¡ticamente a invitados a tu sala</string>
+
+    <string name="content_lang_title">Idioma del contenido</string>
+    <string name="content_region_title">RegiÃ³n de sugerencias</string>
+    <string name="content_explicit_title">Ocultar contenido explÃ­cito</string>
+    <string name="content_explicit_desc">Filtrar e impedir reproducciÃ³n de pistas explÃ­citas</string>
+    <string name="content_video_title">Ocultar vÃ­deos de mÃºsica</string>
+    <string name="content_video_desc">Preferir siempre pistas de audio en lugar de videoclips</string>
+    <string name="content_shorts_title">Ocultar Shorts de YouTube</string>
+    <string name="content_shorts_desc">No mostrar videos cortos en las sugerencias o bÃºsquedas</string>
+
+    <string name="privacy_pause_history_title">Pausar historial</string>
+    <string name="privacy_pause_history_desc">Detiene temporalmente el registro de canciones escuchadas</string>
+    <string name="privacy_clear_history_title">Borrar historial de reproducciÃ³n</string>
+    <string name="privacy_clear_history_desc">Limpia la base de datos de canciones escuchadas</string>
+    <string name="privacy_pause_search_title">Pausar bÃºsquedas recientes</string>
+    <string name="privacy_pause_search_desc">No guardar los tÃ©rminos de bÃºsqueda nuevos</string>
+    <string name="privacy_clear_search_title">Borrar historial de bÃºsquedas</string>
+    <string name="privacy_clear_search_desc">Eliminar bÃºsquedas recientes de la cachÃ© local</string>
+    <string name="privacy_screenshot_title">Desactivar capturas de pantalla</string>
+    <string name="privacy_screenshot_desc">Impide capturas o grabaciones de pantalla de la app (FLAG_SECURE)</string>
+
+    <string name="privacy_clear_history_confirm_title">Â¿Borrar historial de reproducciÃ³n?</string>
+    <string name="privacy_clear_history_confirm_desc">Â¿EstÃ¡s seguro de que quieres eliminar todo tu historial de reproducciÃ³n? Esta acciÃ³n no se puede deshacer.</string>
+    <string name="privacy_clear_search_confirm_title">Â¿Borrar historial de bÃºsquedas?</string>
+    <string name="privacy_clear_search_confirm_desc">Â¿EstÃ¡s seguro de que quieres limpiar la cachÃ© de bÃºsquedas recientes?</string>
+    <string name="privacy_history_cleared">Historial de reproducciÃ³n borrado</string>
+    <string name="privacy_search_cleared">Historial de bÃºsquedas limpio</string>
+
+    <string name="save_action">Guardar</string>
+    <string name="accept_action">Aceptar</string>
+    <string name="confirm_action">Confirmar</string>
+
+    <string name="together_btn_create">Crear Sala</string>
+    <string name="together_btn_join">Unirse a Sala</string>
+    <string name="together_btn_leave">Salir de Sala</string>
+    <string name="together_btn_logs">Ver Logs</string>
+    <string name="together_status_title">ESTADO DE CONEXIÃ“N</string>
+    <string name="together_status_connected">Conectado</string>
+    <string name="together_status_disconnected">Desconectado</string>
+    <string name="together_status_room">Sala: %1$s</string>
+    <string name="together_status_role">Rol: %1$s</string>
+    <string name="together_room_code_label">CÓDIGO DE SALA</string>
+    <string name="together_status_role_host">Anfitrión</string>
+    <string name="together_status_role_guest">Invitado</string>
 </resources>

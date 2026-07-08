@@ -84,12 +84,23 @@ fun Modifier.wiggleOnScroll(
     }
 }
 
+fun LayoutCoordinates.unclippedBoundsInRoot(): Rect {
+    val position = localToRoot(androidx.compose.ui.geometry.Offset.Zero)
+    val size = this.size
+    return Rect(
+        position.x,
+        position.y,
+        position.x + size.width,
+        position.y + size.height
+    )
+}
+
 fun Modifier.trackClickBounds(onClick: () -> Unit): Modifier = composed {
     var coords by remember { mutableStateOf<LayoutCoordinates?>(null) }
     this
         .onGloballyPositioned { coords = it }
         .clickable {
-            SharedTransitionState.lastClickBounds = coords?.boundsInRoot()
+            SharedTransitionState.lastClickBounds = coords?.unclippedBoundsInRoot()
             onClick()
         }
 }
@@ -104,7 +115,7 @@ fun Modifier.trackTapBounds(
         .pointerInput(Unit) {
             detectTapGestures(
                 onTap = {
-                    SharedTransitionState.lastClickBounds = coords?.boundsInRoot()
+                    SharedTransitionState.lastClickBounds = coords?.unclippedBoundsInRoot()
                     onTap()
                 },
                 onLongPress = {
@@ -121,7 +132,7 @@ fun Modifier.sharedTransitionElement(itemId: String): Modifier = composed {
     
     this
         .onGloballyPositioned { coords ->
-            val bounds = coords.boundsInRoot()
+            val bounds = coords.unclippedBoundsInRoot()
             if (bounds.width > 0f && bounds.height > 0f) {
                 SharedTransitionState.carouselItemBounds[itemId] = bounds
             }

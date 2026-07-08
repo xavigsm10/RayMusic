@@ -1,0 +1,2084 @@
+package com.mrtdk.liquid_glass.ui.screens
+
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.painter.Painter
+import com.mrtdk.liquid_glass.R
+import com.mrtdk.liquid_glass.data.LibraryManager
+import com.mrtdk.liquid_glass.ui.components.Material3SettingsGroup
+import com.mrtdk.liquid_glass.ui.components.Material3SettingsItem
+import com.mrtdk.liquid_glass.utils.LocaleUtils
+import com.mrtdk.liquid_glass.utils.Updater
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
+
+enum class SettingsSubScreen {
+    LYRICS,
+    PLAYER,
+    LISTEN_TOGETHER,
+    CONTENT,
+    PRIVACY,
+    ABOUT
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsScreen(
+    onBack: () -> Unit,
+    onOpenEqualizer: () -> Unit,
+    onDisableScreenshotChanged: (Boolean) -> Unit,
+    onUpdateAvailable: (Updater.ReleaseInfo) -> Unit,
+    onGlassStyleChanged: (String) -> Unit
+) {
+    val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
+    var activeSubScreen by remember { mutableStateOf<SettingsSubScreen?>(null) }
+
+    // Intercept back navigation to return to main settings menu if inside a subscreen
+    BackHandler {
+        if (activeSubScreen != null) {
+            activeSubScreen = null
+        } else {
+            onBack()
+        }
+    }
+
+    AnimatedContent(
+        targetState = activeSubScreen,
+        transitionSpec = {
+            fadeIn() togetherWith fadeOut()
+        },
+        label = "settings_navigation"
+    ) { subScreen ->
+        when (subScreen) {
+            null -> MainSettingsMenu(
+                onBack = onBack,
+                onNavigateTo = { activeSubScreen = it },
+                onGlassStyleChanged = onGlassStyleChanged
+            )
+            SettingsSubScreen.LYRICS -> LyricsSettingsScreen(
+                onBack = { activeSubScreen = null }
+            )
+            SettingsSubScreen.PLAYER -> PlayerSettingsScreen(
+                onBack = { activeSubScreen = null },
+                onOpenEqualizer = onOpenEqualizer
+            )
+            SettingsSubScreen.LISTEN_TOGETHER -> ListenTogetherSettingsScreen(
+                onBack = { activeSubScreen = null }
+            )
+            SettingsSubScreen.CONTENT -> ContentSettingsScreen(
+                onBack = { activeSubScreen = null }
+            )
+            SettingsSubScreen.PRIVACY -> PrivacySettingsScreen(
+                onBack = { activeSubScreen = null },
+                onDisableScreenshotChanged = onDisableScreenshotChanged
+            )
+            SettingsSubScreen.ABOUT -> AboutSettingsScreen(
+                onBack = { activeSubScreen = null },
+                onUpdateAvailable = onUpdateAvailable
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MainSettingsMenu(
+    onBack: () -> Unit,
+    onNavigateTo: (SettingsSubScreen) -> Unit,
+    onGlassStyleChanged: (String) -> Unit
+) {
+    val scrollState = rememberScrollState()
+    var showGlassStyleDialog by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .statusBarsPadding()
+    ) {
+        // Header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBackIosNew,
+                    contentDescription = stringResource(R.string.back_action),
+                    tint = Color(0xFFFA243C)
+                )
+            }
+            Text(
+                text = stringResource(R.string.ajustes),
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 8.dp)
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Material3SettingsGroup(
+                title = "APARIENCIA",
+                items = listOf(
+                    Material3SettingsItem(
+                        icon = painterResource(id = R.drawable.lyrics),
+                        title = { Text(stringResource(R.string.settings_lyrics)) },
+                        description = { Text(stringResource(R.string.settings_lyrics_desc)) },
+                        onClick = { onNavigateTo(SettingsSubScreen.LYRICS) }
+                    ),
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.Palette),
+                        title = { Text("Liquid Glass") },
+                        description = {
+                            val currentStyle = LibraryManager.getGlassStyle()
+                            val currentStyleName = when (currentStyle) {
+                                "transparent" -> "Vidrio líquido transparente"
+                                "semitransparent" -> "Semitransparente"
+                                else -> "Vidrio líquido transparente"
+                            }
+                            Text(currentStyleName)
+                        },
+                        onClick = { showGlassStyleDialog = true }
+                    )
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Material3SettingsGroup(
+                title = "COMPORTAMIENTO Y REPRODUCCIÓN",
+                items = listOf(
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.PlayArrow),
+                        title = { Text(stringResource(R.string.settings_player_sound)) },
+                        description = { Text(stringResource(R.string.settings_player_sound_desc)) },
+                        onClick = { onNavigateTo(SettingsSubScreen.PLAYER) }
+                    ),
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.Group),
+                        title = { Text(stringResource(R.string.settings_listen_together)) },
+                        description = { Text(stringResource(R.string.settings_listen_together_desc)) },
+                        onClick = { onNavigateTo(SettingsSubScreen.LISTEN_TOGETHER) }
+                    ),
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.Language),
+                        title = { Text(stringResource(R.string.settings_content)) },
+                        description = { Text(stringResource(R.string.settings_content_desc)) },
+                        onClick = { onNavigateTo(SettingsSubScreen.CONTENT) }
+                    )
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Material3SettingsGroup(
+                title = "PRIVACIDAD Y SEGURIDAD",
+                items = listOf(
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.Security),
+                        title = { Text(stringResource(R.string.settings_privacy)) },
+                        description = { Text(stringResource(R.string.settings_privacy_desc)) },
+                        onClick = { onNavigateTo(SettingsSubScreen.PRIVACY) }
+                    )
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Material3SettingsGroup(
+                title = "APLICACIÓN",
+                items = listOf(
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.Info),
+                        title = { Text(stringResource(R.string.acerca_de)) },
+                        description = { Text(stringResource(R.string.settings_about_desc)) },
+                        onClick = { onNavigateTo(SettingsSubScreen.ABOUT) }
+                    )
+                )
+            )
+
+            Spacer(modifier = Modifier.height(120.dp))
+        }
+    }
+
+    if (showGlassStyleDialog) {
+        SingleChoiceDialog(
+            title = "Estilo de Liquid Glass",
+            options = listOf(
+                "transparent" to "Vidrio líquido transparente",
+                "semitransparent" to "Semitransparente"
+            ),
+            selectedValue = LibraryManager.getGlassStyle(),
+            onDismiss = { showGlassStyleDialog = false },
+            onSelect = {
+                LibraryManager.saveGlassStyle(it)
+                onGlassStyleChanged(it)
+            }
+        )
+    }
+}
+
+// Sub-screen: Lyrics
+@Composable
+fun LyricsSettingsScreen(onBack: () -> Unit) {
+    val scrollState = rememberScrollState()
+
+    var lyricsTextPosition by remember { mutableStateOf(LibraryManager.getString("lyrics_text_position", "left") ?: "left") }
+    var lyricsAnimationStyle by remember { mutableStateOf(LibraryManager.getString("lyrics_animation_style", "echomusic_1") ?: "echomusic_1") }
+    var lyricsGlowEffect by remember { mutableStateOf(LibraryManager.getString("lyrics_glow_effect", "false") == "true") }
+    var lyricsAppleBlur by remember { mutableStateOf(LibraryManager.getString("lyrics_apple_blur", "true") == "true") }
+    var lyricsStandardBlur by remember { mutableStateOf(LibraryManager.getString("lyrics_standard_blur", "false") == "true") }
+    var lyricsTextSize by remember { mutableStateOf(LibraryManager.getString("lyrics_text_size", "28")?.toFloatOrNull() ?: 28f) }
+    var lyricsLineSpacing by remember { mutableStateOf(LibraryManager.getString("lyrics_line_spacing", "1.3")?.toFloatOrNull() ?: 1.3f) }
+    var lyricsClickChange by remember { mutableStateOf(LibraryManager.getString("lyrics_click_change", "true") == "true") }
+    var lyricsAutoScroll by remember { mutableStateOf(LibraryManager.getString("lyrics_auto_scroll", "true") == "true") }
+    var swipeLyrics by remember { mutableStateOf(LibraryManager.getString("lyrics_swipe_to_change_song", "false") == "true") }
+    var enableLyricsThumbnailPlayPause by remember { mutableStateOf(LibraryManager.getString("lyrics_thumbnail_play_pause", "false") == "true") }
+    var hideStatusBarOnFullscreen by remember { mutableStateOf(LibraryManager.getString("hide_status_bar_on_fullscreen", "false") == "true") }
+
+    var showPositionDialog by remember { mutableStateOf(false) }
+    var showAnimationDialog by remember { mutableStateOf(false) }
+    var showTextSizeDialog by remember { mutableStateOf(false) }
+    var showSpacingDialog by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .statusBarsPadding()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBackIosNew,
+                    contentDescription = null,
+                    tint = Color(0xFFFA243C)
+                )
+            }
+            Text(
+                text = stringResource(R.string.settings_lyrics),
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 8.dp)
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Material3SettingsGroup(
+                title = "CONFIGURACIÓN VISUAL",
+                items = listOf(
+                    Material3SettingsItem(
+                        icon = painterResource(id = R.drawable.lyrics),
+                        title = { Text(stringResource(R.string.lyrics_align_title)) },
+                        description = {
+                            Text(
+                                when (lyricsTextPosition) {
+                                    "left" -> stringResource(R.string.lyrics_align_left)
+                                    "center" -> stringResource(R.string.lyrics_align_center)
+                                    "right" -> stringResource(R.string.lyrics_align_right)
+                                    else -> stringResource(R.string.lyrics_align_left)
+                                }
+                            )
+                        },
+                        onClick = { showPositionDialog = true }
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(id = R.drawable.lyrics),
+                        title = { Text(stringResource(R.string.lyrics_anim_title)) },
+                        description = {
+                            Text(
+                                when (lyricsAnimationStyle) {
+                                    "none" -> stringResource(R.string.lyrics_anim_none)
+                                    "fade" -> stringResource(R.string.lyrics_anim_fade)
+                                    "glow" -> stringResource(R.string.lyrics_anim_glow)
+                                    "slide" -> stringResource(R.string.lyrics_anim_slide)
+                                    "karaoke" -> stringResource(R.string.lyrics_anim_karaoke)
+                                    "echomusic_1" -> stringResource(R.string.lyrics_anim_echo_fluid)
+                                    "apple" -> stringResource(R.string.lyrics_anim_apple)
+                                    "apple_v2" -> stringResource(R.string.lyrics_anim_apple_v2)
+                                    "lyrics_v2" -> stringResource(R.string.lyrics_anim_fluid_v2)
+                                    "metro_lyrics" -> stringResource(R.string.lyrics_anim_metro)
+                                    else -> stringResource(R.string.lyrics_anim_echo_fluid)
+                                }
+                            )
+                        },
+                        onClick = { showAnimationDialog = true }
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(id = R.drawable.lyrics),
+                        title = { Text(stringResource(R.string.lyrics_glow_title)) },
+                        description = { Text(stringResource(R.string.lyrics_glow_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = lyricsGlowEffect,
+                                onCheckedChange = { value ->
+                                    lyricsGlowEffect = value
+                                    LibraryManager.saveString("lyrics_glow_effect", value.toString())
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFFA243C))
+                            )
+                        },
+                        onClick = {
+                            val value = !lyricsGlowEffect
+                            lyricsGlowEffect = value
+                            LibraryManager.saveString("lyrics_glow_effect", value.toString())
+                        }
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(id = R.drawable.lyrics),
+                        title = { Text(stringResource(R.string.lyrics_size_title)) },
+                        description = { Text("${lyricsTextSize.roundToInt()} sp") },
+                        onClick = { showTextSizeDialog = true }
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(id = R.drawable.lyrics),
+                        title = { Text(stringResource(R.string.lyrics_spacing_title)) },
+                        description = { Text("${String.format("%.1f", lyricsLineSpacing)}x") },
+                        onClick = { showSpacingDialog = true }
+                    )
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Material3SettingsGroup(
+                title = "EFECTOS Y FONDOS",
+                items = listOfNotNull(
+                    if (lyricsAnimationStyle == "echomusic_1") {
+                        Material3SettingsItem(
+                            icon = painterResource(id = R.drawable.lyrics),
+                            title = { Text(stringResource(R.string.lyrics_blur_bg_title)) },
+                            description = { Text(stringResource(R.string.lyrics_blur_bg_desc)) },
+                            trailingContent = {
+                                Switch(
+                                    checked = lyricsAppleBlur,
+                                    onCheckedChange = { value ->
+                                        lyricsAppleBlur = value
+                                        LibraryManager.saveString("lyrics_apple_blur", value.toString())
+                                    },
+                                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFFA243C))
+                                )
+                            },
+                            onClick = {
+                                val value = !lyricsAppleBlur
+                                lyricsAppleBlur = value
+                                LibraryManager.saveString("lyrics_apple_blur", value.toString())
+                            }
+                        )
+                    } else null,
+                    Material3SettingsItem(
+                        icon = painterResource(id = R.drawable.lyrics),
+                        title = { Text(stringResource(R.string.lyrics_blur_std_title)) },
+                        description = { Text(stringResource(R.string.lyrics_blur_std_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = lyricsStandardBlur,
+                                onCheckedChange = { value ->
+                                    lyricsStandardBlur = value
+                                    LibraryManager.saveString("lyrics_standard_blur", value.toString())
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFFA243C))
+                            )
+                        },
+                        onClick = {
+                            val value = !lyricsStandardBlur
+                            lyricsStandardBlur = value
+                            LibraryManager.saveString("lyrics_standard_blur", value.toString())
+                        }
+                    )
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Material3SettingsGroup(
+                title = "INTERACCIÓN",
+                items = listOf(
+                    Material3SettingsItem(
+                        icon = painterResource(id = R.drawable.lyrics),
+                        title = { Text(stringResource(R.string.lyrics_seek_title)) },
+                        description = { Text(stringResource(R.string.lyrics_seek_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = lyricsClickChange,
+                                onCheckedChange = { value ->
+                                    lyricsClickChange = value
+                                    LibraryManager.saveString("lyrics_click_change", value.toString())
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFFA243C))
+                            )
+                        },
+                        onClick = {
+                            val value = !lyricsClickChange
+                            lyricsClickChange = value
+                            LibraryManager.saveString("lyrics_click_change", value.toString())
+                        }
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(id = R.drawable.lyrics),
+                        title = { Text(stringResource(R.string.lyrics_autoscroll_title)) },
+                        description = { Text(stringResource(R.string.lyrics_autoscroll_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = lyricsAutoScroll,
+                                onCheckedChange = { value ->
+                                    lyricsAutoScroll = value
+                                    LibraryManager.saveString("lyrics_auto_scroll", value.toString())
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFFA243C))
+                            )
+                        },
+                        onClick = {
+                            val value = !lyricsAutoScroll
+                            lyricsAutoScroll = value
+                            LibraryManager.saveString("lyrics_auto_scroll", value.toString())
+                        }
+                    ),
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.Swipe),
+                        title = { Text(stringResource(R.string.lyrics_swipe_title)) },
+                        description = { Text(stringResource(R.string.lyrics_swipe_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = swipeLyrics,
+                                onCheckedChange = { value ->
+                                    swipeLyrics = value
+                                    LibraryManager.saveString("lyrics_swipe_to_change_song", value.toString())
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFFA243C))
+                            )
+                        },
+                        onClick = {
+                            val value = !swipeLyrics
+                            swipeLyrics = value
+                            LibraryManager.saveString("lyrics_swipe_to_change_song", value.toString())
+                        }
+                    ),
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.PlayCircle),
+                        title = { Text(stringResource(R.string.lyrics_thumb_play_title)) },
+                        description = { Text(stringResource(R.string.lyrics_thumb_play_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = enableLyricsThumbnailPlayPause,
+                                onCheckedChange = { value ->
+                                    enableLyricsThumbnailPlayPause = value
+                                    LibraryManager.saveString("lyrics_thumbnail_play_pause", value.toString())
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFFA243C))
+                            )
+                        },
+                        onClick = {
+                            val value = !enableLyricsThumbnailPlayPause
+                            enableLyricsThumbnailPlayPause = value
+                            LibraryManager.saveString("lyrics_thumbnail_play_pause", value.toString())
+                        }
+                    ),
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.Fullscreen),
+                        title = { Text(stringResource(R.string.lyrics_statusbar_title)) },
+                        description = { Text(stringResource(R.string.lyrics_statusbar_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = hideStatusBarOnFullscreen,
+                                onCheckedChange = { value ->
+                                    hideStatusBarOnFullscreen = value
+                                    LibraryManager.saveString("hide_status_bar_on_fullscreen", value.toString())
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFFA243C))
+                            )
+                        },
+                        onClick = {
+                            val value = !hideStatusBarOnFullscreen
+                            hideStatusBarOnFullscreen = value
+                            LibraryManager.saveString("hide_status_bar_on_fullscreen", value.toString())
+                        }
+                    )
+                )
+            )
+
+            Spacer(modifier = Modifier.height(120.dp))
+        }
+    }
+
+    // Dialogs
+    if (showPositionDialog) {
+        SingleChoiceDialog(
+            title = stringResource(R.string.lyrics_align_title),
+            options = listOf(
+                "left" to stringResource(R.string.lyrics_align_left),
+                "center" to stringResource(R.string.lyrics_align_center),
+                "right" to stringResource(R.string.lyrics_align_right)
+            ),
+            selectedValue = lyricsTextPosition,
+            onDismiss = { showPositionDialog = false },
+            onSelect = {
+                lyricsTextPosition = it
+                LibraryManager.saveString("lyrics_text_position", it)
+            }
+        )
+    }
+
+    if (showAnimationDialog) {
+        SingleChoiceDialog(
+            title = stringResource(R.string.lyrics_anim_title),
+            options = listOf(
+                "none" to stringResource(R.string.lyrics_anim_none),
+                "fade" to stringResource(R.string.lyrics_anim_fade),
+                "glow" to stringResource(R.string.lyrics_anim_glow),
+                "slide" to stringResource(R.string.lyrics_anim_slide),
+                "karaoke" to stringResource(R.string.lyrics_anim_karaoke),
+                "echomusic_1" to stringResource(R.string.lyrics_anim_echo_fluid),
+                "apple" to stringResource(R.string.lyrics_anim_apple),
+                "apple_v2" to stringResource(R.string.lyrics_anim_apple_v2),
+                "lyrics_v2" to stringResource(R.string.lyrics_anim_fluid_v2),
+                "metro_lyrics" to stringResource(R.string.lyrics_anim_metro)
+            ),
+            selectedValue = lyricsAnimationStyle,
+            onDismiss = { showAnimationDialog = false },
+            onSelect = {
+                lyricsAnimationStyle = it
+                LibraryManager.saveString("lyrics_animation_style", it)
+            }
+        )
+    }
+
+    if (showTextSizeDialog) {
+        SliderDialog(
+            title = stringResource(R.string.lyrics_size_title),
+            value = lyricsTextSize,
+            valueRange = 20f..44f,
+            onDismiss = { showTextSizeDialog = false },
+            onSave = {
+                lyricsTextSize = it
+                LibraryManager.saveString("lyrics_text_size", it.toString())
+            }
+        )
+    }
+
+    if (showSpacingDialog) {
+        SliderDialog(
+            title = stringResource(R.string.lyrics_spacing_title),
+            value = lyricsLineSpacing,
+            valueRange = 1.0f..2.5f,
+            steps = 15,
+            isFloat = true,
+            onDismiss = { showSpacingDialog = false },
+            onSave = {
+                lyricsLineSpacing = it
+                LibraryManager.saveString("lyrics_line_spacing", it.toString())
+            }
+        )
+    }
+}
+
+// Sub-screen: Player
+@Composable
+fun PlayerSettingsScreen(
+    onBack: () -> Unit,
+    onOpenEqualizer: () -> Unit
+) {
+    val scrollState = rememberScrollState()
+    var audioQuality by remember { mutableStateOf(LibraryManager.getString("audio_quality", "high") ?: "high") }
+    var autoplaySimilar by remember { mutableStateOf(LibraryManager.getString("autoplay_similar", "true") == "true") }
+    var autoDownloadOnLike by remember { mutableStateOf(LibraryManager.getString("auto_download_on_like", "false") == "true") }
+    var persistentQueue by remember { mutableStateOf(LibraryManager.getString("persistent_queue", "true") == "true") }
+
+    var showQualityDialog by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .statusBarsPadding()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBackIosNew,
+                    contentDescription = null,
+                    tint = Color(0xFFFA243C)
+                )
+            }
+            Text(
+                text = stringResource(R.string.settings_player_sound),
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 8.dp)
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Material3SettingsGroup(
+                title = "CALIDAD DE SONIDO Y EFECTOS",
+                items = listOf(
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.GraphicEq),
+                        title = { Text(stringResource(R.string.player_quality_title)) },
+                        description = {
+                            Text(
+                                when (audioQuality) {
+                                    "low" -> stringResource(R.string.player_quality_low_desc)
+                                    else -> stringResource(R.string.player_quality_high_desc)
+                                }
+                            )
+                        },
+                        onClick = { showQualityDialog = true }
+                    ),
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.Equalizer),
+                        title = { Text(stringResource(R.string.player_eq_title)) },
+                        description = { Text(stringResource(R.string.player_eq_desc)) },
+                        onClick = onOpenEqualizer
+                    )
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Material3SettingsGroup(
+                title = "MÉTRICAS Y AUTOMATIZACIÓN",
+                items = listOf(
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.AutoAwesome),
+                        title = { Text(stringResource(R.string.player_autoplay_title)) },
+                        description = { Text(stringResource(R.string.player_autoplay_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = autoplaySimilar,
+                                onCheckedChange = { value ->
+                                    autoplaySimilar = value
+                                    LibraryManager.saveString("autoplay_similar", value.toString())
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFFA243C))
+                            )
+                        },
+                        onClick = {
+                            val value = !autoplaySimilar
+                            autoplaySimilar = value
+                            LibraryManager.saveString("autoplay_similar", value.toString())
+                        }
+                    ),
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.DownloadForOffline),
+                        title = { Text(stringResource(R.string.player_like_download_title)) },
+                        description = { Text(stringResource(R.string.player_like_download_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = autoDownloadOnLike,
+                                onCheckedChange = { value ->
+                                    autoDownloadOnLike = value
+                                    LibraryManager.saveString("auto_download_on_like", value.toString())
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFFA243C))
+                            )
+                        },
+                        onClick = {
+                            val value = !autoDownloadOnLike
+                            autoDownloadOnLike = value
+                            LibraryManager.saveString("auto_download_on_like", value.toString())
+                        }
+                    ),
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.QueueMusic),
+                        title = { Text(stringResource(R.string.player_persistent_queue_title)) },
+                        description = { Text(stringResource(R.string.player_persistent_queue_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = persistentQueue,
+                                onCheckedChange = { value ->
+                                    persistentQueue = value
+                                    LibraryManager.saveString("persistent_queue", value.toString())
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFFA243C))
+                            )
+                        },
+                        onClick = {
+                            val value = !persistentQueue
+                            persistentQueue = value
+                            LibraryManager.saveString("persistent_queue", value.toString())
+                        }
+                    )
+                )
+            )
+
+            Spacer(modifier = Modifier.height(120.dp))
+        }
+    }
+
+    if (showQualityDialog) {
+        SingleChoiceDialog(
+            title = stringResource(R.string.player_quality_title),
+            options = listOf(
+                "low" to stringResource(R.string.player_quality_low),
+                "high" to stringResource(R.string.player_quality_high)
+            ),
+            selectedValue = audioQuality,
+            onDismiss = { showQualityDialog = false },
+            onSelect = {
+                audioQuality = it
+                LibraryManager.saveString("audio_quality", it)
+            }
+        )
+    }
+}
+
+// Sub-screen: Listen Together
+@Composable
+fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
+    val scrollState = rememberScrollState()
+    val context = LocalContext.current
+
+    var isConnected by remember { mutableStateOf(com.mrtdk.liquid_glass.playback.ListenTogetherManager.isConnected) }
+    var roomCode by remember { mutableStateOf(com.mrtdk.liquid_glass.playback.ListenTogetherManager.roomCode) }
+    var role by remember { mutableStateOf(com.mrtdk.liquid_glass.playback.ListenTogetherManager.role) }
+    var username by remember { mutableStateOf(com.mrtdk.liquid_glass.playback.ListenTogetherManager.username) }
+    var serverUrl by remember { mutableStateOf(com.mrtdk.liquid_glass.playback.ListenTogetherManager.serverUrl) }
+    var usersCount by remember { mutableIntStateOf(com.mrtdk.liquid_glass.playback.ListenTogetherManager.users.size) }
+
+    var smartResync by remember { mutableStateOf(LibraryManager.getString("listen_together_smart_resync", "true") == "true") }
+    var syncVolume by remember { mutableStateOf(LibraryManager.getString("listen_together_sync_volume", "true") == "true") }
+    var autoApproval by remember { mutableStateOf(LibraryManager.getString("listen_together_auto_approval", "false") == "true") }
+
+    var showUsernameDialog by remember { mutableStateOf(false) }
+    var showServerDialog by remember { mutableStateOf(false) }
+    var showJoinDialog by remember { mutableStateOf(false) }
+    var showLogsDialog by remember { mutableStateOf(false) }
+    var showRoomDetailsDialog by remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        val prevCallback = com.mrtdk.liquid_glass.playback.ListenTogetherManager.onStateChanged
+        com.mrtdk.liquid_glass.playback.ListenTogetherManager.onStateChanged = {
+            isConnected = com.mrtdk.liquid_glass.playback.ListenTogetherManager.isConnected
+            roomCode = com.mrtdk.liquid_glass.playback.ListenTogetherManager.roomCode
+            role = com.mrtdk.liquid_glass.playback.ListenTogetherManager.role
+            username = com.mrtdk.liquid_glass.playback.ListenTogetherManager.username
+            serverUrl = com.mrtdk.liquid_glass.playback.ListenTogetherManager.serverUrl
+            usersCount = com.mrtdk.liquid_glass.playback.ListenTogetherManager.users.size
+        }
+        onDispose {
+            com.mrtdk.liquid_glass.playback.ListenTogetherManager.onStateChanged = prevCallback
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .statusBarsPadding()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBackIosNew,
+                    contentDescription = null,
+                    tint = Color(0xFFFA243C)
+                )
+            }
+            Text(
+                text = stringResource(R.string.settings_listen_together),
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 8.dp)
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            // --- Status indicator ---
+            // Status pill (connected / disconnected)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .clip(CircleShape)
+                        .background(if (isConnected) Color(0xFF4CAF50) else Color(0xFF9E9E9E))
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = if (isConnected) stringResource(R.string.together_status_connected) else stringResource(R.string.together_status_disconnected),
+                    color = if (isConnected) Color(0xFF4CAF50) else Color.Gray,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp
+                )
+            }
+
+            if (isConnected && roomCode.isNotBlank()) {
+                // ---- Prominent Room Code Card (like Echo-Music) ----
+                androidx.compose.material3.Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = androidx.compose.material3.CardDefaults.cardColors(
+                        containerColor = Color(0xFF1A1A1A)
+                    ),
+                    elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = stringResource(R.string.together_room_code_label),
+                            color = Color.Gray,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 1.5.sp
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            text = roomCode,
+                            color = Color(0xFFFA243C),
+                            fontSize = 42.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 8.sp
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Role badge
+                            Box(
+                                modifier = Modifier
+                                    .background(
+                                        color = if (role == "host") Color(0xFFFA243C).copy(alpha = 0.15f) else Color.White.copy(alpha = 0.08f),
+                                        shape = RoundedCornerShape(50.dp)
+                                    )
+                                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = if (role == "host") "👑 Anfitrión" else "🎵 Invitado",
+                                    color = if (role == "host") Color(0xFFFA243C) else Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            // User count badge
+                            Box(
+                                modifier = Modifier
+                                    .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(50.dp))
+                                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Group,
+                                        contentDescription = null,
+                                        tint = Color.Gray,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(
+                                        text = "$usersCount",
+                                        color = Color.Gray,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(20.dp))
+                        // Copy button
+                        val clipboardManager = LocalClipboardManager.current
+                        Button(
+                            onClick = {
+                                clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(roomCode))
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2A2A2A)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = Color.White
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("Copiar código", color = Color.White, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+
+                // Leave and Logs row
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { showLogsDialog = true },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF333333))
+                    ) {
+                        Icon(imageVector = Icons.Default.ReceiptLong, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.together_btn_logs), color = Color.Gray, fontSize = 13.sp)
+                    }
+                    Button(
+                        onClick = { com.mrtdk.liquid_glass.playback.ListenTogetherManager.leaveRoom() },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFA243C).copy(alpha = 0.15f)),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(imageVector = Icons.Default.Logout, contentDescription = null, tint = Color(0xFFFA243C), modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.together_btn_leave), color = Color(0xFFFA243C), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+
+            } else {
+                // Not connected — create / join buttons + logs
+                Material3SettingsGroup(
+                    title = stringResource(R.string.together_status_title),
+                    items = listOf(
+                        Material3SettingsItem(
+                            icon = rememberPainter(Icons.Default.AddHomeWork),
+                            title = { Text(stringResource(R.string.together_btn_create)) },
+                            description = { Text("Iniciar una nueva sala y obtener código") },
+                            onClick = {
+                                if (username.isBlank()) showUsernameDialog = true
+                                else com.mrtdk.liquid_glass.playback.ListenTogetherManager.createRoom(username)
+                            }
+                        ),
+                        Material3SettingsItem(
+                            icon = rememberPainter(Icons.Default.GroupAdd),
+                            title = { Text(stringResource(R.string.together_btn_join)) },
+                            description = { Text("Ingresar el código de una sala existente") },
+                            onClick = {
+                                if (username.isBlank()) showUsernameDialog = true
+                                else showJoinDialog = true
+                            }
+                        ),
+                        Material3SettingsItem(
+                            icon = rememberPainter(Icons.Default.ReceiptLong),
+                            title = { Text(stringResource(R.string.together_btn_logs)) },
+                            description = { Text("Ver historial de eventos del WebSocket") },
+                            onClick = { showLogsDialog = true }
+                        )
+                    )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Material3SettingsGroup(
+                title = "PERFIL DE SALA",
+                items = listOf(
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.Person),
+                        title = { Text(stringResource(R.string.together_username_title)) },
+                        description = { Text(if (username.isEmpty()) "Sin definir" else username) },
+                        onClick = { showUsernameDialog = true }
+                    ),
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.Dns),
+                        title = { Text(stringResource(R.string.together_server_title)) },
+                        description = { Text(serverUrl) },
+                        onClick = { showServerDialog = true }
+                    )
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Material3SettingsGroup(
+                title = "CONFIGURACIÓN DE SALA",
+                items = listOf(
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.Sync),
+                        title = { Text(stringResource(R.string.together_resync_title)) },
+                        description = { Text(stringResource(R.string.together_resync_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = smartResync,
+                                onCheckedChange = { value ->
+                                    smartResync = value
+                                    LibraryManager.saveString("listen_together_smart_resync", value.toString())
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFFA243C))
+                            )
+                        },
+                        onClick = {
+                            val value = !smartResync
+                            smartResync = value
+                            LibraryManager.saveString("listen_together_smart_resync", value.toString())
+                        }
+                    ),
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.VolumeUp),
+                        title = { Text(stringResource(R.string.together_volume_title)) },
+                        description = { Text(stringResource(R.string.together_volume_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = syncVolume,
+                                onCheckedChange = { value ->
+                                    syncVolume = value
+                                    LibraryManager.saveString("listen_together_sync_volume", value.toString())
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFFA243C))
+                            )
+                        },
+                        onClick = {
+                            val value = !syncVolume
+                            syncVolume = value
+                            LibraryManager.saveString("listen_together_sync_volume", value.toString())
+                        }
+                    ),
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.CheckCircleOutline),
+                        title = { Text(stringResource(R.string.together_approval_title)) },
+                        description = { Text(stringResource(R.string.together_approval_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = autoApproval,
+                                onCheckedChange = { value ->
+                                    autoApproval = value
+                                    LibraryManager.saveString("listen_together_auto_approval", value.toString())
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFFA243C))
+                            )
+                        },
+                        onClick = {
+                            val value = !autoApproval
+                            autoApproval = value
+                            LibraryManager.saveString("listen_together_auto_approval", value.toString())
+                        }
+                    )
+                )
+            )
+
+            Spacer(modifier = Modifier.height(120.dp))
+        }
+    }
+
+    if (showUsernameDialog) {
+        InputDialog(
+            title = stringResource(R.string.together_username_title),
+            placeholder = "Escribe tu alias...",
+            initialValue = username,
+            onDismiss = { showUsernameDialog = false },
+            onSave = {
+                username = it
+                com.mrtdk.liquid_glass.playback.ListenTogetherManager.username = it
+                LibraryManager.saveString("listen_together_username", it)
+            }
+        )
+    }
+
+    if (showServerDialog) {
+        InputDialog(
+            title = stringResource(R.string.together_server_title),
+            placeholder = "wss://...",
+            initialValue = serverUrl,
+            onDismiss = { showServerDialog = false },
+            onSave = {
+                serverUrl = it
+                com.mrtdk.liquid_glass.playback.ListenTogetherManager.serverUrl = it
+            }
+        )
+    }
+
+    if (showJoinDialog) {
+        InputDialog(
+            title = "Unirse a Sala",
+            placeholder = "Escribe el código de sala...",
+            initialValue = "",
+            onDismiss = { showJoinDialog = false },
+            onSave = { code ->
+                com.mrtdk.liquid_glass.playback.ListenTogetherManager.joinRoom(code.uppercase().trim(), username)
+            }
+        )
+    }
+
+    if (showLogsDialog) {
+        // Simple Logs Dialog
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showLogsDialog = false },
+            title = { Text("Logs del Servidor", color = Color.White) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    val logsList = com.mrtdk.liquid_glass.playback.ListenTogetherManager.logs
+                    if (logsList.isEmpty()) {
+                        Text("No hay logs registrados.", color = Color.Gray, fontSize = 14.sp)
+                    } else {
+                        logsList.forEach { logLine ->
+                            Text(logLine, color = Color.LightGray, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    com.mrtdk.liquid_glass.playback.ListenTogetherManager.clearLogs()
+                }) {
+                    Text("Limpiar", color = Color(0xFFFA243C))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogsDialog = false }) {
+                    Text("Cerrar", color = Color.White)
+                }
+            },
+            containerColor = Color(0xFF1E1E1E)
+        )
+    }
+
+    if (showRoomDetailsDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showRoomDetailsDialog = false },
+            title = {
+                Text(
+                    text = "Detalles de la Sala",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "CÓDIGO DE SALA",
+                        color = Color.Gray,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = roomCode,
+                            color = Color(0xFFFA243C),
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 4.sp
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        IconButton(
+                            onClick = {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                val clip = android.content.ClipData.newPlainText("Código de Sala", roomCode)
+                                clipboard.setPrimaryClip(clip)
+                                Toast.makeText(context, "Código de sala copiado", Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = "Copiar Código",
+                                tint = Color.LightGray,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    
+                    val roleText = if (role == "host") "Anfitrión" else "Invitado"
+                    val roleColor = if (role == "host") Color(0xFFFA243C) else Color(0xFF4CAF50)
+                    Surface(
+                        color = roleColor.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    ) {
+                        Text(
+                            text = roleText,
+                            color = roleColor,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
+                    
+                    Text(
+                        text = "MIEMBROS DE LA SALA ($usersCount)",
+                        color = Color.Gray,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.align(Alignment.Start).padding(top = 12.dp, bottom = 8.dp)
+                    )
+                    
+                    val connectedUsers = com.mrtdk.liquid_glass.playback.ListenTogetherManager.users
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 180.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        if (connectedUsers.isEmpty()) {
+                            Text(
+                                text = "Solo tú estás en la sala.",
+                                color = Color.Gray,
+                                fontSize = 14.sp,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        } else {
+                            connectedUsers.forEach { userInRoom ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Person,
+                                        contentDescription = null,
+                                        tint = Color.Gray,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = userInRoom,
+                                        color = Color.White,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    if (userInRoom == username) {
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "(Tú)",
+                                            color = Color.Gray,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showRoomDetailsDialog = false }) {
+                    Text("Cerrar", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showRoomDetailsDialog = false
+                        com.mrtdk.liquid_glass.playback.ListenTogetherManager.leaveRoom()
+                    }
+                ) {
+                    Text("Abandonar Sala", color = Color(0xFFFA243C))
+                }
+            },
+            containerColor = Color(0xFF1E1E1E)
+        )
+    }
+}
+
+// Sub-screen: Content
+@Composable
+fun ContentSettingsScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val scrollState = rememberScrollState()
+
+    val currentLang = remember { LibraryManager.getAppLanguage(context) }
+    var contentLanguage by remember { mutableStateOf(LibraryManager.getString("content_language", "system") ?: "system") }
+    var contentCountry by remember { mutableStateOf(LibraryManager.getString("content_country", "system") ?: "system") }
+    var suggestionRegion by remember { mutableStateOf(LibraryManager.getString("suggestion_region", "system") ?: "system") }
+
+    var hideExplicit by remember { mutableStateOf(LibraryManager.getString("hide_explicit", "false") == "true") }
+    var hideVideoSongs by remember { mutableStateOf(LibraryManager.getString("hide_video_songs", "false") == "true") }
+    var hideYoutubeShorts by remember { mutableStateOf(LibraryManager.getString("hide_youtube_shorts", "false") == "true") }
+
+    var showLangDialog by remember { mutableStateOf(false) }
+    var showCountryDialog by remember { mutableStateOf(false) }
+    var showRegionDialog by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .statusBarsPadding()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBackIosNew,
+                    contentDescription = null,
+                    tint = Color(0xFFFA243C)
+                )
+            }
+            Text(
+                text = stringResource(R.string.settings_content),
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 8.dp)
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Material3SettingsGroup(
+                title = "IDIOMA Y LOCALIZACIÓN",
+                items = listOf(
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.Translate),
+                        title = { Text(stringResource(R.string.idioma_app)) },
+                        description = {
+                            Text(
+                                when (currentLang) {
+                                    "es" -> "Español"
+                                    "en" -> "English"
+                                    else -> stringResource(R.string.predeterminado_sistema)
+                                }
+                            )
+                        },
+                        onClick = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                val intent = Intent(Settings.ACTION_APP_LOCALE_SETTINGS).apply {
+                                    data = Uri.parse("package:${context.packageName}")
+                                }
+                                context.startActivity(intent)
+                            } else {
+                                showLangDialog = true
+                            }
+                        }
+                    ),
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.Language),
+                        title = { Text(stringResource(R.string.content_lang_title)) },
+                        description = { Text(if (contentLanguage == "system") "Predeterminado" else contentLanguage.uppercase()) },
+                        onClick = { showCountryDialog = true }
+                    ),
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.Place),
+                        title = { Text(stringResource(R.string.content_region_title)) },
+                        description = { Text(if (suggestionRegion == "system") "Predeterminado" else suggestionRegion.uppercase()) },
+                        onClick = { showRegionDialog = true }
+                    )
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Material3SettingsGroup(
+                title = "FILTRADO DE CONTENIDO",
+                items = listOf(
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.Explicit),
+                        title = { Text(stringResource(R.string.content_explicit_title)) },
+                        description = { Text(stringResource(R.string.content_explicit_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = hideExplicit,
+                                onCheckedChange = { value ->
+                                    hideExplicit = value
+                                    LibraryManager.saveString("hide_explicit", value.toString())
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFFA243C))
+                            )
+                        },
+                        onClick = {
+                            val value = !hideExplicit
+                            hideExplicit = value
+                            LibraryManager.saveString("hide_explicit", value.toString())
+                        }
+                    ),
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.VideocamOff),
+                        title = { Text(stringResource(R.string.content_video_title)) },
+                        description = { Text(stringResource(R.string.content_video_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = hideVideoSongs,
+                                onCheckedChange = { value ->
+                                    hideVideoSongs = value
+                                    LibraryManager.saveString("hide_video_songs", value.toString())
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFFA243C))
+                            )
+                        },
+                        onClick = {
+                            val value = !hideVideoSongs
+                            hideVideoSongs = value
+                            LibraryManager.saveString("hide_video_songs", value.toString())
+                        }
+                    ),
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.OndemandVideo),
+                        title = { Text(stringResource(R.string.content_shorts_title)) },
+                        description = { Text(stringResource(R.string.content_shorts_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = hideYoutubeShorts,
+                                onCheckedChange = { value ->
+                                    hideYoutubeShorts = value
+                                    LibraryManager.saveString("hide_youtube_shorts", value.toString())
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFFA243C))
+                            )
+                        },
+                        onClick = {
+                            val value = !hideYoutubeShorts
+                            hideYoutubeShorts = value
+                            LibraryManager.saveString("hide_youtube_shorts", value.toString())
+                        }
+                    )
+                )
+            )
+
+            Spacer(modifier = Modifier.height(120.dp))
+        }
+    }
+
+    if (showLangDialog) {
+        SingleChoiceDialog(
+            title = stringResource(R.string.language_dialog_title),
+            options = listOf(
+                "system" to stringResource(R.string.predeterminado_sistema),
+                "es" to "Español",
+                "en" to "English"
+            ),
+            selectedValue = currentLang ?: "system",
+            onDismiss = { showLangDialog = false },
+            onSelect = { langCode ->
+                LibraryManager.saveAppLanguage(context, langCode)
+                LocaleUtils.applyLocale(context)
+                // Restart app to apply locale cleanly
+                val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                }
+                context.startActivity(intent)
+                if (context is Activity) {
+                    context.finish()
+                }
+            }
+        )
+    }
+
+    if (showCountryDialog) {
+        SingleChoiceDialog(
+            title = stringResource(R.string.content_lang_title),
+            options = listOf(
+                "system" to "Predeterminado",
+                "es" to "Español",
+                "en" to "Inglés",
+                "fr" to "Francés",
+                "pt" to "Portugués",
+                "ja" to "Japonés"
+            ),
+            selectedValue = contentLanguage,
+            onDismiss = { showCountryDialog = false },
+            onSelect = {
+                contentLanguage = it
+                LibraryManager.saveString("content_language", it)
+            }
+        )
+    }
+
+    if (showRegionDialog) {
+        SingleChoiceDialog(
+            title = stringResource(R.string.content_region_title),
+            options = listOf(
+                "system" to "Predeterminado",
+                "us" to "Estados Unidos",
+                "es" to "España",
+                "mx" to "México",
+                "ar" to "Argentina",
+                "br" to "Brasil"
+            ),
+            selectedValue = suggestionRegion,
+            onDismiss = { showRegionDialog = false },
+            onSelect = {
+                suggestionRegion = it
+                LibraryManager.saveString("suggestion_region", it)
+            }
+        )
+    }
+}
+
+// Sub-screen: Privacy
+@Composable
+fun PrivacySettingsScreen(
+    onBack: () -> Unit,
+    onDisableScreenshotChanged: (Boolean) -> Unit
+) {
+    val context = LocalContext.current
+    val scrollState = rememberScrollState()
+
+    var pauseListenHistory by remember { mutableStateOf(LibraryManager.getString("pause_listen_history", "false") == "true") }
+    var pauseSearchHistory by remember { mutableStateOf(LibraryManager.getString("pause_search_history", "false") == "true") }
+    var disableScreenshot by remember { mutableStateOf(LibraryManager.getString("disable_screenshot", "false") == "true") }
+
+    var showClearHistoryDialog by remember { mutableStateOf(false) }
+    var showClearSearchDialog by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .statusBarsPadding()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBackIosNew,
+                    contentDescription = null,
+                    tint = Color(0xFFFA243C)
+                )
+            }
+            Text(
+                text = stringResource(R.string.settings_privacy),
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 8.dp)
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Material3SettingsGroup(
+                title = "HISTORIAL DE REPRODUCCIÓN",
+                items = listOf(
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.History),
+                        title = { Text(stringResource(R.string.privacy_pause_history_title)) },
+                        description = { Text(stringResource(R.string.privacy_pause_history_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = pauseListenHistory,
+                                onCheckedChange = { value ->
+                                    pauseListenHistory = value
+                                    LibraryManager.saveString("pause_listen_history", value.toString())
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFFA243C))
+                            )
+                        },
+                        onClick = {
+                            val value = !pauseListenHistory
+                            pauseListenHistory = value
+                            LibraryManager.saveString("pause_listen_history", value.toString())
+                        }
+                    ),
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.DeleteOutline),
+                        title = { Text(stringResource(R.string.privacy_clear_history_title)) },
+                        description = { Text(stringResource(R.string.privacy_clear_history_desc)) },
+                        onClick = { showClearHistoryDialog = true }
+                    )
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Material3SettingsGroup(
+                title = "HISTORIAL DE BÚSQUEDAS",
+                items = listOf(
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.SearchOff),
+                        title = { Text(stringResource(R.string.privacy_pause_search_title)) },
+                        description = { Text(stringResource(R.string.privacy_pause_search_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = pauseSearchHistory,
+                                onCheckedChange = { value ->
+                                    pauseSearchHistory = value
+                                    LibraryManager.saveString("pause_search_history", value.toString())
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFFA243C))
+                            )
+                        },
+                        onClick = {
+                            val value = !pauseSearchHistory
+                            pauseSearchHistory = value
+                            LibraryManager.saveString("pause_search_history", value.toString())
+                        }
+                    ),
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.DeleteSweep),
+                        title = { Text(stringResource(R.string.privacy_clear_search_title)) },
+                        description = { Text(stringResource(R.string.privacy_clear_search_desc)) },
+                        onClick = { showClearSearchDialog = true }
+                    )
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Material3SettingsGroup(
+                title = "SEGURIDAD DE PANTALLA",
+                items = listOf(
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.Screenshot),
+                        title = { Text(stringResource(R.string.privacy_screenshot_title)) },
+                        description = { Text(stringResource(R.string.privacy_screenshot_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = disableScreenshot,
+                                onCheckedChange = { value ->
+                                    disableScreenshot = value
+                                    LibraryManager.saveString("disable_screenshot", value.toString())
+                                    onDisableScreenshotChanged(value)
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFFA243C))
+                            )
+                        },
+                        onClick = {
+                            val value = !disableScreenshot
+                            disableScreenshot = value
+                            LibraryManager.saveString("disable_screenshot", value.toString())
+                            onDisableScreenshotChanged(value)
+                        }
+                    )
+                )
+            )
+
+            Spacer(modifier = Modifier.height(120.dp))
+        }
+    }
+
+    if (showClearHistoryDialog) {
+        ConfirmDialog(
+            title = stringResource(R.string.privacy_clear_history_confirm_title),
+            message = stringResource(R.string.privacy_clear_history_confirm_desc),
+            onDismiss = { showClearHistoryDialog = false },
+            onConfirm = {
+                showClearHistoryDialog = false
+                LibraryManager.clearPlaybackHistory()
+                Toast.makeText(context, context.getString(R.string.privacy_history_cleared), Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
+    if (showClearSearchDialog) {
+        ConfirmDialog(
+            title = stringResource(R.string.privacy_clear_search_confirm_title),
+            message = stringResource(R.string.privacy_clear_search_confirm_desc),
+            onDismiss = { showClearSearchDialog = false },
+            onConfirm = {
+                showClearSearchDialog = false
+                Toast.makeText(context, context.getString(R.string.privacy_search_cleared), Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+}
+
+// Sub-screen: About
+@Composable
+fun AboutSettingsScreen(
+    onBack: () -> Unit,
+    onUpdateAvailable: (Updater.ReleaseInfo) -> Unit
+) {
+    val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
+    val scrollState = rememberScrollState()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .statusBarsPadding()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBackIosNew,
+                    contentDescription = null,
+                    tint = Color(0xFFFA243C)
+                )
+            }
+            Text(
+                text = stringResource(R.string.acerca_de),
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 8.dp)
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // App Brand Logo (Real RayMusic launcher icon)
+            androidx.compose.foundation.Image(
+                painter = painterResource(id = R.mipmap.ic_launcher),
+                contentDescription = "Logo RayMusic",
+                modifier = Modifier
+                    .size(96.dp)
+                    .clip(RoundedCornerShape(24.dp))
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "RayMusic",
+                color = Color.White,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = stringResource(R.string.version_actual, com.mrtdk.liquid_glass.BuildConfig.VERSION_NAME),
+                color = Color.Gray,
+                fontSize = 14.sp
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Material3SettingsGroup(
+                title = "ACTUALIZACIONES Y DESARROLLO",
+                items = listOf(
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.SystemUpdate),
+                        title = { Text(stringResource(R.string.buscar_actualizaciones)) },
+                        description = { Text("Comprueba si hay nuevas versiones de RayMusic") },
+                        onClick = {
+                            Toast.makeText(context, context.getString(R.string.buscando_actualizaciones), Toast.LENGTH_SHORT).show()
+                            Updater.checkUpdate { info ->
+                                CoroutineScope(Dispatchers.Main).launch {
+                                    if (info != null) {
+                                        onUpdateAvailable(info)
+                                    } else {
+                                        Toast.makeText(context, context.getString(R.string.ultima_version_ok), Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        }
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(id = R.drawable.ic_github),
+                        title = { Text(stringResource(R.string.repositorio_app)) },
+                        description = { Text(stringResource(R.string.ver_codigo_github)) },
+                        onClick = {
+                            uriHandler.openUri("https://github.com/xavigsm10/RayMusic")
+                        }
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(id = R.drawable.ic_paypal),
+                        title = { Text("PayPal") },
+                        description = { Text("Apoya el desarrollo de la aplicación") },
+                        onClick = {
+                            uriHandler.openUri("https://www.paypal.me/XaviGranja")
+                        }
+                    )
+                )
+            )
+
+            Spacer(modifier = Modifier.height(120.dp))
+        }
+    }
+}
+
+// Helpers Composable Dialogs
+@Composable
+fun SingleChoiceDialog(
+    title: String,
+    options: List<Pair<String, String>>,
+    selectedValue: String,
+    onDismiss: () -> Unit,
+    onSelect: (String) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold) },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                options.forEach { option ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = (option.first == selectedValue),
+                                onClick = {
+                                    onSelect(option.first)
+                                    onDismiss()
+                                }
+                            )
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = (option.first == selectedValue),
+                            onClick = {
+                                onSelect(option.first)
+                                onDismiss()
+                            },
+                            colors = RadioButtonDefaults.colors(selectedColor = Color(0xFFFA243C), unselectedColor = Color.Gray)
+                        )
+                        Text(
+                            text = option.second,
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            modifier = Modifier.padding(start = 12.dp)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar", color = Color(0xFFFA243C))
+            }
+        },
+        containerColor = Color(0xFF1C1C1E),
+        shape = RoundedCornerShape(20.dp)
+    )
+}
+
+@Composable
+fun SliderDialog(
+    title: String,
+    value: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    steps: Int = 0,
+    isFloat: Boolean = false,
+    onDismiss: () -> Unit,
+    onSave: (Float) -> Unit
+) {
+    var tempValue by remember { mutableFloatStateOf(value) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = if (isFloat) String.format("%.2f", tempValue) else tempValue.roundToInt().toString(),
+                    color = Color.White,
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Slider(
+                    value = tempValue,
+                    onValueChange = { tempValue = it },
+                    valueRange = valueRange,
+                    steps = steps,
+                    colors = SliderDefaults.colors(
+                        thumbColor = Color.White,
+                        activeTrackColor = Color(0xFFFA243C),
+                        inactiveTrackColor = Color.DarkGray
+                    )
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                onSave(tempValue)
+                onDismiss()
+            }) {
+                Text("Guardar", color = Color(0xFFFA243C))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar", color = Color.Gray)
+            }
+        },
+        containerColor = Color(0xFF1C1C1E),
+        shape = RoundedCornerShape(20.dp)
+    )
+}
+
+@Composable
+fun InputDialog(
+    title: String,
+    placeholder: String,
+    initialValue: String,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    var textState by remember { mutableStateOf(initialValue) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold) },
+        text = {
+            OutlinedTextField(
+                value = textState,
+                onValueChange = { textState = it },
+                placeholder = { Text(placeholder, color = Color.DarkGray) },
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFFFA243C),
+                    unfocusedBorderColor = Color.Gray,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                onSave(textState.trim())
+                onDismiss()
+            }) {
+                Text("Aceptar", color = Color(0xFFFA243C))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar", color = Color.Gray)
+            }
+        },
+        containerColor = Color(0xFF1C1C1E),
+        shape = RoundedCornerShape(20.dp)
+    )
+}
+
+@Composable
+fun ConfirmDialog(
+    title: String,
+    message: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold) },
+        text = { Text(message, color = Color.LightGray, fontSize = 16.sp) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("Confirmar", color = Color(0xFFFA243C))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar", color = Color.Gray)
+            }
+        },
+        containerColor = Color(0xFF1C1C1E),
+        shape = RoundedCornerShape(20.dp)
+    )
+}
+
+@Composable
+fun rememberPainter(imageVector: androidx.compose.ui.graphics.vector.ImageVector): Painter {
+    return androidx.compose.ui.graphics.vector.rememberVectorPainter(imageVector)
+}
