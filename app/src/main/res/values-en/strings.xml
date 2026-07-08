@@ -1,4 +1,4 @@
-<resources>
+﻿<resources>
     <string name="app_name">RayMusic</string>
     <string name="nav_inicio">Home</string>
     <string name="nav_novedades">New Releases</string>
@@ -41,7 +41,7 @@
     <string name="siguiente_en_album_playlist">Next in Album/Playlist</string>
     <string name="continue_playing">Continue playing</string>
     <string name="autoplaying_similar_music">Autoplaying similar music</string>
-    <string name="añadir_a_playlist">Add to playlist</string>
+    <string name="anadir_a_playlist">Add to playlist</string>
     <string name="proveedor_letras">Lyrics provider</string>
     <string name="buscar_letra_internet">Search lyrics online</string>
     <string name="desactivar_romaji">Disable Romaji</string>
@@ -91,7 +91,7 @@
     <string name="create_new_playlist">Create New Playlist</string>
     <string name="create_new_folder">Create New Folder</string>
     <string name="favorite_songs">Favorite Songs</string>
-    <string name="no_favorite_songs">You have no favorite songs yet.\nTap the star ★ on any song to save it here.</string>
+    <string name="no_favorite_songs">You have no favorite songs yet.\nTap the star â˜… on any song to save it here.</string>
     <string name="new_playlist_title">New Playlist</string>
     <string name="pinch_drag_position">Pinch &amp; drag to position</string>
     <string name="take_photo">Take Photo</string>
@@ -238,6 +238,14 @@
     <string name="lyrics_menu_adjust_offset">Adjust offset</string>
     <string name="lyrics_menu_romanize">Romanize current track</string>
     <string name="lyrics_menu_search_online">Search online</string>
+    <string name="lyrics_menu_show_translation">Show translations</string>
+    <string name="lyrics_menu_show_accompaniment">Show background vocals</string>
+    <string name="lyrics_menu_export_lyrics">Copy formatted lyrics</string>
+    <string name="lyrics_menu_export_lrc">Standard LRC</string>
+    <string name="lyrics_menu_export_elrc">Enhanced LRC (karaoke)</string>
+    <string name="lyrics_menu_export_ttml">TTML (Apple Music)</string>
+    <string name="lyrics_menu_enable_karaoke">Karaoke Mode</string>
+    <string name="lyrics_menu_enable_duet">Duet Mode</string>
 
     <!-- Artist Options Menu -->
     <string name="artist_menu_select_title">Select Artist</string>
@@ -251,4 +259,124 @@
     <string name="lyrics_offset_reset">Reset</string>
     <string name="lyrics_offset_decrease">Decrease</string>
     <string name="lyrics_offset_increase">Increase</string>
+
+    <!-- Settings system configuration -->
+    <string name="settings_lyrics">Lyrics</string>
+    <string name="settings_lyrics_desc">Adjust lyrics display and behavior</string>
+    <string name="settings_player_sound">Player and Sound</string>
+    <string name="settings_player_sound_desc">Audio quality and player preferences</string>
+    <string name="settings_listen_together">Listen Together</string>
+    <string name="settings_listen_together_desc">Adjust shared room playback parameters</string>
+    <string name="settings_content">Content</string>
+    <string name="settings_content_desc">Language, age restrictions and filters</string>
+    <string name="settings_privacy">Privacy</string>
+    <string name="settings_privacy_desc">Pause or clear search and listening history</string>
+    <string name="settings_about_desc">Developer information and updates</string>
+
+    <string name="lyrics_align_title">Text Alignment</string>
+    <string name="lyrics_align_left">Left</string>
+    <string name="lyrics_align_center">Center</string>
+    <string name="lyrics_align_right">Right</string>
+
+    <string name="lyrics_anim_title">Animation Style</string>
+    <string name="lyrics_anim_none">None</string>
+    <string name="lyrics_anim_fade">Fade</string>
+    <string name="lyrics_anim_glow">Glow</string>
+    <string name="lyrics_anim_slide">Slide</string>
+    <string name="lyrics_anim_karaoke">Karaoke</string>
+    <string name="lyrics_anim_echo_fluid">Echo Fluid v1</string>
+    <string name="lyrics_anim_apple">Apple Music Style</string>
+    <string name="lyrics_anim_apple_v2">Apple Music v2</string>
+    <string name="lyrics_anim_fluid_v2">Fluid Lyrics v2</string>
+    <string name="lyrics_anim_metro">Metro Style Lyrics</string>
+
+    <string name="lyrics_glow_title">Glow Effect</string>
+    <string name="lyrics_glow_desc">Adds a glowing halo to the currently active line</string>
+    <string name="lyrics_size_title">Text Size</string>
+    <string name="lyrics_spacing_title">Line Spacing</string>
+
+    <string name="lyrics_blur_bg_title">Apple Music Backdrop Blur</string>
+    <string name="lyrics_blur_bg_desc">Translucent fluid and blurred artwork effect</string>
+    <string name="lyrics_blur_std_title">Standard Lyrics Blur</string>
+    <string name="lyrics_blur_std_desc">Applies a general subtle blur on the lyrics panel</string>
+
+    <string name="lyrics_seek_title">Tap to Seek</string>
+    <string name="lyrics_seek_desc">Allows seeking playback by tapping a lyrics line</string>
+    <string name="lyrics_autoscroll_title">Auto-scroll</string>
+    <string name="lyrics_autoscroll_desc">Automatically scroll lyrics with the music beat</string>
+    <string name="lyrics_swipe_title">Swipe to Change Song</string>
+    <string name="lyrics_swipe_desc">Allows changing song by swiping horizontally on lyrics</string>
+    <string name="lyrics_thumb_play_title">Tap Artwork to Play/Pause</string>
+    <string name="lyrics_thumb_play_desc">Tapping the artwork in lyrics view will pause/resume music</string>
+    <string name="lyrics_statusbar_title">Hide Status Bar</string>
+    <string name="lyrics_statusbar_desc">Hides the system status bar when opening the player</string>
+
+    <string name="player_quality_title">Audio Quality</string>
+    <string name="player_quality_low">Low (Data Saver)</string>
+    <string name="player_quality_high">High (Recommended)</string>
+    <string name="player_quality_low_desc">Low (48 kbps AAC / 50 kbps Opus)</string>
+    <string name="player_quality_high_desc">High (160 kbps Opus / 128 kbps AAC)</string>
+    <string name="player_eq_title">Equalizer</string>
+    <string name="player_eq_desc">Configure sound effects and equalizer</string>
+
+    <string name="player_autoplay_title">Autoplay similar content</string>
+    <string name="player_autoplay_desc">Automatically appends similar music when the queue ends</string>
+    <string name="player_like_download_title">Download on Like</string>
+    <string name="player_like_download_desc">Automatically downloads the song when marked as favorite</string>
+    <string name="player_persistent_queue_title">Persistent queue</string>
+    <string name="player_persistent_queue_desc">Saves the current playlist on app exit</string>
+
+    <string name="together_username_title">Username</string>
+    <string name="together_server_title">WebSocket Server</string>
+    <string name="together_resync_title">Smart Resync</string>
+    <string name="together_resync_desc">Compensates latency and syncs with millisecond precision</string>
+    <string name="together_volume_title">Sync Host Volume</string>
+    <string name="together_volume_desc">Aligns your volume when host changes their volume</string>
+    <string name="together_approval_title">Auto-approve requests</string>
+    <string name="together_approval_desc">Allows guests to join your room automatically</string>
+
+    <string name="content_lang_title">Content Language</string>
+    <string name="content_region_title">Suggestion Region</string>
+    <string name="content_explicit_title">Block Explicit Content</string>
+    <string name="content_explicit_desc">Filter out and block explicit tracks from playing</string>
+    <string name="content_video_title">Prefer Audio Over Video</string>
+    <string name="content_video_desc">Always prefer audio streams over music videos</string>
+    <string name="content_shorts_title">Hide YouTube Shorts</string>
+    <string name="content_shorts_desc">Do not show short videos in search or suggestions</string>
+
+    <string name="privacy_pause_history_title">Pause listening history</string>
+    <string name="privacy_pause_history_desc">Temporarily stops recording played tracks</string>
+    <string name="privacy_clear_history_title">Clear listening history</string>
+    <string name="privacy_clear_history_desc">Clears database records of played tracks</string>
+    <string name="privacy_pause_search_title">Pause search history</string>
+    <string name="privacy_pause_search_desc">Do not save new search terms</string>
+    <string name="privacy_clear_search_title">Clear search history</string>
+    <string name="privacy_clear_search_desc">Removes recent searches from local cache</string>
+    <string name="privacy_screenshot_title">Block screenshots</string>
+    <string name="privacy_screenshot_desc">Prevents screen capture or recording (FLAG_SECURE)</string>
+
+    <string name="privacy_clear_history_confirm_title">Clear listening history?</string>
+    <string name="privacy_clear_history_confirm_desc">Are you sure you want to clear your listening history? This cannot be undone.</string>
+    <string name="privacy_clear_search_confirm_title">Clear search history?</string>
+    <string name="privacy_clear_search_confirm_desc">Are you sure you want to clear your recent search history?</string>
+    <string name="privacy_history_cleared">Listening history cleared</string>
+    <string name="privacy_search_cleared">Search history cleared</string>
+
+    <string name="save_action">Save</string>
+    <string name="accept_action">Accept</string>
+    <string name="confirm_action">Confirm</string>
+
+    <string name="together_btn_create">Create Room</string>
+    <string name="together_btn_join">Join Room</string>
+    <string name="together_btn_leave">Leave Room</string>
+    <string name="together_btn_logs">View Logs</string>
+    <string name="together_status_title">CONNECTION STATUS</string>
+    <string name="together_status_connected">Connected</string>
+    <string name="together_status_disconnected">Disconnected</string>
+    <string name="together_status_room">Room: %1$s</string>
+    <string name="together_status_role">Role: %1$s</string>
+    <string name="together_room_code_label">ROOM CODE</string>
+    <string name="together_status_role_host">Host</string>
+    <string name="together_status_role_guest">Guest</string>
 </resources>
+

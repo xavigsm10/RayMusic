@@ -74,7 +74,7 @@ fun LiquidBottomTabs(
     content: @Composable RowScope.() -> Unit
 ) {
     val isCollapsing = collapseProgress > 0.001f && collapseProgress < 0.999f
-    val isTransitioning = (searchProgress > 0.001f && searchProgress < 0.999f) || isCollapsing
+    val isTransitioning = (searchProgress > 0.001f && searchProgress < 0.999f)
     val tabsBackdrop = rememberLayerBackdrop()
     val isLightTheme = !isSystemInDarkTheme()
 

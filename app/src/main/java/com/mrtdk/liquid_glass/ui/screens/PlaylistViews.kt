@@ -76,7 +76,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.boundsInRoot
+import com.mrtdk.liquid_glass.ui.components.unclippedBoundsInRoot
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.IntOffset
 import kotlin.math.roundToInt
@@ -253,7 +253,7 @@ fun PlaylistsListScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
-                                        SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                        SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
                                         SharedTransitionState.lastOpenedId = "favorite_songs"
                                         onFavoriteSongsSelected()
                                     }
@@ -305,7 +305,7 @@ fun PlaylistsListScreen(
                                     .pointerInput(Unit) {
                                         detectTapGestures(
                                             onTap = {
-                                                SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                                SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
                                                 SharedTransitionState.lastOpenedId = pl.id
                                                 LibraryManager.saveString("playlist_last_played_${pl.id}", System.currentTimeMillis().toString())
                                                 onPlaylistSelected(pl)
@@ -424,7 +424,7 @@ fun PlaylistsListScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
-                                        SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                        SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
                                         SharedTransitionState.lastOpenedId = "favorite_songs"
                                         onFavoriteSongsSelected()
                                     }
@@ -474,7 +474,7 @@ fun PlaylistsListScreen(
                                     .pointerInput(Unit) {
                                         detectTapGestures(
                                             onTap = {
-                                                SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                                SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
                                                 SharedTransitionState.lastOpenedId = pl.id
                                                 LibraryManager.saveString("playlist_last_played_${pl.id}", System.currentTimeMillis().toString())
                                                 onPlaylistSelected(pl)

@@ -41,7 +41,7 @@ import androidx.compose.ui.draw.scale
 import android.content.Intent
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.boundsInRoot
+import com.mrtdk.liquid_glass.ui.components.unclippedBoundsInRoot
 import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
 import com.mrtdk.liquid_glass.ui.components.wiggleOnScroll
 import coil.compose.AsyncImage
@@ -917,7 +917,7 @@ fun ReplayScreen(
                                     .width(130.dp)
                                     .wiggleOnScroll(albumId, lazyListState = lazyListState)
                                     .clickable {
-                                        SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                        SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
                                         SharedTransitionState.lastOpenedId = albumId
                                         onAlbumSelected(AlbumState(
                                             id = albumId,
@@ -1021,7 +1021,7 @@ fun ReplayScreen(
                                     .width(130.dp)
                                     .wiggleOnScroll(playlist.id, lazyListState = lazyListState)
                                     .clickable {
-                                        SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                        SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
                                         SharedTransitionState.lastOpenedId = playlist.id
                                         onAlbumSelected(AlbumState(
                                             id = playlist.id,
@@ -1418,7 +1418,7 @@ fun ReplayScreen(
                                         .width(130.dp)
                                         .wiggleOnScroll(albumId, lazyListState = lazyListState)
                                         .clickable {
-                                            SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                                            SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
                                             SharedTransitionState.lastOpenedId = albumId
                                             onAlbumSelected(AlbumState(
                                                 id = albumId,
@@ -1651,7 +1651,7 @@ fun ReplayScreen(
                         )
                         .wiggleOnScroll("replay_2026", lazyListState = lazyListState)
                         .clickable {
-                            SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                            SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
                             SharedTransitionState.lastOpenedId = "replay_2026"
                             val playlistSongs = songsList.map { song ->
                                 LibraryItem(

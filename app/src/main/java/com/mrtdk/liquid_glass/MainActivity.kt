@@ -100,6 +100,12 @@ class MainActivity : ComponentActivity() {
         setTheme(R.style.Theme_Liquidglassuicomponent)
         enableEdgeToEdge()
         
+        // Initial setup for screenshots security
+        val disableSec = com.mrtdk.liquid_glass.data.LibraryManager.getString("disable_screenshot", "false") == "true"
+        if (disableSec) {
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+        }
+        
         // Request highest refresh rate (90Hz/120Hz+) if supported by display
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             try {
@@ -133,10 +139,53 @@ class MainActivity : ComponentActivity() {
             }
             .build()
         coil.Coil.setImageLoader(globalImageLoader)
-
         musicPlayer = MusicPlayer(this)
         com.mrtdk.liquid_glass.data.LibraryManager.init(applicationContext)
 
+        // ListenTogether integration
+        com.mrtdk.liquid_glass.playback.ListenTogetherManager.onPlaybackActionReceived = { action, position, trackId ->
+            musicPlayer?.let { player ->
+                com.mrtdk.liquid_glass.playback.ListenTogetherManager.isSyncing = true
+                try {
+                    if (trackId != null && trackId.isNotEmpty() && trackId != player.controller?.currentMediaItem?.mediaId) {
+                        player.playOnlineSong(trackId, null, null, null)
+                    }
+
+                    when (action) {
+                        "play" -> {
+                            if (player.isPlaying.value == false) {
+                                player.controller?.play()
+                            }
+                            if (position != null) {
+                                val currentPos = player.currentPosition.value
+                                if (Math.abs(currentPos - position) > 2000L) {
+                                    player.seekTo(position)
+                                }
+                            }
+                        }
+                        "pause" -> {
+                            if (player.isPlaying.value == true) {
+                                player.pause()
+                            }
+                            if (position != null) {
+                                player.seekTo(position)
+                            }
+                        }
+                        "seek" -> {
+                            if (position != null) {
+                                player.seekTo(position)
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("MainActivity", "Error applying ListenTogether action", e)
+                } finally {
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        com.mrtdk.liquid_glass.playback.ListenTogetherManager.isSyncing = false
+                    }, 500)
+                }
+            }
+        }
         val showDownloads = intent.getBooleanExtra("navigate_to_downloads", false)
         if (showDownloads) {
             navigateToDownloads = true
@@ -206,27 +255,30 @@ class MainActivity : ComponentActivity() {
                                 isFirstStateLoad = false
                             } else {
                                 isFirstStateLoad = false
-                                // Track recently played
-                                com.mrtdk.liquid_glass.data.LibraryManager.addRecentlyPlayed(
-                                    com.mrtdk.liquid_glass.data.LibraryItem(
-                                        id = playerState!!.videoId ?: playerState!!.title,
-                                        title = playerState!!.title,
-                                        subtitle = playerState!!.artist,
-                                        thumbnail = playerState!!.artUrl?.toString(),
-                                        type = com.mrtdk.liquid_glass.data.ItemType.SONG,
-                                        album = playerState!!.album
+                                val pauseHistory = com.mrtdk.liquid_glass.data.LibraryManager.getString("pause_listen_history", "false") == "true"
+                                if (!pauseHistory) {
+                                    // Track recently played
+                                    com.mrtdk.liquid_glass.data.LibraryManager.addRecentlyPlayed(
+                                        com.mrtdk.liquid_glass.data.LibraryItem(
+                                            id = playerState!!.videoId ?: playerState!!.title,
+                                            title = playerState!!.title,
+                                            subtitle = playerState!!.artist,
+                                            thumbnail = playerState!!.artUrl?.toString(),
+                                            type = com.mrtdk.liquid_glass.data.ItemType.SONG,
+                                            album = playerState!!.album
+                                        )
                                     )
-                                )
-                                // Track in complete playback history
-                                com.mrtdk.liquid_glass.data.LibraryManager.addPlaybackRecord(
-                                    songId = playerState!!.videoId ?: playerState!!.title,
-                                    title = playerState!!.title,
-                                    artist = playerState!!.artist,
-                                    thumbnail = playerState!!.artUrl?.toString(),
-                                    album = playerState!!.album,
-                                    playlistId = playerState!!.playlistId,
-                                    playlistName = playerState!!.playlistName
-                                )
+                                    // Track in complete playback history
+                                    com.mrtdk.liquid_glass.data.LibraryManager.addPlaybackRecord(
+                                        songId = playerState!!.videoId ?: playerState!!.title,
+                                        title = playerState!!.title,
+                                        artist = playerState!!.artist,
+                                        thumbnail = playerState!!.artUrl?.toString(),
+                                        album = playerState!!.album,
+                                        playlistId = playerState!!.playlistId,
+                                        playlistName = playerState!!.playlistName
+                                    )
+                                }
                             }
                         }
                     }
@@ -337,11 +389,33 @@ class MainActivity : ComponentActivity() {
                     val repeatMode by musicPlayer!!.repeatMode.collectAsState()
 
                     var isBottomBarCollapsed by remember { mutableStateOf(false) }
+                    val density = androidx.compose.ui.platform.LocalDensity.current
+                    val scrollThresholdPx = remember(density) { with(density) { 50.dp.toPx() } }
+                    var accumulatedScroll by remember { mutableStateOf(0f) }
 
-                    val nestedScrollConnection = remember {
+                    val nestedScrollConnection = remember(scrollThresholdPx) {
                         object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
-                            override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
-                                if (available.y < -30f) isBottomBarCollapsed = true
+                            override fun onPreScroll(
+                                available: androidx.compose.ui.geometry.Offset,
+                                source: androidx.compose.ui.input.nestedscroll.NestedScrollSource
+                            ): androidx.compose.ui.geometry.Offset {
+                                val scrollDelta = available.y
+
+                                // Reset accumulated scroll if changing direction
+                                if ((accumulatedScroll > 0 && scrollDelta < 0) || (accumulatedScroll < 0 && scrollDelta > 0)) {
+                                    accumulatedScroll = 0f
+                                }
+
+                                accumulatedScroll += scrollDelta
+
+                                if (accumulatedScroll <= -scrollThresholdPx && !isBottomBarCollapsed) {
+                                    isBottomBarCollapsed = true
+                                    accumulatedScroll = 0f
+                                } else if (accumulatedScroll >= scrollThresholdPx && isBottomBarCollapsed) {
+                                    isBottomBarCollapsed = false
+                                    accumulatedScroll = 0f
+                                }
+
                                 return androidx.compose.ui.geometry.Offset.Zero
                             }
                         }
@@ -400,18 +474,21 @@ class MainActivity : ComponentActivity() {
                             if (upNextSongs.isEmpty()) {
                                 queueSeedVideoId = vid
                                 com.mrtdk.liquid_glass.playback.PlaybackQueue.queueSeedVideoId = vid
-                                withContext(kotlinx.coroutines.Dispatchers.IO) {
-                                    val endpoint = com.echo.innertube.models.WatchEndpoint(videoId = vid)
-                                    com.echo.innertube.YouTube.next(endpoint).onSuccess { nextResult ->
-                                        queueEndpoint = nextResult.endpoint
-                                        com.mrtdk.liquid_glass.playback.PlaybackQueue.queueEndpoint = nextResult.endpoint
-                                        queueContinuation = nextResult.continuation
-                                        com.mrtdk.liquid_glass.playback.PlaybackQueue.queueContinuation = nextResult.continuation
-                                        val items = nextResult.items
-                                        val nextItems = if (items.isNotEmpty() && items.first().id == vid) items.drop(1) else items
-                                        upNextSongs = nextItems
-                                        com.mrtdk.liquid_glass.playback.PlaybackQueue.upNextSongs = nextItems
-                                        com.mrtdk.liquid_glass.playback.PlaybackQueue.onQueueChanged?.invoke()
+                                val isAutoplayEnabled = com.mrtdk.liquid_glass.data.LibraryManager.getString("autoplay_similar", "true") == "true"
+                                if (isAutoplayEnabled) {
+                                    withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                        val endpoint = com.echo.innertube.models.WatchEndpoint(videoId = vid)
+                                        com.echo.innertube.YouTube.next(endpoint).onSuccess { nextResult ->
+                                            queueEndpoint = nextResult.endpoint
+                                            com.mrtdk.liquid_glass.playback.PlaybackQueue.queueEndpoint = nextResult.endpoint
+                                            queueContinuation = nextResult.continuation
+                                            com.mrtdk.liquid_glass.playback.PlaybackQueue.queueContinuation = nextResult.continuation
+                                            val items = nextResult.items
+                                            val nextItems = if (items.isNotEmpty() && items.first().id == vid) items.drop(1) else items
+                                            upNextSongs = nextItems
+                                            com.mrtdk.liquid_glass.playback.PlaybackQueue.upNextSongs = nextItems
+                                            com.mrtdk.liquid_glass.playback.PlaybackQueue.onQueueChanged?.invoke()
+                                        }
                                     }
                                 }
                             }
@@ -423,19 +500,22 @@ class MainActivity : ComponentActivity() {
                         androidx.compose.runtime.snapshotFlow { upNextSongs.size }
                             .collect { size ->
                                 if (size in 1..3 && queueEndpoint != null && queueContinuation != null) {
-                                    withContext(kotlinx.coroutines.Dispatchers.IO) {
-                                        com.echo.innertube.YouTube.next(queueEndpoint!!, queueContinuation).onSuccess { nextResult ->
-                                            queueEndpoint = nextResult.endpoint
-                                            com.mrtdk.liquid_glass.playback.PlaybackQueue.queueEndpoint = nextResult.endpoint
-                                            queueContinuation = nextResult.continuation
-                                            com.mrtdk.liquid_glass.playback.PlaybackQueue.queueContinuation = nextResult.continuation
-                                            val existingIds = upNextSongs.map { it.id }.toSet()
-                                            val newSongs = nextResult.items.filter { it.id !in existingIds }
-                                            if (newSongs.isNotEmpty()) {
-                                                val updatedList = upNextSongs + newSongs
-                                                upNextSongs = updatedList
-                                                com.mrtdk.liquid_glass.playback.PlaybackQueue.upNextSongs = updatedList
-                                                com.mrtdk.liquid_glass.playback.PlaybackQueue.onQueueChanged?.invoke()
+                                    val isAutoplayEnabled = com.mrtdk.liquid_glass.data.LibraryManager.getString("autoplay_similar", "true") == "true"
+                                    if (isAutoplayEnabled) {
+                                        withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                            com.echo.innertube.YouTube.next(queueEndpoint!!, queueContinuation).onSuccess { nextResult ->
+                                                queueEndpoint = nextResult.endpoint
+                                                com.mrtdk.liquid_glass.playback.PlaybackQueue.queueEndpoint = nextResult.endpoint
+                                                queueContinuation = nextResult.continuation
+                                                com.mrtdk.liquid_glass.playback.PlaybackQueue.queueContinuation = nextResult.continuation
+                                                val existingIds = upNextSongs.map { it.id }.toSet()
+                                                val newSongs = nextResult.items.filter { it.id !in existingIds }
+                                                if (newSongs.isNotEmpty()) {
+                                                    val updatedList = upNextSongs + newSongs
+                                                    upNextSongs = updatedList
+                                                    com.mrtdk.liquid_glass.playback.PlaybackQueue.upNextSongs = updatedList
+                                                    com.mrtdk.liquid_glass.playback.PlaybackQueue.onQueueChanged?.invoke()
+                                                }
                                             }
                                         }
                                     }
@@ -520,7 +600,14 @@ class MainActivity : ComponentActivity() {
                                                     onCategoryConsumed = { initialLibraryCategory = null },
                                                     onGlassStyleChanged = { glassStyle = it },
                                                     onFavoriteSongsSelected = { showFavoriteSongs = true },
-                                                    onUpdateAvailable = { updateReleaseInfo = it }
+                                                    onUpdateAvailable = { updateReleaseInfo = it },
+                                                    onDisableScreenshotChanged = { disable ->
+                                                        if (disable) {
+                                                            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+                                                        } else {
+                                                            window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+                                                        }
+                                                    }
                                                 )
                                                 4 -> BusquedaScreen(
                                                     innerPadding = innerPadding,
@@ -662,65 +749,61 @@ class MainActivity : ComponentActivity() {
 
                                             val mpPadStart by androidx.compose.animation.core.animateDpAsState(if (isCollapsed) 80.dp else 16.dp, springSpec, label = "mpPadStart")
                                             val mpPadEnd by androidx.compose.animation.core.animateDpAsState(if (isCollapsed) 80.dp else 16.dp, springSpec, label = "mpPadEnd")
-                                            val mpPadBottom by androidx.compose.animation.core.animateDpAsState(if (isCollapsed) bottomPad else navBarHeightWithPadding + 12.dp, springSpec, label = "mpPadBottom")
+                                            val mpPadBottom by androidx.compose.animation.core.animateDpAsState(if (isCollapsed) bottomPad + 4.dp else navBarHeightWithPadding + 12.dp, springSpec, label = "mpPadBottom")
 
-                                            val navBarOffset by androidx.compose.animation.core.animateDpAsState(if (isCollapsed) 100.dp else 0.dp, springSpec)
-                                            val navBarAlpha by androidx.compose.animation.core.animateFloatAsState(if (isCollapsed) 0f else 1f, floatSpringSpec)
-
-                                            val btnOffset by androidx.compose.animation.core.animateDpAsState(if (isCollapsed) 0.dp else 50.dp, springSpec)
-                                            val btnAlpha by androidx.compose.animation.core.animateFloatAsState(if (isCollapsed) 1f else 0f, floatSpringSpec)
+                                            val collapseProgress by androidx.compose.animation.core.animateFloatAsState(
+                                                targetValue = if (isCollapsed) 1f else 0f,
+                                                animationSpec = floatSpringSpec,
+                                                label = "collapseProgress"
+                                            )
 
                                             Box(
                                                 modifier = Modifier.fillMaxWidth().height(200.dp).align(Alignment.BottomCenter)
                                             ) {
-                                                // LiquidBottomNavBar (Expanded)
-                                                if (navBarAlpha > 0.01f) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .fillMaxWidth()
-                                                            .align(Alignment.BottomCenter)
-                                                            .padding(bottom = bottomPad)
-                                                            .graphicsLayer {
-                                                                translationY = navBarOffset.toPx()
-                                                                alpha = navBarAlpha
-                                                            }
-                                                    ) {
-                                                        LiquidBottomNavBar(
-                                                            selectedIndex = selectedIndex,
-                                                            tintColor = globalDominantColor.copy(alpha = 0.35f),
-                                                            contentColor = contentTintColor,
-                                                            onTabSelected = { newIndex ->
-                                                                artistDetail = null
-                                                                albumDetail = null
-                                                                playlistDetail = null
-                                                                categoryDetail = null
-                                                                videoDetail = null
-                                                                selectedIndex = newIndex
-                                                                if (newIndex != 4) {
-                                                                    searchQuery = ""
-                                                                    isSearchSubmitted = false
-                                                                }
-                                                            },
-                                                            searchQuery = searchQuery,
-                                                            onSearchQueryChange = { 
-                                                                searchQuery = it 
+                                                // LiquidBottomNavBar (Morphic transition)
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .align(Alignment.BottomCenter)
+                                                        .padding(bottom = bottomPad)
+                                                ) {
+                                                    LiquidBottomNavBar(
+                                                        selectedIndex = selectedIndex,
+                                                        tintColor = globalDominantColor.copy(alpha = 0.35f),
+                                                        contentColor = contentTintColor,
+                                                        collapseProgress = collapseProgress,
+                                                        onTabSelected = { newIndex ->
+                                                            isBottomBarCollapsed = false
+                                                            artistDetail = null
+                                                            albumDetail = null
+                                                            playlistDetail = null
+                                                            categoryDetail = null
+                                                            videoDetail = null
+                                                            selectedIndex = newIndex
+                                                            if (newIndex != 4) {
+                                                                searchQuery = ""
                                                                 isSearchSubmitted = false
-                                                                artistDetail = null
-                                                                albumDetail = null
-                                                                playlistDetail = null
-                                                                categoryDetail = null
-                                                                videoDetail = null
-                                                            },
-                                                            onSearchSubmit = { 
-                                                                isSearchSubmitted = true
-                                                                artistDetail = null
-                                                                albumDetail = null
-                                                                playlistDetail = null
-                                                                categoryDetail = null
-                                                                videoDetail = null
                                                             }
-                                                        )
-                                                    }
+                                                        },
+                                                        searchQuery = searchQuery,
+                                                        onSearchQueryChange = { 
+                                                            searchQuery = it 
+                                                            isSearchSubmitted = false
+                                                            artistDetail = null
+                                                            albumDetail = null
+                                                            playlistDetail = null
+                                                            categoryDetail = null
+                                                            videoDetail = null
+                                                        },
+                                                        onSearchSubmit = { 
+                                                            isSearchSubmitted = true
+                                                            artistDetail = null
+                                                            albumDetail = null
+                                                            playlistDetail = null
+                                                            categoryDetail = null
+                                                            videoDetail = null
+                                                        }
+                                                    )
                                                 }
 
                                                 // MiniPlayer (Shared)
@@ -750,78 +833,6 @@ class MainActivity : ComponentActivity() {
                                                         tintColor = globalDominantColor.copy(alpha = 0.45f),
                                                         contentColor = contentTintColor
                                                     )
-                                                }
-
-                                                // Collapsed Buttons (Home & Search)
-                                                if (btnAlpha > 0.01f) {
-                                                    Row(
-                                                        modifier = Modifier
-                                                            .fillMaxWidth()
-                                                            .align(Alignment.BottomCenter)
-                                                            .padding(horizontal = 16.dp)
-                                                            .padding(bottom = bottomPad)
-                                                            .graphicsLayer {
-                                                                translationY = btnOffset.toPx()
-                                                                alpha = btnAlpha
-                                                            },
-                                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                                        verticalAlignment = Alignment.CenterVertically
-                                                    ) {
-                                                        Box(
-                                                            modifier = Modifier
-                                                                .size(56.dp)
-                                                                .drawBackdrop(
-                                                                    backdrop = mainBackdrop,
-                                                                    shape = { CircleShape },
-                                                                    effects = {
-                                                                        vibrancy()
-                                                                        blur(8f.dp.toPx())
-                                                                        lens(24f.dp.toPx(), 24f.dp.toPx())
-                                                                    },
-                                                                    onDrawSurface = { drawRect(globalDominantColor.copy(alpha = 0.45f)) }
-                                                                )
-                                                                .clip(CircleShape)
-                                                                .clickable { 
-                                                                    isBottomBarCollapsed = false
-                                                                },
-                                                            contentAlignment = Alignment.Center
-                                                        ) {
-                                                            Icon(
-                                                                painter = androidx.compose.ui.res.painterResource(id = R.drawable.nav_inicio),
-                                                                contentDescription = "Home",
-                                                                tint = Color(0xFFFA243C),
-                                                                modifier = Modifier.size(28.dp)
-                                                            )
-                                                        }
-                                                        
-                                                        Box(
-                                                            modifier = Modifier
-                                                                .size(56.dp)
-                                                                .drawBackdrop(
-                                                                    backdrop = mainBackdrop,
-                                                                    shape = { CircleShape },
-                                                                    effects = {
-                                                                        vibrancy()
-                                                                        blur(8f.dp.toPx())
-                                                                        lens(24f.dp.toPx(), 24f.dp.toPx())
-                                                                    },
-                                                                    onDrawSurface = { drawRect(globalDominantColor.copy(alpha = 0.45f)) }
-                                                                )
-                                                                .clip(CircleShape)
-                                                                .clickable { 
-                                                                    isBottomBarCollapsed = false
-                                                                    selectedIndex = 4 
-                                                                },
-                                                            contentAlignment = Alignment.Center
-                                                        ) {
-                                                            Icon(
-                                                                imageVector = Icons.Default.Search,
-                                                                contentDescription = "Search",
-                                                                tint = contentTintColor,
-                                                                modifier = Modifier.size(32.dp)
-                                                            )
-                                                        }
-                                                    }
                                                 }
                                             }
                                             if (updateReleaseInfo != null) {

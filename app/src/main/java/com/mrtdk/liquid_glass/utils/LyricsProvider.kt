@@ -9,11 +9,15 @@ import android.util.Base64
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
-
-data class LyricLine(val timeMs: Long, val text: String)
+import com.mocharealm.accompanist.lyrics.core.model.SyncedLyrics
+import com.mocharealm.accompanist.lyrics.core.parser.AutoParser
 
 object LyricsProvider {
-    suspend fun fetchLyrics(title: String, artist: String): List<LyricLine>? = withContext(Dispatchers.IO) {
+    fun parseSyncedLyrics(text: String): SyncedLyrics? {
+        return AutoParser().parse(text)
+    }
+
+    suspend fun fetchLyrics(title: String, artist: String): SyncedLyrics? = withContext(Dispatchers.IO) {
         try {
             val encodedTitle = URLEncoder.encode(title, "UTF-8")
             val encodedArtist = URLEncoder.encode(artist, "UTF-8")
@@ -28,13 +32,12 @@ object LyricsProvider {
                 val syncedLyrics = json.optString("syncedLyrics", "")
                 
                 if (syncedLyrics.isNotEmpty()) {
-                    return@withContext parseSyncedLyrics(syncedLyrics)
+                    return@withContext AutoParser().parse(syncedLyrics)
                 }
                 
                 val plainLyrics = json.optString("plainLyrics", "")
                 if (plainLyrics.isNotEmpty()) {
-                    // Si no hay sincronizada, devolvemos renglones como lista pero sin tiempo (0ms)
-                    return@withContext plainLyrics.split("\n").map { LyricLine(-1L, it.trim()) }
+                    return@withContext AutoParser().parse(plainLyrics)
                 }
             }
         } catch (e: Exception) {
@@ -43,28 +46,7 @@ object LyricsProvider {
         null
     }
 
-    fun parseSyncedLyrics(syncedLyrics: String): List<LyricLine> {
-        val regex = Regex("\\[(\\d{2}):(\\d{2})\\.(\\d{2,3})] (.*)")
-        val lines = mutableListOf<LyricLine>()
-        
-        syncedLyrics.lineSequence().forEach { line ->
-            val matchResult = regex.find(line)
-            if (matchResult != null) {
-                val (minStr, secStr, msStr, text) = matchResult.destructured
-                val msParsed = if (msStr.length == 2) msStr.toLong() * 10 else msStr.toLong()
-                val timeMs = (minStr.toLong() * 60 * 1000) + (secStr.toLong() * 1000) + msParsed
-                lines.add(LyricLine(timeMs, text.trim()))
-            } else {
-                // If it doesn't match the timestamp, it might be a blank line or metadata
-                if (line.isNotBlank() && !line.startsWith("[")) {
-                     lines.add(LyricLine(-1L, line.trim()))
-                }
-            }
-        }
-        return lines.sortedBy { if (it.timeMs == -1L) Long.MAX_VALUE else it.timeMs }
-    }
-
-    suspend fun fetchKuGouLyrics(title: String, artist: String): List<LyricLine>? = withContext(Dispatchers.IO) {
+    suspend fun fetchKuGouLyrics(title: String, artist: String): SyncedLyrics? = withContext(Dispatchers.IO) {
         try {
             val keyword = "$title - $artist"
             val encodedKeyword = URLEncoder.encode(keyword, "UTF-8")
@@ -92,7 +74,7 @@ object LyricsProvider {
                         if (contentBase64.isNotEmpty()) {
                             val decodedBytes = Base64.decode(contentBase64, Base64.DEFAULT)
                             val decodedLyrics = String(decodedBytes, Charsets.UTF_8)
-                            return@withContext parseSyncedLyrics(decodedLyrics)
+                            return@withContext AutoParser().parse(decodedLyrics)
                         }
                     }
                 }
@@ -103,7 +85,7 @@ object LyricsProvider {
         null
     }
 
-    suspend fun fetchBetterLyrics(title: String, artist: String, duration: Int = -1): List<LyricLine>? = withContext(Dispatchers.IO) {
+    suspend fun fetchBetterLyrics(title: String, artist: String, duration: Int = -1): SyncedLyrics? = withContext(Dispatchers.IO) {
         try {
             val encodedTitle = URLEncoder.encode(title, "UTF-8")
             val encodedArtist = URLEncoder.encode(artist, "UTF-8")
@@ -118,11 +100,7 @@ object LyricsProvider {
                 val json = JSONObject(response)
                 val ttml = json.optString("ttml", "")
                 if (ttml.isNotEmpty()) {
-                    val parsedLines = com.mrtdk.liquid_glass.utils.TTMLParser.parseTTML(ttml)
-                    if (parsedLines.isNotEmpty()) {
-                        val lrc = com.mrtdk.liquid_glass.utils.TTMLParser.toLRC(parsedLines)
-                        return@withContext parseSyncedLyrics(lrc)
-                    }
+                    return@withContext AutoParser().parse(ttml)
                 }
             }
         } catch (e: Exception) {
@@ -131,7 +109,7 @@ object LyricsProvider {
         null
     }
 
-    suspend fun fetchLyricsPlus(title: String, artist: String, duration: Int = -1): List<LyricLine>? = withContext(Dispatchers.IO) {
+    suspend fun fetchLyricsPlus(title: String, artist: String, duration: Int = -1): SyncedLyrics? = withContext(Dispatchers.IO) {
         val baseUrls = listOf(
             "https://lyricsplus.binimum.org",
             "https://lyricsplus.atomix.one",
@@ -153,16 +131,18 @@ object LyricsProvider {
                     val json = JSONObject(response)
                     val lyricsArray = json.optJSONArray("lyrics")
                     if (lyricsArray != null && lyricsArray.length() > 0) {
-                        val lines = mutableListOf<LyricLine>()
+                        val lines = mutableListOf<com.mocharealm.accompanist.lyrics.core.model.ISyncedLine>()
                         for (i in 0 until lyricsArray.length()) {
                             val lineObj = lyricsArray.getJSONObject(i)
-                            val time = lineObj.optLong("time", -1L)
+                            val time = lineObj.optLong("time", -1L).toInt()
                             val text = lineObj.optString("text", "")
                             if (text.isNotBlank()) {
-                                lines.add(LyricLine(time, text.trim()))
+                                val nextTime = if (i < lyricsArray.length() - 1) lyricsArray.getJSONObject(i + 1).optLong("time", -1L).toInt() else -1
+                                val endTime = if (nextTime > time) nextTime else time + 4000
+                                lines.add(com.mocharealm.accompanist.lyrics.core.model.synced.SyncedLine(text, null, time, endTime))
                             }
                         }
-                        if (lines.isNotEmpty()) return@withContext lines
+                        if (lines.isNotEmpty()) return@withContext SyncedLyrics(lines = lines)
                     }
                 }
             } catch (e: Exception) {
@@ -172,7 +152,7 @@ object LyricsProvider {
         null
     }
 
-    suspend fun fetchSimpMusicLyrics(title: String, artist: String): List<LyricLine>? = withContext(Dispatchers.IO) {
+    suspend fun fetchSimpMusicLyrics(title: String, artist: String): SyncedLyrics? = withContext(Dispatchers.IO) {
         try {
             val query = URLEncoder.encode("$title $artist", "UTF-8")
             val searchUrl = URL("https://api-lyrics.simpmusic.org/search?q=$query&limit=1")
@@ -197,11 +177,11 @@ object LyricsProvider {
                                 val lyricItem = lyricsDataArray.getJSONObject(0)
                                 val syncedLyrics = lyricItem.optString("syncedLyrics", "")
                                 if (syncedLyrics.isNotEmpty()) {
-                                    return@withContext parseSyncedLyrics(syncedLyrics)
+                                    return@withContext AutoParser().parse(syncedLyrics)
                                 }
                                 val plainLyric = lyricItem.optString("plainLyric", "")
                                 if (plainLyric.isNotEmpty()) {
-                                    return@withContext plainLyric.split("\n").map { LyricLine(-1L, it.trim()) }
+                                    return@withContext AutoParser().parse(plainLyric)
                                 }
                             }
                         }
@@ -214,14 +194,14 @@ object LyricsProvider {
         null
     }
 
-    suspend fun fetchYouTubeLyrics(id: String): List<LyricLine>? = withContext(Dispatchers.IO) {
+    suspend fun fetchYouTubeLyrics(id: String): SyncedLyrics? = withContext(Dispatchers.IO) {
         try {
             val nextResult = com.echo.innertube.YouTube.next(com.echo.innertube.models.WatchEndpoint(videoId = id)).getOrNull()
             val lyricsEndpoint = nextResult?.lyricsEndpoint
             if (lyricsEndpoint != null) {
                 val lyricsStr = com.echo.innertube.YouTube.lyrics(lyricsEndpoint).getOrNull()
                 if (!lyricsStr.isNullOrEmpty()) {
-                    return@withContext parseSyncedLyrics(lyricsStr)
+                    return@withContext AutoParser().parse(lyricsStr)
                 }
             }
         } catch (e: Exception) {
@@ -230,11 +210,11 @@ object LyricsProvider {
         null
     }
 
-    suspend fun fetchYouTubeSubtitleLyrics(id: String): List<LyricLine>? = withContext(Dispatchers.IO) {
+    suspend fun fetchYouTubeSubtitleLyrics(id: String): SyncedLyrics? = withContext(Dispatchers.IO) {
         try {
             val lyricsStr = com.echo.innertube.YouTube.transcript(id).getOrNull()
             if (!lyricsStr.isNullOrEmpty()) {
-                return@withContext parseSyncedLyrics(lyricsStr)
+                return@withContext AutoParser().parse(lyricsStr)
             }
         } catch (e: Exception) {
             Log.e("LyricsProvider", "Error fetching YouTube Subtitle lyrics", e)

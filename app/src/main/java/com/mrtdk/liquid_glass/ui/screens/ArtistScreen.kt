@@ -59,7 +59,7 @@ import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
 import com.mrtdk.liquid_glass.ui.components.sharedTransitionElement
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.boundsInRoot
+import com.mrtdk.liquid_glass.ui.components.unclippedBoundsInRoot
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.ScrollState
@@ -1856,7 +1856,7 @@ private fun ItemCard(
             Column(modifier = cardMod
                 .let { if (scrollState != null) it.wiggleOnScroll(item.id, lazyListState = scrollState) else it }
                 .clickable {
-                    SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                    SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
                     SharedTransitionState.lastOpenedId = item.id
                     onAlbumSelected(AlbumState(id = item.id, playlistId = item.playlistId ?: item.id, title = item.title, artist = item.artists?.joinToString { it.name } ?: artistName, thumbnail = item.thumbnail, year = item.year as? Int ?: item.year?.toString()?.toIntOrNull()))
                 }
@@ -1865,7 +1865,7 @@ private fun ItemCard(
                     .onGloballyPositioned { coords ->
                         imageCoords = coords
                         if (!fillWidth) {
-                            val bounds = coords.boundsInRoot()
+                            val bounds = coords.unclippedBoundsInRoot()
                             if (bounds.width > 0f && bounds.height > 0f) {
                                 SharedTransitionState.carouselItemBounds[item.id] = bounds
                             }
@@ -1903,7 +1903,7 @@ private fun ItemCard(
                     .onGloballyPositioned { coords ->
                         imageCoords = coords
                         if (!fillWidth) {
-                            val bounds = coords.boundsInRoot()
+                            val bounds = coords.unclippedBoundsInRoot()
                             if (bounds.width > 0f && bounds.height > 0f) {
                                 SharedTransitionState.carouselItemBounds[item.id] = bounds
                             }
@@ -1932,7 +1932,7 @@ private fun ItemCard(
             Column(modifier = cardMod
                 .let { if (scrollState != null) it.wiggleOnScroll(item.id, lazyListState = scrollState) else it }
                 .clickable {
-                    SharedTransitionState.lastClickBounds = imageCoords?.boundsInRoot()
+                    SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
                     SharedTransitionState.lastOpenedId = item.id
                     onAlbumSelected(AlbumState(id = item.id, playlistId = item.id, title = item.title, artist = item.author?.name ?: artistName, thumbnail = item.thumbnail, year = null))
                 }
@@ -1941,7 +1941,7 @@ private fun ItemCard(
                     .onGloballyPositioned { coords ->
                         imageCoords = coords
                         if (!fillWidth) {
-                            val bounds = coords.boundsInRoot()
+                            val bounds = coords.unclippedBoundsInRoot()
                             if (bounds.width > 0f && bounds.height > 0f) {
                                 SharedTransitionState.carouselItemBounds[item.id] = bounds
                             }
@@ -2336,6 +2336,7 @@ fun CarouselToGridTransitionOverlay(
                             is AlbumItem -> item.thumbnail?.replace("=w226-h226", "=w540-h540")?.replace("=w120-h120", "=w540-h540")
                             is SongItem -> item.thumbnail?.replace("=w226-h226", "=w540-h540")?.replace("=w120-h120", "=w540-h540")
                             is PlaylistItem -> item.thumbnail?.replace("=w226-h226", "=w540-h540")?.replace("=w120-h120", "=w540-h540")
+                            is ArtistItem -> item.thumbnail?.replace("=w226-h226", "=w400-h400")?.replace("=w120-h120", "=w400-h400")
                             else -> null
                         }
 
@@ -2343,7 +2344,7 @@ fun CarouselToGridTransitionOverlay(
                             modifier = Modifier
                                 .offset { IntOffset(curX.roundToInt(), curY.roundToInt()) }
                                 .size(with(density) { curW.toDp() }, with(density) { curH.toDp() })
-                                .clip(RoundedCornerShape(curCorner.dp))
+                                .clip(if (item is ArtistItem) CircleShape else RoundedCornerShape(curCorner.dp))
                                 .background(Color.DarkGray)
                         ) {
                             if (hdThumb != null) {

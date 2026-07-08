@@ -24,7 +24,7 @@ import kotlinx.coroutines.withContext
 @OptIn(UnstableApi::class)
 class MusicPlayer(private val context: Context) {
     private var controllerFuture: ListenableFuture<MediaController>? = null
-    private var controller: MediaController? = null
+    var controller: MediaController? = null
     private val scope = CoroutineScope(Dispatchers.Main)
     private var pollingJob: Job? = null
 
@@ -59,6 +59,19 @@ class MusicPlayer(private val context: Context) {
                     } else {
                         stopPolling()
                     }
+
+                    // ListenTogether sync broadcast
+                    if (com.mrtdk.liquid_glass.playback.ListenTogetherManager.isConnected &&
+                        com.mrtdk.liquid_glass.playback.ListenTogetherManager.role == "host" &&
+                        !com.mrtdk.liquid_glass.playback.ListenTogetherManager.isSyncing) {
+                        val currentPos = controller?.currentPosition ?: 0L
+                        val trackId = controller?.currentMediaItem?.mediaId
+                        com.mrtdk.liquid_glass.playback.ListenTogetherManager.sendPlaybackAction(
+                            if (isPlaying) "play" else "pause",
+                            currentPos,
+                            trackId
+                        )
+                    }
                 }
 
                 override fun onPlaybackStateChanged(playbackState: Int) {
@@ -72,6 +85,38 @@ class MusicPlayer(private val context: Context) {
                 
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                     _duration.value = controller?.duration ?: 0L
+
+                    // ListenTogether sync broadcast
+                    if (com.mrtdk.liquid_glass.playback.ListenTogetherManager.isConnected &&
+                        com.mrtdk.liquid_glass.playback.ListenTogetherManager.role == "host" &&
+                        !com.mrtdk.liquid_glass.playback.ListenTogetherManager.isSyncing) {
+                        val trackId = mediaItem?.mediaId
+                        com.mrtdk.liquid_glass.playback.ListenTogetherManager.sendPlaybackAction(
+                            "play",
+                            0L,
+                            trackId
+                        )
+                    }
+                }
+
+                override fun onPositionDiscontinuity(
+                    oldPosition: Player.PositionInfo,
+                    newPosition: Player.PositionInfo,
+                    reason: Int
+                ) {
+                    if (reason == Player.DISCONTINUITY_REASON_SEEK) {
+                        // ListenTogether sync broadcast
+                        if (com.mrtdk.liquid_glass.playback.ListenTogetherManager.isConnected &&
+                            com.mrtdk.liquid_glass.playback.ListenTogetherManager.role == "host" &&
+                            !com.mrtdk.liquid_glass.playback.ListenTogetherManager.isSyncing) {
+                            val trackId = controller?.currentMediaItem?.mediaId
+                            com.mrtdk.liquid_glass.playback.ListenTogetherManager.sendPlaybackAction(
+                                "seek",
+                                newPosition.positionMs,
+                                trackId
+                            )
+                        }
+                    }
                 }
 
                 override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
