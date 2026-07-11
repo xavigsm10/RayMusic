@@ -104,24 +104,45 @@ class InnerTube {
     }
 
     private fun HttpRequestBuilder.ytClient(client: YouTubeClient, setLogin: Boolean = false) {
+        val isMusicClient = client.clientName.equals("WEB_REMIX", ignoreCase = true) || 
+                            client.clientName.equals("ANDROID_MUSIC", ignoreCase = true)
+        if (!isMusicClient) {
+            url {
+                host = "www.youtube.com"
+                val currentPath = encodedPath
+                if (!currentPath.startsWith("/youtubei/v1/")) {
+                    encodedPath = "/youtubei/v1" + if (currentPath.startsWith("/")) currentPath else "/$currentPath"
+                }
+            }
+        }
+
+
         contentType(ContentType.Application.Json)
         headers {
             append("X-Goog-Api-Format-Version", "1")
             append("X-YouTube-Client-Name", client.clientId /* Not a typo. The Client-Name header does contain the client id. */)
             append("X-YouTube-Client-Version", client.clientVersion)
-            append("X-Origin", YouTubeClient.ORIGIN_YOUTUBE_MUSIC)
-            append("Referer", YouTubeClient.REFERER_YOUTUBE_MUSIC)
+            
+            val origin = if (isMusicClient) YouTubeClient.ORIGIN_YOUTUBE_MUSIC else "https://www.youtube.com"
+            val referer = if (isMusicClient) YouTubeClient.REFERER_YOUTUBE_MUSIC 
+                          else if (client.clientName.contains("TVHTML5", ignoreCase = true)) "https://www.youtube.com/tv"
+                          else "https://www.youtube.com/"
+            
+            append("X-Origin", origin)
+            append("Referer", referer)
+            
             visitorData?.let { append("X-Goog-Visitor-Id", it) }
             if (setLogin && client.loginSupported) {
                 cookie?.let { cookie ->
                     append("cookie", cookie)
                     if ("SAPISID" !in cookieMap) return@let
                     val currentTime = System.currentTimeMillis() / 1000
-                    val sapisidHash = sha1("$currentTime ${cookieMap["SAPISID"]} ${YouTubeClient.ORIGIN_YOUTUBE_MUSIC}")
+                    val sapisidHash = sha1("$currentTime ${cookieMap["SAPISID"]} ${if (isMusicClient) YouTubeClient.ORIGIN_YOUTUBE_MUSIC else "https://www.youtube.com"}")
                     append("Authorization", "SAPISIDHASH ${currentTime}_${sapisidHash}")
                 }
             }
         }
+
         userAgent(client.userAgent)
         parameter("prettyPrint", false)
     }

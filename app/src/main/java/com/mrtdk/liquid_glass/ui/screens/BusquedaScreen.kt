@@ -30,6 +30,7 @@ import com.mrtdk.liquid_glass.ui.components.trackClickBounds
 import com.mrtdk.liquid_glass.ui.components.trackTapBounds
 import com.mrtdk.liquid_glass.ui.components.wiggleOnScroll
 import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
+import com.mrtdk.liquid_glass.ui.components.sharedTransitionElement
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.LayoutCoordinates
 import com.mrtdk.liquid_glass.ui.components.unclippedBoundsInRoot
@@ -454,6 +455,7 @@ fun BusquedaScreen(
                                 modifier = Modifier
                                     .size(56.dp)
                                     .onGloballyPositioned { imageCoords = it }
+                                    .sharedTransitionElement(item.browseId)
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(Color.DarkGray)
                             ) {

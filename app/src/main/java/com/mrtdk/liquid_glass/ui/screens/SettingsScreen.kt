@@ -811,8 +811,6 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
     var showUsernameDialog by remember { mutableStateOf(false) }
     var showServerDialog by remember { mutableStateOf(false) }
     var showJoinDialog by remember { mutableStateOf(false) }
-    var showLogsDialog by remember { mutableStateOf(false) }
-    var showRoomDetailsDialog by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
         val prevCallback = com.mrtdk.liquid_glass.playback.ListenTogetherManager.onStateChanged
@@ -986,37 +984,87 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
                     }
                 }
 
-                // Leave and Logs row
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                // ---- Connected Members Section ----
+                androidx.compose.material3.Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 12.dp)
+                        .padding(bottom = 12.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = androidx.compose.material3.CardDefaults.cardColors(
+                        containerColor = Color(0xFF1C1C1E)
+                    )
                 ) {
-                    OutlinedButton(
-                        onClick = { showLogsDialog = true },
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.weight(1f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF333333))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp)
                     ) {
-                        Icon(imageVector = Icons.Default.ReceiptLong, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.together_btn_logs), color = Color.Gray, fontSize = 13.sp)
-                    }
-                    Button(
-                        onClick = { com.mrtdk.liquid_glass.playback.ListenTogetherManager.leaveRoom() },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFA243C).copy(alpha = 0.15f)),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(imageVector = Icons.Default.Logout, contentDescription = null, tint = Color(0xFFFA243C), modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.together_btn_leave), color = Color(0xFFFA243C), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            text = "MIEMBROS DE LA SALA ($usersCount)",
+                            color = Color(0xFFFA243C),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        
+                        val connectedUsers = com.mrtdk.liquid_glass.playback.ListenTogetherManager.users
+                        if (connectedUsers.isEmpty()) {
+                            Text(
+                                text = "Solo tú estás en la sala.",
+                                color = Color.Gray,
+                                fontSize = 14.sp,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        } else {
+                            connectedUsers.forEach { userInRoom ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Person,
+                                        contentDescription = null,
+                                        tint = Color.Gray,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = userInRoom,
+                                        color = Color.White,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    if (userInRoom == username) {
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "(Tú)",
+                                            color = Color.Gray,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
+                // ---- Leave Room Button ----
+                Button(
+                    onClick = { com.mrtdk.liquid_glass.playback.ListenTogetherManager.leaveRoom() },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFA243C).copy(alpha = 0.15f)),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                ) {
+                    Icon(imageVector = Icons.Default.Logout, contentDescription = null, tint = Color(0xFFFA243C), modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(stringResource(R.string.together_btn_leave), color = Color(0xFFFA243C), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                }
+
             } else {
-                // Not connected — create / join buttons + logs
+                // Not connected — create / join buttons
                 Material3SettingsGroup(
                     title = stringResource(R.string.together_status_title),
                     items = listOf(
@@ -1037,12 +1085,6 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
                                 if (username.isBlank()) showUsernameDialog = true
                                 else showJoinDialog = true
                             }
-                        ),
-                        Material3SettingsItem(
-                            icon = rememberPainter(Icons.Default.ReceiptLong),
-                            title = { Text(stringResource(R.string.together_btn_logs)) },
-                            description = { Text("Ver historial de eventos del WebSocket") },
-                            onClick = { showLogsDialog = true }
                         )
                     )
                 )
@@ -1058,12 +1100,6 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
                         title = { Text(stringResource(R.string.together_username_title)) },
                         description = { Text(if (username.isEmpty()) "Sin definir" else username) },
                         onClick = { showUsernameDialog = true }
-                    ),
-                    Material3SettingsItem(
-                        icon = rememberPainter(Icons.Default.Dns),
-                        title = { Text(stringResource(R.string.together_server_title)) },
-                        description = { Text(serverUrl) },
-                        onClick = { showServerDialog = true }
                     )
                 )
             )
@@ -1179,191 +1215,6 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
         )
     }
 
-    if (showLogsDialog) {
-        // Simple Logs Dialog
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showLogsDialog = false },
-            title = { Text("Logs del Servidor", color = Color.White) },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    val logsList = com.mrtdk.liquid_glass.playback.ListenTogetherManager.logs
-                    if (logsList.isEmpty()) {
-                        Text("No hay logs registrados.", color = Color.Gray, fontSize = 14.sp)
-                    } else {
-                        logsList.forEach { logLine ->
-                            Text(logLine, color = Color.LightGray, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    com.mrtdk.liquid_glass.playback.ListenTogetherManager.clearLogs()
-                }) {
-                    Text("Limpiar", color = Color(0xFFFA243C))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showLogsDialog = false }) {
-                    Text("Cerrar", color = Color.White)
-                }
-            },
-            containerColor = Color(0xFF1E1E1E)
-        )
-    }
-
-    if (showRoomDetailsDialog) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showRoomDetailsDialog = false },
-            title = {
-                Text(
-                    text = "Detalles de la Sala",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp
-                )
-            },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "CÓDIGO DE SALA",
-                        color = Color.Gray,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = roomCode,
-                            color = Color(0xFFFA243C),
-                            fontSize = 32.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 4.sp
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        IconButton(
-                            onClick = {
-                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                                val clip = android.content.ClipData.newPlainText("Código de Sala", roomCode)
-                                clipboard.setPrimaryClip(clip)
-                                Toast.makeText(context, "Código de sala copiado", Toast.LENGTH_SHORT).show()
-                            },
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ContentCopy,
-                                contentDescription = "Copiar Código",
-                                tint = Color.LightGray,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                    
-                    val roleText = if (role == "host") "Anfitrión" else "Invitado"
-                    val roleColor = if (role == "host") Color(0xFFFA243C) else Color(0xFF4CAF50)
-                    Surface(
-                        color = roleColor.copy(alpha = 0.15f),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    ) {
-                        Text(
-                            text = roleText,
-                            color = roleColor,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                        )
-                    }
-                    
-                    Spacer(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.DarkGray))
-                    
-                    Text(
-                        text = "MIEMBROS DE LA SALA ($usersCount)",
-                        color = Color.Gray,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.align(Alignment.Start).padding(top = 12.dp, bottom = 8.dp)
-                    )
-                    
-                    val connectedUsers = com.mrtdk.liquid_glass.playback.ListenTogetherManager.users
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 180.dp)
-                            .verticalScroll(rememberScrollState())
-                    ) {
-                        if (connectedUsers.isEmpty()) {
-                            Text(
-                                text = "Solo tú estás en la sala.",
-                                color = Color.Gray,
-                                fontSize = 14.sp,
-                                modifier = Modifier.padding(vertical = 4.dp)
-                            )
-                        } else {
-                            connectedUsers.forEach { userInRoom ->
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 6.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Person,
-                                        contentDescription = null,
-                                        tint = Color.Gray,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = userInRoom,
-                                        color = Color.White,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    if (userInRoom == username) {
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = "(Tú)",
-                                            color = Color.Gray,
-                                            fontSize = 12.sp
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showRoomDetailsDialog = false }) {
-                    Text("Cerrar", color = Color.White)
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showRoomDetailsDialog = false
-                        com.mrtdk.liquid_glass.playback.ListenTogetherManager.leaveRoom()
-                    }
-                ) {
-                    Text("Abandonar Sala", color = Color(0xFFFA243C))
-                }
-            },
-            containerColor = Color(0xFF1E1E1E)
-        )
-    }
 }
 
 // Sub-screen: Content
