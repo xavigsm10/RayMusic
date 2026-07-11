@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="EscritorioVersion-desktop">
+    <output-path>$PROJECT_DIR$/EscritorioVersion/build/libs</output-path>
+    <root id="archive" name="EscritorioVersion-desktop.jar">
+      <element id="module-output" name="liquid-glass-compose.EscritorioVersion.desktopMain" />
+    </root>
+  </artifact>
+</component>

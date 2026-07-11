@@ -25,3 +25,5 @@ include(":app")
 include(":glass")
 include(":innertube")
 include(":shazamkit")
+include(":EscritorioVersion")
+

@@ -37,6 +37,11 @@ import kotlinx.coroutines.withContext
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
+import com.mrtdk.liquid_glass.utils.AudioResampler
+import com.mrtdk.liquid_glass.utils.DecodedAudio
+import java.io.ByteArrayOutputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 @Composable
 fun RadioScreen(
@@ -64,7 +69,7 @@ fun RadioScreen(
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val scale by infiniteTransition.animateFloat(
         initialValue = 1f,
-        targetValue = if (isListening) 1.5f else 1f,
+        targetValue = 1.5f,
         animationSpec = infiniteRepeatable(
             animation = tween(1500, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
@@ -72,8 +77,8 @@ fun RadioScreen(
         label = "scale"
     )
     val alpha by infiniteTransition.animateFloat(
-        initialValue = if (isListening) 0.5f else 0f,
-        targetValue = if (isListening) 0.0f else 0f,
+        initialValue = 0.6f,
+        targetValue = 0.0f,
         animationSpec = infiniteRepeatable(
             animation = tween(1500, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
@@ -89,13 +94,31 @@ fun RadioScreen(
         if (isListening) {
             resultText = null
             try {
-                val samples = withContext(Dispatchers.IO) {
-                    recordMicPcm16Mono(sampleRateHz = 16000, recordMs = 4200L).first
+                val audioData = withContext(Dispatchers.IO) {
+                    recordMicPcm16Mono(sampleRateHz = 44100, recordMs = 10000L)
                 }
                 isProcessing = true
-                val signature = withContext(Dispatchers.Default) {
-                    ShazamSignatureGenerator().apply { feedPcm16Mono(samples) }.nextSignatureOrNull()
+                
+                val decodedAudio = DecodedAudio(
+                    data = audioData,
+                    channelCount = 1,
+                    sampleRate = 44100,
+                    pcmEncoding = AudioFormat.ENCODING_PCM_16BIT
+                )
+                
+                val resampledAudio = withContext(Dispatchers.Default) {
+                    AudioResampler.resample(decodedAudio, 16000).getOrNull()
                 }
+                
+                val signature = if (resampledAudio != null) {
+                    withContext(Dispatchers.Default) {
+                        val shorts = ShortArray(resampledAudio.data.size / 2)
+                        ByteBuffer.wrap(resampledAudio.data).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(shorts)
+                        
+                        ShazamSignatureGenerator().apply { feedPcm16Mono(shorts) }.nextSignatureOrNull()
+                    }
+                } else null
+
                 if (signature != null) {
                     val result = withContext(Dispatchers.IO) {
                         Shazam.recognize(signature.uri, signature.sampleDurationMs)
@@ -206,7 +229,7 @@ fun RadioScreen(
 private suspend fun recordMicPcm16Mono(
     sampleRateHz: Int,
     recordMs: Long,
-): Pair<ShortArray, Int> = withContext(Dispatchers.IO) {
+): ByteArray = withContext(Dispatchers.IO) {
     val channel = AudioFormat.CHANNEL_IN_MONO
     val encoding = AudioFormat.ENCODING_PCM_16BIT
     val minBuffer = AudioRecord.getMinBufferSize(sampleRateHz, channel, encoding).coerceAtLeast(4096)
@@ -218,29 +241,23 @@ private suspend fun recordMicPcm16Mono(
         minBuffer,
     )
 
-    val totalSamples = ((recordMs / 1000.0) * sampleRateHz).toInt().coerceAtLeast(sampleRateHz)
-    val output = ShortArray(totalSamples)
-    val buffer = ShortArray(minBuffer / 2)
+    val outputStream = ByteArrayOutputStream()
+    val buffer = ByteArray(minBuffer)
+    val startTime = System.currentTimeMillis()
 
     try {
         record.startRecording()
 
-        var written = 0
-        while (written < output.size && isActive) {
-            val read = record.read(buffer, 0, minOf(buffer.size, output.size - written))
-            if (read > 0) {
-                System.arraycopy(buffer, 0, output, written, read)
-                written += read
+        while (System.currentTimeMillis() - startTime < recordMs && isActive) {
+            val bytesRead = record.read(buffer, 0, minBuffer)
+            if (bytesRead > 0) {
+                outputStream.write(buffer, 0, bytesRead)
             }
-        }
-
-        if (written <= 0) {
-            ShortArray(0) to sampleRateHz
-        } else {
-            output.copyOf(written) to sampleRateHz
         }
     } finally {
         runCatching { record.stop() }
         runCatching { record.release() }
     }
+
+    outputStream.toByteArray()
 }
