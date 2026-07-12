@@ -625,6 +625,9 @@ class MainActivity : ComponentActivity() {
                                                 )
                                                 2 -> com.mrtdk.liquid_glass.ui.screens.RadioScreen(
                                                     innerPadding = innerPadding,
+                                                    onSongRecognized = { playerState ->
+                                                        playSong(playerState)
+                                                    },
                                                     onSearchResult = { recognizedText ->
                                                         searchQuery = recognizedText
                                                         isSearchSubmitted = true

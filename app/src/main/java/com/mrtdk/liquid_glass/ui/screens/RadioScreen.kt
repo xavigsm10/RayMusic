@@ -16,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.res.stringResource
 import com.mrtdk.liquid_glass.R
+import com.mrtdk.liquid_glass.ui.screens.PlayerState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,6 +47,7 @@ import java.nio.ByteOrder
 @Composable
 fun RadioScreen(
     innerPadding: PaddingValues,
+    onSongRecognized: (PlayerState) -> Unit = {},
     onSearchResult: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -137,9 +139,22 @@ fun RadioScreen(
                     result.fold(
                         onSuccess = { res ->
                             resultText = "${res.title} - ${res.artist}"
-                            // Provide a small delay so user can read the result before navigating
-                            delay(1000)
-                            onSearchResult("${res.title} ${res.artist}")
+                            delay(800)
+                            val videoId = res.youtubeVideoId
+                            if (videoId != null) {
+                                // Play directly in player
+                                onSongRecognized(
+                                    PlayerState(
+                                        title = res.title,
+                                        artist = res.artist,
+                                        artUrl = res.coverArtHqUrl ?: res.coverArtUrl,
+                                        videoId = videoId
+                                    )
+                                )
+                            } else {
+                                // Fallback to search if Shazam didn't return a YouTube ID
+                                onSearchResult("${res.title} ${res.artist}")
+                            }
                         },
                         onFailure = { resultText = context.getString(R.string.radio_no_matches) }
                     )
