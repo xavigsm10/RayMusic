@@ -2476,23 +2476,21 @@ fun PlayerScreen(
 
                         val songHash = playerState?.videoId?.hashCode() ?: 0
                         val skewX = if (songHash % 2 == 0) 0.18f else -0.18f
+                        val maxShift = (kotlin.math.abs(skewX) * screenH).toInt()
 
                         drawIntoCanvas { canvas ->
                             canvas.save()
-                            val centerX = screenW / 2f
-                            canvas.nativeCanvas.translate(centerX, 0f)
-                            canvas.nativeCanvas.scale(1.25f, 1f)
                             canvas.nativeCanvas.skew(skewX, 0f)
-                            canvas.nativeCanvas.translate(-centerX, 0f)
 
                             // 1. Dibuja la parte izquierda (difuminado del píxel del borde izquierdo visible)
-                            if (imgXInt > 0) {
+                            if (imgXInt > 0 || maxShift > 0) {
+                                val leftW = imgXInt + maxShift
                                 drawImage(
                                     image = currentCoverBitmap,
                                     srcOffset = IntOffset(srcXInt, srcYInt),
                                     srcSize = IntSize(1, sampleH),
-                                    dstOffset = IntOffset.Zero,
-                                    dstSize = IntSize(imgXInt, screenH.toInt()),
+                                    dstOffset = IntOffset(-maxShift, 0),
+                                    dstSize = IntSize(leftW, screenH.toInt()),
                                     filterQuality = FilterQuality.Low
                                 )
                             }
@@ -2511,18 +2509,16 @@ fun PlayerScreen(
 
                             // 3. Dibuja la parte derecha (difuminado del píxel del borde derecho visible)
                             val rightX = imgXInt + imgWInt
-                            if (rightX < screenWInt) {
-                                val rightW = screenWInt - rightX
-                                if (rightW > 0) {
-                                    drawImage(
-                                        image = currentCoverBitmap,
-                                        srcOffset = IntOffset((srcXInt + srcWInt - 1).coerceIn(0, currentCoverBitmap.width - 1), srcYInt),
-                                        srcSize = IntSize(1, sampleH),
-                                        dstOffset = IntOffset(rightX, 0),
-                                        dstSize = IntSize(rightW, screenH.toInt()),
-                                        filterQuality = FilterQuality.Low
-                                    )
-                                }
+                            if (rightX < screenWInt || maxShift > 0) {
+                                val rightW = (screenWInt - rightX) + maxShift
+                                drawImage(
+                                    image = currentCoverBitmap,
+                                    srcOffset = IntOffset((srcXInt + srcWInt - 1).coerceIn(0, currentCoverBitmap.width - 1), srcYInt),
+                                    srcSize = IntSize(1, sampleH),
+                                    dstOffset = IntOffset(rightX, 0),
+                                    dstSize = IntSize(rightW, screenH.toInt()),
+                                    filterQuality = FilterQuality.Low
+                                )
                             }
 
                             canvas.restore()
