@@ -803,6 +803,10 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
     var username by remember { mutableStateOf(com.mrtdk.liquid_glass.playback.ListenTogetherManager.username) }
     var serverUrl by remember { mutableStateOf(com.mrtdk.liquid_glass.playback.ListenTogetherManager.serverUrl) }
     var usersCount by remember { mutableIntStateOf(com.mrtdk.liquid_glass.playback.ListenTogetherManager.users.size) }
+    // Fix: connectedUsers must be a reactive Compose state — reading MutableList directly
+    // from ListenTogetherManager is NOT observable and Compose won't recompose when it changes
+    var connectedUsers by remember { mutableStateOf(com.mrtdk.liquid_glass.playback.ListenTogetherManager.users.toList()) }
+    var isConnecting by remember { mutableStateOf(false) }
 
     var smartResync by remember { mutableStateOf(LibraryManager.getString("listen_together_smart_resync", "true") == "true") }
     var syncVolume by remember { mutableStateOf(LibraryManager.getString("listen_together_sync_volume", "true") == "true") }
@@ -821,6 +825,12 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
             username = com.mrtdk.liquid_glass.playback.ListenTogetherManager.username
             serverUrl = com.mrtdk.liquid_glass.playback.ListenTogetherManager.serverUrl
             usersCount = com.mrtdk.liquid_glass.playback.ListenTogetherManager.users.size
+            // Snapshot the list into a new List so Compose detects the change
+            connectedUsers = com.mrtdk.liquid_glass.playback.ListenTogetherManager.users.toList()
+            // Once we get any state update, we are no longer "connecting"
+            if (isConnected || !com.mrtdk.liquid_glass.playback.ListenTogetherManager.isConnected) {
+                isConnecting = false
+            }
         }
         onDispose {
             com.mrtdk.liquid_glass.playback.ListenTogetherManager.onStateChanged = prevCallback
@@ -882,6 +892,39 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp
                 )
+            }
+
+            // Show connecting spinner while waiting for WebSocket response
+            if (isConnecting) {
+                androidx.compose.material3.Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = androidx.compose.material3.CardDefaults.cardColors(
+                        containerColor = Color(0xFF1A1A1A)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = Color(0xFFFA243C),
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            text = "Conectando a la sala...",
+                            color = Color.Gray,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
             }
 
             if (isConnected && roomCode.isNotBlank()) {
@@ -1008,7 +1051,7 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         
-                        val connectedUsers = com.mrtdk.liquid_glass.playback.ListenTogetherManager.users
+                        val connectedUsers = com.mrtdk.liquid_glass.playback.ListenTogetherManager.users.toList()
                         if (connectedUsers.isEmpty()) {
                             Text(
                                 text = "Solo tú estás en la sala.",
@@ -1074,7 +1117,10 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
                             description = { Text("Iniciar una nueva sala y obtener código") },
                             onClick = {
                                 if (username.isBlank()) showUsernameDialog = true
-                                else com.mrtdk.liquid_glass.playback.ListenTogetherManager.createRoom(username)
+                                else {
+                                    isConnecting = true
+                                    com.mrtdk.liquid_glass.playback.ListenTogetherManager.createRoom(username)
+                                }
                             }
                         ),
                         Material3SettingsItem(
@@ -1210,7 +1256,11 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
             initialValue = "",
             onDismiss = { showJoinDialog = false },
             onSave = { code ->
-                com.mrtdk.liquid_glass.playback.ListenTogetherManager.joinRoom(code.uppercase().trim(), username)
+                val trimmedCode = code.uppercase().trim()
+                if (trimmedCode.isNotBlank()) {
+                    isConnecting = true
+                    com.mrtdk.liquid_glass.playback.ListenTogetherManager.joinRoom(trimmedCode, username)
+                }
             }
         )
     }
