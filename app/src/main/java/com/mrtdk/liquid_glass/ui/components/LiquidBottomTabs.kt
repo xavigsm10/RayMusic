@@ -136,6 +136,13 @@ fun LiquidBottomTabs(
                 }
             )
         }
+        val isTabAnimating by remember {
+            derivedStateOf {
+                abs(dampedDragAnimation.value - currentIndex.toFloat()) > 0.01f
+            }
+        }
+        val isAnimating = isTransitioning || isCollapsing || isTabAnimating
+
         LaunchedEffect(Unit) {
             snapshotFlow { currentSelectedTabIndex() }
                 .collectLatest { index ->
@@ -175,7 +182,9 @@ fun LiquidBottomTabs(
                     effects = {
                         vibrancy()
                         blur(8f.dp.toPx())
-                        lens(24f.dp.toPx(), 24f.dp.toPx())
+                        if (!isAnimating) {
+                            lens(24f.dp.toPx(), 24f.dp.toPx())
+                        }
                     },
                     layerBlock = {
                         val progress = dampedDragAnimation.pressProgress
@@ -213,10 +222,12 @@ fun LiquidBottomTabs(
                             val progress = dampedDragAnimation.pressProgress
                             vibrancy()
                             blur(8f.dp.toPx())
-                            lens(
-                                24f.dp.toPx() * progress,
-                                24f.dp.toPx() * progress
-                            )
+                            if (!isAnimating) {
+                                lens(
+                                    24f.dp.toPx() * progress,
+                                    24f.dp.toPx() * progress
+                                )
+                            }
                         },
                         highlight = {
                             val progress = dampedDragAnimation.pressProgress
