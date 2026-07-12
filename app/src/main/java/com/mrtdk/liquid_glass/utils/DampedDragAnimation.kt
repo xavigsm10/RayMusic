@@ -35,9 +35,9 @@ class DampedDragAnimation(
     private val pressProgressAnimationSpec =
         spring<Float>(1f, 1000f, 0.001f)
     private val scaleXAnimationSpec =
-        spring<Float>(0.6f, 250f, 0.001f)
+        spring<Float>(androidx.compose.animation.core.Spring.DampingRatioNoBouncy, 250f, 0.001f)
     private val scaleYAnimationSpec =
-        spring<Float>(0.7f, 250f, 0.001f)
+        spring<Float>(androidx.compose.animation.core.Spring.DampingRatioNoBouncy, 250f, 0.001f)
 
     private val valueAnimation =
         Animatable(initialValue, visibilityThreshold)

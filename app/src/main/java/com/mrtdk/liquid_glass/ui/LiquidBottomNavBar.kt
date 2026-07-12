@@ -76,11 +76,11 @@ fun LiquidBottomNavBar(
     val isSearchActive = selectedIndex == 4
     
     val navSpringSpec = spring<Float>(
-        dampingRatio = 0.85f,
+        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
         stiffness = 300f
     )
     val navDpSpringSpec = spring<androidx.compose.ui.unit.Dp>(
-        dampingRatio = 0.85f,
+        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
         stiffness = 300f
     )
 
@@ -90,6 +90,7 @@ fun LiquidBottomNavBar(
     )
     
     val isTransitioning = (searchProgress > 0.001f && searchProgress < 0.999f)
+    val isAnimating = isTransitioning || isCollapsing
     
     val xWidth by animateDpAsState(
         targetValue = if (isSearchActive && isKeyboardOpen) 64.dp else 0.dp,
@@ -111,7 +112,7 @@ fun LiquidBottomNavBar(
 
     val backdrop = LocalBackdrop.current
     val combineProgress = if (searchProgress > collapseProgress) searchProgress else collapseProgress
-    val navBarHeight = 84.dp - 20.dp * combineProgress
+    val navBarHeight = 84.dp
 
     BoxWithConstraints(
         modifier = modifier
@@ -215,7 +216,9 @@ fun LiquidBottomNavBar(
                         effects = {
                             vibrancy()
                             blur(8f.dp.toPx())
-                            lens(24f.dp.toPx(), 24f.dp.toPx())
+                            if (!isAnimating) {
+                                lens(24f.dp.toPx(), 24f.dp.toPx())
+                            }
                         },
                         onDrawSurface = { drawRect(tintColor) }
                     )
@@ -334,7 +337,9 @@ fun LiquidBottomNavBar(
                             effects = {
                                 vibrancy()
                                 blur(8f.dp.toPx())
-                                lens(24f.dp.toPx(), 24f.dp.toPx())
+                                if (!isAnimating) {
+                                    lens(24f.dp.toPx(), 24f.dp.toPx())
+                                }
                             },
                             onDrawSurface = { drawRect(tintColor) }
                         )
@@ -408,7 +413,7 @@ fun MainTabs(
                 onClick = { onTabSelected(index) },
                 weight = tabWeight
             ) {
-                val iconOffsetY = 5.dp * (1f - combineProgress)
+                val iconOffsetY = androidx.compose.ui.unit.lerp(5.dp, 7.dp, combineProgress)
                 Icon(
                     painter = painterResource(id = pair.second),
                     contentDescription = tabText,
@@ -418,18 +423,16 @@ fun MainTabs(
                         .offset(y = iconOffsetY)
                         .graphicsLayer { alpha = tabAlpha }
                 )
-                if (textAlpha > 0.05f) {
-                    Text(
-                        text = tabText,
-                        color = itemColor,
-                        fontSize = 10.sp,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
-                        maxLines = 1,
-                        modifier = Modifier
-                            .offset(y = (-3).dp)
-                            .graphicsLayer { alpha = textAlpha }
-                    )
-                }
+                Text(
+                    text = tabText,
+                    color = itemColor,
+                    fontSize = 10.sp,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+                    maxLines = 1,
+                    modifier = Modifier
+                        .offset(y = (-3).dp)
+                        .graphicsLayer { alpha = textAlpha }
+                )
             }
         }
     }

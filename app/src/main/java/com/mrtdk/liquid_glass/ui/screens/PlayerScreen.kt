@@ -1,4 +1,4 @@
-﻿package com.mrtdk.liquid_glass.ui.screens
+package com.mrtdk.liquid_glass.ui.screens
 
 
 
@@ -150,11 +150,10 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Path
 
 import androidx.compose.ui.graphics.drawscope.Stroke
-
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.ImageBitmap
-
 import androidx.compose.ui.graphics.asImageBitmap
-
 import androidx.compose.ui.graphics.FilterQuality
 
 import androidx.compose.ui.unit.IntOffset
@@ -305,6 +304,20 @@ data class PlayerState(
 
     val playlistName: String? = null
 
+)
+
+@androidx.compose.runtime.Immutable
+data class QueueItemRowData(
+    val title: String,
+    val artist: String,
+    val artUrl: Any?
+)
+
+@androidx.compose.runtime.Immutable
+data class UpNextSongRowData(
+    val title: String,
+    val artist: String,
+    val thumbnail: String?
 )
 
 
@@ -2414,179 +2427,106 @@ fun PlayerScreen(
                 ) {
 
                     Canvas(modifier = Modifier.fillMaxSize()) {
-
                         val imgX = expandedX.toPx()
-
                         val imgW = expandedWidth.toPx()
-
                         val screenW = size.width
-
                         val screenH = size.height
 
-
-
                         val imgXInt = imgX.toInt()
-
                         val imgWInt = imgW.toInt()
-
                         val screenWInt = screenW.toInt()
 
-
-
                         val sampleHeight = 5 // Altura de muestreo del borde
-
                         val sampleH = sampleHeight.coerceAtMost(currentCoverBitmap.height).coerceAtLeast(1)
 
-
-
                         // Mapeo del recorte de la portada debido a ContentScale.Crop en la pantalla
-
                         val containerW = imgW
-
                         val containerH = expandedHeight.toPx()
-
                         val bitmapW = currentCoverBitmap.width.toFloat()
-
                         val bitmapH = currentCoverBitmap.height.toFloat()
 
-
-
                         val containerRatio = containerW / containerH
-
                         val bitmapRatio = bitmapW / bitmapH
 
-
-
                         val srcX: Float
-
                         val srcWidth: Float
-
                         val srcY: Float
 
-
-
                         if (containerRatio < bitmapRatio) {
-
                             // El contenedor es proporcionalmente más alto (se recorta izq/der)
-
                             val scale = containerH / bitmapH
-
                             val visibleWidth = containerW / scale
-
                             srcX = (bitmapW - visibleWidth) / 2f
-
                             srcWidth = visibleWidth
-
                             srcY = bitmapH - sampleH
-
                         } else {
-
                             // El contenedor es proporcionalmente más ancho (se recorta arriba/abajo)
-
                             val scale = containerW / bitmapW
-
                             val visibleHeight = containerH / scale
-
                             srcX = 0f
-
                             srcWidth = bitmapW
-
                             val cropY = (bitmapH - visibleHeight) / 2f
-
                             val visibleBottomY = cropY + visibleHeight
-
                             srcY = (visibleBottomY - sampleH).coerceIn(0f, bitmapH - sampleH)
-
                         }
-
-
 
                         val srcXInt = srcX.toInt().coerceIn(0, currentCoverBitmap.width - 1)
-
                         val srcWInt = srcWidth.toInt().coerceIn(1, currentCoverBitmap.width - srcXInt)
-
                         val srcYInt = srcY.toInt().coerceIn(0, currentCoverBitmap.height - sampleH)
 
+                        val songHash = playerState?.videoId?.hashCode() ?: 0
+                        val skewX = if (songHash % 2 == 0) 0.18f else -0.18f
 
+                        drawIntoCanvas { canvas ->
+                            canvas.save()
+                            val centerX = screenW / 2f
+                            canvas.nativeCanvas.translate(centerX, 0f)
+                            canvas.nativeCanvas.scale(1.25f, 1f)
+                            canvas.nativeCanvas.skew(skewX, 0f)
+                            canvas.nativeCanvas.translate(-centerX, 0f)
 
-                        // 1. Dibuja la parte izquierda (difuminado del píxel del borde izquierdo visible)
-
-                        if (imgXInt > 0) {
-
-                            drawImage(
-
-                                image = currentCoverBitmap,
-
-                                srcOffset = IntOffset(srcXInt, srcYInt),
-
-                                srcSize = IntSize(1, sampleH),
-
-                                dstOffset = IntOffset.Zero,
-
-                                dstSize = IntSize(imgXInt, screenH.toInt()),
-
-                                filterQuality = FilterQuality.Low
-
-                            )
-
-                        }
-
-
-
-                        // 2. Dibuja la parte central (alineada perfectamente con la carátula visible)
-
-                        if (imgWInt > 0) {
-
-                            drawImage(
-
-                                image = currentCoverBitmap,
-
-                                srcOffset = IntOffset(srcXInt, srcYInt),
-
-                                srcSize = IntSize(srcWInt, sampleH),
-
-                                dstOffset = IntOffset(imgXInt, 0),
-
-                                dstSize = IntSize(imgWInt, screenH.toInt()),
-
-                                filterQuality = FilterQuality.Low
-
-                            )
-
-                        }
-
-
-
-                        // 3. Dibuja la parte derecha (difuminado del píxel del borde derecho visible)
-
-                        val rightX = imgXInt + imgWInt
-
-                        if (rightX < screenWInt) {
-
-                            val rightW = screenWInt - rightX
-
-                            if (rightW > 0) {
-
+                            // 1. Dibuja la parte izquierda (difuminado del píxel del borde izquierdo visible)
+                            if (imgXInt > 0) {
                                 drawImage(
-
                                     image = currentCoverBitmap,
-
-                                    srcOffset = IntOffset((srcXInt + srcWInt - 1).coerceIn(0, currentCoverBitmap.width - 1), srcYInt),
-
+                                    srcOffset = IntOffset(srcXInt, srcYInt),
                                     srcSize = IntSize(1, sampleH),
-
-                                    dstOffset = IntOffset(rightX, 0),
-
-                                    dstSize = IntSize(rightW, screenH.toInt()),
-
+                                    dstOffset = IntOffset.Zero,
+                                    dstSize = IntSize(imgXInt, screenH.toInt()),
                                     filterQuality = FilterQuality.Low
-
                                 )
-
                             }
 
-                        }
+                            // 2. Dibuja la parte central (alineada perfectamente con la carátula visible)
+                            if (imgWInt > 0) {
+                                drawImage(
+                                    image = currentCoverBitmap,
+                                    srcOffset = IntOffset(srcXInt, srcYInt),
+                                    srcSize = IntSize(srcWInt, sampleH),
+                                    dstOffset = IntOffset(imgXInt, 0),
+                                    dstSize = IntSize(imgWInt, screenH.toInt()),
+                                    filterQuality = FilterQuality.Low
+                                )
+                            }
 
+                            // 3. Dibuja la parte derecha (difuminado del píxel del borde derecho visible)
+                            val rightX = imgXInt + imgWInt
+                            if (rightX < screenWInt) {
+                                val rightW = screenWInt - rightX
+                                if (rightW > 0) {
+                                    drawImage(
+                                        image = currentCoverBitmap,
+                                        srcOffset = IntOffset((srcXInt + srcWInt - 1).coerceIn(0, currentCoverBitmap.width - 1), srcYInt),
+                                        srcSize = IntSize(1, sampleH),
+                                        dstOffset = IntOffset(rightX, 0),
+                                        dstSize = IntSize(rightW, screenH.toInt()),
+                                        filterQuality = FilterQuality.Low
+                                    )
+                                }
+                            }
+
+                            canvas.restore()
+                        }
                     }
 
                 }
@@ -3219,148 +3159,109 @@ fun PlayerScreen(
                               // 1. Manual Queue Section (Album/Playlist)
 
                               if (playerState != null && playerState.queue.isNotEmpty()) {
+                                   val state = playerState
+                                   items(
+                                       count = state.queue.size,
+                                       key = { index -> "${state.queue[index].videoId}_$index" }
+                                   ) { index ->
+                                        val qItem = state.queue[index]
+                                        val isCurrent = state.videoId != null && qItem.videoId == state.videoId
 
-                                   items(playerState.queue.size) { index ->
-
-                                        val qItem = playerState.queue[index]
-
-                                        val upgradedArt = qItem.artUrl?.let {
-
-                                            val itStr = it.toString()
-
-                                            if (itStr.startsWith("file:///android_asset/")) {
-
-                                                it
-
-                                            } else {
-
-                                                val upgraded = com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(itStr) ?: itStr
-
-                                                if (it is android.net.Uri) android.net.Uri.parse(upgraded) else upgraded
-
-                                            }
-
-                                        } ?: qItem.artUrl
-
-                                        
-
-                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable {
-
-                                            swipeDirection = 1
-
-                                            val remaining = playerState.queue.drop(index + 1)
-
-                                            onSongSelectedFromQueue(PlayerState(
-
+                                        val rowData = remember(qItem.title, qItem.artist, qItem.artUrl) {
+                                            QueueItemRowData(
                                                 title = qItem.title,
-
                                                 artist = qItem.artist,
+                                                artUrl = qItem.artUrl
+                                            )
+                                        }
 
-                                                artUrl = upgradedArt,
-
-                                                videoId = qItem.videoId,
-
-                                                queue = remaining,
-
-                                                isExclusiveQueue = playerState.isExclusiveQueue,
-
-                                                album = qItem.album,
-
-                                                albumId = qItem.albumId
-
-                                            ))
-
-                                        }) {
-
-                                           AsyncImage(model = ImageRequest.Builder(context).data(upgradedArt).crossfade(false).build(), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp)))
-
-                                           Spacer(modifier = Modifier.width(12.dp))
-
-                                           Column(modifier = Modifier.weight(1f)) {
-
-                                               Text(qItem.title, color = contentColor, fontSize = 16.sp, maxLines = 1, fontWeight = FontWeight.SemiBold)
-
-                                                                                               Text(qItem.artist, color = contentColor.copy(alpha=0.6f), fontSize = 14.sp, maxLines = 1)
-
+                                        val onRowClick = remember(qItem, index, state) {
+                                            {
+                                                swipeDirection = 1
+                                                val upgradedArt = qItem.artUrl?.let {
+                                                    val itStr = it.toString()
+                                                    if (itStr.startsWith("file:///android_asset/")) {
+                                                        it
+                                                    } else {
+                                                        val upgraded = com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(itStr) ?: itStr
+                                                        if (it is android.net.Uri) android.net.Uri.parse(upgraded) else upgraded
+                                                    }
+                                                } ?: qItem.artUrl
+                                                val remaining = state.queue.drop(index + 1)
+                                                onSongSelectedFromQueue(PlayerState(
+                                                    title = qItem.title,
+                                                    artist = qItem.artist,
+                                                    artUrl = upgradedArt,
+                                                    videoId = qItem.videoId,
+                                                    queue = remaining,
+                                                    isExclusiveQueue = state.isExclusiveQueue,
+                                                    album = qItem.album,
+                                                    albumId = qItem.albumId
+                                                ))
                                             }
+                                        }
 
-                                            if (playerState != null && qItem.videoId == playerState.videoId) {
-                                                PlayingEqualizer(color = contentColor, isPlaying = isPlaying, modifier = Modifier.size(24.dp))
-                                            } else {
-                                                Icon(Icons.Default.Menu, contentDescription=null, tint=contentColor.copy(alpha=0.6f))
-                                            }
+                                        QueueItemRow(
+                                             rowData = rowData,
+                                             contentColor = contentColor,
+                                             isPlaying = if (isCurrent) isPlaying else false,
+                                             isCurrentPlayingItem = isCurrent,
+                                             context = context,
+                                             titleFontSize = 16.sp,
+                                             artistFontSize = 14.sp,
+                                             onClick = onRowClick
+                                        )
+                                    }
+                               }
 
+                               if (playerState?.isExclusiveQueue != true) {
+                                   val state = playerState
+                                   items(
+                                       count = upNextSongs.size,
+                                       key = { index -> "${upNextSongs[index].id}_$index" }
+                                   ) { i ->
+                                       val song = upNextSongs[i]
+                                       val isCurrent = state != null && song.id == state.videoId
+
+                                       val rowData = remember(song.title, song.artists, song.thumbnail) {
+                                           UpNextSongRowData(
+                                               title = song.title,
+                                               artist = song.artists.joinToString { it.name },
+                                               thumbnail = song.thumbnail
+                                           )
                                        }
 
+                                       val onRowClick = remember(song, i, upNextSongs, state) {
+                                           {
+                                               swipeDirection = 1
+                                               val upgradedArt = song.thumbnail?.let {
+                                                   com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(it) ?: it
+                                               } ?: song.thumbnail
+                                               onUpNextSongsChange(upNextSongs.drop(i + 1))
+                                               onSongSelectedFromQueue(PlayerState(
+                                                   title = song.title,
+                                                   artist = song.artists.joinToString { it.name },
+                                                   artUrl = upgradedArt,
+                                                   videoId = song.id,
+                                                   isExclusiveQueue = state?.isExclusiveQueue ?: false,
+                                                   album = song.album?.name,
+                                                   albumId = song.album?.id
+                                               ))
+                                           }
+                                       }
+
+                                       UpNextSongRow(
+                                           rowData = rowData,
+                                           contentColor = contentColor,
+                                           context = context,
+                                           isPlaying = if (isCurrent) isPlaying else false,
+                                           isCurrentPlayingItem = isCurrent,
+                                           titleFontSize = 16.sp,
+                                           artistFontSize = 14.sp,
+                                           onClick = onRowClick
+                                       )
                                    }
-
-                              }
-
-                              if (playerState?.isExclusiveQueue != true) items(upNextSongs.size) { i ->
-
-                                  val song = upNextSongs[i]
-
-                                  val hdThumb = song.thumbnail?.let {
-
-                                       com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(it) ?: it
-
-                                   } ?: song.thumbnail
-
-                                  Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable {
-
-                                      swipeDirection = 1
-
-                                      val upgradedArt = song.thumbnail?.let {
-
-                                          com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(it) ?: it
-
-                                      } ?: song.thumbnail
-
-                                      // Remove clicked song and all before it from the queue
-
-                                      onUpNextSongsChange(upNextSongs.drop(i + 1))
-
-                                      onSongSelectedFromQueue(PlayerState(
-
-                                          title = song.title,
-
-                                          artist = song.artists.joinToString { it.name },
-
-                                          artUrl = upgradedArt,
-
-                                          videoId = song.id,
-
-                                          isExclusiveQueue = playerState.isExclusiveQueue,
-
-                                          album = song.album?.name,
-
-                                          albumId = song.album?.id
-
-                                      ))
-
-                                  }) {
-
-                                      AsyncImage(model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp)))
-
-                                      Spacer(modifier = Modifier.width(12.dp))
-
-                                      Column(modifier = Modifier.weight(1f)) {
-
-                                          Text(song.title, color = contentColor, fontSize = 16.sp, maxLines = 1, fontWeight = FontWeight.SemiBold)
-
-                                                                                    Text(song.artists.joinToString { it.name }, color = contentColor.copy(alpha=0.6f), fontSize = 14.sp, maxLines = 1)
-
-                                      }
-
-                                      if (playerState != null && song.id == playerState.videoId) {
-                                          PlayingEqualizer(color = contentColor, isPlaying = isPlaying, modifier = Modifier.size(24.dp))
-                                      } else {
-                                          Icon(Icons.Default.Menu, contentDescription=null, tint=contentColor.copy(alpha=0.6f))
-                                      }
-
-                                  }
-
-                              }
+                               }
 
                           }
 
@@ -7449,160 +7350,107 @@ fun LandscapePlayerLayout(
                                 }
 
                                 if (playerState != null && playerState.queue.isNotEmpty()) {
-
-                                    items(playerState.queue.size) { index ->
-
-                                        val qItem = playerState.queue[index]
-
-                                        val upgradedArt = qItem.artUrl?.let {
-
-                                            val itStr = it.toString()
-
-                                            if (itStr.startsWith("file:///android_asset/")) {
-
-                                                it
-
-                                            } else {
-
-                                                val upgraded = com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(itStr) ?: itStr
-
-                                                if (it is android.net.Uri) android.net.Uri.parse(upgraded) else upgraded
-
-                                            }
-
-                                        } ?: qItem.artUrl
-
-
-
-                                        Row(
-
-                                            verticalAlignment = Alignment.CenterVertically,
-
-                                            modifier = Modifier.fillMaxWidth().clickable {
-
-                                                val remaining = playerState.queue.drop(index + 1)
-
-                                                onSongSelectedFromQueue(PlayerState(
-
-                                                    title = qItem.title,
-
-                                                    artist = qItem.artist,
-
-                                                    artUrl = upgradedArt,
-
-                                                    videoId = qItem.videoId,
-
-                                                    queue = remaining,
-
-                                                    isExclusiveQueue = playerState.isExclusiveQueue,
-
-                                                    album = qItem.album,
-
-                                                    albumId = qItem.albumId
-
-                                                ))
-
-                                            }
-
-                                        ) {
-
-                                            AsyncImage(model = ImageRequest.Builder(context).data(upgradedArt).crossfade(false).build(), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp)))
-
-                                            Spacer(modifier = Modifier.width(12.dp))
-
-                                            Column(modifier = Modifier.weight(1f)) {
-
-                                                Text(qItem.title, color = contentColor, fontSize = 15.sp, maxLines = 1, fontWeight = FontWeight.SemiBold)
-
-                                                                                                Text(qItem.artist, color = contentColor.copy(alpha=0.6f), fontSize = 13.sp, maxLines = 1)
-
-                                            }
-
-                                            if (playerState != null && qItem.videoId == playerState.videoId) {
-                                                PlayingEqualizer(color = contentColor, isPlaying = isPlaying, modifier = Modifier.size(24.dp))
-                                            } else {
-                                                Icon(Icons.Default.Menu, contentDescription=null, tint=contentColor.copy(alpha=0.6f))
-                                            }
-
-                                        }
-
-                                    }
-
-                                }
-
-                                if (playerState?.isExclusiveQueue != true) {
-
-                                    items(upNextSongs.size) { i ->
-
-                                        val song = upNextSongs[i]
-
-                                        val hdThumb = song.thumbnail?.let {
-
-                                            com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(it) ?: it
-
-                                        } ?: song.thumbnail
-
-                                        Row(
-
-                                            verticalAlignment = Alignment.CenterVertically,
-
-                                            modifier = Modifier.fillMaxWidth().clickable {
-
-                                                val upgradedArt = song.thumbnail?.let {
-
-                                                    com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(it) ?: it
-
-                                                } ?: song.thumbnail
-
-                                                onUpNextSongsChange(upNextSongs.drop(i + 1))
-
-                                                onSongSelectedFromQueue(PlayerState(
-
-                                                    title = song.title,
-
-                                                    artist = song.artists.joinToString { it.name },
-
-                                                    artUrl = upgradedArt,
-
-                                                    videoId = song.id,
-
-                                                    isExclusiveQueue = playerState?.isExclusiveQueue ?: false,
-
-                                                    album = song.album?.name,
-
-                                                    albumId = song.album?.id
-
-                                                ))
-
-                                            }
-
-                                        ) {
-
-                                            AsyncImage(model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp)))
-
-                                            Spacer(modifier = Modifier.width(12.dp))
-
-                                            Column(modifier = Modifier.weight(1f)) {
-
-                                                Text(song.title, color = contentColor, fontSize = 15.sp, maxLines = 1, fontWeight = FontWeight.SemiBold)
-
-                                                                                                Text(song.artists.joinToString { it.name }, color = contentColor.copy(alpha=0.6f), fontSize = 13.sp, maxLines = 1)
-
-                                            }
-
-                                            if (playerState != null && song.id == playerState.videoId) {
-                                                PlayingEqualizer(color = contentColor, isPlaying = isPlaying, modifier = Modifier.size(24.dp))
-                                            } else {
-                                                Icon(Icons.Default.Menu, contentDescription=null, tint=contentColor.copy(alpha=0.6f))
-                                            }
-
-                                        }
-
-                                    }
-
-                                }
-
-                                item { Spacer(modifier = Modifier.height(40.dp)) }
+                                     val state = playerState
+                                     items(
+                                         count = state.queue.size,
+                                         key = { index -> "${state.queue[index].videoId}_$index" }
+                                     ) { index ->
+                                         val qItem = state.queue[index]
+                                         val isCurrent = state.videoId != null && qItem.videoId == state.videoId
+
+                                         val rowData = remember(qItem.title, qItem.artist, qItem.artUrl) {
+                                             QueueItemRowData(
+                                                 title = qItem.title,
+                                                 artist = qItem.artist,
+                                                 artUrl = qItem.artUrl
+                                             )
+                                         }
+
+                                         val onRowClick = remember(qItem, index, state) {
+                                             {
+                                                 val remaining = state.queue.drop(index + 1)
+                                                 onSongSelectedFromQueue(PlayerState(
+                                                     title = qItem.title,
+                                                     artist = qItem.artist,
+                                                     artUrl = qItem.artUrl?.let {
+                                                         val itStr = it.toString()
+                                                         if (itStr.startsWith("file:///android_asset/")) {
+                                                             it
+                                                         } else {
+                                                             val upgraded = com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(itStr) ?: itStr
+                                                             if (it is android.net.Uri) android.net.Uri.parse(upgraded) else upgraded
+                                                         }
+                                                     } ?: qItem.artUrl,
+                                                     videoId = qItem.videoId,
+                                                     queue = remaining,
+                                                     isExclusiveQueue = state.isExclusiveQueue,
+                                                     album = qItem.album,
+                                                     albumId = qItem.albumId
+                                                 ))
+                                             }
+                                         }
+
+                                         QueueItemRow(
+                                             rowData = rowData,
+                                             contentColor = contentColor,
+                                             isPlaying = if (isCurrent) isPlaying else false,
+                                             isCurrentPlayingItem = isCurrent,
+                                             context = context,
+                                             titleFontSize = 15.sp,
+                                             artistFontSize = 13.sp,
+                                             onClick = onRowClick
+                                         )
+                                     }
+                                 }
+
+                                 if (playerState?.isExclusiveQueue != true) {
+                                     val state = playerState
+                                     items(
+                                         count = upNextSongs.size,
+                                         key = { index -> "${upNextSongs[index].id}_$index" }
+                                     ) { i ->
+                                         val song = upNextSongs[i]
+                                         val isCurrent = state != null && song.id == state.videoId
+
+                                         val rowData = remember(song.title, song.artists, song.thumbnail) {
+                                             UpNextSongRowData(
+                                                 title = song.title,
+                                                 artist = song.artists.joinToString { it.name },
+                                                 thumbnail = song.thumbnail
+                                             )
+                                         }
+
+                                         val onRowClick = remember(song, i, upNextSongs, state) {
+                                             {
+                                                 val upgradedArt = song.thumbnail?.let {
+                                                     com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(it) ?: it
+                                                 } ?: song.thumbnail
+                                                 onUpNextSongsChange(upNextSongs.drop(i + 1))
+                                                 onSongSelectedFromQueue(PlayerState(
+                                                     title = song.title,
+                                                     artist = song.artists.joinToString { it.name },
+                                                     artUrl = upgradedArt,
+                                                     videoId = song.id,
+                                                     isExclusiveQueue = state?.isExclusiveQueue ?: false,
+                                                     album = song.album?.name,
+                                                     albumId = song.album?.id
+                                                 ))
+                                             }
+                                         }
+
+                                         UpNextSongRow(
+                                             rowData = rowData,
+                                             contentColor = contentColor,
+                                             context = context,
+                                             isPlaying = if (isCurrent) isPlaying else false,
+                                             isCurrentPlayingItem = isCurrent,
+                                             titleFontSize = 15.sp,
+                                             artistFontSize = 13.sp,
+                                             onClick = onRowClick
+                                         )
+                                     }
+                                 }
+                                 item { Spacer(modifier = Modifier.height(40.dp)) }
 
                             }
 
@@ -8100,5 +7948,115 @@ private fun PlayingEqualizer(
             topLeft = Offset(startX + (barWidth + spacing) * 2f, h * (1f - h3)),
             size = androidx.compose.ui.geometry.Size(barWidth, h * h3)
         )
+    }
+}
+
+@Composable
+private fun QueueItemRow(
+    rowData: QueueItemRowData,
+    contentColor: Color,
+    isPlaying: Boolean,
+    isCurrentPlayingItem: Boolean,
+    context: android.content.Context,
+    titleFontSize: androidx.compose.ui.unit.TextUnit = 16.sp,
+    artistFontSize: androidx.compose.ui.unit.TextUnit = 14.sp,
+    onClick: () -> Unit
+) {
+    val upgradedArt = remember(rowData.artUrl) {
+        rowData.artUrl?.let {
+            val itStr = it.toString()
+            if (itStr.startsWith("file:///android_asset/")) {
+                it
+            } else {
+                val upgraded = com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(itStr) ?: itStr
+                if (it is android.net.Uri) android.net.Uri.parse(upgraded) else upgraded
+            }
+        } ?: rowData.artUrl
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+    ) {
+        AsyncImage(
+            model = upgradedArt,
+            contentDescription = null,
+            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp))
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = rowData.title,
+                color = contentColor,
+                fontSize = titleFontSize,
+                maxLines = 1,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = rowData.artist,
+                color = contentColor.copy(alpha = 0.6f),
+                fontSize = artistFontSize,
+                maxLines = 1
+            )
+        }
+        if (isCurrentPlayingItem) {
+            PlayingEqualizer(color = contentColor, isPlaying = isPlaying, modifier = Modifier.size(24.dp))
+        } else {
+            Icon(Icons.Default.Menu, contentDescription = null, tint = contentColor.copy(alpha = 0.6f))
+        }
+    }
+}
+
+@Composable
+private fun UpNextSongRow(
+    rowData: UpNextSongRowData,
+    contentColor: Color,
+    context: android.content.Context,
+    isPlaying: Boolean,
+    isCurrentPlayingItem: Boolean,
+    titleFontSize: androidx.compose.ui.unit.TextUnit = 16.sp,
+    artistFontSize: androidx.compose.ui.unit.TextUnit = 14.sp,
+    onClick: () -> Unit
+) {
+    val hdThumb = remember(rowData.thumbnail) {
+        rowData.thumbnail?.let {
+            com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(it) ?: it
+        } ?: rowData.thumbnail
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+    ) {
+        AsyncImage(
+            model = hdThumb,
+            contentDescription = null,
+            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp))
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = rowData.title,
+                color = contentColor,
+                fontSize = titleFontSize,
+                maxLines = 1,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = rowData.artist,
+                color = contentColor.copy(alpha = 0.6f),
+                fontSize = artistFontSize,
+                maxLines = 1
+            )
+        }
+        if (isCurrentPlayingItem) {
+            PlayingEqualizer(color = contentColor, isPlaying = isPlaying, modifier = Modifier.size(24.dp))
+        } else {
+            Icon(Icons.Default.Menu, contentDescription = null, tint = contentColor.copy(alpha = 0.6f))
+        }
     }
 }

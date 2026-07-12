@@ -736,11 +736,11 @@ class MainActivity : ComponentActivity() {
                                             val isCollapsed = isBottomBarCollapsed && playerState != null
                                             
                                             val springSpec = androidx.compose.animation.core.spring<androidx.compose.ui.unit.Dp>(
-                                                dampingRatio = 0.8f,
+                                                dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
                                                 stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
                                             )
                                             val floatSpringSpec = androidx.compose.animation.core.spring<Float>(
-                                                dampingRatio = 0.8f,
+                                                dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
                                                 stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
                                             )
 
@@ -749,7 +749,7 @@ class MainActivity : ComponentActivity() {
 
                                             val mpPadStart by androidx.compose.animation.core.animateDpAsState(if (isCollapsed) 80.dp else 16.dp, springSpec, label = "mpPadStart")
                                             val mpPadEnd by androidx.compose.animation.core.animateDpAsState(if (isCollapsed) 80.dp else 16.dp, springSpec, label = "mpPadEnd")
-                                            val mpPadBottom by androidx.compose.animation.core.animateDpAsState(if (isCollapsed) bottomPad + 4.dp else navBarHeightWithPadding + 12.dp, springSpec, label = "mpPadBottom")
+                                            val mpPadBottom by androidx.compose.animation.core.animateDpAsState(if (isCollapsed) bottomPad + 14.dp else navBarHeightWithPadding + 12.dp, springSpec, label = "mpPadBottom")
 
                                             val collapseProgress by androidx.compose.animation.core.animateFloatAsState(
                                                 targetValue = if (isCollapsed) 1f else 0f,
