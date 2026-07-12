@@ -109,13 +109,24 @@ fun RadioScreen(
                 val resampledAudio = withContext(Dispatchers.Default) {
                     AudioResampler.resample(decodedAudio, 16000).getOrNull()
                 }
-                
-                val signature = if (resampledAudio != null) {
+
+                // Guard: ShazamSignatureGenerator.fromI16 assumes Little Endian, like Echo-Music does
+                if (ByteOrder.nativeOrder() != ByteOrder.LITTLE_ENDIAN) {
+                    resultText = "Unsupported device byte order"
+                    isListening = false
+                    isProcessing = false
+                    return@LaunchedEffect
+                }
+
+                val signature = if (resampledAudio != null && resampledAudio.data.size >= 2 && resampledAudio.data.size % 2 == 0) {
                     withContext(Dispatchers.Default) {
                         val shorts = ShortArray(resampledAudio.data.size / 2)
+                        // Use LITTLE_ENDIAN explicitly to match ShazamSignatureGenerator's byte order expectation
                         ByteBuffer.wrap(resampledAudio.data).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(shorts)
-                        
-                        ShazamSignatureGenerator().apply { feedPcm16Mono(shorts) }.nextSignatureOrNull()
+
+                        // Use maxTimeSeconds = 10.0 matching Echo-Music's MAX_TIME_SECONDS = 12.0
+                        // The default 3.1s was the main reason recognition never found anything
+                        ShazamSignatureGenerator(maxTimeSeconds = 10.0).apply { feedPcm16Mono(shorts) }.nextSignatureOrNull()
                     }
                 } else null
 
