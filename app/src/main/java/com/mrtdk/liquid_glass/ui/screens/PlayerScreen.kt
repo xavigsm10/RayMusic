@@ -1586,12 +1586,11 @@ fun PlayerScreen(
 
 
         var coverBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
-
-
+        var reflectionSkew by remember { mutableStateOf(0.12f) }
 
         LaunchedEffect(hdArtUrl) {
-
             coverBitmap = null
+            reflectionSkew = 0.12f
 
             if (hdArtUrl != null) {
 
@@ -1634,8 +1633,8 @@ fun PlayerScreen(
                         }
 
                     if (bitmap != null) {
-
                         coverBitmap = bitmap.asImageBitmap()
+                        reflectionSkew = calculateDominantSkew(bitmap)
 
                         try {
 
@@ -2474,8 +2473,7 @@ fun PlayerScreen(
                         val srcWInt = srcWidth.toInt().coerceIn(1, currentCoverBitmap.width - srcXInt)
                         val srcYInt = srcY.toInt().coerceIn(0, currentCoverBitmap.height - sampleH)
 
-                        val songHash = playerState?.videoId?.hashCode() ?: 0
-                        val skewX = if (songHash % 2 == 0) 0.18f else -0.18f
+                        val skewX = reflectionSkew
                         val maxShift = (kotlin.math.abs(skewX) * screenH).toInt()
 
                         drawIntoCanvas { canvas ->
@@ -3879,8 +3877,8 @@ fun PlayerScreen(
                         onPlaybackStarted = { isVideoPlaying = true },
 
                         onFrameCaptured = { frameBitmap ->
-
                             coverBitmap = frameBitmap.asImageBitmap()
+                            reflectionSkew = calculateDominantSkew(frameBitmap)
 
                             try {
 
@@ -8055,4 +8053,52 @@ private fun UpNextSongRow(
             Icon(Icons.Default.Menu, contentDescription = null, tint = contentColor.copy(alpha = 0.6f))
         }
     }
+}
+
+private fun calculateDominantSkew(bitmap: android.graphics.Bitmap): Float {
+    val w = bitmap.width
+    val h = bitmap.height
+    if (w < 40 || h < 40) return 0.15f // Fallback
+
+    val y1 = h - 2
+    val y2 = h - 12
+
+    var bestDx = 0
+    var minDiff = Long.MAX_VALUE
+
+    val range = 12 // test shifts from -12 to 12
+    val margin = 15
+
+    // Cache luminance values for rows to make it super fast
+    val lum1 = IntArray(w)
+    val lum2 = IntArray(w)
+    for (x in 0 until w) {
+        val p1 = bitmap.getPixel(x, y1)
+        lum1[x] = ((p1 shr 16 and 0xFF) * 3 + (p1 shr 8 and 0xFF) * 6 + (p1 and 0xFF)) / 10
+
+        val p2 = bitmap.getPixel(x, y2)
+        lum2[x] = ((p2 shr 16 and 0xFF) * 3 + (p2 shr 8 and 0xFF) * 6 + (p2 and 0xFF)) / 10
+    }
+
+    for (dx in -range..range) {
+        var diff = 0L
+        var count = 0
+        for (x in margin until (w - margin)) {
+            val x2 = x + dx
+            if (x2 in 0 until w) {
+                diff += kotlin.math.abs(lum1[x] - lum2[x2])
+                count++
+            }
+        }
+        if (count > 0) {
+            val avgDiff = diff / count
+            if (avgDiff < minDiff) {
+                minDiff = avgDiff
+                bestDx = dx
+            }
+        }
+    }
+
+    val skew = -(bestDx / 10f) * 0.22f
+    return skew.coerceIn(-0.25f, 0.25f)
 }
