@@ -2,6 +2,7 @@ package com.mrtdk.liquid_glass.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import com.mrtdk.liquid_glass.ui.screens.PlayerState
@@ -83,7 +84,20 @@ object LibraryManager {
         _recentlyPlayed.value = dbHelper.getRecentlyPlayed()
         _downloadedSongs.value = dbHelper.getDownloadedSongs()
 
+        com.mrtdk.liquid_glass.spotify.SpotifySession.init()
+        com.mrtdk.liquid_glass.ui.theme.ThemeManager.init()
+
         isInitialized = true
+
+        if (com.mrtdk.liquid_glass.spotify.SpotifySession.isLoggedIn.value) {
+            kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    syncSpotifyPlaylists()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
     }
 
     private fun migrateFromSharedPrefs() {
@@ -318,6 +332,115 @@ object LibraryManager {
         if (!isInitialized) return
         dbHelper.togglePinPlaylist(playlistId)
         _playlists.value = dbHelper.getPlaylists()
+    }
+
+    suspend fun syncSpotifyPlaylists() {
+        if (!isInitialized) return
+        try {
+            com.mrtdk.liquid_glass.spotify.SpotifySession.ensureValidToken()
+            
+            // 1. Sync Playlists
+            val spotifyPlaylists = com.mrtdk.liquid_glass.spotify.Spotify.myPlaylists().getOrNull() ?: emptyList()
+            for (spPlaylist in spotifyPlaylists) {
+                if (spPlaylist.id.isBlank() || spPlaylist.name.isBlank()) continue
+                val playlistId = "spotify_${spPlaylist.id}"
+                val existing = _playlists.value.find { it.id == playlistId || it.id == spPlaylist.id }
+                val coverUrl = spPlaylist.images.firstOrNull()?.url
+
+                if (existing == null) {
+                    dbHelper.insertPlaylist(Playlist(playlistId, spPlaylist.name, emptyList(), coverUrl, false, System.currentTimeMillis()))
+                } else {
+                    dbHelper.updatePlaylist(existing.id, spPlaylist.name, coverUrl ?: existing.coverUrl)
+                }
+            }
+            _playlists.value = dbHelper.getPlaylists()
+
+            // 2. Sync Albums
+            val spotifyAlbums = com.mrtdk.liquid_glass.spotify.Spotify.myAlbums().getOrNull() ?: emptyList()
+            for (album in spotifyAlbums) {
+                if (album.id.isBlank() || album.name.isBlank()) continue
+                val albumId = "spotify_album_${album.id}"
+                val artistStr = album.artists.joinToString(", ") { it.name }
+                val item = LibraryItem(
+                    id = albumId,
+                    title = album.name,
+                    subtitle = if (artistStr.isNotBlank()) "Álbum • $artistStr" else "Álbum",
+                    thumbnail = album.images.firstOrNull()?.url,
+                    type = ItemType.ALBUM,
+                    album = album.name
+                )
+                dbHelper.insertSavedItem(item)
+            }
+
+            // 3. Sync Artists
+            val spotifyArtists = com.mrtdk.liquid_glass.spotify.Spotify.myArtists().getOrNull() ?: emptyList()
+            for (artist in spotifyArtists) {
+                if (artist.id.isBlank() || artist.name.isBlank()) continue
+                val artistId = "spotify_artist_${artist.id}"
+                val item = LibraryItem(
+                    id = artistId,
+                    title = artist.name,
+                    subtitle = "Artista",
+                    thumbnail = artist.images.firstOrNull()?.url,
+                    type = ItemType.ARTIST
+                )
+                dbHelper.insertSavedItem(item)
+            }
+
+            _savedItems.value = dbHelper.getSavedItems()
+
+            // Asynchronously fetch tracks for each imported playlist
+            for (spPlaylist in spotifyPlaylists) {
+                if (spPlaylist.id.isBlank()) continue
+                val playlistId = "spotify_${spPlaylist.id}"
+                kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        fetchSpotifyPlaylistTracks(playlistId)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    suspend fun fetchSpotifyPlaylistTracks(playlistId: String) {
+        if (!isInitialized) return
+        val rawId = playlistId.removePrefix("spotify_")
+        try {
+            val allTracks = mutableListOf<com.mrtdk.liquid_glass.spotify.SpotifyTrack>()
+            var offset = 0
+            val limit = 100
+            while (true) {
+                val page = com.mrtdk.liquid_glass.spotify.Spotify.playlistTracks(rawId, limit = limit, offset = offset).getOrNull() ?: break
+                if (page.isEmpty()) break
+                allTracks.addAll(page)
+                if (page.size < limit) break
+                offset += page.size
+            }
+            if (allTracks.isEmpty()) return
+
+            val items = allTracks.map { track ->
+                LibraryItem(
+                    id = track.id,
+                    title = track.name,
+                    subtitle = track.artists.firstOrNull()?.name ?: "",
+                    thumbnail = track.album?.images?.firstOrNull()?.url,
+                    type = ItemType.SONG,
+                    album = track.album?.name
+                )
+            }
+            val existing = _playlists.value.find { it.id == playlistId }
+            if (existing != null) {
+                val updated = existing.copy(items = items)
+                dbHelper.insertPlaylist(updated)
+                _playlists.value = dbHelper.getPlaylists()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     fun deletePlaylist(playlistId: String) {

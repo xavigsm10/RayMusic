@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBackIosNew
@@ -101,6 +103,7 @@ fun AlbumScreen(
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
     var tracks by remember { mutableStateOf<List<SongItem>>(emptyList()) }
     var dominantColor by remember { mutableStateOf(Color(0xFF1E1E1E)) }
+    var albumError by remember { mutableStateOf<String?>(null) }
     val savedItems by LibraryManager.savedItems.collectAsState()
     val isSaved = savedItems.any { it.id == albumState.id }
 
@@ -272,15 +275,19 @@ fun AlbumScreen(
             } else {
                 var loaded = false
                 val isAlbum = albumState.id.startsWith("MPREb") || albumState.id.startsWith("FEmusic")
+                val errors = mutableListOf<String>()
                 if (isAlbum) {
                     YouTube.album(albumState.id).onSuccess { albumPage ->
                         tracks = albumPage.songs
                         loaded = true
-                    }.onFailure {
+                    }.onFailure { err ->
+                        errors.add("Album API error: ${err.localizedMessage ?: err.toString()}")
                         val pId = albumState.playlistId.ifEmpty { albumState.id }.removePrefix("VL")
                         YouTube.playlist(pId).onSuccess { playlistPage ->
                             tracks = playlistPage.songs
                             loaded = true
+                        }.onFailure { err2 ->
+                            errors.add("Playlist fallback error: ${err2.localizedMessage ?: err2.toString()}")
                         }
                     }
                 } else {
@@ -288,10 +295,13 @@ fun AlbumScreen(
                     YouTube.playlist(pId).onSuccess { playlistPage ->
                         tracks = playlistPage.songs
                         loaded = true
-                    }.onFailure {
+                    }.onFailure { err ->
+                        errors.add("Playlist API error: ${err.localizedMessage ?: err.toString()}")
                         YouTube.album(albumState.id).onSuccess { albumPage ->
                             tracks = albumPage.songs
                             loaded = true
+                        }.onFailure { err2 ->
+                            errors.add("Album fallback error: ${err2.localizedMessage ?: err2.toString()}")
                         }
                     }
                 }
@@ -310,7 +320,14 @@ fun AlbumScreen(
                                 explicit = false
                             )
                         }
+                        albumError = null
+                    } else {
+                        if (errors.isNotEmpty()) {
+                            albumError = errors.joinToString("\n")
+                        }
                     }
+                } else {
+                    albumError = null
                 }
             }
         }
@@ -1206,6 +1223,63 @@ glassContent = {
                 }
             }
         }
+    }
+
+    if (albumError != null) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { albumError = null },
+            title = {
+                Text(
+                    text = "Error al cargar canciones",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "No se pudieron cargar las canciones del álbum. Por favor, toma una captura de pantalla de este error para enviársela al desarrollador:",
+                        color = Color.LightGray,
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 200.dp)
+                            .background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                            .padding(8.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        Text(
+                            text = albumError ?: "",
+                            color = Color.Red,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        val clip = android.content.ClipData.newPlainText("Error RayMusic", albumError)
+                        clipboard.setPrimaryClip(clip)
+                        android.widget.Toast.makeText(context, "Copiado al portapapeles", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                ) {
+                    Text("Copiar", color = Color(0xFFE91E63))
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { albumError = null }) {
+                    Text("Cerrar", color = Color.White)
+                }
+            },
+            containerColor = Color(0xFF1E1E1E),
+            textContentColor = Color.White
+        )
     }
 }
 

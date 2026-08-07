@@ -46,6 +46,9 @@ class MusicPlayer(private val context: Context) {
     private val _repeatMode = MutableStateFlow(Player.REPEAT_MODE_OFF)
     val repeatMode: StateFlow<Int> = _repeatMode
 
+    private val _playbackError = MutableStateFlow<String?>(null)
+    val playbackError: StateFlow<String?> = _playbackError
+
     init {
         val sessionToken = SessionToken(context, ComponentName(context, MusicService::class.java))
         controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
@@ -66,10 +69,17 @@ class MusicPlayer(private val context: Context) {
                         !com.mrtdk.liquid_glass.playback.ListenTogetherManager.isSyncing) {
                         val currentPos = controller?.currentPosition ?: 0L
                         val trackId = controller?.currentMediaItem?.mediaId
+                        val metadata = controller?.currentMediaItem?.mediaMetadata
+                        val title = metadata?.title?.toString()
+                        val artist = metadata?.artist?.toString()
+                        val artUrl = metadata?.artworkUri?.toString()
                         com.mrtdk.liquid_glass.playback.ListenTogetherManager.sendPlaybackAction(
                             if (isPlaying) "play" else "pause",
                             currentPos,
-                            trackId
+                            trackId,
+                            title,
+                            artist,
+                            artUrl
                         )
                     }
                 }
@@ -82,19 +92,32 @@ class MusicPlayer(private val context: Context) {
                         _songEnded.value = _songEnded.value + 1
                     }
                 }
+
+                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    val rootCause = error.cause ?: error
+                    _playbackError.value = "Playback error (code ${error.errorCode}): ${error.message}\nCause: ${rootCause.localizedMessage ?: rootCause.toString()}"
+                }
                 
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                     _duration.value = controller?.duration ?: 0L
+                    _playbackError.value = null
 
                     // ListenTogether sync broadcast
                     if (com.mrtdk.liquid_glass.playback.ListenTogetherManager.isConnected &&
                         com.mrtdk.liquid_glass.playback.ListenTogetherManager.role == "host" &&
                         !com.mrtdk.liquid_glass.playback.ListenTogetherManager.isSyncing) {
                         val trackId = mediaItem?.mediaId
+                        val metadata = mediaItem?.mediaMetadata
+                        val title = metadata?.title?.toString()
+                        val artist = metadata?.artist?.toString()
+                        val artUrl = metadata?.artworkUri?.toString()
                         com.mrtdk.liquid_glass.playback.ListenTogetherManager.sendPlaybackAction(
                             "play",
                             0L,
-                            trackId
+                            trackId,
+                            title,
+                            artist,
+                            artUrl
                         )
                     }
                 }
@@ -110,10 +133,17 @@ class MusicPlayer(private val context: Context) {
                             com.mrtdk.liquid_glass.playback.ListenTogetherManager.role == "host" &&
                             !com.mrtdk.liquid_glass.playback.ListenTogetherManager.isSyncing) {
                             val trackId = controller?.currentMediaItem?.mediaId
+                            val metadata = controller?.currentMediaItem?.mediaMetadata
+                            val title = metadata?.title?.toString()
+                            val artist = metadata?.artist?.toString()
+                            val artUrl = metadata?.artworkUri?.toString()
                             com.mrtdk.liquid_glass.playback.ListenTogetherManager.sendPlaybackAction(
                                 "seek",
                                 newPosition.positionMs,
-                                trackId
+                                trackId,
+                                title,
+                                artist,
+                                artUrl
                             )
                         }
                     }
@@ -151,6 +181,7 @@ class MusicPlayer(private val context: Context) {
     }
 
     fun playLocalSong(contentUri: Uri, title: String? = null, artist: String? = null, artUrl: String? = null) {
+        _playbackError.value = null
         val metadata = androidx.media3.common.MediaMetadata.Builder().apply {
             title?.let { setTitle(it) }
             artist?.let { setArtist(it) }
@@ -166,6 +197,7 @@ class MusicPlayer(private val context: Context) {
     }
 
     fun playOnlineSong(videoId: String, title: String? = null, artist: String? = null, artUrl: String? = null) {
+        _playbackError.value = null
         android.util.Log.d("MusicPlayer", "Playing stream instantly: yt://$videoId")
         
         val localUriStr = com.mrtdk.liquid_glass.data.LibraryManager.getString("local_uri_$videoId")
@@ -202,6 +234,7 @@ class MusicPlayer(private val context: Context) {
     }
 
     fun playOnlineSongs(songs: List<MediaItem>, startIndex: Int = 0) {
+        _playbackError.value = null
         controller?.setMediaItems(songs, startIndex, 0L)
         controller?.prepare()
         controller?.play()
@@ -242,7 +275,11 @@ class MusicPlayer(private val context: Context) {
     }
 
     fun setVolume(volume: Float) {
-        controller?.volume = volume
+        controller?.setVolume(volume)
+    }
+
+    fun clearPlaybackError() {
+        _playbackError.value = null
     }
 
     fun setShuffleModeEnabled(enabled: Boolean) {
@@ -282,27 +319,105 @@ class MusicPlayer(private val context: Context) {
 
     companion object {
         private val songUrlCache = java.util.concurrent.ConcurrentHashMap<String, Pair<String, Long>>()
+        private val spotifyToYtCache = java.util.concurrent.ConcurrentHashMap<String, String>()
 
         fun clearCache(videoId: String) {
             songUrlCache.remove(videoId)
+            spotifyToYtCache.remove(videoId)
+        }
+
+        private fun isYouTubeId(id: String): Boolean {
+            return id.length == 11 && !id.contains(" ") && !id.contains(":") && !id.contains("/")
         }
 
         suspend fun resolveUrl(videoId: String): String? = withContext(Dispatchers.IO) {
             val quality = com.mrtdk.liquid_glass.data.LibraryManager.getString("audio_quality", "high") ?: "high"
             val preferLow = quality == "low"
 
-            // Check cache
+            // Check cache for this exact videoId (Spotify or YT)
             songUrlCache[videoId]?.takeIf { it.second > System.currentTimeMillis() }?.let {
                 return@withContext it.first
             }
 
+            var targetVideoId = videoId
+
+            // If not a valid 11-char YouTube ID (e.g. Spotify ID or custom ID)
+            if (!isYouTubeId(targetVideoId)) {
+                spotifyToYtCache[videoId]?.let { cachedYtId ->
+                    targetVideoId = cachedYtId
+                } ?: run {
+                    val currentSong = com.mrtdk.liquid_glass.playback.PlaybackQueue.currentSong
+                    val query = if (currentSong != null && (currentSong.videoId == videoId || videoId.contains(currentSong.title, ignoreCase = true))) {
+                        "${currentSong.artist} ${currentSong.title}".trim()
+                    } else {
+                        videoId
+                    }
+
+                    if (query.isNotBlank()) {
+                        val foundYtId = try {
+                            YouTube.search(query, YouTube.SearchFilter.FILTER_SONG)
+                                .getOrNull()
+                                ?.items
+                                ?.filterIsInstance<com.echo.innertube.models.SongItem>()
+                                ?.firstOrNull()
+                                ?.id
+                        } catch (e: Exception) {
+                            android.util.Log.e("MusicPlayer", "Failed YouTube search for Spotify track $query", e)
+                            null
+                        }
+
+                        if (foundYtId != null && isYouTubeId(foundYtId)) {
+                            spotifyToYtCache[videoId] = foundYtId
+                            targetVideoId = foundYtId
+                            android.util.Log.d("MusicPlayer", "Mapped Spotify track $videoId -> YT $targetVideoId ($query)")
+                        }
+                    }
+                }
+            }
+
+            // Extract stream URL for targetVideoId
+            var formatUrl = extractDirectStreamUrl(targetVideoId, preferLow)
+
+            // Fallback: If direct stream extraction failed, attempt search fallback
+            if (formatUrl == null && targetVideoId == videoId && !isYouTubeId(targetVideoId)) {
+                val currentSong = com.mrtdk.liquid_glass.playback.PlaybackQueue.currentSong
+                if (currentSong != null) {
+                    val fallbackQuery = "${currentSong.artist} ${currentSong.title}".trim()
+                    if (fallbackQuery.isNotBlank()) {
+                        val fallbackYtId = try {
+                            YouTube.search(fallbackQuery, YouTube.SearchFilter.FILTER_SONG)
+                                .getOrNull()
+                                ?.items
+                                ?.filterIsInstance<com.echo.innertube.models.SongItem>()
+                                ?.firstOrNull()
+                                ?.id
+                        } catch (_: Exception) { null }
+
+                        if (fallbackYtId != null && isYouTubeId(fallbackYtId)) {
+                            formatUrl = extractDirectStreamUrl(fallbackYtId, preferLow)
+                        }
+                    }
+                }
+            }
+
+            if (formatUrl != null) {
+                // Cache stream URL for 6 hours
+                songUrlCache[videoId] = Pair(formatUrl, System.currentTimeMillis() + 6 * 60 * 60 * 1000L)
+            }
+
+            formatUrl
+        }
+
+        private suspend fun extractDirectStreamUrl(videoId: String, preferLow: Boolean): String? = withContext(Dispatchers.IO) {
+            if (!isYouTubeId(videoId)) return@withContext null
+
             if (YouTube.cookie == null && YouTube.visitorData == null) {
-                try { YouTube.visitorData = YouTube.visitorData().getOrNull() } catch (e: Exception) {}
+                try { YouTube.visitorData = YouTube.visitorData().getOrNull() } catch (_: Exception) {}
             }
 
             var formatUrl: String? = null
             var usedClient = "ANDROID"
-            
+
             kotlinx.coroutines.coroutineScope {
                 val clientsToTry = listOf(
                     com.echo.innertube.models.YouTubeClient.IOS,
@@ -310,16 +425,16 @@ class MusicPlayer(private val context: Context) {
                     com.echo.innertube.models.YouTubeClient.ANDROID_VR_NO_AUTH,
                     com.echo.innertube.models.YouTubeClient.TVHTML5_SIMPLY_EMBEDDED_PLAYER
                 )
-                
+
                 val httpClient = okhttp3.OkHttpClient.Builder()
                     .proxy(YouTube.proxy)
                     .connectTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
                     .readTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
                     .fastFallback(true)
                     .build()
-                    
+
                 val channel = kotlinx.coroutines.channels.Channel<Pair<String, String>?>(clientsToTry.size + 1)
-                
+
                 // Job 1: NewPipe Extraction
                 launch(Dispatchers.IO) {
                     try {
@@ -351,109 +466,104 @@ class MusicPlayer(private val context: Context) {
                     }
                     channel.trySend(null)
                 }
-                
+
                 val jobs = clientsToTry.map { client ->
-                        launch(Dispatchers.IO) {
-                            try {
-                                val signatureTimestamp = if (client.useSignatureTimestamp) com.echo.innertube.NewPipeUtils.getSignatureTimestamp(videoId).getOrNull() else null
-                                val playerResponse = YouTube.player(videoId, null, client, signatureTimestamp).getOrNull()
-                                
-                                val responseToUse = try {
-                                    if (playerResponse != null) YouTube.newPipePlayer(videoId, playerResponse) ?: playerResponse else null
-                                } catch (e: Exception) {
-                                    playerResponse
-                                }
-                                
-                                val formats = responseToUse?.streamingData?.adaptiveFormats ?: emptyList()
-                                val audioFormats = formats.filter { it.mimeType.startsWith("audio/") }
-                                val format = if (preferLow) {
-                                    audioFormats.minByOrNull { it.bitrate } ?: formats.find { it.mimeType.startsWith("audio/") }
-                                } else {
-                                    audioFormats.maxByOrNull { it.bitrate } ?: formats.find { it.mimeType.startsWith("audio/") }
-                                }
-                                
-                                if (format != null) {
-                                    val candidateUrl = try { 
-                                        com.echo.innertube.NewPipeUtils.getStreamUrl(format, videoId).getOrNull() ?: throw Exception("NewPipe failed to extract")
-                                    } catch (e: Exception) { 
-                                        if (client == com.echo.innertube.models.YouTubeClient.TVHTML5_SIMPLY_EMBEDDED_PLAYER || 
-                                            client == com.echo.innertube.models.YouTubeClient.ANDROID_VR_NO_AUTH) {
-                                            format.url
-                                        } else {
-                                            null
-                                        }
-                                    }
-                                    if (candidateUrl != null) {
-                                        val testUrl = if (candidateUrl.contains("c=")) candidateUrl else candidateUrl + (if (candidateUrl.contains("?")) "&" else "?") + "c=" + client.clientName
-                                        
-                                        val cName = client.clientName
-                                        val ua = when {
-                                            cName.equals("WEB_REMIX", ignoreCase = true) || cName.equals("WEB", ignoreCase = true) || cName.equals("WEB_CREATOR", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.USER_AGENT_WEB
-                                            cName.equals("TVHTML5", ignoreCase = true) || cName.contains("TVHTML5_SIMPLY", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.TVHTML5.userAgent
-                                            cName.startsWith("IOS", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.IOS.userAgent
-                                            cName.startsWith("ANDROID_VR", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.ANDROID_VR_NO_AUTH.userAgent
-                                            cName.startsWith("ANDROID", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.MOBILE.userAgent
-                                            else -> com.echo.innertube.models.YouTubeClient.ANDROID_VR_NO_AUTH.userAgent
-                                        }
-                                        
-                                        val requestBuilder = okhttp3.Request.Builder()
-                                            .head()
-                                            .url(testUrl)
-                                            .header("User-Agent", ua)
-                                        
-                                        val origin = when {
-                                            cName.equals("WEB_REMIX", ignoreCase = true) || cName.equals("WEB", ignoreCase = true) || cName.equals("WEB_CREATOR", ignoreCase = true) -> "https://music.youtube.com"
-                                            cName.equals("TVHTML5", ignoreCase = true) || cName.contains("TVHTML5_SIMPLY", ignoreCase = true) -> "https://www.youtube.com"
-                                            else -> null
-                                        }
-                                        val referer = when {
-                                            cName.equals("WEB_REMIX", ignoreCase = true) || cName.equals("WEB", ignoreCase = true) || cName.equals("WEB_CREATOR", ignoreCase = true) -> "https://music.youtube.com/"
-                                            cName.equals("TVHTML5", ignoreCase = true) || cName.contains("TVHTML5_SIMPLY", ignoreCase = true) -> "https://www.youtube.com/tv"
-                                            else -> null
-                                        }
-                                        if (origin != null) {
-                                            requestBuilder.header("Origin", origin)
-                                            requestBuilder.header("Referer", referer ?: "")
-                                        }
-                                        
-                                        if (!cName.contains("NO_AUTH", ignoreCase = true) && !cName.contains("TVHTML5_SIMPLY", ignoreCase = true)) {
-                                            YouTube.cookie?.let { requestBuilder.header("Cookie", it) }
-                                        }
-                                        
-                                        val response = httpClient.newCall(requestBuilder.build()).execute()
-                                        if (response.isSuccessful || response.code == 206) {
-                                            channel.trySend(Pair(candidateUrl, client.clientName))
-                                            return@launch
-                                        }
-                                    }
-                                }
-                            } catch (e: Exception) {
-                                // Ignored
+                    launch(Dispatchers.IO) {
+                        try {
+                            val signatureTimestamp = if (client.useSignatureTimestamp) com.echo.innertube.NewPipeUtils.getSignatureTimestamp(videoId).getOrNull() else null
+                            val playerResponse = YouTube.player(videoId, null, client, signatureTimestamp).getOrNull()
+
+                            val responseToUse = try {
+                                if (playerResponse != null) YouTube.newPipePlayer(videoId, playerResponse) ?: playerResponse else null
+                            } catch (_: Exception) {
+                                playerResponse
                             }
-                            channel.trySend(null)
+
+                            val formats = responseToUse?.streamingData?.adaptiveFormats ?: emptyList()
+                            val audioFormats = formats.filter { it.mimeType.startsWith("audio/") }
+                            val format = if (preferLow) {
+                                audioFormats.minByOrNull { it.bitrate } ?: formats.find { it.mimeType.startsWith("audio/") }
+                            } else {
+                                audioFormats.maxByOrNull { it.bitrate } ?: formats.find { it.mimeType.startsWith("audio/") }
+                            }
+
+                            if (format != null) {
+                                val candidateUrl = try {
+                                    com.echo.innertube.NewPipeUtils.getStreamUrl(format, videoId).getOrNull() ?: throw Exception("NewPipe failed to extract")
+                                } catch (_: Exception) {
+                                    if (client == com.echo.innertube.models.YouTubeClient.TVHTML5_SIMPLY_EMBEDDED_PLAYER ||
+                                        client == com.echo.innertube.models.YouTubeClient.ANDROID_VR_NO_AUTH) {
+                                        format.url
+                                    } else {
+                                        null
+                                    }
+                                }
+                                if (candidateUrl != null) {
+                                    val testUrl = if (candidateUrl.contains("c=")) candidateUrl else candidateUrl + (if (candidateUrl.contains("?")) "&" else "?") + "c=" + client.clientName
+
+                                    val cName = client.clientName
+                                    val ua = when {
+                                        cName.equals("WEB_REMIX", ignoreCase = true) || cName.equals("WEB", ignoreCase = true) || cName.equals("WEB_CREATOR", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.USER_AGENT_WEB
+                                        cName.equals("TVHTML5", ignoreCase = true) || cName.contains("TVHTML5_SIMPLY", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.TVHTML5.userAgent
+                                        cName.startsWith("IOS", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.IOS.userAgent
+                                        cName.startsWith("ANDROID_VR", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.ANDROID_VR_NO_AUTH.userAgent
+                                        cName.startsWith("ANDROID", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.MOBILE.userAgent
+                                        else -> com.echo.innertube.models.YouTubeClient.ANDROID_VR_NO_AUTH.userAgent
+                                    }
+
+                                    val requestBuilder = okhttp3.Request.Builder()
+                                        .head()
+                                        .url(testUrl)
+                                        .header("User-Agent", ua)
+
+                                    val origin = when {
+                                        cName.equals("WEB_REMIX", ignoreCase = true) || cName.equals("WEB", ignoreCase = true) || cName.equals("WEB_CREATOR", ignoreCase = true) -> "https://music.youtube.com"
+                                        cName.equals("TVHTML5", ignoreCase = true) || cName.contains("TVHTML5_SIMPLY", ignoreCase = true) -> "https://www.youtube.com"
+                                        else -> null
+                                    }
+                                    val referer = when {
+                                        cName.equals("WEB_REMIX", ignoreCase = true) || cName.equals("WEB", ignoreCase = true) || cName.equals("WEB_CREATOR", ignoreCase = true) -> "https://music.youtube.com/"
+                                        cName.equals("TVHTML5", ignoreCase = true) || cName.contains("TVHTML5_SIMPLY", ignoreCase = true) -> "https://www.youtube.com/tv"
+                                        else -> null
+                                    }
+                                    if (origin != null) {
+                                        requestBuilder.header("Origin", origin)
+                                        requestBuilder.header("Referer", referer ?: "")
+                                    }
+
+                                    if (!cName.contains("NO_AUTH", ignoreCase = true) && !cName.contains("TVHTML5_SIMPLY", ignoreCase = true)) {
+                                        YouTube.cookie?.let { requestBuilder.header("Cookie", it) }
+                                    }
+
+                                    val response = httpClient.newCall(requestBuilder.build()).execute()
+                                    if (response.isSuccessful || response.code == 206) {
+                                        channel.trySend(Pair(candidateUrl, client.clientName))
+                                        return@launch
+                                    }
+                                }
+                            }
+                        } catch (_: Exception) {
+                            // Ignored
                         }
-                    }
-                    
-                    for (i in 0..clientsToTry.size) {
-                        val result = channel.receive()
-                        if (result != null) {
-                            formatUrl = result.first
-                            usedClient = result.second
-                            jobs.forEach { it.cancel() }
-                            break
-                        }
+                        channel.trySend(null)
                     }
                 }
-            
+
+                for (i in 0..clientsToTry.size) {
+                    val result = channel.receive()
+                    if (result != null) {
+                        formatUrl = result.first
+                        usedClient = result.second
+                        jobs.forEach { it.cancel() }
+                        break
+                    }
+                }
+            }
+
             if (formatUrl != null && !formatUrl!!.contains("c=")) {
                 formatUrl = formatUrl + (if (formatUrl!!.contains("?")) "&" else "?") + "c=" + usedClient
             }
-            
-            if (formatUrl != null) {
-                // Cache for 6 hours
-                songUrlCache[videoId] = Pair(formatUrl!!, System.currentTimeMillis() + 6 * 60 * 60 * 1000L)
-            }
-            
+
             formatUrl
         }
     }

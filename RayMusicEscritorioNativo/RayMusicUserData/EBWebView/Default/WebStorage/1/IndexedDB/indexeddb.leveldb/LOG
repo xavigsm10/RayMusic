@@ -1,0 +1,16 @@
+2026/08/03-01:14:08.046 62e0 Reusing MANIFEST C:\Users\Xavi\Documents\RayMusic\RayMusicEscritorioNativo\RayMusicUserData\EBWebView\Default\WebStorage\1\IndexedDB\indexeddb.leveldb/MANIFEST-000001
+2026/08/03-01:14:08.047 62e0 Recovering log #92
+2026/08/03-01:14:08.047 62e0 Reusing old log C:\Users\Xavi\Documents\RayMusic\RayMusicEscritorioNativo\RayMusicUserData\EBWebView\Default\WebStorage\1\IndexedDB\indexeddb.leveldb/000092.log 
+2026/08/03-01:14:08.047 62e0 Delete type=2 #90
+2026/08/03-01:14:08.047 62e0 Delete type=2 #93
+2026/08/03-01:14:08.079 6810 Level-0 table #97: started
+2026/08/03-01:14:08.080 6810 Level-0 table #97: 9624 bytes OK
+2026/08/03-01:14:08.081 6810 Delete type=0 #92
+2026/08/03-01:14:08.081 62e0 Manual compaction at level-0 from '\x00\x1c\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x1d\x00\x00\x00' @ 0 : 0; will stop at (end)
+2026/08/03-01:14:08.081 62e0 Manual compaction at level-1 from '\x00\x1c\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x1d\x00\x00\x00' @ 0 : 0; will stop at '\x00\x1d\x00\x00\xc8\x11\x00L\x00o\x00g\x00s\x00R\x00e\x00q\x00u\x00e\x00s\x00t\x00s\x00S\x00t\x00o\x00r\x00e' @ 5739 : 1
+2026/08/03-01:14:08.081 62e0 Compacting 1@1 + 1@2 files
+2026/08/03-01:14:08.082 62e0 Generated table #98@1: 62 keys, 1424 bytes
+2026/08/03-01:14:08.083 62e0 Compacted 1@1 + 1@2 files => 1424 bytes
+2026/08/03-01:14:08.083 62e0 compacted to: files[ 0 0 1 0 0 0 0 ]
+2026/08/03-01:14:08.083 62e0 Delete type=2 #97
+2026/08/03-01:14:08.083 62e0 Manual compaction at level-1 from '\x00\x1d\x00\x00\xc8\x11\x00L\x00o\x00g\x00s\x00R\x00e\x00q\x00u\x00e\x00s\x00t\x00s\x00S\x00t\x00o\x00r\x00e' @ 5739 : 1 .. '\x00\x1d\x00\x00\x00' @ 0 : 0; will stop at (end)

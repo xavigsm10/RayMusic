@@ -12,17 +12,7 @@ import com.mrtdk.liquid_glass.R
 import com.mrtdk.liquid_glass.databinding.ActivityPlayerImmersiveBinding
 import com.mrtdk.liquid_glass.utils.BlurTransformation
 
-/**
- * An immersive Music Player Activity implementing a glassmorphism background effect.
- *
- * Implements a strict 4-layer layout structure:
- * Capa 0: Background ImageView (imgBackground) with a 100f blur.
- * Capa 1: Semi-transparent solid dark overlay (bgOverlay) to guarantee readability.
- * Capa 2: Sharp ImageView (imgCover) in the top half.
- * Capa 3: Transparent controls container (controlsContainer) in the bottom half.
- *
- * All Palette API integrations, solid background colors, and color gradients have been removed.
- */
+
 class PlayerImmersiveActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityPlayerImmersiveBinding

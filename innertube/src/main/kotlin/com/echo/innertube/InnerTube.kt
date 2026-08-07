@@ -32,10 +32,24 @@ import java.util.*
 class InnerTube {
     private var httpClient = createClient()
 
-    var locale = YouTubeLocale(
-        gl = Locale.getDefault().country,
-        hl = Locale.getDefault().toLanguageTag()
-    )
+    var locale = run {
+        val defaultLocale = Locale.getDefault()
+        var country = defaultLocale.country
+        if (country.isNullOrBlank() || country.length != 2) {
+            val lang = defaultLocale.language
+            country = if (lang.length == 2) lang.uppercase() else "US"
+        } else {
+            country = country.uppercase()
+        }
+        var language = defaultLocale.language
+        if (language.isNullOrBlank() || language.length !in 2..3) {
+            language = "en"
+        }
+        YouTubeLocale(
+            gl = country,
+            hl = language
+        )
+    }
     var visitorData: String? = null
     var dataSyncId: String? = null
     var cookie: String? = null

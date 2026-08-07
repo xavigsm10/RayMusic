@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -67,8 +68,8 @@ fun LiquidBottomTabs(
     backdrop: Backdrop,
     tabsCount: Int,
     modifier: Modifier = Modifier,
-    containerColor: Color = if (!isSystemInDarkTheme()) Color(0xFFFAFAFA).copy(0.4f) else Color(0xFF121212).copy(0.4f),
-    accentColor: Color = if (!isSystemInDarkTheme()) Color(0xFF0088FF) else Color(0xFF0091FF),
+    containerColor: Color = if (!com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.value) Color(0xFFFAFAFA).copy(0.4f) else Color(0xFF121212).copy(0.4f),
+    accentColor: Color = Color(0xFFFA243C),
     searchProgress: Float = 0f,
     collapseProgress: Float = 0f,
     content: @Composable RowScope.() -> Unit
@@ -76,10 +77,11 @@ fun LiquidBottomTabs(
     val isCollapsing = collapseProgress > 0.001f && collapseProgress < 0.999f
     val isTransitioning = (searchProgress > 0.001f && searchProgress < 0.999f)
     val tabsBackdrop = rememberLayerBackdrop()
-    val isLightTheme = !isSystemInDarkTheme()
+    val isDarkMode by com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState()
+    val isLightTheme = !isDarkMode
 
     BoxWithConstraints(
-        modifier,
+        modifier.graphicsLayer { clip = false },
         contentAlignment = Alignment.CenterStart
     ) {
         val density = LocalDensity.current
@@ -254,6 +256,7 @@ fun LiquidBottomTabs(
                         if (isLtr) dampedDragAnimation.value * tabWidth + panelOffset
                         else size.width - (dampedDragAnimation.value + 1f) * tabWidth + panelOffset
                     alpha = 1f - searchProgress
+                    clip = false
                 }
                 .then(interactiveHighlight.gestureModifier)
                 .then(dampedDragAnimation.modifier)

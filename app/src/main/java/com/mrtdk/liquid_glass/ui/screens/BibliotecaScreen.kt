@@ -1,4 +1,4 @@
-﻿package com.mrtdk.liquid_glass.ui.screens
+package com.mrtdk.liquid_glass.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -135,6 +135,8 @@ fun BibliotecaScreen(
     val savedItems by LibraryManager.savedItems.collectAsState()
     val playlists by LibraryManager.playlists.collectAsState()
     val downloadedSongs by LibraryManager.downloadedSongs.collectAsState()
+    val isSpotifyLoggedIn by com.mrtdk.liquid_glass.spotify.SpotifySession.isLoggedIn.collectAsState()
+
     var selectedCategory by remember { mutableStateOf<ItemType?>(null) }
     var showCategoryDetail by remember { mutableStateOf(false) }
     var selectedCategoryName by remember { mutableStateOf("") }
@@ -158,7 +160,13 @@ fun BibliotecaScreen(
         }
     }
 
-    // Removed local songs scanning LaunchEffect
+    LaunchedEffect(isSpotifyLoggedIn) {
+        if (isSpotifyLoggedIn) {
+            withContext(kotlinx.coroutines.Dispatchers.IO) {
+                LibraryManager.syncSpotifyPlaylists()
+            }
+        }
+    }
     
     if (showEqualizer) {
         RayEqualizerScreen(onBack = { showEqualizer = false })
@@ -180,7 +188,7 @@ fun BibliotecaScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black)
+                .background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor)
                 .padding(top = innerPadding.calculateTopPadding())
         ) {
             if (selectedCategoryKey != "Playlists") {
@@ -193,7 +201,7 @@ fun BibliotecaScreen(
                     }
                     Text(
                         text = selectedCategoryName,
-                        color = Color.White,
+                        color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(start = 8.dp)
@@ -311,7 +319,7 @@ fun BibliotecaScreen(
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 text = item.title,
-                                color = Color.White,
+                                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Medium,
                                 maxLines = 1,
@@ -319,7 +327,7 @@ fun BibliotecaScreen(
                             )
                             Text(
                                 text = item.subtitle,
-                                color = Color.Gray,
+                                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor,
                                 fontSize = 12.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -338,7 +346,7 @@ fun BibliotecaScreen(
             columns = GridCells.Fixed(2),
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black),
+                .background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor),
             contentPadding = PaddingValues(
             start = 16.dp,
             end = 16.dp,
@@ -356,7 +364,7 @@ fun BibliotecaScreen(
             ) {
                 Text(
                     text = "Biblioteca",
-                    color = Color.White,
+                    color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                     fontSize = 34.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -453,7 +461,7 @@ fun BibliotecaScreen(
                             Spacer(modifier = Modifier.width(16.dp))
                             Text(
                                 text = labelText,
-                                color = Color.White,
+                                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Normal
                             )
@@ -461,12 +469,12 @@ fun BibliotecaScreen(
                         Icon(
                             imageVector = Icons.Default.ArrowForwardIos,
                             contentDescription = null,
-                            tint = Color.Gray.copy(alpha=0.6f),
+                            tint = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor.copy(alpha=0.6f),
                             modifier = Modifier.size(16.dp)
                         )
                     }
                     if (index < menuItems.size - 1) {
-                        androidx.compose.material3.Divider(modifier = Modifier.padding(start = 40.dp), color = Color.DarkGray.copy(alpha=0.5f), thickness = 0.5.dp)
+                        androidx.compose.material3.Divider(modifier = Modifier.padding(start = 40.dp), color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.dividerColor, thickness = 0.5.dp)
                     }
                 }
             }
@@ -475,7 +483,7 @@ fun BibliotecaScreen(
         item(span = { GridItemSpan(2) }) {
             Text(
                 text = stringResource(R.string.recently_added),
-                color = Color.White,
+                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(top = 16.dp)

@@ -30,6 +30,8 @@ object LyricsUtils {
     val LINE_REGEX = "((\\[\\d\\d:\\d\\d\\.\\d{2,3}\\] ?)+)(.+)".toRegex()
     val TIME_REGEX = "\\[(\\d\\d):(\\d\\d)\\.(\\d{2,3})\\]".toRegex()
     private val WHITESPACE_REGEX = "\\s+".toRegex()
+    private val WORD_SPLIT_REGEX = "((?<=\\s|[.,!?;])|(?=\\s|[.,!?;]))".toRegex()
+    private val PUNCT_REGEX = "[.,!?;]".toRegex()
     private val OTHER_ROMANIZATION_EXCLUDED_SCRIPTS = setOf(
         UnicodeScript.LATIN,
         UnicodeScript.COMMON,
@@ -512,11 +514,11 @@ object LyricsUtils {
 
     private fun romanizeRussianInternal(text: String): String {
         val romajiBuilder = StringBuilder(text.length)
-        val words = text.split("((?<=\\s|[.,!?;])|(?=\\s|[.,!?;]))".toRegex())
+        val words = text.split(WORD_SPLIT_REGEX)
             .filter { it.isNotEmpty() }
 
         words.forEachIndexed { _, word ->
-            if (word.matches("[.,!?;]".toRegex()) || word.isBlank()) {
+            if (word.matches(PUNCT_REGEX) || word.isBlank()) {
                 romajiBuilder.append(word)
             } else {
                 var charIndex = 0
@@ -552,11 +554,11 @@ object LyricsUtils {
 
     private fun romanizeUkrainianInternal(text: String): String {
         val romajiBuilder = StringBuilder(text.length)
-        val words = text.split("((?<=\\s|[.,!?;])|(?=\\s|[.,!?;]))".toRegex())
+        val words = text.split(WORD_SPLIT_REGEX)
             .filter { it.isNotEmpty() }
 
         words.forEachIndexed { _, word ->
-            if (word.matches("[.,!?;]".toRegex()) || word.isBlank()) {
+            if (word.matches(PUNCT_REGEX) || word.isBlank()) {
                 romajiBuilder.append(word)
             } else {
                 var charIndex = 0
@@ -593,11 +595,11 @@ object LyricsUtils {
 
     private fun romanizeSerbianInternal(text: String): String {
         val romajiBuilder = StringBuilder(text.length)
-        val words = text.split("((?<=\\s|[.,!?;])|(?=\\s|[.,!?;]))".toRegex())
+        val words = text.split(WORD_SPLIT_REGEX)
             .filter { it.isNotEmpty() }
 
         words.forEachIndexed { _, word ->
-            if (word.matches("[.,!?;]".toRegex()) || word.isBlank()) {
+            if (word.matches(PUNCT_REGEX) || word.isBlank()) {
                 romajiBuilder.append(word)
             } else {
                 var charIndex = 0
@@ -614,11 +616,11 @@ object LyricsUtils {
 
     private fun romanizeBulgarianInternal(text: String): String {
         val romajiBuilder = StringBuilder(text.length)
-        val words = text.split("((?<=\\s|[.,!?;])|(?=\\s|[.,!?;]))".toRegex())
+        val words = text.split(WORD_SPLIT_REGEX)
             .filter { it.isNotEmpty() }
 
         words.forEachIndexed { _, word ->
-            if (word.matches("[.,!?;]".toRegex()) || word.isBlank()) {
+            if (word.matches(PUNCT_REGEX) || word.isBlank()) {
                 romajiBuilder.append(word)
             } else {
                 var charIndex = 0
@@ -635,11 +637,11 @@ object LyricsUtils {
 
     private fun romanizeBelarusianInternal(text: String): String {
         val romajiBuilder = StringBuilder(text.length)
-        val words = text.split("((?<=\\s|[.,!?;])|(?=\\s|[.,!?;]))".toRegex())
+        val words = text.split(WORD_SPLIT_REGEX)
             .filter { it.isNotEmpty() }
 
         words.forEach { word ->
-            if (word.matches("[.,!?;]".toRegex()) || word.isBlank()) {
+            if (word.matches(PUNCT_REGEX) || word.isBlank()) {
                 romajiBuilder.append(word)
             } else {
                 var charIndex = 0
@@ -663,11 +665,11 @@ object LyricsUtils {
 
     private fun romanizeKyrgyzInternal(text: String): String {
         val romajiBuilder = StringBuilder(text.length)
-        val words = text.split("((?<=\\s|[.,!?;])|(?=\\s|[.,!?;]))".toRegex())
+        val words = text.split(WORD_SPLIT_REGEX)
             .filter { it.isNotEmpty() }
 
         words.forEachIndexed { _, word ->
-            if (word.matches("[.,!?;]".toRegex()) || word.isBlank()) {
+            if (word.matches(PUNCT_REGEX) || word.isBlank()) {
                 romajiBuilder.append(word)
             } else {
                 var charIndex = 0
@@ -684,11 +686,11 @@ object LyricsUtils {
 
     private fun romanizeMacedonianInternal(text: String): String {
         val romajiBuilder = StringBuilder(text.length)
-        val words = text.split("((?<=\\s|[.,!?;])|(?=\\s|[.,!?;]))".toRegex())
+        val words = text.split(WORD_SPLIT_REGEX)
             .filter { it.isNotEmpty() }
 
         words.forEachIndexed { _, word ->
-            if (word.matches("[.,!?;]".toRegex()) || word.isBlank()) {
+            if (word.matches(PUNCT_REGEX) || word.isBlank()) {
                 romajiBuilder.append(word)
             } else {
                 var charIndex = 0
@@ -737,11 +739,11 @@ object LyricsUtils {
         }
 
         val romajiBuilder = StringBuilder(text.length)
-        val words = text.split("((?<=\\s|[.,!?;])|(?=\\s|[.,!?;]))".toRegex())
+        val words = text.split(WORD_SPLIT_REGEX)
             .filter { it.isNotEmpty() }
 
         words.forEachIndexed { _, word ->
-            if (word.matches("[.,!?;]".toRegex()) || word.isBlank()) {
+            if (word.matches(PUNCT_REGEX) || word.isBlank()) {
                 // Preserve punctuation or spaces as is
                 romajiBuilder.append(word)
             } else {
@@ -792,8 +794,7 @@ object LyricsUtils {
         return text.any { char ->
             RUSSIAN_CYRILLIC_LETTERS.contains(char.toString())
         } && text.all { char ->
-            val charStr = char.toString()
-            RUSSIAN_CYRILLIC_LETTERS.contains(charStr) || !charStr.matches("[\\u0400-\\u04FF]".toRegex())
+            RUSSIAN_CYRILLIC_LETTERS.contains(char.toString()) || (char < '\u0400' || char > '\u04FF')
         }
     }
 
@@ -801,7 +802,7 @@ object LyricsUtils {
         return text.any { char ->
             UKRAINIAN_CYRILLIC_LETTERS.contains(char.toString()) || UKRAINIAN_SPECIFIC_CYRILLIC_LETTERS.contains(char.toString())
         } && text.all { char ->
-            UKRAINIAN_CYRILLIC_LETTERS.contains(char.toString()) || UKRAINIAN_SPECIFIC_CYRILLIC_LETTERS.contains(char.toString()) || !char.toString().matches("[\\u0400-\\u04FF]".toRegex())
+            UKRAINIAN_CYRILLIC_LETTERS.contains(char.toString()) || UKRAINIAN_SPECIFIC_CYRILLIC_LETTERS.contains(char.toString()) || (char < '\u0400' || char > '\u04FF')
         }
     }
 
@@ -809,7 +810,7 @@ object LyricsUtils {
         return text.any { char ->
             SERBIAN_CYRILLIC_LETTERS.contains(char.toString()) || SERBIAN_SPECIFIC_CYRILLIC_LETTERS.contains(char.toString())
         } && text.all { char ->
-            SERBIAN_CYRILLIC_LETTERS.contains(char.toString()) || SERBIAN_SPECIFIC_CYRILLIC_LETTERS.contains(char.toString()) || !char.toString().matches("[\\u0400-\\u04FF]".toRegex())
+            SERBIAN_CYRILLIC_LETTERS.contains(char.toString()) || SERBIAN_SPECIFIC_CYRILLIC_LETTERS.contains(char.toString()) || (char < '\u0400' || char > '\u04FF')
         }
     }
 
@@ -817,7 +818,7 @@ object LyricsUtils {
         return text.any { char ->
             BULGARIAN_CYRILLIC_LETTERS.contains(char.toString()) // Bulgarian doesn't have any language specific letters
         } && text.all { char ->
-            BULGARIAN_CYRILLIC_LETTERS.contains(char.toString()) || !char.toString().matches("[\\u0400-\\u04FF]".toRegex())
+            BULGARIAN_CYRILLIC_LETTERS.contains(char.toString()) || (char < '\u0400' || char > '\u04FF')
         }
     }
 
@@ -825,7 +826,7 @@ object LyricsUtils {
         return text.any { char ->
             BELARUSIAN_CYRILLIC_LETTERS.contains(char.toString()) || BELARUSIAN_SPECIFIC_CYRILLIC_LETTERS.contains(char.toString())
         } && text.all { char ->
-            BELARUSIAN_CYRILLIC_LETTERS.contains(char.toString()) || BELARUSIAN_SPECIFIC_CYRILLIC_LETTERS.contains(char.toString()) || !char.toString().matches("[\\u0400-\\u04FF]".toRegex())
+            BELARUSIAN_CYRILLIC_LETTERS.contains(char.toString()) || BELARUSIAN_SPECIFIC_CYRILLIC_LETTERS.contains(char.toString()) || (char < '\u0400' || char > '\u04FF')
         }
     }
 
@@ -833,7 +834,7 @@ object LyricsUtils {
         return text.any { char ->
             KYRGYZ_CYRILLIC_LETTERS.contains(char.toString()) || KYRGYZ_SPECIFIC_CYRILLIC_LETTERS.contains(char.toString())
         } && text.all { char ->
-            KYRGYZ_CYRILLIC_LETTERS.contains(char.toString()) || KYRGYZ_SPECIFIC_CYRILLIC_LETTERS.contains(char.toString()) || !char.toString().matches("[\\u0400-\\u04FF]".toRegex())
+            KYRGYZ_CYRILLIC_LETTERS.contains(char.toString()) || KYRGYZ_SPECIFIC_CYRILLIC_LETTERS.contains(char.toString()) || (char < '\u0400' || char > '\u04FF')
         }
     }
 
@@ -841,7 +842,7 @@ object LyricsUtils {
         return text.any { char ->
             MACEDONIAN_CYRILLIC_LETTERS.contains(char.toString()) || MACEDONIAN_SPECIFIC_CYRILLIC_LETTERS.contains(char.toString())
         } && text.all { char ->
-            MACEDONIAN_CYRILLIC_LETTERS.contains(char.toString()) || MACEDONIAN_SPECIFIC_CYRILLIC_LETTERS.contains(char.toString()) || !char.toString().matches("[\\u0400-\\u04FF]".toRegex())
+            MACEDONIAN_CYRILLIC_LETTERS.contains(char.toString()) || MACEDONIAN_SPECIFIC_CYRILLIC_LETTERS.contains(char.toString()) || (char < '\u0400' || char > '\u04FF')
         }
     }
 

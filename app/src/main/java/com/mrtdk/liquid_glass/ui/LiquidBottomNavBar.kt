@@ -32,6 +32,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -64,10 +65,15 @@ fun LiquidBottomNavBar(
     onSearchQueryChange: (String) -> Unit = {},
     onSearchSubmit: (String) -> Unit = {},
     modifier: Modifier = Modifier,
-    tintColor: Color = Color.White.copy(alpha = 0.15f),
-    contentColor: Color = Color.White,
+    tintColor: Color = Color.Unspecified,
+    contentColor: Color = Color.Unspecified,
     collapseProgress: Float = 0f
 ) {
+    val isDarkMode by com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState()
+    val actualTintColor = if (tintColor != Color.Unspecified) tintColor
+                          else if (!isDarkMode) Color.Black.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.15f)
+    val actualContentColor = if (contentColor != Color.Unspecified) contentColor
+                             else if (!isDarkMode) Color.Black else Color.White
     val imeBottom = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current)
     val isKeyboardOpen = imeBottom > 0
     val focusManager = LocalFocusManager.current
@@ -84,23 +90,33 @@ fun LiquidBottomNavBar(
         stiffness = 300f
     )
 
-    val searchProgress by animateFloatAsState(
+    val searchProgressState = animateFloatAsState(
         targetValue = if (isSearchActive) 1f else 0f,
         animationSpec = navSpringSpec
     )
     
-    val isTransitioning = (searchProgress > 0.001f && searchProgress < 0.999f)
-    val isAnimating = isTransitioning || isCollapsing
-    
-    val xWidth by animateDpAsState(
+    val xWidthState = animateDpAsState(
         targetValue = if (isSearchActive && isKeyboardOpen) 64.dp else 0.dp,
         animationSpec = navDpSpringSpec
     )
     
-    val spacingSearchX by animateDpAsState(
+    val spacingSearchXState = animateDpAsState(
         targetValue = if (isSearchActive && isKeyboardOpen) 12.dp else 0.dp,
         animationSpec = navDpSpringSpec
     )
+
+    val collapseProgressState = rememberUpdatedState(collapseProgress)
+    val collapseProgressProvider = remember { { collapseProgressState.value } }
+    val searchProgressProvider = remember { { searchProgressState.value } }
+
+    val isAnimatingState = remember(isSearchActive) {
+        derivedStateOf {
+            val progress = searchProgressState.value
+            val transitioning = progress > 0.001f && progress < 0.999f
+            val collapsing = collapseProgressState.value > 0.001f && collapseProgressState.value < 0.999f
+            transitioning || collapsing
+        }
+    }
 
     val focusRequester = remember { FocusRequester() }
 
@@ -111,7 +127,6 @@ fun LiquidBottomNavBar(
     }
 
     val backdrop = LocalBackdrop.current
-    val combineProgress = if (searchProgress > collapseProgress) searchProgress else collapseProgress
     val navBarHeight = 84.dp
 
     BoxWithConstraints(
@@ -135,8 +150,8 @@ fun LiquidBottomNavBar(
             Box(
                 modifier = Modifier
                     .layout { measurable, constraints ->
-                        val progress = if (searchProgress > collapseProgress) searchProgress else collapseProgress
-                        val currentAvailableWidth = parentWidth - xWidth - spacingSearchX - 12.dp
+                        val progress = if (searchProgressState.value > collapseProgressState.value) searchProgressState.value else collapseProgressState.value
+                        val currentAvailableWidth = parentWidth - xWidthState.value - spacingSearchXState.value - 12.dp
                         val widthDp = currentAvailableWidth - 56.dp - (currentAvailableWidth - 112.dp) * progress
                         val widthPx = widthDp.roundToPx()
                         val heightPx = (84.dp - 28.dp * progress).roundToPx()
@@ -150,24 +165,19 @@ fun LiquidBottomNavBar(
                             placeable.place(0, 0)
                         }
                     }
-                    .let { mod ->
-                        if (isSearchActive || collapseProgress > 0f || searchProgress > 0.001f) {
-                            mod
-                                .clip(Capsule())
-                                .clipToBounds()
-                                .drawWithContent {
-                                    drawContent()
-                                    val strokeWidth = 1.dp.toPx()
-                                    drawRoundRect(
-                                        color = Color.White.copy(alpha = 0.15f),
-                                        topLeft = androidx.compose.ui.geometry.Offset(strokeWidth / 2f, strokeWidth / 2f),
-                                        size = androidx.compose.ui.geometry.Size(size.width - strokeWidth, size.height - strokeWidth),
-                                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2f, size.height / 2f),
-                                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth)
-                                    )
-                                }
-                        } else {
-                            mod
+                    .clip(Capsule())
+                    .drawWithContent {
+                        drawContent()
+                        if (isSearchActive || collapseProgressState.value > 0f || searchProgressState.value > 0.001f) {
+                            val strokeWidth = 1.2.dp.toPx()
+                            val strokeColor = if (!isDarkMode) Color.Black.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.28f)
+                            drawRoundRect(
+                                color = strokeColor,
+                                topLeft = androidx.compose.ui.geometry.Offset(strokeWidth, strokeWidth),
+                                size = androidx.compose.ui.geometry.Size(size.width - strokeWidth * 2f, size.height - strokeWidth * 2f),
+                                cornerRadius = androidx.compose.ui.geometry.CornerRadius((size.height - strokeWidth * 2f) / 2f, (size.height - strokeWidth * 2f) / 2f),
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth)
+                            )
                         }
                     },
                 contentAlignment = Alignment.Center
@@ -176,14 +186,21 @@ fun LiquidBottomNavBar(
                     modifier = Modifier
                         .requiredWidth(mainTabsMaxWidth)
                         .graphicsLayer {
-                            val progress = if (searchProgress > collapseProgress) searchProgress else collapseProgress
-                            val currentAvailableWidth = parentWidth - xWidth - spacingSearchX - 12.dp
+                            val progress = if (searchProgressState.value > collapseProgressState.value) searchProgressState.value else collapseProgressState.value
+                            val currentAvailableWidth = parentWidth - xWidthState.value - spacingSearchXState.value - 12.dp
                             val widthDp = currentAvailableWidth - 56.dp - (currentAvailableWidth - 112.dp) * progress
                             val offsetDp = (targetCenterX - homeTabCenterX) * progress - (widthDp - mainTabsMaxWidth) / 2
                             translationX = offsetDp.toPx()
                         }
                 ) {
-                    MainTabs(selectedIndex, onTabSelected, contentColor, tintColor, searchProgress, collapseProgress)
+                    MainTabs(
+                        selectedIndex = selectedIndex,
+                        onTabSelected = onTabSelected,
+                        contentColor = actualContentColor,
+                        tintColor = actualTintColor,
+                        searchProgress = searchProgressProvider,
+                        collapseProgress = collapseProgressProvider
+                    )
                 }
             }
 
@@ -193,11 +210,11 @@ fun LiquidBottomNavBar(
             Box(
                 modifier = Modifier
                     .layout { measurable, constraints ->
-                        val progress = searchProgress
-                        val currentAvailableWidth = parentWidth - xWidth - spacingSearchX - 12.dp
-                        val widthDp = 56.dp + (currentAvailableWidth - 112.dp) * progress * (1f - collapseProgress)
+                        val progress = searchProgressState.value
+                        val currentAvailableWidth = parentWidth - xWidthState.value - spacingSearchXState.value - 12.dp
+                        val widthDp = 56.dp + (currentAvailableWidth - 112.dp) * progress * (1f - collapseProgressState.value)
                         val widthPx = widthDp.roundToPx()
-                        val heightPx = (56.dp + 8.dp * progress * (1f - collapseProgress)).roundToPx()
+                        val heightPx = (56.dp + 8.dp * progress * (1f - collapseProgressState.value)).roundToPx()
                         val placeable = measurable.measure(
                             constraints.copy(
                                 minWidth = widthPx, maxWidth = widthPx,
@@ -216,23 +233,29 @@ fun LiquidBottomNavBar(
                         effects = {
                             vibrancy()
                             blur(8f.dp.toPx())
-                            if (!isAnimating) {
+                            if (!isAnimatingState.value) {
                                 lens(24f.dp.toPx(), 24f.dp.toPx())
                             }
                         },
-                        onDrawSurface = { drawRect(tintColor) }
+                        onDrawSurface = { drawRect(actualTintColor) }
                     )
             ) {
-                val progress = searchProgress * (1f - collapseProgress)
+                val isSearchEnabled by remember {
+                    derivedStateOf {
+                        val progress = searchProgressState.value * (1f - collapseProgressState.value)
+                        progress > 0.5f
+                    }
+                }
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
                         .graphicsLayer {
+                            val progress = searchProgressState.value * (1f - collapseProgressState.value)
                             val offsetDp = -4.dp * (1f - progress)
                             translationX = offsetDp.toPx()
                         }
                         .clickable { 
-                            if (collapseProgress > 0.5f || !isSearchActive) {
+                            if (collapseProgressState.value > 0.5f || !isSearchActive) {
                                 onTabSelected(4)
                             }
                         },
@@ -241,7 +264,7 @@ fun LiquidBottomNavBar(
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = stringResource(R.string.search_action),
-                        tint = Color.White,
+                        tint = actualContentColor,
                         modifier = Modifier
                             .padding(start = 20.dp, end = 12.dp)
                             .size(24.dp)
@@ -249,18 +272,18 @@ fun LiquidBottomNavBar(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ) { 
-                                if (collapseProgress > 0.5f || !isSearchActive) {
+                                if (collapseProgressState.value > 0.5f || !isSearchActive) {
                                     onTabSelected(4)
                                 }
                             }
                     )
                     
-                    val textAlpha = progress.coerceIn(0f, 1f)
-                    
                     Row(
                         modifier = Modifier
                             .weight(1f)
                             .graphicsLayer { 
+                                val progress = searchProgressState.value * (1f - collapseProgressState.value)
+                                val textAlpha = progress.coerceIn(0f, 1f)
                                 alpha = textAlpha
                                 translationX = if (textAlpha < 0.01f) 10000f else 0f
                             },
@@ -273,15 +296,15 @@ fun LiquidBottomNavBar(
                                 .weight(1f)
                                 .focusRequester(focusRequester)
                                 .padding(end = 8.dp),
-                            textStyle = TextStyle(color = contentColor, fontSize = 16.sp),
-                            cursorBrush = SolidColor(contentColor),
+                            textStyle = TextStyle(color = actualContentColor, fontSize = 16.sp),
+                            cursorBrush = SolidColor(actualContentColor),
                             singleLine = true,
-                            enabled = textAlpha > 0.5f,
+                            enabled = isSearchEnabled,
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                             keyboardActions = KeyboardActions(onSearch = { onSearchSubmit(searchQuery) }),
                             decorationBox = { innerTextField ->
                                 if (searchQuery.isEmpty()) {
-                                    Text(stringResource(R.string.search_placeholder), color = contentColor.copy(alpha = 0.5f), fontSize = 16.sp)
+                                    Text(stringResource(R.string.search_placeholder), color = actualContentColor.copy(alpha = 0.5f), fontSize = 16.sp)
                                 }
                                 innerTextField()
                             }
@@ -313,14 +336,28 @@ fun LiquidBottomNavBar(
             }
 
             // Close Pill (X)
-            if (xWidth > 0.5.dp) {
-                Spacer(modifier = Modifier.width(spacingSearchX))
+            val showClosePill by remember {
+                derivedStateOf {
+                    xWidthState.value > 0.5.dp
+                }
+            }
+            if (showClosePill) {
+                Spacer(
+                    modifier = Modifier
+                        .layout { measurable, constraints ->
+                            val widthPx = spacingSearchXState.value.roundToPx()
+                            val placeable = measurable.measure(constraints.copy(minWidth = widthPx, maxWidth = widthPx))
+                            layout(widthPx, placeable.height) {
+                                placeable.place(0, 0)
+                            }
+                        }
+                )
                 Box(
                     modifier = Modifier
                         .layout { measurable, constraints ->
-                            val progress = searchProgress
-                            val widthPx = xWidth.roundToPx()
-                            val heightPx = (56.dp + 8.dp * progress * (1f - collapseProgress)).roundToPx()
+                            val progress = searchProgressState.value
+                            val widthPx = xWidthState.value.roundToPx()
+                            val heightPx = (56.dp + 8.dp * progress * (1f - collapseProgressState.value)).roundToPx()
                             val placeable = measurable.measure(
                                 constraints.copy(
                                     minWidth = widthPx, maxWidth = widthPx,
@@ -337,11 +374,11 @@ fun LiquidBottomNavBar(
                             effects = {
                                 vibrancy()
                                 blur(8f.dp.toPx())
-                                if (!isAnimating) {
+                                if (!isAnimatingState.value) {
                                     lens(24f.dp.toPx(), 24f.dp.toPx())
                                 }
                             },
-                            onDrawSurface = { drawRect(tintColor) }
+                            onDrawSurface = { drawRect(actualTintColor) }
                         )
                         .clip(Capsule())
                         .clickable { 
@@ -356,7 +393,7 @@ fun LiquidBottomNavBar(
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = stringResource(R.string.close_action),
-                        tint = contentColor,
+                        tint = actualContentColor,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -371,13 +408,19 @@ fun MainTabs(
     onTabSelected: (Int) -> Unit,
     contentColor: Color = Color.White,
     tintColor: Color = Color.White.copy(alpha = 0.15f),
-    searchProgress: Float = 0f,
-    collapseProgress: Float = 0f
+    searchProgress: () -> Float = { 0f },
+    collapseProgress: () -> Float = { 0f }
 ) {
     val backdrop = LocalBackdrop.current
     val tabsCount = tabs.size
 
-    val combineProgress = if (searchProgress > collapseProgress) searchProgress else collapseProgress
+    val combineProgress = remember {
+        {
+            val s = searchProgress()
+            val c = collapseProgress()
+            if (s > c) s else c
+        }
+    }
 
     LiquidBottomTabs(
         selectedTabIndex = { selectedIndex },
@@ -386,52 +429,59 @@ fun MainTabs(
         tabsCount = tabsCount,
         containerColor = tintColor,
         accentColor = Color(0xFFFA243C),
-        searchProgress = combineProgress,
-        collapseProgress = collapseProgress,
+        searchProgress = combineProgress(),
+        collapseProgress = collapseProgress(),
         modifier = Modifier.fillMaxSize()
     ) {
         tabs.forEachIndexed { index, pair ->
             val tabText = stringResource(id = pair.first)
             
+            val isDarkMode by com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState()
             val isSelected = selectedIndex == index
-            val itemColor = if (index == 0) {
-                androidx.compose.ui.graphics.lerp(
-                    if (isSelected) Color.White else Color.White.copy(alpha = 0.6f),
-                    Color(0xFFFA243C),
-                    combineProgress
-                )
-            } else {
+            val baseColor = if (isDarkMode) {
                 if (isSelected) Color.White else Color.White.copy(alpha = 0.6f)
+            } else {
+                if (isSelected) Color(0xFFFA243C) else Color.Black.copy(alpha = 0.6f)
             }
             val iconSize = 26.dp
-
             val tabWeight = 1f
-            val tabAlpha = if (index == 0) 1f else (1f - combineProgress)
-            val textAlpha = 1f - combineProgress
 
             LiquidBottomTab(
                 onClick = { onTabSelected(index) },
                 weight = tabWeight
             ) {
-                val iconOffsetY = androidx.compose.ui.unit.lerp(5.dp, 7.dp, combineProgress)
                 Icon(
                     painter = painterResource(id = pair.second),
                     contentDescription = tabText,
-                    tint = itemColor,
+                    tint = baseColor,
                     modifier = Modifier
                         .size(iconSize)
-                        .offset(y = iconOffsetY)
-                        .graphicsLayer { alpha = tabAlpha }
+                        .graphicsLayer {
+                            translationY = androidx.compose.ui.unit.lerp(5.dp, 7.dp, combineProgress()).toPx()
+                            alpha = if (index == 0) 1f else (1f - combineProgress())
+                            val color = if (index == 0) {
+                                androidx.compose.ui.graphics.lerp(
+                                    baseColor,
+                                    Color(0xFFFA243C),
+                                    combineProgress()
+                                )
+                            } else {
+                                baseColor
+                            }
+                            colorFilter = ColorFilter.tint(color)
+                        }
                 )
                 Text(
                     text = tabText,
-                    color = itemColor,
+                    color = baseColor,
                     fontSize = 10.sp,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
                     maxLines = 1,
                     modifier = Modifier
                         .offset(y = (-3).dp)
-                        .graphicsLayer { alpha = textAlpha }
+                        .graphicsLayer {
+                            alpha = 1f - combineProgress()
+                        }
                 )
             }
         }

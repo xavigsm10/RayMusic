@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -16,6 +18,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import com.mrtdk.liquid_glass.ui.theme.ThemeManager
 
 @Composable
 fun Material3SettingsGroup(
@@ -23,6 +26,8 @@ fun Material3SettingsGroup(
     compact: Boolean = false,
     items: List<Material3SettingsItem>
 ) {
+    val isDarkMode by ThemeManager.isDarkMode.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -31,7 +36,7 @@ fun Material3SettingsGroup(
             Text(
                 text = it,
                 style = MaterialTheme.typography.labelLarge,
-                color = Color(0xFFFA243C), // Beautiful brand red tint
+                color = Color(0xFFFA243C),
                 modifier = Modifier.padding(bottom = if (compact) 4.dp else 8.dp, top = if (compact) 12.dp else 16.dp, start = 8.dp)
             )
         }
@@ -57,7 +62,7 @@ fun Material3SettingsGroup(
                         containerColor = if (item.isHighlighted)
                             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
                         else
-                            Color(0xFF1C1C1E) // Premium dark background
+                            ThemeManager.surfaceColor
                     ),
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
@@ -73,6 +78,8 @@ private fun Material3SettingsItemRow(
     item: Material3SettingsItem,
     compact: Boolean = false
 ) {
+    val isDarkMode by ThemeManager.isDarkMode.collectAsState()
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -105,7 +112,7 @@ private fun Material3SettingsItemRow(
                         painter = icon,
                         contentDescription = null,
                         tint = if (!item.enabled)
-                            Color.Gray.copy(alpha = 0.5f)
+                            ThemeManager.subtextColor.copy(alpha = 0.5f)
                         else
                             Color(0xFFFA243C),
                         modifier = Modifier.size(if (compact) 20.dp else 24.dp)
@@ -129,9 +136,9 @@ private fun Material3SettingsItemRow(
             ProvideTextStyle(
                 MaterialTheme.typography.titleMedium.copy(
                     color = if (!item.enabled)
-                        Color.Gray
+                        ThemeManager.subtextColor
                     else
-                        Color.White
+                        ThemeManager.textColor
                 )
             ) {
                 item.title()
@@ -141,7 +148,7 @@ private fun Material3SettingsItemRow(
                 Spacer(modifier = Modifier.height(2.dp))
                 ProvideTextStyle(
                     MaterialTheme.typography.bodyMedium.copy(
-                        color = Color.Gray
+                        color = ThemeManager.subtextColor
                     )
                 ) {
                     desc()

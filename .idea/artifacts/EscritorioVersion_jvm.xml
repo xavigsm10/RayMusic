@@ -1,0 +1,6 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="EscritorioVersion-jvm">
+    <output-path>$PROJECT_DIR$/EscritorioVersion/build/libs</output-path>
+    <root id="archive" name="EscritorioVersion-jvm.jar" />
+  </artifact>
+</component>

@@ -53,6 +53,7 @@ enum class SettingsSubScreen {
     LYRICS,
     PLAYER,
     LISTEN_TOGETHER,
+    SPOTIFY,
     CONTENT,
     PRIVACY,
     ABOUT
@@ -103,6 +104,9 @@ fun SettingsScreen(
             SettingsSubScreen.LISTEN_TOGETHER -> ListenTogetherSettingsScreen(
                 onBack = { activeSubScreen = null }
             )
+            SettingsSubScreen.SPOTIFY -> SpotifySettingsScreen(
+                onBack = { activeSubScreen = null }
+            )
             SettingsSubScreen.CONTENT -> ContentSettingsScreen(
                 onBack = { activeSubScreen = null }
             )
@@ -128,10 +132,13 @@ fun MainSettingsMenu(
     val scrollState = rememberScrollState()
     var showGlassStyleDialog by remember { mutableStateOf(false) }
 
+    val isDarkMode by com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState()
+    var showThemeDialog by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor)
             .statusBarsPadding()
     ) {
         // Header
@@ -173,6 +180,14 @@ fun MainSettingsMenu(
                         onClick = { onNavigateTo(SettingsSubScreen.LYRICS) }
                     ),
                     Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.DarkMode),
+                        title = { Text("Tema de la aplicación") },
+                        description = {
+                            Text(if (isDarkMode) "Modo Oscuro (Predeterminado)" else "Modo Claro")
+                        },
+                        onClick = { showThemeDialog = true }
+                    ),
+                    Material3SettingsItem(
                         icon = rememberPainter(Icons.Default.Palette),
                         title = { Text("Liquid Glass") },
                         description = {
@@ -189,6 +204,64 @@ fun MainSettingsMenu(
                 )
             )
 
+            if (showThemeDialog) {
+                AlertDialog(
+                    onDismissRequest = { showThemeDialog = false },
+                    title = { Text("Tema de la aplicación", color = Color.White, fontWeight = FontWeight.Bold) },
+                    text = {
+                        Column {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        com.mrtdk.liquid_glass.ui.theme.ThemeManager.setThemeMode(com.mrtdk.liquid_glass.ui.theme.ThemeManager.MODE_DARK)
+                                        showThemeDialog = false
+                                    }
+                                    .padding(vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = isDarkMode,
+                                    onClick = {
+                                        com.mrtdk.liquid_glass.ui.theme.ThemeManager.setThemeMode(com.mrtdk.liquid_glass.ui.theme.ThemeManager.MODE_DARK)
+                                        showThemeDialog = false
+                                    }
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Modo Oscuro (Predeterminado)", color = Color.White)
+                            }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        com.mrtdk.liquid_glass.ui.theme.ThemeManager.setThemeMode(com.mrtdk.liquid_glass.ui.theme.ThemeManager.MODE_LIGHT)
+                                        showThemeDialog = false
+                                    }
+                                    .padding(vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = !isDarkMode,
+                                    onClick = {
+                                        com.mrtdk.liquid_glass.ui.theme.ThemeManager.setThemeMode(com.mrtdk.liquid_glass.ui.theme.ThemeManager.MODE_LIGHT)
+                                        showThemeDialog = false
+                                    }
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Modo Claro", color = Color.White)
+                            }
+                        }
+                    },
+                    confirmButton = {},
+                    dismissButton = {
+                        TextButton(onClick = { showThemeDialog = false }) {
+                            Text("Cancelar", color = Color(0xFFFA243C))
+                        }
+                    },
+                    containerColor = com.mrtdk.liquid_glass.ui.theme.ThemeManager.surfaceColor
+                )
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
             Material3SettingsGroup(
@@ -201,10 +274,10 @@ fun MainSettingsMenu(
                         onClick = { onNavigateTo(SettingsSubScreen.PLAYER) }
                     ),
                     Material3SettingsItem(
-                        icon = rememberPainter(Icons.Default.Group),
-                        title = { Text(stringResource(R.string.settings_listen_together)) },
-                        description = { Text(stringResource(R.string.settings_listen_together_desc)) },
-                        onClick = { onNavigateTo(SettingsSubScreen.LISTEN_TOGETHER) }
+                        icon = rememberPainter(Icons.Default.MusicNote),
+                        title = { Text("Spotify") },
+                        description = { Text("Sincronizar cuenta y playlists de Spotify") },
+                        onClick = { onNavigateTo(SettingsSubScreen.SPOTIFY) }
                     ),
                     Material3SettingsItem(
                         icon = rememberPainter(Icons.Default.Language),
@@ -290,7 +363,7 @@ fun LyricsSettingsScreen(onBack: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor)
             .statusBarsPadding()
     ) {
         Row(
@@ -646,7 +719,7 @@ fun PlayerSettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor)
             .statusBarsPadding()
     ) {
         Row(
@@ -806,6 +879,7 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
     // Fix: connectedUsers must be a reactive Compose state — reading MutableList directly
     // from ListenTogetherManager is NOT observable and Compose won't recompose when it changes
     var connectedUsers by remember { mutableStateOf(com.mrtdk.liquid_glass.playback.ListenTogetherManager.users.toList()) }
+    var hostUsername by remember { mutableStateOf(com.mrtdk.liquid_glass.playback.ListenTogetherManager.hostUsername) }
     var isConnecting by remember { mutableStateOf(false) }
 
     var smartResync by remember { mutableStateOf(LibraryManager.getString("listen_together_smart_resync", "true") == "true") }
@@ -827,6 +901,7 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
             usersCount = com.mrtdk.liquid_glass.playback.ListenTogetherManager.users.size
             // Snapshot the list into a new List so Compose detects the change
             connectedUsers = com.mrtdk.liquid_glass.playback.ListenTogetherManager.users.toList()
+            hostUsername = com.mrtdk.liquid_glass.playback.ListenTogetherManager.hostUsername
             // Once we get any state update, we are no longer "connecting"
             if (isConnected || !com.mrtdk.liquid_glass.playback.ListenTogetherManager.isConnected) {
                 isConnecting = false
@@ -840,7 +915,7 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor)
             .statusBarsPadding()
     ) {
         Row(
@@ -960,6 +1035,15 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
                             fontWeight = FontWeight.ExtraBold,
                             letterSpacing = 8.sp
                         )
+                        if (role == "guest" && hostUsername.isNotBlank()) {
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                text = "Sala de $hostUsername",
+                                color = Color.Gray,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                         Spacer(Modifier.height(16.dp))
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1061,6 +1145,7 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
                             )
                         } else {
                             connectedUsers.forEach { userInRoom ->
+                                val isHostUser = userInRoom == hostUsername
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier
@@ -1068,9 +1153,9 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
                                         .padding(vertical = 6.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Person,
+                                        imageVector = if (isHostUser) Icons.Default.Star else Icons.Default.Person,
                                         contentDescription = null,
-                                        tint = Color.Gray,
+                                        tint = if (isHostUser) Color(0xFFFA243C) else Color.Gray,
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
@@ -1080,6 +1165,15 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
                                         fontSize = 15.sp,
                                         fontWeight = FontWeight.Medium
                                     )
+                                    if (isHostUser) {
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "(Anfitrión)",
+                                            color = Color(0xFFFA243C),
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                     if (userInRoom == username) {
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
@@ -1289,7 +1383,7 @@ fun ContentSettingsScreen(onBack: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor)
             .statusBarsPadding()
     ) {
         Row(
@@ -1331,6 +1425,8 @@ fun ContentSettingsScreen(onBack: () -> Unit) {
                                 when (currentLang) {
                                     "es" -> "Español"
                                     "en" -> "English"
+                                    "pt" -> "Português"
+                                    "tr" -> "Türkçe"
                                     else -> stringResource(R.string.predeterminado_sistema)
                                 }
                             )
@@ -1439,7 +1535,9 @@ fun ContentSettingsScreen(onBack: () -> Unit) {
             options = listOf(
                 "system" to stringResource(R.string.predeterminado_sistema),
                 "es" to "Español",
-                "en" to "English"
+                "en" to "English",
+                "pt" to "Português",
+                "tr" to "Türkçe"
             ),
             selectedValue = currentLang ?: "system",
             onDismiss = { showLangDialog = false },
@@ -1466,7 +1564,8 @@ fun ContentSettingsScreen(onBack: () -> Unit) {
                 "es" to "Español",
                 "en" to "Inglés",
                 "fr" to "Francés",
-                "pt" to "Portugués",
+                "pt" to "Português",
+                "tr" to "Turco",
                 "ja" to "Japonés"
             ),
             selectedValue = contentLanguage,
@@ -1518,7 +1617,7 @@ fun PrivacySettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor)
             .statusBarsPadding()
     ) {
         Row(
@@ -1688,7 +1787,7 @@ fun AboutSettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor)
             .statusBarsPadding()
     ) {
         Row(
@@ -1963,7 +2062,7 @@ fun ConfirmDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(text = title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold) },
-        text = { Text(message, color = Color.LightGray, fontSize = 16.sp) },
+        text = { Text(message, color = Color.Gray, fontSize = 16.sp) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
                 Text("Confirmar", color = Color(0xFFFA243C))
@@ -1977,6 +2076,143 @@ fun ConfirmDialog(
         containerColor = Color(0xFF1C1C1E),
         shape = RoundedCornerShape(20.dp)
     )
+}
+
+@Composable
+fun SpotifySettingsScreen(onBack: () -> Unit) {
+    val scrollState = rememberScrollState()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val isLoggedIn by com.mrtdk.liquid_glass.spotify.SpotifySession.isLoggedIn.collectAsState()
+    var showLoginDialog by remember { mutableStateOf(false) }
+    var isSyncing by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isLoggedIn) {
+        if (isLoggedIn && com.mrtdk.liquid_glass.spotify.SpotifySession.userName.isBlank()) {
+            val user = com.mrtdk.liquid_glass.spotify.Spotify.me().getOrNull()
+            if (user != null && !user.displayName.isNullOrBlank()) {
+                com.mrtdk.liquid_glass.spotify.SpotifySession.saveSession(
+                    com.mrtdk.liquid_glass.spotify.SpotifySession.spDc,
+                    com.mrtdk.liquid_glass.spotify.SpotifyInternalToken(
+                        accessToken = com.mrtdk.liquid_glass.spotify.SpotifySession.accessToken,
+                        accessTokenExpirationTimestampMs = com.mrtdk.liquid_glass.spotify.SpotifySession.tokenExpirationMs
+                    ),
+                    displayName = user.displayName,
+                    uid = user.id
+                )
+            }
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor)
+            .statusBarsPadding()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBackIosNew,
+                    contentDescription = null,
+                    tint = Color(0xFFFA243C)
+                )
+            }
+            Text(
+                text = "Spotify",
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 8.dp)
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Material3SettingsGroup(
+                title = "CUENTA Y ASOCIACIÓN",
+                items = listOf(
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.AccountCircle),
+                        title = { Text("Estado de la cuenta") },
+                        description = {
+                            Text(
+                                if (isLoggedIn) "Conectado como ${com.mrtdk.liquid_glass.spotify.SpotifySession.userName.ifBlank { com.mrtdk.liquid_glass.spotify.SpotifySession.userId }}"
+                                else "No conectado"
+                            )
+                        },
+                        onClick = {
+                            if (!isLoggedIn) {
+                                showLoginDialog = true
+                            }
+                        }
+                    )
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (isLoggedIn) {
+                Material3SettingsGroup(
+                    title = "ACCIONES DE SPOTIFY",
+                    items = listOf(
+                        Material3SettingsItem(
+                            icon = rememberPainter(Icons.Default.Sync),
+                            title = { Text(if (isSyncing) "Sincronizando playlists..." else "Sincronizar Playlists ahora") },
+                            description = { Text("Importa tus playlists de Spotify a la Biblioteca de RayMusic") },
+                            onClick = {
+                                if (!isSyncing) {
+                                    isSyncing = true
+                                    scope.launch {
+                                        LibraryManager.syncSpotifyPlaylists()
+                                        isSyncing = false
+                                        Toast.makeText(context, "Playlists de Spotify sincronizadas", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        ),
+                        Material3SettingsItem(
+                            icon = rememberPainter(Icons.Default.Logout),
+                            title = { Text("Cerrar sesión de Spotify") },
+                            description = { Text("Desconectar tu cuenta de Spotify de RayMusic") },
+                            onClick = {
+                                com.mrtdk.liquid_glass.spotify.SpotifySession.logout()
+                                Toast.makeText(context, "Sesión de Spotify cerrada", Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    )
+                )
+            } else {
+                Button(
+                    onClick = { showLoginDialog = true },
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1ED760)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Iniciar sesión con Spotify", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                }
+            }
+        }
+    }
+
+    if (showLoginDialog) {
+        com.mrtdk.liquid_glass.ui.components.SpotifyLoginDialog(
+            onDismiss = { showLoginDialog = false },
+            onSuccess = {
+                showLoginDialog = false
+                Toast.makeText(context, "¡Sesión iniciada con éxito!", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
 }
 
 @Composable

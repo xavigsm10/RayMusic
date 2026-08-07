@@ -7,6 +7,7 @@ import coil.Coil
 import coil.request.SuccessResult
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.ArrowBackIosNew
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -105,7 +107,8 @@ fun InicioScreen(
     onArtistSelected: (ArtistState) -> Unit = {},
     onAlbumSelected: (AlbumState) -> Unit = {},
     onVideoSelected: (String) -> Unit = {},
-    onReplaySelected: () -> Unit = {}
+    onReplaySelected: () -> Unit = {},
+    onListenTogetherSelected: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var activeSimilarSection by remember { mutableStateOf<SimilarSection?>(null) }
@@ -358,20 +361,52 @@ fun InicioScreen(
             state = listState,
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black),
+                .background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding() + 24.dp,
                 bottom = innerPadding.calculateBottomPadding() + 180.dp
             )
         ) {
         item {
-            Text(
-                text = stringResource(R.string.nav_inicio),
-                color = Color.White,
-                fontSize = 34.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.nav_inicio),
+                    color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.Red.copy(alpha = 0.15f))
+                        .border(1.dp, Color.Red.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                        .clickable { onListenTogetherSelected() }
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Groups,
+                            contentDescription = null,
+                            tint = Color.Red,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Escuchar juntos",
+                            color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
             Spacer(modifier = Modifier.height(20.dp))
         }
 
@@ -385,7 +420,7 @@ fun InicioScreen(
             item {
                 Text(
                     text = stringResource(R.string.sugerencias_destacadas),
-                    color = Color.White,
+                    color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
@@ -422,7 +457,7 @@ fun InicioScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(stringResource(R.string.selecciones_rapidas), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.selecciones_rapidas), color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
@@ -472,8 +507,8 @@ fun InicioScreen(
                                 modifier = Modifier.size(180.dp).clip(RoundedCornerShape(12.dp))
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text(song.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(song.artists.joinToString { it.name }, color = Color.Gray, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(song.title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(song.artists.joinToString { it.name }, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
@@ -498,8 +533,8 @@ fun InicioScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(stringResource(R.string.sigue_escuchando), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                    Icon(Icons.Default.ChevronRight, contentDescription = "More", tint = Color.Gray)
+                    Text(stringResource(R.string.sigue_escuchando), color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Icon(Icons.Default.ChevronRight, contentDescription = "More", tint = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor)
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 LazyRow(
@@ -557,8 +592,8 @@ fun InicioScreen(
                                     }
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text(item.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(item.subtitle, color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(item.title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(item.subtitle, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
@@ -576,7 +611,7 @@ fun InicioScreen(
             item {
                 Text(
                     text = stringResource(R.string.playlist_destacada),
-                    color = Color.White,
+                    color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
@@ -615,7 +650,7 @@ fun InicioScreen(
                             )
                             Text(
                                 text = "\"${playlist.title}\"",
-                                color = Color.White,
+                                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
@@ -658,7 +693,7 @@ fun InicioScreen(
         } else {
             similarSections.forEachIndexed { index, section ->
                 item {
-                    Text(stringResource(R.string.similar_a), color = Color.Gray, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 16.dp))
+                    Text(stringResource(R.string.similar_a), color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 16.dp))
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -670,8 +705,8 @@ fun InicioScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(section.artistName, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                        Icon(Icons.Default.ChevronRight, contentDescription = "More", tint = Color.Gray)
+                        Text(section.artistName, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.ChevronRight, contentDescription = "More", tint = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor)
                     }
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 16.dp),
@@ -723,27 +758,49 @@ fun InicioScreen(
                                         }
                                     }
                             ) {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
-                                    contentDescription = title,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .size(180.dp)
-                                        .onGloballyPositioned { coords ->
-                                            imageCoords = coords
-                                            val bounds = coords.unclippedBoundsInRoot()
-                                            if (bounds.width > 0f && bounds.height > 0f) {
-                                                SharedTransitionState.carouselItemBounds[item.id] = bounds
+                                if (isCircle) {
+                                    com.mrtdk.liquid_glass.spotify.SpotifyArtistAvatar(
+                                        artistName = title,
+                                        fallbackUrl = hdThumb,
+                                        contentDescription = title,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .size(180.dp)
+                                            .onGloballyPositioned { coords ->
+                                                imageCoords = coords
+                                                val bounds = coords.unclippedBoundsInRoot()
+                                                if (bounds.width > 0f && bounds.height > 0f) {
+                                                    SharedTransitionState.carouselItemBounds[item.id] = bounds
+                                                }
                                             }
-                                        }
-                                        .clip(if (isCircle) CircleShape else RoundedCornerShape(12.dp))
-                                        .graphicsLayer {
-                                            alpha = if (SharedTransitionState.animatingItemIds.contains(item.id)) 0f else 1f
-                                        }
-                                )
+                                            .clip(CircleShape)
+                                            .graphicsLayer {
+                                                alpha = if (SharedTransitionState.animatingItemIds.contains(item.id)) 0f else 1f
+                                            }
+                                    )
+                                } else {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                                        contentDescription = title,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .size(180.dp)
+                                            .onGloballyPositioned { coords ->
+                                                imageCoords = coords
+                                                val bounds = coords.unclippedBoundsInRoot()
+                                                if (bounds.width > 0f && bounds.height > 0f) {
+                                                    SharedTransitionState.carouselItemBounds[item.id] = bounds
+                                                }
+                                            }
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .graphicsLayer {
+                                                alpha = if (SharedTransitionState.animatingItemIds.contains(item.id)) 0f else 1f
+                                            }
+                                    )
+                                }
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Text(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(subtitle, color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(subtitle, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
                     }
@@ -754,7 +811,7 @@ fun InicioScreen(
                     item {
                         Text(
                             text = stringResource(R.string.playlist_destacada),
-                            color = Color.White,
+                            color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                             fontSize = 22.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
@@ -793,7 +850,7 @@ fun InicioScreen(
                                     )
                                     Text(
                                         text = "\"${playlist.title}\"",
-                                        color = Color.White,
+                                        color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                                         fontSize = 20.sp,
                                         fontWeight = FontWeight.Bold,
                                         maxLines = 1,
@@ -857,10 +914,10 @@ fun InicioScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column {
-                            Text(stringResource(R.string.porque_escuchaste), color = Color.Gray, fontSize = 13.sp)
-                            Text(section.artistName, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(stringResource(R.string.porque_escuchaste), color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 13.sp)
+                            Text(section.artistName, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-                        Icon(Icons.Default.ChevronRight, contentDescription = "More", tint = Color.Gray)
+                        Icon(Icons.Default.ChevronRight, contentDescription = "More", tint = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor)
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                     LazyRow(
@@ -902,8 +959,8 @@ fun InicioScreen(
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Text(song.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(song.artists.joinToString { it.name }, color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(song.title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(song.artists.joinToString { it.name }, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
                     }
@@ -924,10 +981,10 @@ fun InicioScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column {
-                        Text(stringResource(R.string.porque_escuchaste), color = Color.Gray, fontSize = 13.sp)
-                        Text(state.seleccionesTitle!!, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(stringResource(R.string.porque_escuchaste), color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 13.sp)
+                        Text(state.seleccionesTitle!!, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    Icon(Icons.Default.ChevronRight, contentDescription = "More", tint = Color.Gray)
+                    Icon(Icons.Default.ChevronRight, contentDescription = "More", tint = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor)
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 LazyRow(
@@ -969,8 +1026,8 @@ fun InicioScreen(
                                 )
                             }
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text(song.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(song.artists.joinToString { it.name }, color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(song.title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(song.artists.joinToString { it.name }, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
@@ -1081,8 +1138,8 @@ fun InicioScreen(
                                         )
                                     }
                                     Spacer(modifier = Modifier.height(8.dp))
-                                    Text(titleStr, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text(subtitleStr, color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(titleStr, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(subtitleStr, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                             }
                         }
@@ -1183,7 +1240,7 @@ fun InicioScreen(
         onClose = { activeSimilarSection = null }
     ) { dismiss ->
         val overlayItems = activeSection!!.items
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        Box(modifier = Modifier.fillMaxSize().background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize().padding(top = innerPadding.calculateTopPadding())) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
@@ -1198,7 +1255,7 @@ fun InicioScreen(
                     }
                     Text(
                         text = activeSection.artistName,
-                        color = Color.White,
+                        color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(start = 8.dp)
@@ -1279,17 +1336,27 @@ fun InicioScreen(
                                     .clip(if (isCircle) androidx.compose.foundation.shape.CircleShape else RoundedCornerShape(12.dp))
                                     .background(Color(0xFF1C1C1E))
                             ) {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(),
-                                    contentDescription = title,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
+                                if (isCircle) {
+                                    com.mrtdk.liquid_glass.spotify.SpotifyArtistAvatar(
+                                        artistName = title,
+                                        fallbackUrl = hdThumb,
+                                        contentDescription = title,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                } else {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(),
+                                        contentDescription = title,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
                             }
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 text = title,
-                                color = Color.White,
+                                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Medium,
                                 maxLines = 1,
@@ -1297,7 +1364,7 @@ fun InicioScreen(
                             )
                             Text(
                                 text = subtitle,
-                                color = Color.Gray,
+                                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor,
                                 fontSize = 12.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -1322,7 +1389,7 @@ fun InicioScreen(
         snapshotBounds = recentlyPlayedSnapshotBounds,
         onClose = { activeRecentlyPlayedSection = false }
     ) { dismiss ->
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        Box(modifier = Modifier.fillMaxSize().background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize().padding(top = innerPadding.calculateTopPadding())) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
@@ -1337,7 +1404,7 @@ fun InicioScreen(
                     }
                     Text(
                         text = stringResource(R.string.sigue_escuchando),
-                        color = Color.White,
+                        color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(start = 8.dp)
@@ -1408,7 +1475,7 @@ fun InicioScreen(
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 text = item.title,
-                                color = Color.White,
+                                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Medium,
                                 maxLines = 1,
@@ -1416,7 +1483,7 @@ fun InicioScreen(
                             )
                             Text(
                                 text = if (isCircle) "Artista" else origItem.subtitle,
-                                color = Color.Gray,
+                                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor,
                                 fontSize = 12.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -1440,7 +1507,7 @@ fun InicioScreen(
         onClose = { activePorqueEscuchasteSection = null }
     ) { dismiss ->
         val overlayItems = activePorqueEscuchaste!!.songs
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        Box(modifier = Modifier.fillMaxSize().background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize().padding(top = innerPadding.calculateTopPadding())) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
@@ -1456,12 +1523,12 @@ fun InicioScreen(
                     Column(modifier = Modifier.padding(start = 8.dp)) {
                         Text(
                             text = stringResource(R.string.porque_escuchaste),
-                            color = Color.Gray,
+                            color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor,
                             fontSize = 11.sp
                         )
                         Text(
                             text = activePorqueEscuchaste.artistName,
-                            color = Color.White,
+                            color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -1513,7 +1580,7 @@ fun InicioScreen(
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 text = item.title,
-                                color = Color.White,
+                                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Medium,
                                 maxLines = 1,
@@ -1521,7 +1588,7 @@ fun InicioScreen(
                             )
                             Text(
                                 text = "Canción • ${item.artists.joinToString { it.name }}",
-                                color = Color.Gray,
+                                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor,
                                 fontSize = 12.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -1544,7 +1611,7 @@ fun InicioScreen(
         onClose = { activeSeleccionesSection = false }
     ) { dismiss ->
         val overlayItems = state.seleccionesParaTi
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        Box(modifier = Modifier.fillMaxSize().background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize().padding(top = innerPadding.calculateTopPadding())) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
@@ -1560,12 +1627,12 @@ fun InicioScreen(
                     Column(modifier = Modifier.padding(start = 8.dp)) {
                         Text(
                             text = stringResource(R.string.porque_escuchaste),
-                            color = Color.Gray,
+                            color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor,
                             fontSize = 11.sp
                         )
                         Text(
                             text = state.seleccionesTitle ?: "",
-                            color = Color.White,
+                            color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -1617,7 +1684,7 @@ fun InicioScreen(
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 text = item.title,
-                                color = Color.White,
+                                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Medium,
                                 maxLines = 1,
@@ -1625,7 +1692,7 @@ fun InicioScreen(
                             )
                             Text(
                                 text = "Canción • ${item.artists.joinToString { it.name }}",
-                                color = Color.Gray,
+                                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor,
                                 fontSize = 12.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -1967,7 +2034,7 @@ private fun upgradeThumbHD(url: String?): String? {
 fun SectionTitle(title: String, isDark: Boolean = true, small: Boolean = false) {
     Text(
         text = title,
-        color = if (small) Color.Gray else Color.White,
+        color = if (small) com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor else com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
         fontSize = if (small) 12.sp else 22.sp,
         fontWeight = if (small) FontWeight.SemiBold else FontWeight.Bold,
         modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = if (small) 4.dp else 12.dp)

@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="CompilerConfiguration">
-    <bytecodeTargetLevel target="11" />
+    <bytecodeTargetLevel target="11">
+      <module name="liquid-glass-compose.EscritorioVersion.desktopMain" target="21" />
+      <module name="liquid-glass-compose.EscritorioVersion.desktopTest" target="21" />
+      <module name="liquid-glass-compose.EscritorioVersion.jvmDev" target="21" />
+      <module name="liquid-glass-compose.EscritorioVersion.jvmMain" target="21" />
+      <module name="liquid-glass-compose.EscritorioVersion.jvmTest" target="21" />
+    </bytecodeTargetLevel>
   </component>
 </project>

@@ -13,6 +13,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -143,12 +144,13 @@ class MainActivity : ComponentActivity() {
         com.mrtdk.liquid_glass.data.LibraryManager.init(applicationContext)
 
         // ListenTogether integration
-        com.mrtdk.liquid_glass.playback.ListenTogetherManager.onPlaybackActionReceived = { action, position, trackId ->
+        com.mrtdk.liquid_glass.playback.ListenTogetherManager.onPlaybackActionReceived = { action, position, trackId, title, artist, artUrl ->
             musicPlayer?.let { player ->
                 com.mrtdk.liquid_glass.playback.ListenTogetherManager.isSyncing = true
                 try {
-                    if (trackId != null && trackId.isNotEmpty() && trackId != player.controller?.currentMediaItem?.mediaId) {
-                        player.playOnlineSong(trackId, null, null, null)
+                    val isNewSong = trackId != null && trackId.isNotEmpty() && trackId != player.controller?.currentMediaItem?.mediaId
+                    if (isNewSong) {
+                        player.playOnlineSong(trackId!!, title, artist, artUrl)
                     }
 
                     when (action) {
@@ -156,9 +158,9 @@ class MainActivity : ComponentActivity() {
                             if (player.isPlaying.value == false) {
                                 player.controller?.play()
                             }
-                            if (position != null) {
+                            if (position != null && position > 0L) {
                                 val currentPos = player.currentPosition.value
-                                if (Math.abs(currentPos - position) > 2000L) {
+                                if (isNewSong || Math.abs(currentPos - position) > 2000L) {
                                     player.seekTo(position)
                                 }
                             }
@@ -182,7 +184,7 @@ class MainActivity : ComponentActivity() {
                 } finally {
                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                         com.mrtdk.liquid_glass.playback.ListenTogetherManager.isSyncing = false
-                    }, 500)
+                    }, 800)
                 }
             }
         }
@@ -205,6 +207,50 @@ class MainActivity : ComponentActivity() {
                             notificationPermissionState.launchPermissionRequest()
                         }
                     }
+                }
+
+                var pendingJoinRequest by remember { mutableStateOf<Pair<String, String>?>(null) }
+                val newLtManager = remember { com.mrtdk.liquid_glass.listentogether.ListenTogetherManager.getInstance(context) }
+
+                LaunchedEffect(newLtManager) {
+                    newLtManager.client.events.collect { event ->
+                        if (event is com.mrtdk.liquid_glass.listentogether.ListenTogetherEvent.JoinRequestReceived) {
+                            pendingJoinRequest = Pair(event.userId, event.username)
+                        }
+                    }
+                }
+
+                if (pendingJoinRequest != null) {
+                    val activeReq = pendingJoinRequest!!
+                    androidx.compose.material3.AlertDialog(
+                        onDismissRequest = {
+                            newLtManager.client.rejectJoin(activeReq.first, "Rechazado por el usuario")
+                            pendingJoinRequest = null
+                        },
+                        title = { Text("Solicitud de ingreso", color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) },
+                        text = { Text("El usuario ${activeReq.second} quiere unirse a tu sala.", color = Color.White) },
+                        confirmButton = {
+                            androidx.compose.material3.TextButton(
+                                onClick = {
+                                    newLtManager.client.approveJoin(activeReq.first)
+                                    pendingJoinRequest = null
+                                }
+                            ) {
+                                Text("Aceptar", color = Color(0xFFFF2D55), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                            }
+                        },
+                        dismissButton = {
+                            androidx.compose.material3.TextButton(
+                                onClick = {
+                                    newLtManager.client.rejectJoin(activeReq.first, "Rechazado por el usuario")
+                                    pendingJoinRequest = null
+                                }
+                            ) {
+                                Text("Rechazar", color = Color(0xFF8E8E93))
+                            }
+                        },
+                        containerColor = Color(0xFF1C1C1E)
+                    )
                 }
 
                 var selectedIndex by remember { mutableIntStateOf(com.mrtdk.liquid_glass.data.LibraryManager.getLastTab()) }
@@ -310,6 +356,7 @@ class MainActivity : ComponentActivity() {
                     var categoryDetail by remember { mutableStateOf<com.mrtdk.liquid_glass.ui.screens.SearchCategory?>(null) }
                     var showFavoriteSongs by remember { mutableStateOf(false) }
                     var showReplay by remember { mutableStateOf(false) }
+                    var showListenTogether by remember { mutableStateOf(false) }
                     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
                     val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
 
@@ -322,7 +369,7 @@ class MainActivity : ComponentActivity() {
 
                     // Handle system back navigation
                     androidx.activity.compose.BackHandler(
-                        enabled = showPlayer || showReplay || videoDetail != null || playlistDetail != null || albumDetail != null || artistDetail != null || categoryDetail != null || showFavoriteSongs || (selectedIndex == 4 && isSearchSubmitted) || selectedIndex != 0
+                        enabled = showPlayer || showReplay || showListenTogether || videoDetail != null || playlistDetail != null || albumDetail != null || artistDetail != null || categoryDetail != null || showFavoriteSongs || (selectedIndex == 4 && isSearchSubmitted) || selectedIndex != 0
                     ) {
                         when {
                             videoDetail != null -> videoDetail = null
@@ -333,6 +380,7 @@ class MainActivity : ComponentActivity() {
                             showPlayer -> showPlayer = false
                             showReplay -> showReplay = false
                             showFavoriteSongs -> showFavoriteSongs = false
+                            showListenTogether -> showListenTogether = false
                             selectedIndex == 4 && isSearchSubmitted -> {
                                 isSearchSubmitted = false
                                 searchQuery = ""
@@ -383,6 +431,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                     val isPlaying by musicPlayer!!.isPlaying.collectAsState()
+                    val playbackError by musicPlayer!!.playbackError.collectAsState()
                     val currentPosition by musicPlayer!!.currentPosition.collectAsState()
                     val duration by musicPlayer!!.duration.collectAsState()
                     val shuffleModeEnabled by musicPlayer!!.shuffleModeEnabled.collectAsState()
@@ -421,6 +470,8 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
+                    val listenTogetherManager = remember { com.mrtdk.liquid_glass.listentogether.ListenTogetherManager.getInstance(context) }
+
                     // Helper to play a song
                     val playSongInternal: (PlayerState, Boolean) -> Unit = { state, keepQueue ->
                         playerState = state
@@ -455,10 +506,32 @@ class MainActivity : ComponentActivity() {
 
                         if (state.contentUri != null) musicPlayer?.playLocalSong(state.contentUri, state.title, state.artist, state.artUrl?.toString())
                         else if (state.videoId != null) musicPlayer?.playOnlineSong(state.videoId, state.title, state.artist, state.artUrl?.toString())
+
+                        listenTogetherManager.broadcastSongChange(state)
                     }
 
-                    val playSong: (PlayerState) -> Unit = { state -> playSongInternal(state, false) }
-                    val playSongFromQueue: (PlayerState) -> Unit = { state -> playSongInternal(state, true) }
+                    val playSong: (PlayerState) -> Unit = { state ->
+                        if (listenTogetherManager.onSongSelectedAttempt(state)) {
+                            playSongInternal(state, false)
+                        }
+                    }
+                    val playSongFromQueue: (PlayerState) -> Unit = { state ->
+                        if (listenTogetherManager.onSongSelectedAttempt(state)) {
+                            playSongInternal(state, true)
+                        }
+                    }
+
+                    LaunchedEffect(listenTogetherManager) {
+                        listenTogetherManager.onSongSelectedCallback = { targetState ->
+                            playSongInternal(targetState, false)
+                        }
+                        listenTogetherManager.onTogglePlayPauseCallback = {
+                            musicPlayer?.togglePlayPause()
+                        }
+                        listenTogetherManager.onSeekCallback = { posMs ->
+                            musicPlayer?.seekTo(posMs.toLong())
+                        }
+                    }
 
                     LaunchedEffect(Unit) {
                         androidx.compose.runtime.snapshotFlow { 
@@ -524,18 +597,28 @@ class MainActivity : ComponentActivity() {
                     }
 
                     val skipNextFun: () -> Unit = {
-                        val nextState = com.mrtdk.liquid_glass.playback.PlaybackQueue.getNextSongAndAdvance()
-                        if (nextState != null) {
-                            if (nextState.contentUri != null) musicPlayer?.playLocalSong(nextState.contentUri, nextState.title, nextState.artist, nextState.artUrl?.toString())
-                            else if (nextState.videoId != null) musicPlayer?.playOnlineSong(nextState.videoId, nextState.title, nextState.artist, nextState.artUrl?.toString())
+                        if (listenTogetherManager.isInRoom && !listenTogetherManager.isHost) {
+                            android.widget.Toast.makeText(context, "Solo el anfitrion puede cambiar canciones.", android.widget.Toast.LENGTH_SHORT).show()
+                        } else {
+                            val nextState = com.mrtdk.liquid_glass.playback.PlaybackQueue.getNextSongAndAdvance()
+                            if (nextState != null) {
+                                if (nextState.contentUri != null) musicPlayer?.playLocalSong(nextState.contentUri, nextState.title, nextState.artist, nextState.artUrl?.toString())
+                                else if (nextState.videoId != null) musicPlayer?.playOnlineSong(nextState.videoId, nextState.title, nextState.artist, nextState.artUrl?.toString())
+                                listenTogetherManager.broadcastSongChange(nextState)
+                            }
                         }
                     }
 
                     val skipPreviousFun: () -> Unit = {
-                        val prevState = com.mrtdk.liquid_glass.playback.PlaybackQueue.getPreviousSongAndGoBack()
-                        if (prevState != null) {
-                            if (prevState.contentUri != null) musicPlayer?.playLocalSong(prevState.contentUri, prevState.title, prevState.artist, prevState.artUrl?.toString())
-                            else if (prevState.videoId != null) musicPlayer?.playOnlineSong(prevState.videoId, prevState.title, prevState.artist, prevState.artUrl?.toString())
+                        if (listenTogetherManager.isInRoom && !listenTogetherManager.isHost) {
+                            android.widget.Toast.makeText(context, "Solo el anfitrion puede cambiar canciones.", android.widget.Toast.LENGTH_SHORT).show()
+                        } else {
+                            val prevState = com.mrtdk.liquid_glass.playback.PlaybackQueue.getPreviousSongAndGoBack()
+                            if (prevState != null) {
+                                if (prevState.contentUri != null) musicPlayer?.playLocalSong(prevState.contentUri, prevState.title, prevState.artist, prevState.artUrl?.toString())
+                                else if (prevState.videoId != null) musicPlayer?.playOnlineSong(prevState.videoId, prevState.title, prevState.artist, prevState.artUrl?.toString())
+                                listenTogetherManager.broadcastSongChange(prevState)
+                            }
                         }
                     }
 
@@ -578,7 +661,8 @@ class MainActivity : ComponentActivity() {
                                                         musicPlayer?.pause()
                                                         videoDetail = videoId
                                                     },
-                                                    onReplaySelected = { showReplay = true }
+                                                    onReplaySelected = { showReplay = true },
+                                                    onListenTogetherSelected = { showListenTogether = true }
                                                 )
                                                 1 -> NovedadesScreen(
                                                     innerPadding = innerPadding,
@@ -720,6 +804,14 @@ class MainActivity : ComponentActivity() {
                                                  )
                                              }
                                          }
+
+                                         if (showListenTogether) {
+                                             androidx.activity.compose.BackHandler { showListenTogether = false }
+                                             com.mrtdk.liquid_glass.ui.screens.ListenTogetherScreen(
+                                                 innerPadding = innerPadding,
+                                                 onBack = { showListenTogether = false }
+                                             )
+                                         }
                                     }
                                     },
                                     glassContent = {
@@ -814,18 +906,36 @@ class MainActivity : ComponentActivity() {
                                                     modifier = Modifier
                                                         .fillMaxWidth()
                                                         .align(Alignment.BottomCenter)
-                                                        .padding(start = mpPadStart, end = mpPadEnd, bottom = mpPadBottom)
+                                                        .layout { measurable, constraints ->
+                                                            val startPx = mpPadStart.roundToPx()
+                                                            val endPx = mpPadEnd.roundToPx()
+                                                            val bottomPx = mpPadBottom.roundToPx()
+                                                            val targetWidth = (constraints.maxWidth - startPx - endPx).coerceAtLeast(0)
+                                                            val placeable = measurable.measure(
+                                                                androidx.compose.ui.unit.Constraints.fixedWidth(targetWidth)
+                                                            )
+                                                            layout(constraints.maxWidth, placeable.height + bottomPx) {
+                                                                placeable.placeRelative(startPx, 0)
+                                                            }
+                                                        }
                                                 ) {
                                                     MiniPlayer(
                                                         playerState = playerState,
                                                         isPlaying = isPlaying,
                                                         onTogglePlayPause = { 
-                                                            if (duration <= 0L && playerState != null) {
-                                                                val state = playerState!!
-                                                                if (state.contentUri != null) musicPlayer?.playLocalSong(state.contentUri, state.title, state.artist, state.artUrl?.toString())
-                                                                else if (state.videoId != null) musicPlayer?.playOnlineSong(state.videoId, state.title, state.artist, state.artUrl?.toString())
+                                                            if (listenTogetherManager.isInRoom && !listenTogetherManager.isHost) {
+                                                                android.widget.Toast.makeText(context, "Solo el anfitrion puede controlar la reproduccion.", android.widget.Toast.LENGTH_SHORT).show()
                                                             } else {
-                                                                musicPlayer?.togglePlayPause() 
+                                                                if (duration <= 0L && playerState != null) {
+                                                                    val state = playerState!!
+                                                                    if (state.contentUri != null) musicPlayer?.playLocalSong(state.contentUri, state.title, state.artist, state.artUrl?.toString())
+                                                                    else if (state.videoId != null) musicPlayer?.playOnlineSong(state.videoId, state.title, state.artist, state.artUrl?.toString())
+                                                                } else {
+                                                                    musicPlayer?.togglePlayPause() 
+                                                                }
+                                                                if (listenTogetherManager.isInRoom && listenTogetherManager.isHost) {
+                                                                    listenTogetherManager.broadcastPlayPause(!isPlaying)
+                                                                }
                                                             }
                                                         },
                                                         onClick = { if (playerState != null) showPlayer = true },
@@ -880,15 +990,31 @@ class MainActivity : ComponentActivity() {
                                 onSkipPrevious = skipPreviousFun,
                                 onClose = { showPlayer = false },
                                 onTogglePlayPause = { 
-                                    if (duration <= 0L && playerState != null) {
-                                        val state = playerState!!
-                                        if (state.contentUri != null) musicPlayer?.playLocalSong(state.contentUri, state.title, state.artist, state.artUrl?.toString())
-                                        else if (state.videoId != null) musicPlayer?.playOnlineSong(state.videoId, state.title, state.artist, state.artUrl?.toString())
-                                    } else {
-                                        musicPlayer?.togglePlayPause() 
-                                    }
-                                },
-                                onSeek = { musicPlayer?.seekTo(it) },
+                                     if (listenTogetherManager.isInRoom && !listenTogetherManager.isHost) {
+                                         android.widget.Toast.makeText(context, "Solo el anfitrion puede controlar la reproduccion.", android.widget.Toast.LENGTH_SHORT).show()
+                                     } else {
+                                         if (duration <= 0L && playerState != null) {
+                                             val state = playerState!!
+                                             if (state.contentUri != null) musicPlayer?.playLocalSong(state.contentUri, state.title, state.artist, state.artUrl?.toString())
+                                             else if (state.videoId != null) musicPlayer?.playOnlineSong(state.videoId, state.title, state.artist, state.artUrl?.toString())
+                                         } else {
+                                             musicPlayer?.togglePlayPause() 
+                                         }
+                                         if (listenTogetherManager.isInRoom && listenTogetherManager.isHost) {
+                                             listenTogetherManager.broadcastPlayPause(!isPlaying)
+                                         }
+                                     }
+                                 },
+                                 onSeek = { posMs -> 
+                                     if (listenTogetherManager.isInRoom && !listenTogetherManager.isHost) {
+                                         android.widget.Toast.makeText(context, "Solo el anfitrion puede mover la musica.", android.widget.Toast.LENGTH_SHORT).show()
+                                     } else {
+                                         musicPlayer?.seekTo(posMs)
+                                         if (listenTogetherManager.isInRoom && listenTogetherManager.isHost) {
+                                             listenTogetherManager.broadcastSeek(posMs)
+                                         }
+                                     }
+                                 },
                                 onVolumeChange = { musicPlayer?.setVolume(it) },
                                 onArtistSelected = { artist ->
                                     showPlayer = false
@@ -911,7 +1037,9 @@ class MainActivity : ComponentActivity() {
                                         else -> androidx.media3.common.Player.REPEAT_MODE_OFF
                                     }
                                     musicPlayer?.setRepeatMode(nextMode)
-                                }
+                                },
+                                playbackError = playbackError,
+                                onClearPlaybackError = { musicPlayer?.clearPlaybackError() }
                             )
                         }
                     }

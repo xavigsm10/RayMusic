@@ -8,6 +8,9 @@ composeBom = "2024.09.00"
 vanniktechPublishing = "0.35.0"
 media3 = "1.5.1"
 cloudy = "0.5.0"
+compose-multiplatform = "1.11.1"
+vlcj = "4.12.1"
+haze = "0.7.3"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -25,6 +28,8 @@ androidx-media3-session = { group = "androidx.media3", name = "media3-session", 
 androidx-media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
 androidx-media3-hls = { group = "androidx.media3", name = "media3-exoplayer-hls", version.ref = "media3" }
 compose-cloudy = { module = "com.github.skydoves:cloudy", version.ref = "cloudy" }
+vlcj = { group = "uk.co.caprica", name = "vlcj", version.ref = "vlcj" }
+haze = { group = "dev.chrisbanes.haze", name = "haze", version.ref = "haze" }
 
 
 [plugins]
@@ -34,4 +39,5 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 kmp = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin"}
 android-kmp-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 vanniktech-publishing = { id = "com.vanniktech.maven.publish", version.ref = "vanniktechPublishing"}
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "compose-multiplatform" }
 

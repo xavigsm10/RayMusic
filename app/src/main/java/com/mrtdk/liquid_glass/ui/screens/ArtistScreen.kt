@@ -62,6 +62,7 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import com.mrtdk.liquid_glass.ui.components.unclippedBoundsInRoot
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.ScrollState
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.unit.IntOffset
@@ -136,6 +137,7 @@ fun ArtistScreen(
     val context = LocalContext.current
     var artistPage by remember { mutableStateOf<ArtistPage?>(null) }
     var isLoading by remember { mutableStateOf(true) }
+    var artistError by remember { mutableStateOf<String?>(null) }
     val savedItems by LibraryManager.savedItems.collectAsState()
     var dominantColor by remember { mutableStateOf(Color(0xFF111111)) }
     // "Show all albums" overlay state
@@ -176,7 +178,18 @@ fun ArtistScreen(
     }
 
 
-    val artistThumb = artistPage?.artist?.thumbnail ?: artistState.thumbnail
+    val currentArtistName = artistPage?.artist?.title ?: artistState.name
+    var spotifyArtistThumb by remember(currentArtistName) { mutableStateOf<String?>(null) }
+    LaunchedEffect(currentArtistName) {
+        if (currentArtistName.isNotBlank()) {
+            val spUrl = com.mrtdk.liquid_glass.spotify.SpotifyArtistProvider.getArtistImageUrl(currentArtistName)
+            if (!spUrl.isNullOrBlank()) {
+                spotifyArtistThumb = spUrl
+            }
+        }
+    }
+
+    val artistThumb = spotifyArtistThumb ?: artistPage?.artist?.thumbnail ?: artistState.thumbnail
     val hdThumb = artistThumb?.let { url ->
         val width = 1200
         val height = 1200
@@ -195,11 +208,18 @@ fun ArtistScreen(
     // Single fast API call — with fallback to search if browseId fails
     LaunchedEffect(artistState.id) {
         withContext(Dispatchers.IO) {
+            val errors = mutableListOf<String>()
+            
             // Try the direct artist API first (fastest)
-            val result = YouTube.artist(artistState.id).getOrNull()
-            if (result != null && result.sections.isNotEmpty()) {
-                artistPage = result
+            val result = YouTube.artist(artistState.id)
+            if (result.isSuccess && result.getOrNull()?.sections?.isNotEmpty() == true) {
+                artistPage = result.getOrNull()
             } else {
+                val errVal = result.exceptionOrNull()
+                if (errVal != null) {
+                    errors.add("Artist API error: ${errVal.localizedMessage ?: errVal.toString()}")
+                }
+                
                 // Fallback: search for the artist to get their correct browseId
                 // If the artist name has commas, ampersands, or semicolons, take the first one
                 val firstArtistName = artistState.name
@@ -208,17 +228,44 @@ fun ArtistScreen(
                     ?.split(";")?.firstOrNull()
                     ?.trim() ?: artistState.name
                 
-                val searchResult = YouTube.search(firstArtistName, YouTube.SearchFilter.FILTER_ARTIST).getOrNull()
-                val foundArtist = searchResult?.items?.filterIsInstance<com.echo.innertube.models.ArtistItem>()?.firstOrNull()
-                if (foundArtist != null && foundArtist.id != artistState.id) {
-                    YouTube.artist(foundArtist.id).onSuccess { page ->
-                        artistPage = page
+                val searchResult = YouTube.search(firstArtistName, YouTube.SearchFilter.FILTER_ARTIST)
+                if (searchResult.isSuccess) {
+                    val foundArtist = searchResult.getOrNull()?.items?.filterIsInstance<com.echo.innertube.models.ArtistItem>()?.firstOrNull()
+                    if (foundArtist != null && foundArtist.id != artistState.id) {
+                        val result2 = YouTube.artist(foundArtist.id)
+                        if (result2.isSuccess) {
+                            artistPage = result2.getOrNull()
+                        } else {
+                            val errVal2 = result2.exceptionOrNull()
+                            if (errVal2 != null) {
+                                errors.add("Artist fallback error: ${errVal2.localizedMessage ?: errVal2.toString()}")
+                            }
+                        }
+                    }
+                } else {
+                    val searchErr = searchResult.exceptionOrNull()
+                    if (searchErr != null) {
+                        errors.add("Search fallback error: ${searchErr.localizedMessage ?: searchErr.toString()}")
                     }
                 }
+                
                 // If still nothing, build a minimal page from search results
                 if (artistPage == null) {
-                    val songs = YouTube.search(firstArtistName, YouTube.SearchFilter.FILTER_SONG).getOrNull()?.items?.filterIsInstance<SongItem>()?.take(10) ?: emptyList()
-                    val albums = YouTube.search(firstArtistName, YouTube.SearchFilter.FILTER_ALBUM).getOrNull()?.items?.filterIsInstance<AlbumItem>() ?: emptyList()
+                    val songsResult = YouTube.search(firstArtistName, YouTube.SearchFilter.FILTER_SONG)
+                    val albumsResult = YouTube.search(firstArtistName, YouTube.SearchFilter.FILTER_ALBUM)
+                    
+                    val songs = songsResult.getOrNull()?.items?.filterIsInstance<SongItem>()?.take(10) ?: emptyList()
+                    val albums = albumsResult.getOrNull()?.items?.filterIsInstance<AlbumItem>() ?: emptyList()
+                    
+                    if (songsResult.isFailure) {
+                        val sErr = songsResult.exceptionOrNull()
+                        if (sErr != null) errors.add("Song search error: ${sErr.localizedMessage ?: sErr.toString()}")
+                    }
+                    if (albumsResult.isFailure) {
+                        val aErr = albumsResult.exceptionOrNull()
+                        if (aErr != null) errors.add("Album search error: ${aErr.localizedMessage ?: aErr.toString()}")
+                    }
+                    
                     if (songs.isNotEmpty() || albums.isNotEmpty()) {
                         val sections = mutableListOf<ArtistSection>()
                         if (songs.isNotEmpty()) sections.add(ArtistSection(title = "Songs", items = songs, moreEndpoint = null))
@@ -230,6 +277,11 @@ fun ArtistScreen(
                         )
                     }
                 }
+            }
+            if (artistPage == null && errors.isNotEmpty()) {
+                artistError = errors.joinToString("\n")
+            } else {
+                artistError = null
             }
             isLoading = false
         }
@@ -385,10 +437,11 @@ fun ArtistScreen(
                             essentialsDescriptions[album.id] = desc
                         } else {
                             val lang = java.util.Locale.getDefault().language
-                            val fallbackDesc = if (lang == "es") {
-                                "Un álbum imprescindible en la discografía de ${artistState.name} que define su legado musical."
-                            } else {
-                                "An essential album in the discography of ${artistState.name} that defines their musical legacy."
+                            val fallbackDesc = when (lang) {
+                                "es" -> "Un álbum imprescindible en la discografía de ${artistState.name} que define su legado musical."
+                                "pt" -> "Um álbum essencial na discografia de ${artistState.name} que define o seu legado musical."
+                                "tr" -> "${artistState.name} diskografisinde müzikal mirasını tanımlayan temel bir albüm."
+                                else -> "An essential album in the discography of ${artistState.name} that defines their musical legacy."
                             }
                             essentialsDescriptions[album.id] = fallbackDesc
                         }
@@ -1310,13 +1363,13 @@ fun ArtistScreen(
                         horizontalArrangement = Arrangement.Start,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(section.title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Text(section.title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                         if (isClickable) {
                             Spacer(modifier = Modifier.width(6.dp))
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                 contentDescription = "Ver todo",
-                                tint = Color.White.copy(alpha = 0.6f),
+                                tint = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor,
                                 modifier = Modifier.size(28.dp)
                             )
                         }
@@ -1567,7 +1620,7 @@ fun ArtistScreen(
             onClose = { showAllAlbumsOverlay = false }
         ) { dismiss ->
             val allAlbums = allAlbumsSection!!.items.filterIsInstance<AlbumItem>()
-            Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+            Box(modifier = Modifier.fillMaxSize().background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor)) {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     item { Spacer(modifier = Modifier.statusBarsPadding().height(16.dp)) }
                     // Pill back button
@@ -1577,7 +1630,7 @@ fun ArtistScreen(
                                 Icon(Icons.Default.ArrowBackIosNew, "Back", tint = Color(0xFFFA243C), modifier = Modifier.size(22.dp))
                             }
                             Spacer(modifier = Modifier.width(16.dp))
-                            Text(stringResource(R.string.albumes), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.albumes), color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                     }
@@ -1610,7 +1663,7 @@ fun ArtistScreen(
             onClose = { showAllSectionOverlay = false }
         ) { dismiss ->
             val overlayItems = allSectionData!!.items
-            Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+            Box(modifier = Modifier.fillMaxSize().background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor)) {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     item { Spacer(modifier = Modifier.statusBarsPadding().height(16.dp)) }
                     item {
@@ -1663,7 +1716,7 @@ fun ArtistScreen(
         // ── ALL SONGS OVERLAY PAGE ─────────────────────
         if (showAllSongsOverlay && allSongsSection != null) {
             val allSongs = allSongsSection!!.items.filterIsInstance<SongItem>()
-            Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+            Box(modifier = Modifier.fillMaxSize().background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor)) {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     item { Spacer(modifier = Modifier.statusBarsPadding().height(16.dp)) }
                     // Pill back button
@@ -1826,6 +1879,63 @@ fun ArtistScreen(
                 topSongs = topSongsSection?.items?.filterIsInstance<SongItem>() ?: emptyList()
             )
         }
+
+        if (artistError != null) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { artistError = null },
+                title = {
+                    Text(
+                        text = "Error al cargar artista",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Column {
+                        Text(
+                            text = "No se pudo cargar la información del artista. Por favor, toma una captura de pantalla de este error para enviársela al desarrollador:",
+                            color = Color.Gray,
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 200.dp)
+                                .background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                                .padding(8.dp)
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            Text(
+                                text = artistError ?: "",
+                                color = Color.Red,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    androidx.compose.material3.TextButton(
+                        onClick = {
+                            val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                            val clip = android.content.ClipData.newPlainText("Error RayMusic", artistError)
+                            clipboard.setPrimaryClip(clip)
+                            android.widget.Toast.makeText(context, "Copiado al portapapeles", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    ) {
+                        Text("Copiar", color = Color(0xFFE91E63))
+                    }
+                },
+                dismissButton = {
+                    androidx.compose.material3.TextButton(onClick = { artistError = null }) {
+                        Text("Cerrar", color = Color.White)
+                    }
+                },
+                containerColor = Color(0xFF1E1E1E),
+                textContentColor = Color.White
+            )
+        }
     }
 }
 
@@ -1885,8 +1995,8 @@ private fun ItemCard(
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(item.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("${item.year ?: ""}", color = Color.Gray, fontSize = 13.sp)
+                Text(item.title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("${item.year ?: ""}", color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 13.sp)
             }
         }
         is SongItem -> {
@@ -1922,8 +2032,8 @@ private fun ItemCard(
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(item.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(item.artists.joinToString { it.name }, color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(item.title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(item.artists.joinToString { it.name }, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         is PlaylistItem -> {
@@ -1961,8 +2071,8 @@ private fun ItemCard(
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(item.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(item.author?.name ?: stringResource(R.string.playlists), color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(item.title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(item.author?.name ?: stringResource(R.string.playlists), color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         is ArtistItem -> {
@@ -1972,7 +2082,7 @@ private fun ItemCard(
             }) {
                 AsyncImage(model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(), contentDescription = item.title, contentScale = ContentScale.Crop, modifier = Modifier.size(if (fillWidth) 160.dp else 120.dp).clip(CircleShape).background(Color.DarkGray))
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(item.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(item.title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         else -> {}
