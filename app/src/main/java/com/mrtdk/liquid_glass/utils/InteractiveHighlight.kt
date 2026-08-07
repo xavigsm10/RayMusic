@@ -114,7 +114,9 @@ half4 main(float2 coord) {
                     }
                 }
             ) { change, _ ->
-                animationScope.launch { positionAnimation.snapTo(change.position) }
+                if (change.position != positionAnimation.value) {
+                    animationScope.launch { positionAnimation.snapTo(change.position) }
+                }
             }
         }
 }

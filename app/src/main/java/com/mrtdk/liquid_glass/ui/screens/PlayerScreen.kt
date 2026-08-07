@@ -1164,7 +1164,11 @@ fun PlayerScreen(
 
     onToggleRepeat: () -> Unit = {},
 
-    onDominantColorChanged: (Color) -> Unit = {}
+    onDominantColorChanged: (Color) -> Unit = {},
+
+    playbackError: String? = null,
+
+    onClearPlaybackError: () -> Unit = {}
 
 ) {
 
@@ -1197,6 +1201,122 @@ fun PlayerScreen(
         val context = LocalContext.current
 
         val localBackdrop = rememberLayerBackdrop()
+
+
+
+        if (playbackError != null) {
+
+            androidx.compose.material3.AlertDialog(
+
+                onDismissRequest = onClearPlaybackError,
+
+                title = {
+
+                    Text(
+
+                        text = "Error de reproducción",
+
+                        color = Color.White,
+
+                        fontWeight = FontWeight.Bold
+
+                    )
+
+                },
+
+                text = {
+
+                    Column {
+
+                        Text(
+
+                            text = "No se pudo reproducir la canción. Por favor, toma una captura de pantalla de este error para enviársela al desarrollador:",
+
+                            color = Color.LightGray,
+
+                            fontSize = 14.sp,
+
+                            modifier = Modifier.padding(bottom = 8.dp)
+
+                        )
+
+                        Box(
+
+                            modifier = Modifier
+
+                                .fillMaxWidth()
+
+                                .heightIn(max = 200.dp)
+
+                                .background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+
+                                .padding(8.dp)
+
+                                .verticalScroll(rememberScrollState())
+
+                        ) {
+
+                            Text(
+
+                                text = playbackError ?: "",
+
+                                color = Color.Red,
+
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+
+                                fontSize = 12.sp
+
+                            )
+
+                        }
+
+                    }
+
+                },
+
+                confirmButton = {
+
+                    androidx.compose.material3.TextButton(
+
+                        onClick = {
+
+                            val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+
+                            val clip = android.content.ClipData.newPlainText("Error RayMusic", playbackError)
+
+                            clipboard.setPrimaryClip(clip)
+
+                            android.widget.Toast.makeText(context, "Copiado al portapapeles", android.widget.Toast.LENGTH_SHORT).show()
+
+                        }
+
+                    ) {
+
+                        Text("Copiar", color = Color(0xFFE91E63))
+
+                    }
+
+                },
+
+                dismissButton = {
+
+                    androidx.compose.material3.TextButton(onClick = onClearPlaybackError) {
+
+                        Text("Cerrar", color = Color.White)
+
+                    }
+
+                },
+
+                containerColor = Color(0xFF1E1E1E),
+
+                textContentColor = Color.White
+
+            )
+
+        }
+
+
 
         val audioManager = remember { context.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager }
 
@@ -3067,35 +3187,7 @@ fun PlayerScreen(
 
                                     .weight(1f)
 
-                                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-
-                                    .drawWithContent {
-
-                                        drawContent()
-
-                                        drawRect(
-
-                                            brush = Brush.verticalGradient(
-
-                                                colorStops = arrayOf(
-
-                                                    0.0f to Color.Black,
-
-                                                    0.94f to Color.Black,
-
-                                                    0.98f to Color.Black.copy(alpha = 0.3f),
-
-                                                    1.0f to Color.Transparent
-
-                                                )
-
-                                            ),
-
-                                            blendMode = BlendMode.DstIn
-
-                                        )
-
-                                    }
+                                    .fillMaxWidth()
 
                             ) {
 
@@ -3103,9 +3195,9 @@ fun PlayerScreen(
 
                                 state = queueListState, 
 
-                                modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp).nestedScroll(nestedScrollConnection), 
+                                modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp), 
 
-                                contentPadding = PaddingValues(bottom = 360.dp),
+                                contentPadding = PaddingValues(top = 4.dp, bottom = 16.dp),
 
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
 
@@ -7300,6 +7392,8 @@ fun LandscapePlayerLayout(
 
                                 modifier = Modifier.weight(1f).fillMaxWidth(),
 
+                                contentPadding = PaddingValues(top = 4.dp, bottom = 16.dp),
+
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
 
                             ) {
@@ -7972,7 +8066,10 @@ private fun QueueItemRow(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onClick() }
     ) {
         AsyncImage(
             model = upgradedArt,
@@ -8024,7 +8121,10 @@ private fun UpNextSongRow(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onClick() }
     ) {
         AsyncImage(
             model = hdThumb,

@@ -289,7 +289,7 @@ fun CategoriaScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor)
             .padding(innerPadding)
     ) {
         // App Bar
@@ -729,15 +729,9 @@ fun CategoriaScreen(
                                     },
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(context)
-                                        .data(item.thumbnail?.let {
-                                            when {
-                                                it.contains("=w") -> it.substringBefore("=w") + "=w400-h400-l90-rj"
-                                                else -> it
-                                            }
-                                        })
-                                        .crossfade(false).build(),
+                                com.mrtdk.liquid_glass.spotify.SpotifyArtistAvatar(
+                                    artistName = item.title,
+                                    fallbackUrl = item.thumbnail,
                                     contentDescription = "Artist Cover",
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier

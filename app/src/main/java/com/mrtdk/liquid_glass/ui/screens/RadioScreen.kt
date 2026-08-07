@@ -173,7 +173,7 @@ fun RadioScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor)
             .padding(innerPadding),
         contentAlignment = Alignment.Center
     ) {
@@ -236,7 +236,7 @@ fun RadioScreen(
                     resultText != null -> resultText!!
                     else -> stringResource(R.string.radio_tap_to_identify)
                 },
-                color = Color.White,
+                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
@@ -244,7 +244,7 @@ fun RadioScreen(
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = stringResource(R.string.radio_hear_clearly),
-                color = Color.Gray,
+                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor,
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center
             )

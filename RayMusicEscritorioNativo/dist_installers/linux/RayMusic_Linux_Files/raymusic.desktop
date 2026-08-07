@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=RayMusic
+Comment=Reproductor de Música Premium RayMusic
+Exec=/opt/raymusic/raymusic-launcher
+Icon=/opt/raymusic/src/app_icon.png
+Terminal=false
+Type=Application
+Categories=AudioVideo;Player;Audio;Music;

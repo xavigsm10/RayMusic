@@ -131,6 +131,14 @@ fun PlaylistsListScreen(
     val viewMode = remember { mutableStateOf(LibraryManager.getString("playlist_view_mode", "list") ?: "list") }
     val sortBy = remember { mutableStateOf(LibraryManager.getString("playlist_sort_by", "date_added") ?: "date_added") }
 
+    LaunchedEffect(Unit) {
+        if (com.mrtdk.liquid_glass.spotify.SpotifySession.isLoggedIn.value) {
+            withContext(Dispatchers.IO) {
+                LibraryManager.syncSpotifyPlaylists()
+            }
+        }
+    }
+
     var showCreateOptions by remember { mutableStateOf(false) }
     var showCreateModal by remember { mutableStateOf(false) }
     var contextMenuPlaylist by remember { mutableStateOf<Playlist?>(null) }
@@ -174,7 +182,7 @@ fun PlaylistsListScreen(
         useShader = true,
         content = {
             Box(modifier = Modifier.fillMaxSize()) {
-                Box(modifier = Modifier.fillMaxSize().background(Color.Black).layerBackdrop(pillBackdrop))
+                Box(modifier = Modifier.fillMaxSize().background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor).layerBackdrop(pillBackdrop))
                 Box(modifier = Modifier.fillMaxSize().layerBackdrop(localBackdrop)) {
                     if (viewMode.value == "grid") {
                     LazyVerticalGrid(
@@ -827,6 +835,13 @@ fun PlaylistDetailScreen(
     
     val coverUrl = currentPlaylist.coverUrl ?: (if (currentPlaylist.items.isNotEmpty()) currentPlaylist.items.first().thumbnail else null)
     
+    val isSpotify = remember(currentPlaylist.id) { currentPlaylist.id.startsWith("spotify_") }
+    LaunchedEffect(currentPlaylist.id) {
+        if (isSpotify && currentPlaylist.items.isEmpty()) {
+            LibraryManager.fetchSpotifyPlaylistTracks(currentPlaylist.id)
+        }
+    }
+
     // Exact same color extraction logic
     LaunchedEffect(coverUrl, isReplay) {
         if (isReplay) {

@@ -63,6 +63,8 @@ import com.mrtdk.liquid_glass.data.LibraryItem
 import com.mrtdk.liquid_glass.data.ItemType
 import com.mrtdk.liquid_glass.ui.screens.QueueItem
 import com.mrtdk.liquid_glass.ui.screens.PlayerState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 data class SearchCategory(val name: String, val imageUrl: String)
 
@@ -96,6 +98,7 @@ class BusquedaState {
     var selectedTab by mutableIntStateOf(0)
     var lastQuery by mutableStateOf("")
     var lastTab by mutableIntStateOf(-1)
+    var searchError by mutableStateOf<String?>(null)
 }
 
 @Composable
@@ -125,6 +128,7 @@ fun BusquedaScreen(
         if (query.length < 2) {
             state.displayResults = emptyList()
             state.lastQuery = query
+            state.searchError = null
             return@LaunchedEffect
         }
         
@@ -139,6 +143,7 @@ fun BusquedaScreen(
         state.isSearching = true
         state.lastQuery = query
         state.lastTab = state.selectedTab
+        state.searchError = null
         
         try {
             withContext(Dispatchers.IO) {
@@ -150,8 +155,9 @@ fun BusquedaScreen(
                         val artists = try { YouTube.search(query, YouTube.SearchFilter.FILTER_ARTIST).getOrNull()?.items?.filterIsInstance<ArtistItem>()?.take(3) ?: emptyList() } catch (_: Exception) { emptyList() }
                         val albums = try { YouTube.search(query, YouTube.SearchFilter.FILTER_ALBUM).getOrNull()?.items?.filterIsInstance<AlbumItem>()?.take(3) ?: emptyList() } catch (_: Exception) { emptyList() }
                         state.displayResults = artists + albums + songs
-                    }.onFailure {
+                    }.onFailure { err ->
                         state.displayResults = emptyList()
+                        state.searchError = err.localizedMessage ?: err.toString()
                     }
                 } else {
                     val filter = when (state.selectedTab) {
@@ -166,8 +172,9 @@ fun BusquedaScreen(
                             2 -> result.items.filterIsInstance<AlbumItem>().take(30)
                             else -> result.items.filterIsInstance<SongItem>().take(30)
                         }
-                    }.onFailure {
+                    }.onFailure { err ->
                         state.displayResults = emptyList()
+                        state.searchError = err.localizedMessage ?: err.toString()
                     }
                 }
             }
@@ -190,7 +197,7 @@ fun BusquedaScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black)
+                        .background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor)
                         .padding(innerPadding)
                 ) {
             Box(
@@ -269,7 +276,7 @@ fun BusquedaScreen(
         state = listState,
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black),
+            .background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor),
         contentPadding = PaddingValues(
             top = innerPadding.calculateTopPadding() + 16.dp,
             bottom = innerPadding.calculateBottomPadding() + 180.dp
@@ -290,14 +297,14 @@ fun BusquedaScreen(
                                 .clip(RoundedCornerShape(20.dp))
                                 .background(
                                     if (isSelected) Color(0xFFE91E63)
-                                    else Color.White.copy(alpha = 0.08f)
+                                    else com.mrtdk.liquid_glass.ui.theme.ThemeManager.surfaceColor
                                 )
                                 .clickable { state.selectedTab = i }
                                 .padding(horizontal = 18.dp, vertical = 9.dp)
                         ) {
                             Text(
                                 text = tabNames[i],
-                                color = if (isSelected) Color.White else Color.LightGray,
+                                color = if (isSelected) Color.White else com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                 fontSize = 15.sp
                             )
@@ -364,11 +371,11 @@ fun BusquedaScreen(
                             }
                             Spacer(modifier = Modifier.width(14.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(item.title, color = Color.White, fontSize = 15.sp,
+                                Text(item.title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 15.sp,
                                     fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Text(
                                     "${stringResource(R.string.search_type_song)} · ${item.artists.joinToString { it.name }}",
-                                    color = Color.Gray, fontSize = 13.sp,
+                                    color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 13.sp,
                                     maxLines = 1, overflow = TextOverflow.Ellipsis
                                 )
                             }
@@ -383,7 +390,7 @@ fun BusquedaScreen(
                                     albumId = item.album?.id
                                 )
                             }) {
-                                Icon(Icons.Default.MoreVert, null, tint = Color.Gray)
+                                Icon(Icons.Default.MoreVert, null, tint = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor)
                             }
                         }
                     }
@@ -409,9 +416,9 @@ fun BusquedaScreen(
                                     .clip(CircleShape)
                                     .background(Color.DarkGray)
                             ) {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(context)
-                                        .data(item.thumbnail).crossfade(false).build(),
+                                com.mrtdk.liquid_glass.spotify.SpotifyArtistAvatar(
+                                    artistName = item.title,
+                                    fallbackUrl = item.thumbnail,
                                     contentDescription = "Artist",
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize()
@@ -419,12 +426,12 @@ fun BusquedaScreen(
                             }
                             Spacer(modifier = Modifier.width(14.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(item.title, color = Color.White, fontSize = 15.sp,
+                                Text(item.title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 15.sp,
                                     fontWeight = FontWeight.Medium, maxLines = 1)
-                                Text(stringResource(R.string.search_type_artist), color = Color.Gray, fontSize = 13.sp)
+                                Text(stringResource(R.string.search_type_artist), color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 13.sp)
                             }
                             IconButton(onClick = { }) {
-                                Icon(Icons.Default.MoreVert, null, tint = Color.Gray)
+                                Icon(Icons.Default.MoreVert, null, tint = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor)
                             }
                         }
                     }
@@ -469,9 +476,9 @@ fun BusquedaScreen(
                             }
                             Spacer(modifier = Modifier.width(14.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(item.title, color = Color.White, fontSize = 15.sp,
+                                Text(item.title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 15.sp,
                                     fontWeight = FontWeight.Medium, maxLines = 1)
-                                Text("${stringResource(R.string.search_type_album)} · ${item.year ?: ""}", color = Color.Gray, fontSize = 13.sp)
+                                Text("${stringResource(R.string.search_type_album)} · ${item.year ?: ""}", color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 13.sp)
                             }
                             IconButton(onClick = {
                                 activeAlbumForMenu = ContextMenuAlbum(
@@ -483,7 +490,7 @@ fun BusquedaScreen(
                                     year = item.year
                                 )
                             }) {
-                                Icon(Icons.Default.MoreVert, null, tint = Color.Gray)
+                                Icon(Icons.Default.MoreVert, null, tint = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor)
                             }
                         }
                     }
@@ -492,7 +499,7 @@ fun BusquedaScreen(
         } else if (!state.isSearching && query.isNotEmpty() && state.displayResults.isEmpty()) {
             item {
                 Box(modifier = Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
-                    Text(stringResource(R.string.no_resultados_para, query), color = Color.Gray)
+                    Text(stringResource(R.string.no_resultados_para, query), color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor)
                 }
             }
         }
@@ -608,4 +615,61 @@ glassContent = {
         )
     }
 })
+
+    if (state.searchError != null) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { state.searchError = null },
+            title = {
+                Text(
+                    text = "Error al buscar",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "No se pudieron obtener resultados de búsqueda. Por favor, toma una captura de pantalla de este error para enviársela al desarrollador:",
+                        color = Color.Gray,
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 200.dp)
+                            .background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                            .padding(8.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        Text(
+                            text = state.searchError ?: "",
+                            color = Color.Red,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        val clip = android.content.ClipData.newPlainText("Error RayMusic", state.searchError)
+                        clipboard.setPrimaryClip(clip)
+                        android.widget.Toast.makeText(context, "Copiado al portapapeles", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                ) {
+                    Text("Copiar", color = Color(0xFFE91E63))
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { state.searchError = null }) {
+                    Text("Cerrar", color = Color.White)
+                }
+            },
+            containerColor = Color(0xFF1E1E1E),
+            textContentColor = Color.White
+        )
+    }
 }

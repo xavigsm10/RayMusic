@@ -5,6 +5,17 @@ import coil.request.ImageResult
 import android.util.Log
 
 object CoilUtils {
+    private val REGEX_MZSTATIC_1 = Regex("/\\d+x\\d+bb\\.[a-zA-Z0-9]+$")
+    private val REGEX_MZSTATIC_2 = Regex("/\\d+x\\d+sr\\.[a-zA-Z0-9]+$")
+    private val REGEX_MZSTATIC_3 = Regex("/\\d+x\\d+bb\\-\\d+\\.[a-zA-Z0-9]+$")
+    private val REGEX_MZSTATIC_4 = Regex("/\\d+x\\d+\\.[a-zA-Z0-9]+$")
+    private val REGEX_WS_1 = Regex("=[ws]\\d+")
+    private val REGEX_WS_1_REPLACE = Regex("=[ws]\\d+.*$")
+    private val REGEX_WS_2 = Regex("-[ws]\\d+")
+    private val REGEX_WS_2_REPLACE = Regex("-[ws]\\d+.*$")
+    private val REGEX_WS_3 = Regex("/[ws]\\d+")
+    private val REGEX_WS_3_REPLACE = Regex("/[ws]\\d+.*$")
+
     fun upgradeThumbQuality(url: String?): String? {
         if (url == null) return null
         if (url.startsWith("file:///android_asset/")) {
@@ -13,10 +24,10 @@ object CoilUtils {
         
         val upgraded = when {
             url.contains("mzstatic.com") -> {
-                url.replace(Regex("/\\d+x\\d+bb\\.[a-zA-Z0-9]+$"), "/1000x1000bb.jpg")
-                   .replace(Regex("/\\d+x\\d+sr\\.[a-zA-Z0-9]+$"), "/1000x1000bb.jpg")
-                   .replace(Regex("/\\d+x\\d+bb\\-\\d+\\.[a-zA-Z0-9]+$"), "/1000x1000bb.jpg")
-                   .replace(Regex("/\\d+x\\d+\\.[a-zA-Z0-9]+$"), "/1000x1000bb.jpg")
+                url.replace(REGEX_MZSTATIC_1, "/1000x1000bb.jpg")
+                   .replace(REGEX_MZSTATIC_2, "/1000x1000bb.jpg")
+                   .replace(REGEX_MZSTATIC_3, "/1000x1000bb.jpg")
+                   .replace(REGEX_MZSTATIC_4, "/1000x1000bb.jpg")
             }
            
             url.contains("yt3.ggpht.com") -> {
@@ -25,12 +36,12 @@ object CoilUtils {
             }
            
             url.contains("googleusercontent.com") || url.contains("ggpht.com") -> {
-                if (url.contains(Regex("=[ws]\\d+"))) {
-                    url.replace(Regex("=[ws]\\d+.*$"), "=w1200-h1200-l90-rj")
-                } else if (url.contains(Regex("-[ws]\\d+"))) {
-                    url.replace(Regex("-[ws]\\d+.*$"), "-w1200-h1200")
-                } else if (url.contains(Regex("/[ws]\\d+"))) {
-                    url.replace(Regex("/[ws]\\d+.*$"), "/s1200")
+                if (url.contains(REGEX_WS_1)) {
+                    url.replace(REGEX_WS_1_REPLACE, "=w1200-h1200-l90-rj")
+                } else if (url.contains(REGEX_WS_2)) {
+                    url.replace(REGEX_WS_2_REPLACE, "-w1200-h1200")
+                } else if (url.contains(REGEX_WS_3)) {
+                    url.replace(REGEX_WS_3_REPLACE, "/s1200")
                 } else {
                     val index = url.indexOf("=w").takeIf { it != -1 } ?: url.indexOf("=s")
                     if (index != -1) {
@@ -52,7 +63,7 @@ object CoilUtils {
                    .replace("/mqdefault.webp", "/maxresdefault.jpg")
                    .replace("/sddefault.webp", "/maxresdefault.jpg")
             }
-            
+             
             url.contains("=w") || url.contains("=s") -> {
                 val index = url.indexOf("=w").takeIf { it != -1 } ?: url.indexOf("=s")
                 if (index != -1) {

@@ -297,12 +297,12 @@ fun NovedadesScreen(
 
     LazyColumn(
         state = listState,
-        modifier = Modifier.fillMaxSize().background(Color.Black),
+        modifier = Modifier.fillMaxSize().background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor),
         contentPadding = PaddingValues(top = innerPadding.calculateTopPadding() + 16.dp, bottom = innerPadding.calculateBottomPadding() + 180.dp)
     ) {
         // ── FEATURED ALBUMS CAROUSEL (big cards with text overlay at top) ──
         item {
-            Text(stringResource(R.string.nav_novedades), color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+            Text(stringResource(R.string.nav_novedades), color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 28.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
             Spacer(modifier = Modifier.height(8.dp))
 
             if (state.featuredAlbums.isNotEmpty()) {
@@ -353,7 +353,7 @@ fun NovedadesScreen(
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                     repeat(state.featuredAlbums.size) { i ->
                         Box(modifier = Modifier.padding(horizontal = 3.dp).size(if (pagerState.currentPage == i) 8.dp else 6.dp).clip(CircleShape)
-                            .background(if (pagerState.currentPage == i) Color.White else Color.White.copy(alpha = 0.3f)))
+                            .background(if (pagerState.currentPage == i) com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor else com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor.copy(alpha = 0.3f)))
                     }
                 }
                 Spacer(modifier = Modifier.height(28.dp))
@@ -364,8 +364,8 @@ fun NovedadesScreen(
         if (state.featuredNewSongs.isNotEmpty()) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text(stringResource(R.string.canciones_nuevas_destacadas), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                    androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(28.dp).padding(start = 4.dp))
+                    Text(stringResource(R.string.canciones_nuevas_destacadas), color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.ChevronRight, contentDescription = null, tint = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, modifier = Modifier.size(28.dp).padding(start = 4.dp))
                 }
                 Spacer(modifier = Modifier.height(4.dp))
 
@@ -393,7 +393,7 @@ fun NovedadesScreen(
         if (state.newReleaseAlbums.size > 6) {
             item {
                 Spacer(modifier = Modifier.height(28.dp))
-                Text(stringResource(R.string.nav_novedades), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                Text(stringResource(R.string.nav_novedades), color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -427,8 +427,8 @@ fun NovedadesScreen(
                                         AsyncImage(model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(), contentDescription = album.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                                     }
                                     Spacer(modifier = Modifier.height(8.dp))
-                                    Text(album.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text(album.artists?.joinToString { it.name } ?: "", color = Color.Gray, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(album.title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(album.artists?.joinToString { it.name } ?: "", color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                             }
                         }
@@ -442,7 +442,7 @@ fun NovedadesScreen(
             item {
                 Spacer(modifier = Modifier.height(32.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text(stringResource(R.string.canciones_momento), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.canciones_momento), color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                     androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(28.dp).padding(start = 4.dp))
                 }
                 Spacer(modifier = Modifier.height(4.dp))
@@ -472,7 +472,7 @@ fun NovedadesScreen(
             item {
                 Spacer(modifier = Modifier.height(32.dp))
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text(stringResource(R.string.toda_gente_escuchando), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.toda_gente_escuchando), color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -519,7 +519,7 @@ fun NovedadesScreen(
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 s.title,
-                                color = Color.White,
+                                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Medium,
                                 maxLines = 1,
@@ -527,7 +527,7 @@ fun NovedadesScreen(
                             )
                             Text(
                                 s.artists.joinToString { it.name },
-                                color = Color.Gray,
+                                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor,
                                 fontSize = 12.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -563,15 +563,15 @@ private fun SongRow(
         Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(s.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(s.title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (s.explicit) {
                     Box(modifier = Modifier.padding(start = 4.dp).clip(RoundedCornerShape(4.dp)).background(Color.Gray.copy(alpha=0.3f)).padding(horizontal = 4.dp, vertical = 2.dp)) {
-                        Text("E", color = Color.LightGray, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Text("E", color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
-            Text(s.artists.joinToString { it.name }, color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(s.artists.joinToString { it.name }, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.MoreVert, contentDescription = "More", tint = Color.Gray, modifier = Modifier.padding(start = 8.dp).size(20.dp))
+        androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.MoreVert, contentDescription = "More", tint = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, modifier = Modifier.padding(start = 8.dp).size(20.dp))
     }
 }

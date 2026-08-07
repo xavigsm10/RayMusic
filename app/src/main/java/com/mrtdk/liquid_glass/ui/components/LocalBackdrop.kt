@@ -288,8 +288,10 @@ fun SharedElementTransitionContainer(
                         dragY = (dragY + delta).coerceAtLeast(0f)
                         val consumed = dragY - oldDragY
                         val newProgress = (1f - (dragY / (screenHeight * 0.8f))).coerceIn(0f, 1f)
-                        scope.launch {
-                            progress.snapTo(newProgress)
+                        if (newProgress != progress.value) {
+                            scope.launch {
+                                progress.snapTo(newProgress)
+                            }
                         }
                         return androidx.compose.ui.geometry.Offset(0f, consumed)
                     }
@@ -305,8 +307,10 @@ fun SharedElementTransitionContainer(
                     if (delta > 0f) {
                         dragY += delta
                         val newProgress = (1f - (dragY / (screenHeight * 0.8f))).coerceIn(0f, 1f)
-                        scope.launch {
-                            progress.snapTo(newProgress)
+                        if (newProgress != progress.value) {
+                            scope.launch {
+                                progress.snapTo(newProgress)
+                            }
                         }
                         return androidx.compose.ui.geometry.Offset(0f, delta)
                     }
