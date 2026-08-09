@@ -149,6 +149,8 @@ import androidx.compose.ui.graphics.luminance
 
 import androidx.compose.ui.graphics.Path
 
+import androidx.compose.ui.graphics.Paint
+
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
@@ -2389,7 +2391,6 @@ fun PlayerScreen(
                         }
 
                     }
-
             ) {
 
 
@@ -2414,11 +2415,15 @@ fun PlayerScreen(
                 val verticalScale = -stretchY
                 val pivotY = stretchY / (1f + stretchY)
 
+                val blurRadiusPx = with(density) { 15.dp.toPx() }
+                val maskBitmapCache = remember { arrayOfNulls<androidx.compose.ui.graphics.ImageBitmap>(1) }
+
                 Box(
                     modifier = Modifier
                         .offset(x = reflectionX, y = reflectionY)
                         .width(reflectionWidth)
                         .height(reflectionHeight)
+                        .clipToBounds()
                         .graphicsLayer {
                             compositingStrategy = CompositingStrategy.Offscreen
                             alpha = (1f - dragProgress).coerceIn(0f, 1f)
@@ -2428,27 +2433,50 @@ fun PlayerScreen(
 
                             val w = size.width
                             val h = size.height
-                            val curveDipPx = with(density) { 38.dp.toPx() }
+                            val width = w.roundToInt()
+                            val height = h.roundToInt()
 
-                            // Forma curva proyectada hacia abajo para una integración suave con la carátula superior
-                            val curvedPath = Path().apply {
-                                moveTo(0f, 0f)
-                                cubicTo(
-                                    w * 0.25f, curveDipPx,
-                                    w * 0.65f, curveDipPx * 1.1f,
-                                    w, 0f
-                                )
-                                lineTo(w, h)
-                                lineTo(0f, h)
-                                close()
+                            if (width > 0 && height > 0) {
+                                val currentBmp = maskBitmapCache[0]
+                                if (currentBmp == null || currentBmp.width != width || currentBmp.height != height) {
+                                    val bmp = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
+                                    val canvas = android.graphics.Canvas(bmp)
+
+                                    val paint = android.graphics.Paint().apply {
+                                        isAntiAlias = true
+                                        color = android.graphics.Color.BLACK
+                                        style = android.graphics.Paint.Style.FILL
+                                        maskFilter = android.graphics.BlurMaskFilter(blurRadiusPx, android.graphics.BlurMaskFilter.Blur.NORMAL)
+                                    }
+
+                                    val path = android.graphics.Path().apply {
+                                        val curveDipPx = with(density) { 38.dp.toPx() }
+                                        val ext = blurRadiusPx
+
+                                        moveTo(-ext, 0f)
+                                        lineTo(0f, 0f)
+                                        cubicTo(
+                                            width * 0.28f, curveDipPx * 0.90f,
+                                            width * 0.65f, curveDipPx * 1.25f,
+                                            width.toFloat(), curveDipPx * 0.35f
+                                        )
+                                        lineTo(width + ext, curveDipPx * 0.35f)
+                                        lineTo(width + ext, height + ext)
+                                        lineTo(-ext, height + ext)
+                                        close()
+                                    }
+
+                                    canvas.drawPath(path, paint)
+                                    maskBitmapCache[0] = bmp.asImageBitmap()
+                                }
                             }
 
-                            // Aplicar el recorte de la curva en DstIn con opacidad 100% continua (sin filtrar color sólido de fondo)
-                            drawPath(
-                                path = curvedPath,
-                                color = Color.Black,
-                                blendMode = BlendMode.DstIn
-                            )
+                            maskBitmapCache[0]?.let { bmp ->
+                                drawImage(
+                                    image = bmp,
+                                    blendMode = BlendMode.DstIn
+                                )
+                            }
                         }
                 ) {
                     val currentBitmap = coverBitmap
@@ -2468,7 +2496,6 @@ fun PlayerScreen(
                                     transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, pivotY)
                                 }
                                 .clipToBounds()
-                                .blur(20.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
                         )
                     } else if (mirrorArtModel != null) {
                         AsyncImage(
@@ -2489,7 +2516,6 @@ fun PlayerScreen(
                                     transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, pivotY)
                                 }
                                 .clipToBounds()
-                                .blur(20.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
                         )
                     }
                 }
@@ -3536,32 +3562,111 @@ fun PlayerScreen(
                         }
 
                     }
-
-
-
             ) {
 
                 // Base sharp album cover (always drawn in background during drag or before playback starts)
-
                 AsyncImage(
-
                     model = ImageRequest.Builder(context)
-
                         .data(hdArtUrl)
-
                         .crossfade(true)
-
                         .build(),
-
                     imageLoader = animatedImageLoader,
-
                     contentDescription = "Album Art",
-
                     contentScale = ContentScale.Crop,
-
                     modifier = Modifier.fillMaxSize()
-
                 )
+
+                // Capa de desenfoque blur recortada exclusivamente en la sección bajo la curva elevada (1:1 en ancho y escala con difuminado suave en el borde curvo)
+                if (dragProgress < 1f && !isOverlayActive) {
+                    val blurRadiusPx = with(density) { 15.dp.toPx() }
+                    val maskBitmapCache = remember { arrayOfNulls<androidx.compose.ui.graphics.ImageBitmap>(1) }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                compositingStrategy = CompositingStrategy.Offscreen
+                            }
+                            .drawWithContent {
+                                drawContent()
+
+                                val w = size.width
+                                val h = size.height
+                                val width = w.roundToInt()
+                                val height = h.roundToInt()
+
+                                if (width > 0 && height > 0) {
+                                    val currentBmp = maskBitmapCache[0]
+                                    if (currentBmp == null || currentBmp.width != width || currentBmp.height != height) {
+                                        val bmp = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
+                                        val canvas = android.graphics.Canvas(bmp)
+
+                                        val paint = android.graphics.Paint().apply {
+                                            isAntiAlias = true
+                                            color = android.graphics.Color.BLACK
+                                            style = android.graphics.Paint.Style.FILL
+                                            maskFilter = android.graphics.BlurMaskFilter(blurRadiusPx, android.graphics.BlurMaskFilter.Blur.NORMAL)
+                                        }
+
+                                        val path = android.graphics.Path().apply {
+                                            val lY = height - with(density) { 95.dp.toPx() }
+                                            val rY = height - with(density) { 115.dp.toPx() }
+                                            val mY = height - with(density) { 6.dp.toPx() }
+                                            val ext = blurRadiusPx
+
+                                            moveTo(-ext, lY)
+                                            lineTo(0f, lY)
+                                            cubicTo(
+                                                width * 0.28f, mY + with(density) { 4.dp.toPx() },
+                                                width * 0.65f, mY + with(density) { 8.dp.toPx() },
+                                                width.toFloat(), rY
+                                            )
+                                            lineTo(width + ext, rY)
+                                            lineTo(width + ext, height + ext)
+                                            lineTo(-ext, height + ext)
+                                            close()
+                                        }
+
+                                        canvas.drawPath(path, paint)
+                                        maskBitmapCache[0] = bmp.asImageBitmap()
+                                    }
+                                }
+
+                                maskBitmapCache[0]?.let { bmp ->
+                                    drawImage(
+                                        image = bmp,
+                                        blendMode = BlendMode.DstIn
+                                    )
+                                }
+                            }
+                    ) {
+                        val currentBitmap = coverBitmap
+                        if (currentBitmap != null) {
+                            Image(
+                                bitmap = currentBitmap,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .blur(25.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
+                            )
+                        } else {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(hdArtUrl)
+                                    .crossfade(true)
+                                    .build(),
+                                imageLoader = animatedImageLoader,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .blur(25.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
+                            )
+                        }
+                    }
+                }
+
+
 
 
 
@@ -3637,115 +3742,7 @@ fun PlayerScreen(
 
 
 
-                // Blurred bottom overlay to fade/blur the bottom of the image
 
-                if (dragProgress < 1f && !isOverlayActive) {
-
-                    val currentBitmap = coverBitmap
-
-                    if (currentBitmap != null) {
-
-                        Image(
-
-                            bitmap = currentBitmap,
-
-                            contentDescription = null,
-
-                            contentScale = ContentScale.Crop,
-
-                            modifier = Modifier
-
-                                .fillMaxSize()
-
-                                .cloudy(radius = 100)
-
-                                .drawWithContent {
-
-                                    drawContent()
-
-                                    drawRect(
-
-                                        brush = Brush.verticalGradient(
-
-                                            colorStops = arrayOf(
-
-                                                0.75f to Color.Transparent,
-
-                                                0.88f to Color.Black.copy(alpha = 0.6f),
-
-                                                1.0f to Color.Black
-
-                                            )
-
-                                        ),
-
-                                        blendMode = BlendMode.DstIn
-
-                                    )
-
-                                }
-
-                        )
-
-                    } else {
-
-                        AsyncImage(
-
-                            model = ImageRequest.Builder(context)
-
-                                .data(hdArtUrl)
-
-                                .size(150) // Downsample to 150x150 for a much more aggressive, premium soft blur
-
-                                .memoryCachePolicy(coil.request.CachePolicy.READ_ONLY)
-
-                                .crossfade(true)
-
-                                .build(),
-
-                            imageLoader = animatedImageLoader,
-
-                            contentDescription = null,
-
-                            contentScale = ContentScale.Crop,
-
-                            modifier = Modifier
-
-                                .fillMaxSize()
-
-                                .cloudy(radius = 100)
-
-                                .drawWithContent {
-
-                                    drawContent()
-
-                                    drawRect(
-
-                                        brush = Brush.verticalGradient(
-
-                                            colorStops = arrayOf(
-
-                                                0.75f to Color.Transparent,
-
-                                                0.88f to Color.Black.copy(alpha = 0.6f),
-
-                                                1.0f to Color.Black
-
-                                            )
-
-                                        ),
-
-                                        blendMode = BlendMode.DstIn
-
-                                    )
-
-                                }
-
-                        )
-
-                    }
-
-                }
 
             }
 
