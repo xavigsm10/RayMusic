@@ -2336,45 +2336,6 @@ fun PlayerScreen(
                     }
 
                     .background(bottomAverageColor.copy(alpha = bgAlpha))
-
-                    .drawWithContent {
-
-                        if (dragProgress < 1f) {
-
-                            drawRect(
-
-                                brush = Brush.verticalGradient(
-
-                                    colors = listOf(
-
-                                        Color.Transparent,
-
-                                        bottomAverageColor.copy(alpha = 0.10f),
-
-                                        bottomAverageColor.copy(alpha = 0.30f),
-
-                                        bottomAverageColor.copy(alpha = 0.55f),
-
-                                        bottomAverageColor.copy(alpha = 0.80f),
-
-                                        bottomAverageColor
-
-                                    ),
-
-                                    startY = this.size.height * 0.42f,
-
-                                    endY = this.size.height
-
-                                )
-
-                            )
-
-                        }
-
-                        drawContent()
-
-                    }
-
                     .pointerInput(showLyrics, showQueue) {
 
                         if (!showLyrics && !showQueue) {
@@ -2433,410 +2394,106 @@ fun PlayerScreen(
 
 
 
-            //             // Capa 1: Reflejo Líquido Estirado 1D (Proyección vertical de la carátula)
 
-            val currentCoverBitmap = coverBitmap
 
-            val overlapDp = 35.dp
 
-            // Keep the blur height frozen: restore original formula but only update it when in main view,
 
-            // so it doesn't change when returning from overlay views.
-
-            var frozenBlurHeight by remember { mutableStateOf(0.dp) }
-
-            val dynamicBlurHeight = if (stableSliderYDp > 0.dp) {
-
-                (stableSliderYDp - (expandedY + expandedHeight - overlapDp)).coerceAtLeast(0.dp)
-
-            } else {
-
-                maxHeight - (expandedY + expandedHeight) + overlapDp
-
-            }
-
-            if (!isOverlayActive && dragProgress == 0f && stableSliderYDp > 0.dp && dynamicBlurHeight < 150.dp) {
-
-                frozenBlurHeight = dynamicBlurHeight
-
-            }
-
-            if (currentCoverBitmap != null && dragProgress < 1f && !isOverlayActive) {
-
-                val blurHeight = if (frozenBlurHeight > 0.dp) frozenBlurHeight else dynamicBlurHeight
-
-
-
-                // Caja del reflejo posicionada bajo la portada, llenando todo el espacio inferior
-
-                Box(
-
-                    modifier = Modifier
-
-                        .offset(x = 0.dp, y = expandedY + expandedHeight - overlapDp)
-
-                        .fillMaxWidth()
-
-                        .height(blurHeight + 120.dp)
-
-                        .graphicsLayer {
-
-                            compositingStrategy = CompositingStrategy.Offscreen
-
-                        }
-
-                        .blur(25.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
-
-                        .drawWithContent {
-
-                            drawContent()
-
-                            drawRect(
-
-                                brush = Brush.verticalGradient(
-
-                                    colorStops = if (isBadSong) {
-
-                                        arrayOf(
-
-                                            0.0f to Color.Black,
-
-                                            0.05f to Color.Black.copy(alpha = 0.4f),
-
-                                            0.1f to Color.Transparent,
-
-                                            1.0f to Color.Transparent
-
-                                        )
-
-                                    } else {
-
-                                        arrayOf(
-
-                                            0.0f to Color.Black,
-
-                                            0.05f to Color.Black,
-
-                                            0.15f to Color.Black.copy(alpha = 0.9f),
-
-                                            0.30f to Color.Black.copy(alpha = 0.7f),
-
-                                            0.45f to Color.Black.copy(alpha = 0.45f),
-
-                                            0.60f to Color.Black.copy(alpha = 0.25f),
-
-                                            0.75f to Color.Black.copy(alpha = 0.10f),
-
-                                            0.88f to Color.Black.copy(alpha = 0.03f),
-
-                                            1.0f to Color.Transparent
-
-                                        )
-
-                                    }
-
-                                ),
-
-                                blendMode = BlendMode.DstIn
-
-                            )
-
-                        }
-
-                ) {
-
-                    Canvas(modifier = Modifier.fillMaxSize()) {
-                        val imgX = expandedX.toPx()
-                        val imgW = expandedWidth.toPx()
-                        val screenW = size.width
-                        val screenH = size.height
-
-                        val imgXInt = imgX.toInt()
-                        val imgWInt = imgW.toInt()
-                        val screenWInt = screenW.toInt()
-
-                        val sampleHeight = 5 // Altura de muestreo del borde
-                        val sampleH = sampleHeight.coerceAtMost(currentCoverBitmap.height).coerceAtLeast(1)
-
-                        // Mapeo del recorte de la portada debido a ContentScale.Crop en la pantalla
-                        val containerW = imgW
-                        val containerH = expandedHeight.toPx()
-                        val bitmapW = currentCoverBitmap.width.toFloat()
-                        val bitmapH = currentCoverBitmap.height.toFloat()
-
-                        val containerRatio = containerW / containerH
-                        val bitmapRatio = bitmapW / bitmapH
-
-                        val srcX: Float
-                        val srcWidth: Float
-                        val srcY: Float
-
-                        if (containerRatio < bitmapRatio) {
-                            // El contenedor es proporcionalmente más alto (se recorta izq/der)
-                            val scale = containerH / bitmapH
-                            val visibleWidth = containerW / scale
-                            srcX = (bitmapW - visibleWidth) / 2f
-                            srcWidth = visibleWidth
-                            srcY = bitmapH - sampleH
-                        } else {
-                            // El contenedor es proporcionalmente más ancho (se recorta arriba/abajo)
-                            val scale = containerW / bitmapW
-                            val visibleHeight = containerH / scale
-                            srcX = 0f
-                            srcWidth = bitmapW
-                            val cropY = (bitmapH - visibleHeight) / 2f
-                            val visibleBottomY = cropY + visibleHeight
-                            srcY = (visibleBottomY - sampleH).coerceIn(0f, bitmapH - sampleH)
-                        }
-
-                        val srcXInt = srcX.toInt().coerceIn(0, currentCoverBitmap.width - 1)
-                        val srcWInt = srcWidth.toInt().coerceIn(1, currentCoverBitmap.width - srcXInt)
-                        val srcYInt = srcY.toInt().coerceIn(0, currentCoverBitmap.height - sampleH)
-
-                        val skewX = reflectionSkew
-                        val maxShift = (kotlin.math.abs(skewX) * screenH).toInt()
-
-                        drawIntoCanvas { canvas ->
-                            canvas.save()
-                            canvas.nativeCanvas.skew(skewX, 0f)
-
-                            // 1. Dibuja la parte izquierda (difuminado del píxel del borde izquierdo visible)
-                            if (imgXInt > 0 || maxShift > 0) {
-                                val leftW = imgXInt + maxShift
-                                drawImage(
-                                    image = currentCoverBitmap,
-                                    srcOffset = IntOffset(srcXInt, srcYInt),
-                                    srcSize = IntSize(1, sampleH),
-                                    dstOffset = IntOffset(-maxShift, 0),
-                                    dstSize = IntSize(leftW, screenH.toInt()),
-                                    filterQuality = FilterQuality.Low
-                                )
-                            }
-
-                            // 2. Dibuja la parte central (alineada perfectamente con la carátula visible)
-                            if (imgWInt > 0) {
-                                drawImage(
-                                    image = currentCoverBitmap,
-                                    srcOffset = IntOffset(srcXInt, srcYInt),
-                                    srcSize = IntSize(srcWInt, sampleH),
-                                    dstOffset = IntOffset(imgXInt, 0),
-                                    dstSize = IntSize(imgWInt, screenH.toInt()),
-                                    filterQuality = FilterQuality.Low
-                                )
-                            }
-
-                            // 3. Dibuja la parte derecha (difuminado del píxel del borde derecho visible)
-                            val rightX = imgXInt + imgWInt
-                            if (rightX < screenWInt || maxShift > 0) {
-                                val rightW = (screenWInt - rightX) + maxShift
-                                drawImage(
-                                    image = currentCoverBitmap,
-                                    srcOffset = IntOffset((srcXInt + srcWInt - 1).coerceIn(0, currentCoverBitmap.width - 1), srcYInt),
-                                    srcSize = IntSize(1, sampleH),
-                                    dstOffset = IntOffset(rightX, 0),
-                                    dstSize = IntSize(rightW, screenH.toInt()),
-                                    filterQuality = FilterQuality.Low
-                                )
-                            }
-
-                            canvas.restore()
-                        }
-                    }
-
-                }
-
-            }
-
-
-
-            // Capa 4: Reflejo invertido con difuminado extremo
-
-            if (hdArtUrl != null && dragProgress < 1f) {
-
+            // Capa 4: Reflejo invertido estirado verticalmente (3.20x) iniciando EXACTAMENTE donde termina la carátula superior
+            val mirrorArtModel = hdArtUrl ?: playerState?.artUrl
+            if ((coverBitmap != null || mirrorArtModel != null) && dragProgress < 1f) {
                 val reflectionWidth = maxWidth
-
-                val pad = 120.dp
-
                 val reflectionX = 0.dp
-
                 val childWidth = expandedWidth
-
                 val childOffsetX = expandedX
-
+                val baseReflectionY = expandedY + expandedHeight
+                val reflectionY = baseReflectionY
+                val reflectionHeight = (maxHeight - baseReflectionY).coerceAtLeast(expandedHeight)
+                val mirrorImageHeight = expandedHeight
                 
-
-                val overlapDp = 24.dp
-
-                val baseReflectionY = (if (stableSliderYDp > 0.dp) stableSliderYDp else (expandedY + expandedHeight)) - overlapDp
-
-                val reflectionY = baseReflectionY - pad
-
-                val reflectionHeight = expandedHeight + pad * 2
-
-                
-
-                val hPx = with(density) { reflectionHeight.toPx() }
-
-                val padPx = with(density) { pad.toPx() }
-
-                val imgHPx = with(density) { expandedHeight.toPx() }
-
-                val gapPx = with(density) { 40.dp.toPx() }
-
-                
-
-                val reflectionGradient = if (isBadSong) {
-
-                    arrayOf(
-
-                        0.0f to Color.Transparent,
-
-                        ((padPx - gapPx) / hPx).coerceIn(0f, 1f) to Color.Transparent,
-
-                        (padPx / hPx).coerceIn(0f, 1f) to Color.Transparent,
-
-                        ((padPx + imgHPx * 0.05f) / hPx).coerceIn(0f, 1f) to Color.Black,
-
-                        ((padPx + imgHPx * 0.1f) / hPx).coerceIn(0f, 1f) to Color.Transparent,
-
-                        1.0f to Color.Transparent
-
-                    )
-
-                } else {
-
-                    arrayOf(
-
-                        0.0f to Color.Transparent,
-
-                        ((padPx - gapPx) / hPx).coerceIn(0f, 1f) to Color.Transparent,
-
-                        (padPx / hPx).coerceIn(0f, 1f) to Color.Transparent,
-
-                        ((padPx + imgHPx * 0.25f) / hPx).coerceIn(0f, 1f) to Color.Black,
-
-                        ((padPx + imgHPx * 0.5f) / hPx).coerceIn(0f, 1f) to Color.Black.copy(alpha = 0.8f),
-
-                        ((padPx + imgHPx * 0.8f) / hPx).coerceIn(0f, 1f) to Color.Black.copy(alpha = 0.2f),
-
-                        ((padPx + imgHPx) / hPx).coerceIn(0f, 1f) to Color.Transparent,
-
-                        1.0f to Color.Transparent
-
-                    )
-
-                }
-
-
+                val stretchY = 3.20f
+                val verticalScale = -stretchY
+                val pivotY = stretchY / (1f + stretchY)
 
                 Box(
-
                     modifier = Modifier
-
                         .offset(x = reflectionX, y = reflectionY)
-
                         .width(reflectionWidth)
-
                         .height(reflectionHeight)
-
                         .graphicsLayer {
-
                             compositingStrategy = CompositingStrategy.Offscreen
-
                             alpha = (1f - dragProgress).coerceIn(0f, 1f)
-
                         }
-
                         .drawWithContent {
-
                             drawContent()
 
-                            drawRect(
+                            val w = size.width
+                            val h = size.height
+                            val curveDipPx = with(density) { 38.dp.toPx() }
 
-                                brush = Brush.verticalGradient(
+                            // Forma curva proyectada hacia abajo para una integración suave con la carátula superior
+                            val curvedPath = Path().apply {
+                                moveTo(0f, 0f)
+                                cubicTo(
+                                    w * 0.25f, curveDipPx,
+                                    w * 0.65f, curveDipPx * 1.1f,
+                                    w, 0f
+                                )
+                                lineTo(w, h)
+                                lineTo(0f, h)
+                                close()
+                            }
 
-                                    colorStops = reflectionGradient
-
-                                ),
-
+                            // Aplicar el recorte de la curva en DstIn con opacidad 100% continua (sin filtrar color sólido de fondo)
+                            drawPath(
+                                path = curvedPath,
+                                color = Color.Black,
                                 blendMode = BlendMode.DstIn
-
                             )
-
                         }
-
                 ) {
-
                     val currentBitmap = coverBitmap
-
                     if (currentBitmap != null) {
-
                         Image(
-
                             bitmap = currentBitmap,
-
                             contentDescription = null,
-
                             contentScale = ContentScale.Crop,
-
+                            alignment = Alignment.TopCenter,
                             modifier = Modifier
-
-                                .offset(x = childOffsetX, y = 120.dp)
-
+                                .offset(x = childOffsetX, y = 0.dp)
                                 .width(childWidth)
-
-                                .height(expandedHeight)
-
+                                .height(mirrorImageHeight)
                                 .graphicsLayer {
-
-                                    scaleY = -1f // Invertido verticalmente
-
+                                    scaleX = 1.00f
+                                    scaleY = verticalScale
+                                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, pivotY)
                                 }
-
-                                .blur(280.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
-
+                                .clipToBounds()
+                                .blur(20.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
                         )
-
-                    } else {
-
+                    } else if (mirrorArtModel != null) {
                         AsyncImage(
-
                             model = ImageRequest.Builder(context)
-
-                                .data(hdArtUrl)
-
+                                .data(mirrorArtModel)
                                 .crossfade(true)
-
                                 .build(),
-
                             contentDescription = null,
-
                             contentScale = ContentScale.Crop,
-
+                            alignment = Alignment.TopCenter,
                             modifier = Modifier
-
-                                .offset(x = childOffsetX, y = 120.dp)
-
+                                .offset(x = childOffsetX, y = 0.dp)
                                 .width(childWidth)
-
-                                .height(expandedHeight)
-
+                                .height(mirrorImageHeight)
                                 .graphicsLayer {
-
-                                    scaleY = -1f // Invertido verticalmente
-
+                                    scaleX = 1.00f
+                                    scaleY = verticalScale
+                                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, pivotY)
                                 }
-
-                                .blur(280.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
-
+                                .clipToBounds()
+                                .blur(20.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
                         )
-
                     }
-
                 }
-
             }
-
 
 
             // LYRICS / QUEUE OVERLAY
@@ -3880,39 +3537,7 @@ fun PlayerScreen(
 
                     }
 
-                    .then(
 
-                        if (dragProgress < 1f && !isOverlayActive) {
-
-                            Modifier.drawWithContent {
-
-                                drawContent()
-
-                                drawRect(
-
-                                    brush = Brush.verticalGradient(
-
-                                        colorStops = arrayOf(
-
-                                            0f to Color.Black,
-
-                                            0.96f to Color.Black,
-
-                                            1f to Color.Transparent
-
-                                        )
-
-                                    ),
-
-                                    blendMode = BlendMode.DstIn
-
-                                )
-
-                            }
-
-                        } else Modifier
-
-                    )
 
             ) {
 
