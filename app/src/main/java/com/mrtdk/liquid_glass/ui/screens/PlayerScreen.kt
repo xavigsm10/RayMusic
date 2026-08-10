@@ -156,6 +156,7 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.FilterQuality
 
 import androidx.compose.ui.unit.IntOffset
@@ -2446,25 +2447,21 @@ fun PlayerScreen(
                                         isAntiAlias = true
                                         color = android.graphics.Color.BLACK
                                         style = android.graphics.Paint.Style.FILL
-                                        maskFilter = android.graphics.BlurMaskFilter(blurRadiusPx, android.graphics.BlurMaskFilter.Blur.NORMAL)
+                                        // Commented out to make the top curve transition edge sharp
+                                        // maskFilter = android.graphics.BlurMaskFilter(blurRadiusPx, android.graphics.BlurMaskFilter.Blur.NORMAL)
                                     }
 
                                     val path = android.graphics.Path().apply {
-                                        val curveDipPx = with(density) { 38.dp.toPx() }
-                                        val ext = blurRadiusPx
+                                         val marginX = with(density) { 100.dp.toPx() }
+                                         val marginY = with(density) { 200.dp.toPx() }
 
-                                        moveTo(-ext, 0f)
-                                        lineTo(0f, 0f)
-                                        cubicTo(
-                                            width * 0.28f, curveDipPx * 0.90f,
-                                            width * 0.65f, curveDipPx * 1.25f,
-                                            width.toFloat(), curveDipPx * 0.35f
-                                        )
-                                        lineTo(width + ext, curveDipPx * 0.35f)
-                                        lineTo(width + ext, height + ext)
-                                        lineTo(-ext, height + ext)
-                                        close()
-                                    }
+                                         // Use a straight horizontal line at y = 0 instead of a curve
+                                         moveTo(-marginX, 0f)
+                                         lineTo(width + marginX, 0f)
+                                         lineTo(width + marginX, height + marginY)
+                                         lineTo(-marginX, height + marginY)
+                                         close()
+                                     }
 
                                     canvas.drawPath(path, paint)
                                     maskBitmapCache[0] = bmp.asImageBitmap()
@@ -2481,26 +2478,140 @@ fun PlayerScreen(
                 ) {
                     val currentBitmap = coverBitmap
                     if (currentBitmap != null) {
-                        Image(
-                            bitmap = currentBitmap,
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            alignment = Alignment.TopCenter,
+                        // Capa A: Difuminado moderado (25.dp) que se desvanece a partir de 120.dp
+                        Box(
                             modifier = Modifier
                                 .offset(x = childOffsetX, y = 0.dp)
                                 .width(childWidth)
                                 .height(mirrorImageHeight)
                                 .graphicsLayer {
-                                    scaleX = 1.00f
-                                    scaleY = verticalScale
-                                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, pivotY)
+                                    compositingStrategy = CompositingStrategy.Offscreen
                                 }
-                                .clipToBounds()
-                        )
+                                .drawWithContent {
+                                    drawContent()
+                                    val startY = with(density) { 120.dp.toPx() }
+                                    val endY = with(density) { 180.dp.toPx() }
+                                    drawRect(
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(Color.Black, Color.Transparent),
+                                            startY = startY,
+                                            endY = endY
+                                        ),
+                                        blendMode = BlendMode.DstIn
+                                    )
+                                }
+                        ) {
+                            Image(
+                                bitmap = currentBitmap,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                alignment = Alignment.TopCenter,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer {
+                                        scaleX = 1.00f
+                                        scaleY = verticalScale
+                                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, pivotY)
+                                    }
+                                    .clipToBounds()
+                                    .blur(25.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
+                            )
+                        }
+                        // Capa B: Difuminado extremo (imagen de 40x40 píxeles estirada y difuminada)
+                        val lowResBitmap = remember(currentBitmap) {
+                            android.graphics.Bitmap.createScaledBitmap(
+                                currentBitmap.asAndroidBitmap(),
+                                40,
+                                40,
+                                true
+                            ).asImageBitmap()
+                        }
+                        Box(
+                            modifier = Modifier
+                                .offset(x = childOffsetX, y = 0.dp)
+                                .width(childWidth)
+                                .height(mirrorImageHeight)
+                                .graphicsLayer {
+                                    compositingStrategy = CompositingStrategy.Offscreen
+                                }
+                                .blur(25.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
+                                .drawWithContent {
+                                    drawContent()
+                                    val startY = with(density) { 120.dp.toPx() }
+                                    val endY = with(density) { 180.dp.toPx() }
+                                    drawRect(
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(Color.Transparent, Color.Black),
+                                            startY = startY,
+                                            endY = endY
+                                        ),
+                                        blendMode = BlendMode.DstIn
+                                    )
+                                }
+                        ) {
+                            Image(
+                                bitmap = lowResBitmap,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                alignment = Alignment.TopCenter,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer {
+                                        scaleX = 1.00f
+                                        scaleY = verticalScale
+                                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, pivotY)
+                                    }
+                                    .clipToBounds()
+                            )
+                        }
                     } else if (mirrorArtModel != null) {
+                        // Capa A: Difuminado moderado (25.dp) que se desvanece a partir de 120.dp
+                        Box(
+                            modifier = Modifier
+                                .offset(x = childOffsetX, y = 0.dp)
+                                .width(childWidth)
+                                .height(mirrorImageHeight)
+                                .graphicsLayer {
+                                    compositingStrategy = CompositingStrategy.Offscreen
+                                }
+                                .drawWithContent {
+                                    drawContent()
+                                    val startY = with(density) { 120.dp.toPx() }
+                                    val endY = with(density) { 180.dp.toPx() }
+                                    drawRect(
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(Color.Black, Color.Transparent),
+                                            startY = startY,
+                                            endY = endY
+                                        ),
+                                        blendMode = BlendMode.DstIn
+                                    )
+                                }
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(mirrorArtModel)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                alignment = Alignment.TopCenter,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer {
+                                        scaleX = 1.00f
+                                        scaleY = verticalScale
+                                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, pivotY)
+                                    }
+                                    .clipToBounds()
+                                    .blur(25.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
+                            )
+                        }
+                        // Capa B: Difuminado extremo (imagen de 40x40 píxeles estirada y difuminada)
                         AsyncImage(
                             model = ImageRequest.Builder(context)
                                 .data(mirrorArtModel)
+                                .size(40, 40) // Carga una versión de muy baja resolución para disolver formas
                                 .crossfade(true)
                                 .build(),
                             contentDescription = null,
@@ -2511,11 +2622,22 @@ fun PlayerScreen(
                                 .width(childWidth)
                                 .height(mirrorImageHeight)
                                 .graphicsLayer {
-                                    scaleX = 1.00f
-                                    scaleY = verticalScale
-                                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, pivotY)
+                                    compositingStrategy = CompositingStrategy.Offscreen
                                 }
-                                .clipToBounds()
+                                .blur(25.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
+                                .drawWithContent {
+                                    drawContent()
+                                    val startY = with(density) { 120.dp.toPx() }
+                                    val endY = with(density) { 180.dp.toPx() }
+                                    drawRect(
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(Color.Transparent, Color.Black),
+                                            startY = startY,
+                                            endY = endY
+                                        ),
+                                        blendMode = BlendMode.DstIn
+                                    )
+                                }
                         )
                     }
                 }
