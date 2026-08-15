@@ -95,76 +95,6 @@ class MusicService : MediaSessionService() {
         val okHttpDataSourceFactory = androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(
             OkHttpClient.Builder()
                 .proxy(YouTube.proxy)
-                .fastFallback(true)
-                .addInterceptor { chain ->
-                    val request = chain.request()
-                    val clientParam = request.url.queryParameter("c")
-                    
-                    val c = clientParam?.trim().orEmpty()
-                    
-                    val ua = when {
-                        c.equals("WEB_REMIX", ignoreCase = true) ||
-                            c.equals("WEB", ignoreCase = true) ||
-                            c.equals("WEB_CREATOR", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.USER_AGENT_WEB
-            
-                        c.equals("TVHTML5", ignoreCase = true) ||
-                            c.equals("TVHTML5_SIMPLY_EMBEDDED_PLAYER", ignoreCase = true) ||
-                            c.equals("TVHTML5_SIMPLY", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.TVHTML5.userAgent
-            
-                        c.startsWith("IOS", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.IOS.userAgent
-            
-                        c.startsWith("ANDROID_VR", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.ANDROID_VR_NO_AUTH.userAgent
-            
-                        c.startsWith("ANDROID_CREATOR", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.ANDROID_CREATOR.userAgent
-            
-                        c.startsWith("ANDROID", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.MOBILE.userAgent
-            
-                        c.startsWith("VISIONOS", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.VISIONOS.userAgent
-                        
-                        c.equals("NEWPIPE_FALLBACK", ignoreCase = true) -> "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0"
-            
-                        else -> com.echo.innertube.models.YouTubeClient.ANDROID_VR_NO_AUTH.userAgent
-                    }
-                    
-                    val origin = when {
-                        c.equals("WEB_REMIX", ignoreCase = true) ||
-                            c.equals("WEB", ignoreCase = true) ||
-                            c.equals("WEB_CREATOR", ignoreCase = true) ->
-                            "https://music.youtube.com"
-            
-                        c.equals("TVHTML5", ignoreCase = true) ||
-                            c.equals("TVHTML5_SIMPLY_EMBEDDED_PLAYER", ignoreCase = true) ||
-                            c.equals("TVHTML5_SIMPLY", ignoreCase = true) ->
-                            "https://www.youtube.com"
-            
-                        else -> null
-                    }
-                    
-                    val referer = when {
-                        c.equals("WEB_REMIX", ignoreCase = true) ||
-                            c.equals("WEB", ignoreCase = true) ||
-                            c.equals("WEB_CREATOR", ignoreCase = true) ->
-                            "https://music.youtube.com/"
-            
-                        c.equals("TVHTML5", ignoreCase = true) ||
-                            c.equals("TVHTML5_SIMPLY_EMBEDDED_PLAYER", ignoreCase = true) ||
-                            c.equals("TVHTML5_SIMPLY", ignoreCase = true) ->
-                            "https://www.youtube.com/tv"
-            
-                        else -> null
-                    }
-                    
-                    val builder = request.newBuilder().header("User-Agent", ua)
-                    if (origin != null) {
-                        builder.header("Origin", origin)
-                        builder.header("Referer", referer ?: "")
-                    }
-                    if (!c.contains("NO_AUTH", ignoreCase = true) && !c.contains("TVHTML5_SIMPLY", ignoreCase = true)) {
-                        YouTube.cookie?.let { builder.header("Cookie", it) }
-                    }
-                    
-                    chain.proceed(builder.build())
-                }
                 .proxyAuthenticator { _, response ->
                     YouTube.proxyAuth?.let { auth ->
                         response.request.newBuilder()
@@ -172,9 +102,23 @@ class MusicService : MediaSessionService() {
                             .build()
                     } ?: response.request
                 }
-                .connectTimeout(5, TimeUnit.SECONDS)
-                .readTimeout(8, TimeUnit.SECONDS)
-                .callTimeout(10, TimeUnit.SECONDS)
+                .fastFallback(true)
+                .addInterceptor { chain ->
+                    val request = chain.request()
+                    val host = request.url.host
+                    val builder = request.newBuilder()
+                    
+                    builder.header("User-Agent", com.echo.innertube.models.YouTubeClient.USER_AGENT_WEB)
+                    
+                    if (!host.contains("googlevideo.com")) {
+                        YouTube.cookie?.let { builder.header("Cookie", it) }
+                    }
+                    
+                    chain.proceed(builder.build())
+                }
+                .connectTimeout(8, TimeUnit.SECONDS)
+                .readTimeout(10, TimeUnit.SECONDS)
+                .callTimeout(15, TimeUnit.SECONDS)
                 .build()
         )
 
