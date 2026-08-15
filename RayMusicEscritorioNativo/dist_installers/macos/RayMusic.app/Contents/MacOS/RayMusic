@@ -1,4 +1,0 @@
-#!/bin/bash
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-RESOURCES="$DIR/../Resources"
-open -a "Google Chrome" --args --app="file://$RESOURCES/src/index.html" --user-data-dir="$HOME/Library/Application Support/RayMusic" || open -a "Safari" "$RESOURCES/src/index.html"

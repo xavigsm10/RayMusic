@@ -89,14 +89,18 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Search
 
 import androidx.compose.material.icons.filled.AllInclusive
-
 import androidx.compose.material.icons.filled.ToggleOn
-
 import androidx.compose.material.icons.filled.Repeat
-
 import androidx.compose.material.icons.filled.RepeatOne
-
 import androidx.compose.material.icons.filled.ToggleOff
+import androidx.compose.material.icons.filled.VerticalAlignBottom
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.foundation.border
 
 import androidx.compose.ui.platform.LocalConfiguration
 
@@ -216,6 +220,7 @@ import androidx.compose.material.icons.filled.Laptop
 import androidx.compose.material.icons.filled.Wifi
 
 import com.mrtdk.liquid_glass.ui.components.PlayerOptionsMenu
+import com.mrtdk.liquid_glass.ui.components.GraduatedBlurArtwork
 import com.mrtdk.liquid_glass.ui.components.LyricsOptionsMenu
 import com.mrtdk.liquid_glass.ui.components.ArtistOptionsMenu
 import androidx.compose.material.icons.filled.Refresh
@@ -279,6 +284,14 @@ val ISyncedLine.text: String
         is com.mocharealm.accompanist.lyrics.core.model.synced.UncheckedSyncedLine -> this.content
         is com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeLine -> this.syllables.joinToString("") { it.content }
         else -> ""
+    }
+
+val ISyncedLine.translationText: String?
+    get() = when (this) {
+        is com.mocharealm.accompanist.lyrics.core.model.synced.SyncedLine -> this.translation
+        is com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeLine.MainKaraokeLine -> this.translation
+        is com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeLine.AccompanimentKaraokeLine -> this.translation
+        else -> null
     }
 
 data class PlayerState(
@@ -1187,13 +1200,7 @@ fun PlayerScreen(
 
            ) + androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(250)),
 
-        exit = androidx.compose.animation.slideOutVertically(
-
-               targetOffsetY = { it },
-
-               animationSpec = androidx.compose.animation.core.tween(300, easing = androidx.compose.animation.core.FastOutSlowInEasing)
-
-           ) + androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(200))
+        exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(100))
 
     ) {
 
@@ -1232,31 +1239,19 @@ fun PlayerScreen(
                     Column {
 
                         Text(
-
                             text = "No se pudo reproducir la canción. Por favor, toma una captura de pantalla de este error para enviársela al desarrollador:",
-
                             color = Color.LightGray,
-
                             fontSize = 14.sp,
-
                             modifier = Modifier.padding(bottom = 8.dp)
-
                         )
 
                         Box(
-
                             modifier = Modifier
-
                                 .fillMaxWidth()
-
                                 .heightIn(max = 200.dp)
-
                                 .background(Color.Black.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-
                                 .padding(8.dp)
-
                                 .verticalScroll(rememberScrollState())
-
                         ) {
 
                             Text(
@@ -1336,6 +1331,12 @@ fun PlayerScreen(
         val scope = rememberCoroutineScope()
 
         val dragOffsetY = remember { Animatable(0f) }
+
+        LaunchedEffect(isVisible) {
+            if (isVisible) {
+                dragOffsetY.snapTo(0f)
+            }
+        }
 
         val offsetY = dragOffsetY.value
 
@@ -1483,13 +1484,15 @@ fun PlayerScreen(
 
 
 
-        var selectedLyricsProvider by remember { mutableStateOf("LRCLIB") }
+        var selectedLyricsProvider by remember { mutableStateOf("Auto") }
+        var currentLyricsProviderName by remember { mutableStateOf("") }
+        var currentLyricsSyncType by remember { mutableStateOf("line") }
+        var availableLyricsProviders by remember { mutableStateOf<List<com.mrtdk.liquid_glass.utils.LyricsFetchResult>>(emptyList()) }
+        var currentLyricsProviderIndex by remember { mutableStateOf(0) }
 
         var isRomajiEnabled by remember { mutableStateOf(false) }
 
-
-
-                LaunchedEffect(playerState?.videoId) {
+        LaunchedEffect(playerState?.videoId) {
             if (playerState?.videoId != null) {
                 val offsetKey = "lyrics_offset_${playerState.videoId}"
                 val romajiKey = "romanize_lyrics_${playerState.videoId}"
@@ -1503,33 +1506,123 @@ fun PlayerScreen(
         }
 
         LaunchedEffect(playerState?.title, playerState?.artist, selectedLyricsProvider, isRomajiEnabled, lyricsReloadTrigger) {
-            lyricsLines = null
             val videoId = playerState?.videoId
-            if (playerState != null && videoId != null) {
-                launch {
-                    val customLyricsKey = "custom_lyrics_$videoId"
-                    val customLyricsText = com.mrtdk.liquid_glass.data.LibraryManager.getString(customLyricsKey)
-                    
-                    val lines = if (!customLyricsText.isNullOrBlank()) {
-                        com.mrtdk.liquid_glass.utils.LyricsProvider.parseSyncedLyrics(customLyricsText)
+            val songTitle = playerState?.title
+            val songArtist = playerState?.artist
+
+            if (playerState != null && songTitle != null && songArtist != null) {
+                // 1. Instant Cache Display (0ms, sin esperar a la red si ya está en memoria)
+                if (lyricsReloadTrigger == 0 && (selectedLyricsProvider.isEmpty() || selectedLyricsProvider == "Auto")) {
+                    val cachedResult = com.mrtdk.liquid_glass.utils.LyricsProvider.getCachedLyrics(songArtist, songTitle)
+                    if (cachedResult != null && cachedResult.lyrics != null) {
+                        currentLyricsProviderName = cachedResult.providerName
+                        currentLyricsSyncType = cachedResult.syncType
+                        val processed = if (isRomajiEnabled) {
+                            val prefs = com.mrtdk.liquid_glass.utils.LyricsRomanizationPreferences(true, true, true, true, true)
+                            com.mrtdk.liquid_glass.utils.LyricsUtils.romanizeSyncedLyrics(cachedResult.lyrics, prefs)
+                        } else {
+                            cachedResult.lyrics
+                        }
+                        lyricsLines = processed?.lines
                     } else {
-                        when (selectedLyricsProvider) {
-                            "KuGou" -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchKuGouLyrics(playerState.title, playerState.artist)
-                            "BetterLyrics" -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchBetterLyrics(playerState.title, playerState.artist)
-                            "LyricsPlus" -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchLyricsPlus(playerState.title, playerState.artist)
-                            "SimpMusic" -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchSimpMusicLyrics(playerState.title, playerState.artist)
-                            "YouTube Music" -> videoId.let { com.mrtdk.liquid_glass.utils.LyricsProvider.fetchYouTubeLyrics(it) }
-                            "YouTube Subtitle" -> videoId.let { com.mrtdk.liquid_glass.utils.LyricsProvider.fetchYouTubeSubtitleLyrics(it) }
-                            else -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchLyrics(playerState.title, playerState.artist)
+                        lyricsLines = null
+                        currentLyricsProviderName = ""
+                        currentLyricsSyncType = "line"
+                    }
+                } else {
+                    lyricsLines = null
+                    currentLyricsProviderName = ""
+                    currentLyricsSyncType = "line"
+                }
+
+                launch {
+                    val customLyricsKey = "custom_lyrics_${videoId ?: ""}"
+                    val customLyricsText = if (videoId != null) com.mrtdk.liquid_glass.data.LibraryManager.getString(customLyricsKey) else null
+                    val durSec = (duration / 1000).toInt()
+
+                    if (!customLyricsText.isNullOrBlank()) {
+                        val parsed = com.mrtdk.liquid_glass.utils.LyricsProvider.parseSyncedLyrics(customLyricsText)
+                        if (parsed != null) {
+                            val customRes = com.mrtdk.liquid_glass.utils.LyricsFetchResult(parsed, "Personalizado", "line")
+                            availableLyricsProviders = listOf(customRes)
+                            currentLyricsProviderIndex = 0
+                            lyricsLines = parsed.lines
+                            currentLyricsProviderName = "Personalizado"
+                            currentLyricsSyncType = "line"
+                            return@launch
                         }
                     }
-                    val processedLines = if (isRomajiEnabled && lines != null) {
-                        val prefs = com.mrtdk.liquid_glass.utils.LyricsRomanizationPreferences(true, true, true, true, true)
-                        com.mrtdk.liquid_glass.utils.LyricsUtils.romanizeSyncedLyrics(lines, prefs)
-                    } else {
-                        lines
+
+                    val allProviders = com.mrtdk.liquid_glass.utils.LyricsProvider.fetchAllAvailableProviders(
+                        videoId ?: "",
+                        songTitle,
+                        songArtist,
+                        durSec,
+                        playerState.album
+                    )
+
+                    if (allProviders.isNotEmpty()) {
+                        availableLyricsProviders = allProviders
+                        val targetIndex = if (selectedLyricsProvider.isNotEmpty() && selectedLyricsProvider != "Auto") {
+                            allProviders.indexOfFirst { it.providerName.equals(selectedLyricsProvider, ignoreCase = true) }.coerceAtLeast(0)
+                        } else {
+                            0
+                        }
+                        currentLyricsProviderIndex = targetIndex
+                        val activeResult = allProviders[targetIndex]
+                        currentLyricsProviderName = activeResult.providerName
+                        currentLyricsSyncType = activeResult.syncType
+
+                        val lines = activeResult.lyrics
+                        val processedLines = if (isRomajiEnabled && lines != null) {
+                            val prefs = com.mrtdk.liquid_glass.utils.LyricsRomanizationPreferences(true, true, true, true, true)
+                            com.mrtdk.liquid_glass.utils.LyricsUtils.romanizeSyncedLyrics(lines, prefs)
+                        } else {
+                            lines
+                        }
+                        lyricsLines = processedLines?.lines
                     }
-                    lyricsLines = processedLines?.lines
+                }
+            }
+        }
+
+        // Prefetching en segundo plano para las próximas canciones en la cola (aparecen en 0ms al pasar de canción)
+        LaunchedEffect(playerState?.videoId, playerState?.title) {
+            val queue = com.mrtdk.liquid_glass.playback.PlaybackQueue.queue
+            val upNext = com.mrtdk.liquid_glass.playback.PlaybackQueue.upNextSongs
+
+            queue.take(3).forEach { qItem ->
+                if (qItem.title.isNotBlank() && qItem.artist.isNotBlank()) {
+                    val alreadyCached = com.mrtdk.liquid_glass.utils.LyricsProvider.getCachedLyrics(qItem.artist, qItem.title) != null
+                    if (!alreadyCached) {
+                        launch(Dispatchers.IO) {
+                            com.mrtdk.liquid_glass.utils.LyricsProvider.fetchAutoLyrics(
+                                qItem.videoId ?: "",
+                                qItem.title,
+                                qItem.artist,
+                                -1,
+                                qItem.album
+                            )
+                        }
+                    }
+                }
+            }
+
+            upNext.take(2).forEach { songItem ->
+                val artName = songItem.artists.firstOrNull()?.name.orEmpty()
+                if (songItem.title.isNotBlank() && artName.isNotBlank()) {
+                    val alreadyCached = com.mrtdk.liquid_glass.utils.LyricsProvider.getCachedLyrics(artName, songItem.title) != null
+                    if (!alreadyCached) {
+                        launch(Dispatchers.IO) {
+                            com.mrtdk.liquid_glass.utils.LyricsProvider.fetchAutoLyrics(
+                                songItem.id,
+                                songItem.title,
+                                artName,
+                                -1,
+                                songItem.album?.name
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -1825,7 +1918,14 @@ fun PlayerScreen(
 
         
 
-        val isLightBackground = bottomAverageColor.luminance() > 0.35f
+        val isLightBackground = run {
+            val r = bottomAverageColor.red
+            val g = bottomAverageColor.green
+            val b = bottomAverageColor.blue
+            val maxCh = maxOf(r, g, b)
+            val minCh = minOf(r, g, b)
+            bottomAverageColor.luminance() > 0.90f && (maxCh - minCh) < 0.12f && minCh > 0.85f
+        }
 
         val contentColor = if (isLightBackground) Color(0xFF1A1A1A) else Color.White
 
@@ -2098,75 +2198,53 @@ fun PlayerScreen(
 
 
 
-            val threshold = 0.70f
+            val p = dragProgress.coerceIn(0f, 1f)
 
-            
+            val imgOffsetYTarget = androidx.compose.ui.unit.lerp(startOffsetY, targetOffsetY, p)
 
+            val threshold = 0.85f
             val imgWidthTarget: androidx.compose.ui.unit.Dp
-
             val imgHeightTarget: androidx.compose.ui.unit.Dp
-
             val imgOffsetXTarget: androidx.compose.ui.unit.Dp
-
-            val imgOffsetYTarget: androidx.compose.ui.unit.Dp
-
             val imageCornerTarget: androidx.compose.ui.unit.Dp
 
-            val contentAlpha: Float
-
-            val overlayAlpha: Float
-
-            
-
-            if (dragProgress <= threshold) {
-
-                val p1 = if (threshold > 0f) dragProgress / threshold else 0f
-
-                imgWidthTarget = startWidth
-
-                imgHeightTarget = startHeight
-
-                imgOffsetXTarget = startOffsetX
-
-                imgOffsetYTarget = startOffsetY
-
-                imageCornerTarget = startCorner
-
-                contentAlpha = (1f - p1).coerceIn(0f, 1f)
-
-                overlayAlpha = (1f - p1).coerceIn(0f, 1f)
-
+            if (isOverlayActive) {
+                imgWidthTarget = androidx.compose.ui.unit.lerp(startWidth, 40.dp, p)
+                imgHeightTarget = androidx.compose.ui.unit.lerp(startHeight, 40.dp, p)
+                imgOffsetXTarget = androidx.compose.ui.unit.lerp(startOffsetX, targetOffsetX, p)
+                imageCornerTarget = androidx.compose.ui.unit.lerp(startCorner, 20.dp, p)
             } else {
-
-                val p2 = if (threshold < 1f) (dragProgress - threshold) / (1f - threshold) else 1f
-
-                imgWidthTarget = androidx.compose.ui.unit.lerp(startWidth, 40.dp, p2)
-
-                imgHeightTarget = androidx.compose.ui.unit.lerp(startHeight, 40.dp, p2)
-
-                imgOffsetXTarget = androidx.compose.ui.unit.lerp(startOffsetX, targetOffsetX, p2)
-
-                imgOffsetYTarget = androidx.compose.ui.unit.lerp(startOffsetY, 0.dp, p2)
-
-                imageCornerTarget = androidx.compose.ui.unit.lerp(startCorner, 20.dp, p2)
-
-                contentAlpha = 0f
-
-                overlayAlpha = 0f
-
+                if (p <= threshold) {
+                    imgWidthTarget = startWidth
+                    imgHeightTarget = startHeight
+                    imgOffsetXTarget = startOffsetX
+                    imageCornerTarget = startCorner
+                } else {
+                    val p2 = if (threshold < 1f) (p - threshold) / (1f - threshold) else 1f
+                    val p2Smooth = p2 * p2
+                    imgWidthTarget = androidx.compose.ui.unit.lerp(startWidth, 40.dp, p2Smooth)
+                    imgHeightTarget = androidx.compose.ui.unit.lerp(startHeight, 40.dp, p2Smooth)
+                    imgOffsetXTarget = androidx.compose.ui.unit.lerp(startOffsetX, targetOffsetX, p2Smooth)
+                    imageCornerTarget = androidx.compose.ui.unit.lerp(startCorner, 20.dp, p2Smooth)
+                }
             }
 
+            val contentAlpha = (1f - p * 2.2f).coerceIn(0f, 1f)
+            val overlayAlpha = (1f - p * 2.2f).coerceIn(0f, 1f)
 
 
-            val imgWidth by androidx.compose.animation.core.animateDpAsState(imgWidthTarget)
 
-            val imgHeight by androidx.compose.animation.core.animateDpAsState(imgHeightTarget)
+            val animatedImgWidth by androidx.compose.animation.core.animateDpAsState(imgWidthTarget)
+            val animatedImgHeight by androidx.compose.animation.core.animateDpAsState(imgHeightTarget)
+            val animatedImgOffsetX by androidx.compose.animation.core.animateDpAsState(imgOffsetXTarget)
+            val animatedImgOffsetY by androidx.compose.animation.core.animateDpAsState(imgOffsetYTarget)
+            val animatedImgCorner by androidx.compose.animation.core.animateDpAsState(imageCornerTarget)
 
-            val imgOffsetX by androidx.compose.animation.core.animateDpAsState(imgOffsetXTarget)
-
-            val imgOffsetY by androidx.compose.animation.core.animateDpAsState(imgOffsetYTarget)
-
-            val imgCorner by androidx.compose.animation.core.animateDpAsState(imageCornerTarget)
+            val imgWidth = if (dragProgress > 0f) imgWidthTarget else animatedImgWidth
+            val imgHeight = if (dragProgress > 0f) imgHeightTarget else animatedImgHeight
+            val imgOffsetX = if (dragProgress > 0f) imgOffsetXTarget else animatedImgOffsetX
+            val imgOffsetY = if (dragProgress > 0f) imgOffsetYTarget else animatedImgOffsetY
+            val imgCorner = if (dragProgress > 0f) imageCornerTarget else animatedImgCorner
 
 
 
@@ -2277,13 +2355,9 @@ fun PlayerScreen(
                         
 
                         if (delta > 0f && isAtTop) {
-
-                            val newOffset = (currentOffsetY + delta * 0.7f).coerceAtLeast(0f)
-
+                            val newOffset = (currentOffsetY + delta).coerceAtLeast(0f)
                             scope.launch { dragOffsetY.snapTo(newOffset) }
-
                             return Offset(0f, delta)
-
                         }
 
                         return Offset.Zero
@@ -2333,15 +2407,12 @@ fun PlayerScreen(
                     .fillMaxSize()
 
                     .graphicsLayer {
-
-                        translationY = offsetY
-
+                        alpha = bgAlpha
                     }
-
                     .background(
                         brush = Brush.verticalGradient(
                             colors = listOf(
-                                dominantColor.copy(alpha = 0.35f),
+                                dominantColor.copy(alpha = 1.0f),
                                 Color(0xFF16181B),
                                 Color(0xFF101113)
                             )
@@ -2388,11 +2459,8 @@ fun PlayerScreen(
                             ) { change, dragAmount ->
 
                                 if (dragAmount > 0f || dragOffsetY.value > 0f) {
-
-                                    val newOffset = (dragOffsetY.value + dragAmount * 0.7f).coerceAtLeast(0f)
-
+                                    val newOffset = (dragOffsetY.value + dragAmount).coerceAtLeast(0f)
                                     scope.launch { dragOffsetY.snapTo(newOffset) }
-
                                 }
 
                             }
@@ -2402,25 +2470,20 @@ fun PlayerScreen(
                     }
             ) {
 
-
-
-
-
-
-
-            // Capa 4: Reflejo invertido estirado verticalmente (3.20x) iniciando EXACTAMENTE donde termina la carátula superior
+            // Capa 4: Reflejo invertido estilo Apple Music (solo en vista principal)
             val mirrorArtModel = hdArtUrl ?: playerState?.artUrl
-            if ((coverBitmap != null || mirrorArtModel != null) && dragProgress < 1f) {
+            if ((coverBitmap != null || mirrorArtModel != null) && dragProgress < 1f && !showLyrics && !showQueue) {
                 val reflectionWidth = maxWidth
                 val reflectionX = 0.dp
                 val childWidth = expandedWidth
                 val childOffsetX = expandedX
+                val overlapY = 0.dp
                 val baseReflectionY = expandedY + expandedHeight
                 val reflectionY = baseReflectionY
                 val reflectionHeight = (maxHeight - baseReflectionY).coerceAtLeast(expandedHeight)
                 val mirrorImageHeight = reflectionHeight
                 
-                val stretchY = 2.40f
+                val stretchY = 3.80f
                 val verticalScale = -stretchY
                 val pivotY = 0f
 
@@ -2437,49 +2500,6 @@ fun PlayerScreen(
                             compositingStrategy = CompositingStrategy.Offscreen
                             alpha = (1f - dragProgress).coerceIn(0f, 1f)
                         }
-                        .drawWithContent {
-                            drawContent()
-
-                            val w = size.width
-                            val h = size.height
-                            val width = w.roundToInt()
-                            val height = h.roundToInt()
-
-                            if (width > 0 && height > 0) {
-                                val currentBmp = maskBitmapCache[0]
-                                if (currentBmp == null || currentBmp.width != width || currentBmp.height != height) {
-                                    val bmp = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
-                                    val canvas = android.graphics.Canvas(bmp)
-
-                                    val paint = android.graphics.Paint().apply {
-                                        isAntiAlias = true
-                                        color = android.graphics.Color.BLACK
-                                        style = android.graphics.Paint.Style.FILL
-                                    }
-
-                                    val path = android.graphics.Path().apply {
-                                         val marginX = with(density) { 100.dp.toPx() }
-                                         val marginY = with(density) { 200.dp.toPx() }
-
-                                         moveTo(-marginX, 0f)
-                                         lineTo(width + marginX, 0f)
-                                         lineTo(width + marginX, height + marginY)
-                                         lineTo(-marginX, height + marginY)
-                                         close()
-                                     }
-
-                                    canvas.drawPath(path, paint)
-                                    maskBitmapCache[0] = bmp.asImageBitmap()
-                                }
-                            }
-
-                            maskBitmapCache[0]?.let { bmp ->
-                                drawImage(
-                                    image = bmp,
-                                    blendMode = BlendMode.DstIn
-                                )
-                            }
-                        }
                 ) {
                     val currentBitmap = coverBitmap
                     val mirrorModel = mirrorArtModel ?: currentBitmap
@@ -2489,53 +2509,30 @@ fun PlayerScreen(
                             .offset(x = childOffsetX, y = 0.dp)
                             .width(childWidth)
                             .height(mirrorImageHeight)
-                            .clipToBounds()
                     ) {
                         if (currentBitmap != null || mirrorModel != null) {
-                            // Capa de Imagen Invertida Completa (Apple Music Imagen 2)
-                            // Difuminado suave (55.dp) que cubre el 100% de la zona inferior sin cortes de color sólido
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                            ) {
-                                if (currentBitmap != null) {
-                                    Image(
-                                        bitmap = currentBitmap,
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Crop,
-                                        alignment = Alignment.TopCenter,
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .blur(55.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
-                                            .graphicsLayer {
-                                                scaleX = 1.15f
-                                                scaleY = verticalScale
-                                                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0f)
-                                            }
-                                            .clipToBounds()
-                                    )
-                                } else if (mirrorModel != null) {
-                                    AsyncImage(
-                                        model = ImageRequest.Builder(context)
-                                            .data(mirrorModel)
-                                            .crossfade(true)
-                                            .build(),
-                                        imageLoader = animatedImageLoader,
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Crop,
-                                        alignment = Alignment.TopCenter,
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .blur(55.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
-                                            .graphicsLayer {
-                                                scaleX = 1.15f
-                                                scaleY = verticalScale
-                                                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0f)
-                                            }
-                                            .clipToBounds()
-                                    )
-                                }
+                            val sliderFraction = if (reflectionHeight > 0.dp && stableSliderYDp > baseReflectionY) {
+                                ((stableSliderYDp - baseReflectionY) / reflectionHeight).coerceIn(0.15f, 0.45f)
+                            } else {
+                                0.28f
                             }
+
+                            val currentAnimatedUrl = animatedArtworkUrl
+
+                            // Reflejo con difuminado estilo Apple Music (difusión horizontal expandida de tonos de fondo)
+                            com.mrtdk.liquid_glass.ui.components.GraduatedBlurArtwork(
+                                imageUrl = currentBitmap ?: mirrorModel,
+                                videoUrl = if (isVideoPlaying && !currentAnimatedUrl.isNullOrBlank()) currentAnimatedUrl else null,
+                                modifier = Modifier.fillMaxSize(),
+                                blurRadiusX = 150.dp,
+                                blurRadiusY = 75.dp,
+                                frostedRadius = 25.dp,
+                                verticalScale = verticalScale,
+                                pivotY = 0f,
+                                horizontalScale = 1.0f,
+                                blurTransitionEndFraction = sliderFraction,
+                                imageLoader = animatedImageLoader
+                            )
                         }
                     }
                 }
@@ -2564,57 +2561,77 @@ fun PlayerScreen(
 
                  ) {
 
-                     // Full-screen blurred background image of album cover for lyrics/queue view
-
+                     // Full-screen rich blurred background image of album cover for lyrics/queue view
                      val currentOverlayCover = coverBitmap
+                     val overlayArtSource = currentOverlayCover ?: mirrorArtModel
+                     val currentAnimatedUrl = animatedArtworkUrl
 
-                     if (currentOverlayCover != null) {
-
-                         Image(
-
-                             bitmap = currentOverlayCover,
-
-                             contentDescription = null,
-
-                             contentScale = ContentScale.Crop,
-
+                     if (isVideoPlaying && !currentAnimatedUrl.isNullOrBlank()) {
+                         Box(
                              modifier = Modifier
-
                                  .fillMaxSize()
-
-                                 .blur(220.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
-
-                                 .graphicsLayer { alpha = 0.92f }
-
-                         )
-
-                     } else {
-
-                         AsyncImage(
-
-                             model = ImageRequest.Builder(context)
-
-                                 .data(hdArtUrl)
-
-                                 .crossfade(true)
-
-                                 .build(),
-
-                             contentDescription = null,
-
-                             contentScale = ContentScale.Crop,
-
-                             modifier = Modifier
-
-                                 .fillMaxSize()
-
-                                 .blur(220.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
-
-                                 .graphicsLayer { alpha = 0.92f }
-
-                         )
-
+                                 .graphicsLayer {
+                                     scaleX = 1.35f
+                                     scaleY = 1.35f
+                                 }
+                                 .blur(120.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+                         ) {
+                             com.mrtdk.liquid_glass.ui.components.AnimatedArtworkPlayer(
+                                 videoUrl = currentAnimatedUrl,
+                                 modifier = Modifier.fillMaxSize(),
+                                 isPaused = false,
+                                 enableFrameCapture = false
+                             )
+                         }
+                     } else if (overlayArtSource != null) {
+                         if (overlayArtSource is ImageBitmap) {
+                             Image(
+                                 bitmap = overlayArtSource,
+                                 contentDescription = null,
+                                 contentScale = ContentScale.Crop,
+                                 modifier = Modifier
+                                     .fillMaxSize()
+                                     .graphicsLayer {
+                                         scaleX = 1.35f
+                                         scaleY = 1.35f
+                                     }
+                                     .blur(120.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+                             )
+                         } else {
+                             AsyncImage(
+                                 model = ImageRequest.Builder(context)
+                                     .data(overlayArtSource)
+                                     .crossfade(true)
+                                     .build(),
+                                 imageLoader = animatedImageLoader,
+                                 contentDescription = null,
+                                 contentScale = ContentScale.Crop,
+                                 modifier = Modifier
+                                     .fillMaxSize()
+                                     .graphicsLayer {
+                                         scaleX = 1.35f
+                                         scaleY = 1.35f
+                                     }
+                                     .blur(120.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+                             )
+                         }
                      }
+
+                     // Capa de difusión de colores vivos y contraste de texto para letras y cola
+                     Box(
+                         modifier = Modifier
+                             .fillMaxSize()
+                             .background(
+                                 Brush.verticalGradient(
+                                     colors = listOf(
+                                         dominantColor.copy(alpha = 0.32f),
+                                         bottomAverageColor.copy(alpha = 0.28f),
+                                         Color.Black.copy(alpha = 0.45f)
+                                     )
+                                 )
+                             )
+                     )
+                 }
 
                       // Height of the content area = exactly the cover image height (player controls start below)
 
@@ -2631,290 +2648,158 @@ fun PlayerScreen(
                       )
 
                        Column(
-
                            modifier = Modifier
-
                                .fillMaxWidth()
-
                                .height(overlayContentHeight)
-
                        ) {
 
-                      if (showQueue) {
-
-                          Spacer(modifier = Modifier.height(148.dp))
-
-                      } else {
-
-                          // Lyrics: slightly lower start so lyrics appear above the player controls
-
-                          Spacer(modifier = Modifier.height(120.dp))
-
-                      }
-
-                      
-
-                                                                    if (showQueue) {
-
-                            Spacer(modifier = Modifier.height(24.dp))
-
+                       if (showQueue) {
+                           Spacer(modifier = Modifier.height(148.dp))
+                       } else {
+                           // Lyrics: slightly lower start so lyrics appear above the player controls
+                           Spacer(modifier = Modifier.height(120.dp))
+                       }
+                       
+                       if (showQueue) {
+                            Spacer(modifier = Modifier.height(6.dp))
                             
-
                             val shuffleInteraction = remember { MutableInteractionSource() }
-
                             val isShuffleActive = shuffleModeEnabled
-
                             val isShufflePressed by shuffleInteraction.collectIsPressedAsState()
-
                             val shuffleScale by animateFloatAsState(targetValue = if (isShufflePressed) 0.85f else 1.0f, label = "shuffleScale")
-
                             
-
                             val activeBg = contentColor.copy(alpha = 0.9f)
-
                             val activeIcon = if (contentColor == Color.White) dominantColor else Color.White
 
-
-
                             val shuffleBgColor by animateColorAsState(targetValue = if (isShuffleActive) activeBg else contentColor.copy(alpha=0.15f), label = "shuffleBg")
-
                             val shuffleIconColor by animateColorAsState(targetValue = if (isShuffleActive) activeIcon else contentColor.copy(alpha=0.5f), label = "shuffleIcon")
 
-
-
                             val repeatInteraction = remember { MutableInteractionSource() }
-
                             val isRepeatActive = repeatMode != androidx.media3.common.Player.REPEAT_MODE_OFF
-
                             val isRepeatPressed by repeatInteraction.collectIsPressedAsState()
-
                             val repeatScale by animateFloatAsState(targetValue = if (isRepeatPressed) 0.85f else 1.0f, label = "repeatScale")
-
                             val repeatBgColor by animateColorAsState(targetValue = if (isRepeatActive) activeBg else contentColor.copy(alpha=0.15f), label = "repeatBg")
-
                             val repeatIconColor by animateColorAsState(targetValue = if (isRepeatActive) activeIcon else contentColor.copy(alpha=0.5f), label = "repeatIcon")
 
-
-
                             val autoplayInteraction = remember { MutableInteractionSource() }
-
                             val isAutoplayActive = !playerState.isExclusiveQueue
-
                             val isAutoplayPressed by autoplayInteraction.collectIsPressedAsState()
-
                             val autoplayScale by animateFloatAsState(targetValue = if (isAutoplayPressed) 0.85f else 1.0f, label = "autoplayScale")
-
                             val autoplayBgColor by animateColorAsState(targetValue = if (isAutoplayActive) activeBg else contentColor.copy(alpha=0.15f), label = "autoplayBg")
-
                             val autoplayIconColor by animateColorAsState(targetValue = if (isAutoplayActive) activeIcon else contentColor.copy(alpha=0.5f), label = "autoplayIcon")
 
-
-
                             val romajiInteraction = remember { MutableInteractionSource() }
-
                             val isRomajiActive = isRomajiEnabled
-
                             val isRomajiPressed by romajiInteraction.collectIsPressedAsState()
-
                             val romajiScale by animateFloatAsState(targetValue = if (isRomajiPressed) 0.85f else 1.0f, label = "romajiScale")
-
                             val romajiBgColor by animateColorAsState(targetValue = if (isRomajiActive) activeBg else contentColor.copy(alpha=0.15f), label = "romajiBg")
-
                             val romajiIconColor by animateColorAsState(targetValue = if (isRomajiActive) activeIcon else contentColor.copy(alpha=0.5f), label = "romajiIcon")
 
-
-
                             Row(modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-
                                 Box(
-
                                     modifier = Modifier
-
                                         .weight(1f)
-
                                         .graphicsLayer(scaleX = shuffleScale, scaleY = shuffleScale)
-
                                         .height(40.dp)
-
                                         .clip(RoundedCornerShape(50))
-
                                         .background(shuffleBgColor)
-
                                         .clickable(
-
                                             interactionSource = shuffleInteraction,
-
                                             indication = null,
-
                                             onClick = onToggleShuffle
-
                                         ),
-
-                                    contentAlignment=Alignment.Center
-
+                                    contentAlignment = Alignment.Center
                                 ) {
-
-                                    Icon(painterResource(id = R.drawable.shuffle), "Shuffle", tint=shuffleIconColor, modifier=Modifier.size(20.dp))
-
+                                    Icon(painterResource(id = R.drawable.shuffle), "Shuffle", tint = shuffleIconColor, modifier = Modifier.size(20.dp))
                                 }
 
                                 Box(
-
                                     modifier = Modifier
-
                                         .weight(1f)
-
                                         .graphicsLayer(scaleX = repeatScale, scaleY = repeatScale)
-
                                         .height(40.dp)
-
                                         .clip(RoundedCornerShape(50))
-
                                         .background(repeatBgColor)
-
                                         .clickable(
-
                                             interactionSource = repeatInteraction,
-
                                             indication = null,
-
                                             onClick = onToggleRepeat
-
                                         ),
-
-                                    contentAlignment=Alignment.Center
-
+                                    contentAlignment = Alignment.Center
                                 ) {
-
-                                    Icon(if (repeatMode == androidx.media3.common.Player.REPEAT_MODE_ONE) Icons.Default.RepeatOne else Icons.Default.Repeat, "Repeat", tint=repeatIconColor, modifier=Modifier.size(20.dp))
-
+                                    val repeatIcon = if (repeatMode == androidx.media3.common.Player.REPEAT_MODE_ONE) Icons.Default.RepeatOne else Icons.Default.Repeat
+                                    Icon(repeatIcon, "Repeat", tint = repeatIconColor, modifier = Modifier.size(20.dp))
                                 }
 
                                 Box(
-
                                     modifier = Modifier
-
                                         .weight(1f)
-
                                         .graphicsLayer(scaleX = autoplayScale, scaleY = autoplayScale)
-
                                         .height(40.dp)
-
                                         .clip(RoundedCornerShape(50))
-
                                         .background(autoplayBgColor)
-
                                         .clickable(
-
                                             interactionSource = autoplayInteraction,
-
                                             indication = null,
-
                                             onClick = {
-
                                                 onSongSelected(playerState.copy(isExclusiveQueue = !playerState.isExclusiveQueue))
-
                                             }
-
                                         ),
-
-                                    contentAlignment=Alignment.Center
-
+                                    contentAlignment = Alignment.Center
                                 ) {
-
-                                    Icon(Icons.Default.AllInclusive, "Autoplay", tint=autoplayIconColor, modifier=Modifier.size(20.dp))
-
+                                    Icon(Icons.Default.AllInclusive, "Autoplay", tint = autoplayIconColor, modifier = Modifier.size(20.dp))
                                 }
 
                                 Box(
-
                                     modifier = Modifier
-
                                         .weight(1f)
-
                                         .graphicsLayer(scaleX = romajiScale, scaleY = romajiScale)
-
                                         .height(40.dp)
-
                                         .clip(RoundedCornerShape(50))
-
                                         .background(romajiBgColor)
-
                                         .clickable(
-
                                             interactionSource = romajiInteraction,
-
                                             indication = null,
-
                                             onClick = {
-
                                                 isRomajiEnabled = !isRomajiEnabled
-
                                             }
-
                                         ),
-
-                                    contentAlignment=Alignment.Center
-
+                                    contentAlignment = Alignment.Center
                                 ) {
-
-                                    Icon(if (isRomajiActive) Icons.Default.ToggleOn else Icons.Default.ToggleOff, "Toggle", tint=romajiIconColor, modifier=Modifier.size(24.dp))
-
+                                    Icon(if (isRomajiActive) Icons.Default.ToggleOn else Icons.Default.ToggleOff, "Toggle", tint = romajiIconColor, modifier = Modifier.size(24.dp))
                                 }
-
                             }
 
                              if (playerState != null && playerState.queue.isNotEmpty()) {
-
-                               Text(text = stringResource(R.string.siguiente_en_album_playlist), color=contentColor, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top=14.dp, start=24.dp, end=24.dp, bottom=8.dp))
-
-                            } else if (playerState?.isExclusiveQueue != true) {
-
-                                 Column(modifier = Modifier.padding(top=14.dp, start=24.dp, end=24.dp, bottom=8.dp)) {
-
-                                     Text(text = stringResource(R.string.continue_playing), color=contentColor, fontSize=18.sp, fontWeight=FontWeight.Bold)
-
-                                     Text(text = stringResource(R.string.autoplaying_similar_music), color=contentColor.copy(alpha=0.7f), fontSize=14.sp)
-
-                                 }
-
+                               Text(text = stringResource(R.string.siguiente_en_album_playlist), color = contentColor, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp, start = 24.dp, end = 24.dp, bottom = 4.dp))
+                             } else if (playerState?.isExclusiveQueue != true) {
+                                  Column(modifier = Modifier.padding(top = 8.dp, start = 24.dp, end = 24.dp, bottom = 4.dp)) {
+                                      Text(text = stringResource(R.string.continue_playing), color = contentColor, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                                      Text(text = stringResource(R.string.autoplaying_similar_music), color = contentColor.copy(alpha = 0.7f), fontSize = 13.5.sp)
+                                  }
                              }
-
                           
-
-                           // Fading edge Box: clips queue list before it reaches the player controls area
-
-                            Box(
-
+                            // Fading edge Box: clips queue list before it reaches the player controls area
+                             Box(
                                 modifier = Modifier
-
                                     .weight(1f)
-
                                     .fillMaxWidth()
-
                             ) {
-
                             LazyColumn(
-
                                 state = queueListState, 
-
                                 modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp), 
-
-                                contentPadding = PaddingValues(top = 4.dp, bottom = 16.dp),
-
+                                contentPadding = PaddingValues(top = 2.dp, bottom = 16.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
-
                             ) {
-
-                              if (playerState != null) {
-                                  item {
-                                      Text(
-                                          text = "Reproduciendo",
-                                          color = contentColor,
-                                          fontSize = 18.sp,
-                                          fontWeight = FontWeight.Bold,
-                                          modifier = Modifier.padding(top = 14.dp, bottom = 8.dp)
-                                      )
+                               if (playerState != null) {
+                                   item {
+                                       Text(
+                                           text = stringResource(R.string.player_queue_now_playing),
+                                           color = contentColor,
+                                           fontSize = 17.sp,
+                                           fontWeight = FontWeight.Bold,
+                                           modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+                                       )
                                       Row(
                                           verticalAlignment = Alignment.CenterVertically,
                                           modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
@@ -3058,81 +2943,71 @@ fun PlayerScreen(
 
                       } else if (showLyrics) {
 
-                             Spacer(modifier = Modifier.height(16.dp))
+                              Spacer(modifier = Modifier.height(16.dp))
 
-                             Box(
+                              Box(
+                                  modifier = Modifier
+                                      .weight(1f)
+                                      .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                                      .drawWithContent {
+                                          drawContent()
+                                          // Fade the lyrics at top and bottom for immersive depth
+                                          drawRect(
+                                              brush = Brush.verticalGradient(
+                                                  colorStops = arrayOf(
+                                                      0.0f to Color.Transparent,
+                                                      0.04f to Color.Black.copy(alpha = 0.7f),
+                                                      0.08f to Color.Black,
+                                                      0.90f to Color.Black,
+                                                      0.96f to Color.Black.copy(alpha = 0.3f),
+                                                      1.0f to Color.Transparent
+                                                  )
+                                              ),
+                                              blendMode = BlendMode.DstIn
+                                          )
+                                      }
+                                      .clipToBounds()
+                                      .pointerInput(Unit) {
+                                          val swipeLyrics = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_swipe_to_change_song", "false") == "true"
+                                          if (swipeLyrics) {
+                                              var dragAccumulator = 0f
+                                              detectHorizontalDragGestures(
+                                                  onDragStart = { dragAccumulator = 0f },
+                                                  onDragEnd = {
+                                                      if (dragAccumulator < -100f) {
+                                                          onSkipNext()
+                                                      } else if (dragAccumulator > 100f) {
+                                                          onSkipPrevious()
+                                                      }
+                                                  },
+                                                  onHorizontalDrag = { change, dragAmount ->
+                                                      change.consume()
+                                                      dragAccumulator += dragAmount
+                                                  }
+                                              )
+                                          }
+                                      }
+                                      .clickable(
+                                          interactionSource = remember { MutableInteractionSource() },
+                                          indication = null
+                                      ) {
+                                          val lyricsThumbPlayPause = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_thumbnail_play_pause", "false") == "true"
+                                          if (lyricsThumbPlayPause) {
+                                              onTogglePlayPause()
+                                          } else {
+                                              showLyricsControls = !showLyricsControls
+                                              if (showLyricsControls) {
+                                                  lyricsControlsHideTrigger++
+                                              }
+                                          }
+                                      }
+                              ) {
+                                  val currentLyricsLines = lyricsLines
 
-                                 modifier = Modifier
+                                  if (currentLyricsLines != null && currentLyricsLines.isNotEmpty()) {
+                                      val isSynced = currentLyricsLines.any { it.timeMs > 0L }
 
-                                     .weight(1f)
-
-                                     .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-
-                                     .drawWithContent {
-
-                                         drawContent()
-
-                                         // Fade the lyrics at the bottom so they don't overlap the player controls
-
-                                         drawRect(
-                                             brush = Brush.verticalGradient(
-                                                 colorStops = arrayOf(
-                                                     0.0f to Color.Black,
-                                                     0.94f to Color.Black,
-                                                     0.98f to Color.Black.copy(alpha = 0.3f),
-                                                     1.0f to Color.Transparent
-                                                 )
-                                             ),
-                                             blendMode = BlendMode.DstIn
-                                         )
-                                     }
-                                     .clipToBounds()
-                                     .pointerInput(Unit) {
-                                         val swipeLyrics = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_swipe_to_change_song", "false") == "true"
-                                         if (swipeLyrics) {
-                                             var dragAccumulator = 0f
-                                             detectHorizontalDragGestures(
-                                                 onDragStart = { dragAccumulator = 0f },
-                                                 onDragEnd = {
-                                                     if (dragAccumulator < -100f) {
-                                                         onSkipNext()
-                                                     } else if (dragAccumulator > 100f) {
-                                                         onSkipPrevious()
-                                                     }
-                                                 },
-                                                 onHorizontalDrag = { change, dragAmount ->
-                                                     change.consume()
-                                                     dragAccumulator += dragAmount
-                                                 }
-                                             )
-                                         }
-                                     }
-                                     .clickable(
-                                         interactionSource = remember { MutableInteractionSource() },
-                                         indication = null
-                                     ) {
-                                         val lyricsThumbPlayPause = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_thumbnail_play_pause", "false") == "true"
-                                         if (lyricsThumbPlayPause) {
-                                             onTogglePlayPause()
-                                         } else {
-                                             showLyricsControls = !showLyricsControls
-                                             if (showLyricsControls) {
-                                                 lyricsControlsHideTrigger++
-                                             }
-                                         }
-                                     }
-
-                             ) {
-
-                                 val currentLyricsLines = lyricsLines
-
-                                 if (currentLyricsLines != null && currentLyricsLines.isNotEmpty()) {
-
-                                     val isSynced = currentLyricsLines.any { it.timeMs > 0L }
-
-                                     
-
-                                                                           val lyricsScrollConnection = remember {
+                                      val lyricsScrollConnection = remember {
                                           object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
                                               override fun onPostScroll(
                                                   consumed: Offset,
@@ -3154,361 +3029,472 @@ fun PlayerScreen(
                                               }
                                           }
                                       }
-                                       val lyricsTextSize = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_text_size", "28")?.toFloatOrNull() ?: 28f
-                                       val lyricsLineSpacing = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_line_spacing", "1.3")?.toFloatOrNull() ?: 1.3f
-                                       val lyricsGlowEffect = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_glow_effect", "false") == "true"
-                                       val lyricsTextPosition = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_text_position", "left") ?: "left"
-                                       val lyricsClickChange = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_click_change", "true") == "true"
-                                       val lyricsAutoScroll = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_auto_scroll", "true") == "true"
 
-                                       LaunchedEffect(currentPosition, currentLyricsLines, isAutoScrollEnabled, scrollToCurrentTrigger, lyricsAutoScroll) {
-                                           if (!isSynced) return@LaunchedEffect
-                                           if (!lyricsAutoScroll) return@LaunchedEffect
-                                           if (!isAutoScrollEnabled && scrollToCurrentTrigger == 0) return@LaunchedEffect
-                                           val currentIdx = currentLyricsLines.indexOfLast { it.timeMs != -1L && it.timeMs <= currentPosition + lyricsOffset + 500 }
-                                           if (currentIdx >= 0 && !lyricsListState.isScrollInProgress) {
-                                               lyricsListState.animateScrollToItem(currentIdx.coerceAtLeast(0), scrollOffset = -100)
-                                           }
-                                       }
+                                      val lyricsTextSize = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_text_size", "28")?.toFloatOrNull() ?: 28f
+                                      val lyricsLineSpacing = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_line_spacing", "1.3")?.toFloatOrNull() ?: 1.3f
+                                      val lyricsGlowEffect = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_glow_effect", "false") == "true"
+                                      val lyricsTextPosition = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_text_position", "left") ?: "left"
+                                      val lyricsClickChange = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_click_change", "true") == "true"
+                                      val lyricsAutoScroll = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_auto_scroll", "true") == "true"
 
-                                       LazyColumn(
-                                           state = lyricsListState,
-                                           modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp).nestedScroll(lyricsScrollConnection).nestedScroll(nestedScrollConnection),
-                                           verticalArrangement = Arrangement.spacedBy((24 * lyricsLineSpacing / 1.3f).dp)
-                                       ) {
-                                           item { Spacer(modifier = Modifier.height(60.dp)) }
-                                           items(currentLyricsLines.size) { i ->
-                                               val line = currentLyricsLines[i]
-                                               val isCurrent = isSynced && line.timeMs != -1L && (currentPosition + lyricsOffset) >= line.timeMs && 
-                                                   (i == currentLyricsLines.lastIndex || (currentPosition + lyricsOffset) < currentLyricsLines[i+1].timeMs)
-                                               val isPast = isSynced && line.timeMs != -1L && (currentPosition + lyricsOffset) > line.timeMs
-                                               val distance = if (isSynced) {
-                                                   val curIdx = currentLyricsLines.indexOfLast { it.timeMs != -1L && it.timeMs <= (currentPosition + lyricsOffset) + 500 }
-                                                   if (curIdx >= 0) kotlin.math.abs(i - curIdx) else 0
-                                               } else 0
-
-                                              
-
-                                              // Compute word timing for word-by-word gradient fill
-
-                                              val nextLineTime = currentLyricsLines.getOrNull(i + 1)?.timeMs
-
-                                              val lineDuration = remember(line.timeMs, nextLineTime) {
-
-                                                  if (nextLineTime != null && nextLineTime > 0 && line.timeMs > 0) nextLineTime - line.timeMs else 4000L
-
+                                      // Better Lyrics Display Items Model (Lines + Instrumental Breaks)
+                                      val displayItems = remember(currentLyricsLines) {
+                                          val items = mutableListOf<Any>()
+                                          if (!isSynced) {
+                                              currentLyricsLines.forEachIndexed { idx, line ->
+                                                  items.add(Pair(idx, line))
                                               }
+                                              return@remember items
+                                          }
 
-                                              val activeDuration = remember(lineDuration) {
+                                          val firstLine = currentLyricsLines.firstOrNull { it.timeMs > 0L }
+                                          if (firstLine != null && firstLine.timeMs >= 5000L) {
+                                              items.add(Triple(0L, firstLine.timeMs, 0L)) // Intro instrumental break
+                                          }
 
-                                                  (lineDuration * 0.95).toLong().coerceAtLeast(300L)
+                                          for (i in currentLyricsLines.indices) {
+                                              val line = currentLyricsLines[i]
+                                              val nextLine = currentLyricsLines.getOrNull(i + 1)
+                                              items.add(Pair(i, line))
 
+                                              if (nextLine != null && line.timeMs > 0L && nextLine.timeMs > line.timeMs) {
+                                                  val estimatedEnd = line.timeMs + 3500L
+                                                  val gap = nextLine.timeMs - estimatedEnd
+                                                  if (gap >= 4500L) {
+                                                      items.add(Triple(estimatedEnd, nextLine.timeMs, estimatedEnd))
+                                                  }
                                               }
+                                          }
+                                          items
+                                      }
 
-                                              val lineRelTime = if (isCurrent && line.timeMs > 0) ((currentPosition + lyricsOffset) - line.timeMs).coerceAtLeast(0L) else if (isPast) activeDuration else 0L
+                                      val activeItemIndex = remember(currentPosition, lyricsOffset, displayItems) {
+                                          if (!isSynced) return@remember 0
+                                          val pos = currentPosition + lyricsOffset
+                                          displayItems.indexOfLast { item ->
+                                              when (item) {
+                                                  is Pair<*, *> -> {
+                                                      val line = item.second as com.mocharealm.accompanist.lyrics.core.model.ISyncedLine
+                                                      line.timeMs != -1L && line.timeMs <= pos + 400
+                                                  }
+                                                  is Triple<*, *, *> -> {
+                                                      val start = item.first as Long
+                                                      val end = item.second as Long
+                                                      pos in start until end
+                                                  }
+                                                  else -> false
+                                              }
+                                          }
+                                      }
 
-                                              
+                                      LaunchedEffect(activeItemIndex, isAutoScrollEnabled, scrollToCurrentTrigger, lyricsAutoScroll) {
+                                          if (!isSynced || !lyricsAutoScroll) return@LaunchedEffect
+                                          if (!isAutoScrollEnabled && scrollToCurrentTrigger == 0) return@LaunchedEffect
+                                          if (activeItemIndex >= 0 && !lyricsListState.isScrollInProgress) {
+                                              lyricsListState.animateScrollToItem(activeItemIndex.coerceAtLeast(0), scrollOffset = -120)
+                                          }
+                                      }
+
+                                      val infiniteTransition = rememberInfiniteTransition(label = "instrumentalWave")
+                                      val instrumentalWavePhase by infiniteTransition.animateFloat(
+                                          initialValue = 0f,
+                                          targetValue = 1f,
+                                          animationSpec = infiniteRepeatable(
+                                              animation = tween(1200, easing = LinearEasing),
+                                              repeatMode = RepeatMode.Restart
+                                          ),
+                                          label = "instrumentalWavePhase"
+                                      )
+
+                                      LazyColumn(
+                                          state = lyricsListState,
+                                          modifier = Modifier
+                                              .fillMaxSize()
+                                              .padding(horizontal = 24.dp)
+                                              .nestedScroll(lyricsScrollConnection)
+                                              .nestedScroll(nestedScrollConnection),
+                                          verticalArrangement = Arrangement.spacedBy((22 * lyricsLineSpacing / 1.3f).dp)
+                                      ) {
+                                          item { Spacer(modifier = Modifier.height(70.dp)) }
+
+                                          items(displayItems.size) { itemIdx ->
+                                              val item = displayItems[itemIdx]
+                                              val isItemActive = isSynced && itemIdx == activeItemIndex
+                                              val distance = if (isSynced && activeItemIndex >= 0) kotlin.math.abs(itemIdx - activeItemIndex) else 0
 
                                               val targetAlpha = when {
-
-                                                  !isSynced || isCurrent -> 1f
-
-                                                  distance == 1 -> 0.55f
-
-                                                  distance == 2 -> 0.4f
-
-                                                  else -> 0.3f
-
+                                                  !isSynced || isItemActive -> 1f
+                                                  distance == 1 -> 0.32f
+                                                  distance == 2 -> 0.20f
+                                                  else -> 0.12f
                                               }
 
                                               val targetScale = when {
-
-                                                  !isSynced || isCurrent -> 1.05f
-
-                                                  distance == 1 -> 0.95f
-
-                                                  distance >= 2 -> 0.85f
-
-                                                  else -> 1f
-
+                                                  !isSynced || isItemActive -> 1.04f
+                                                  distance == 1 -> 0.94f
+                                                  distance == 2 -> 0.88f
+                                                  else -> 0.82f
                                               }
 
-                                              val targetBlur = if (!isCurrent && isSynced) {
-
+                                              val targetBlur = if (!isItemActive && isSynced) {
                                                   when (distance) {
-
-                                                      1 -> 2.5f
-
-                                                      2 -> 4f
-
-                                                      else -> 6f
-
+                                                      1 -> 4.dp
+                                                      2 -> 8.dp
+                                                      else -> 14.dp
                                                   }
+                                              } else 0.dp
 
-                                              } else 0f
+                                              val animAlpha by animateFloatAsState(targetAlpha, animationSpec = tween(260, easing = FastOutSlowInEasing), label = "itemAlpha")
+                                              val animScale by animateFloatAsState(targetScale, animationSpec = tween(320, easing = FastOutSlowInEasing), label = "itemScale")
+                                              val animBlur by androidx.compose.animation.core.animateDpAsState(targetBlur, animationSpec = tween(350, easing = FastOutSlowInEasing), label = "itemBlur")
 
-                                              
+                                              when (item) {
+                                                  is Triple<*, *, *> -> {
+                                                      // Instrumental Break Row
+                                                      val startMs = item.first as Long
+                                                      val endMs = item.second as Long
+                                                      val seekTarget = item.third as Long
+                                                      val breakDuration = (endMs - startMs).coerceAtLeast(1L)
+                                                      val breakProgress = if (isItemActive) {
+                                                          ((currentPosition + lyricsOffset - startMs).toFloat() / breakDuration).coerceIn(0f, 1f)
+                                                      } else 0f
 
-                                              val animAlpha by androidx.compose.animation.core.animateFloatAsState(targetAlpha, animationSpec = tween(260, easing = FastOutSlowInEasing), label="lyricsAlpha")
-
-                                              val animScale by androidx.compose.animation.core.animateFloatAsState(targetScale, animationSpec = tween(320, easing = FastOutSlowInEasing), label="lyricsScale")
-
-                                              val animBlur by androidx.compose.animation.core.animateFloatAsState(targetBlur, animationSpec = tween(420, easing = FastOutSlowInEasing), label="lyricsBlur")
-
-                                              
-                                              // Word-by-word data
-
-                                              val wordData = remember(line.text, activeDuration) {
-
-                                                  val words = line.text.split(" ").filter { it.isNotEmpty() }
-
-                                                  if (words.isEmpty()) {
-
-                                                      listOf(Triple(line.text, 0L, activeDuration))
-
-                                                  } else {
-
-                                                      val totalChars = line.text.length
-
-                                                      var accumulatedTime = 0L
-
-                                                      words.mapIndexed { wordIndex, word ->
-
-                                                          val charCount = if (wordIndex < words.lastIndex) word.length + 1 else word.length
-
-                                                          val wordStart = accumulatedTime
-
-                                                          val wordDur = if (totalChars > 0) (activeDuration * charCount.toFloat() / totalChars).toLong() else activeDuration
-
-                                                          accumulatedTime += wordDur
-
-                                                          Triple(if (wordIndex < words.lastIndex) "$word " else word, wordStart, wordStart + wordDur)
-
-                                                      }
-
-                                                  }
-
-                                              }
-
-                                              
-
-                                              // Word-by-word FlowRow rendering
-
-                                              @OptIn(ExperimentalLayoutApi::class)
-
-                                              FlowRow(
-
-                                                  modifier = Modifier.fillMaxWidth()
-
-                                                      .graphicsLayer {
-
-                                                          scaleX = animScale; scaleY = animScale
-
-                                                          alpha = animAlpha
-
-                                                          transformOrigin = androidx.compose.ui.graphics.TransformOrigin(
-                                                              when (lyricsTextPosition) {
-                                                                  "center" -> 0.5f
-                                                                  "right" -> 1f
-                                                                  else -> 0f
-                                                              },
-                                                              0.5f
-                                                          )
-
-                                                      }
-
-                                                      .then(if (animBlur > 0f) Modifier.blur(animBlur.dp) else Modifier)
-
-                                                      .clickable(
-                                                          enabled = lyricsClickChange,
-                                                          onClick = { 
-                                                              if(line.timeMs != -1L) onSeek((line.timeMs - lyricsOffset).coerceAtLeast(0L))
-                                                              showLyricsControls = true
-                                                              lyricsControlsHideTrigger++
+                                                      Row(
+                                                          modifier = Modifier
+                                                              .fillMaxWidth()
+                                                              .graphicsLayer {
+                                                                  scaleX = animScale
+                                                                  scaleY = animScale
+                                                                  alpha = animAlpha
+                                                                  transformOrigin = androidx.compose.ui.graphics.TransformOrigin(
+                                                                      when (lyricsTextPosition) {
+                                                                          "center" -> 0.5f
+                                                                          "right" -> 1f
+                                                                          else -> 0f
+                                                                      },
+                                                                      0.5f
+                                                                  )
+                                                              }
+                                                              .then(if (animBlur > 0.dp) Modifier.blur(animBlur) else Modifier)
+                                                              .clickable(
+                                                                  enabled = lyricsClickChange,
+                                                                  onClick = {
+                                                                      onSeek((seekTarget - lyricsOffset).coerceAtLeast(0L))
+                                                                      showLyricsControls = true
+                                                                      lyricsControlsHideTrigger++
+                                                                  }
+                                                              )
+                                                              .padding(vertical = 10.dp),
+                                                          horizontalArrangement = when (lyricsTextPosition) {
+                                                              "center" -> Arrangement.Center
+                                                              "right" -> Arrangement.End
+                                                              else -> Arrangement.Start
+                                                          },
+                                                          verticalAlignment = Alignment.CenterVertically
+                                                      ) {
+                                                          Row(
+                                                              modifier = Modifier
+                                                                  .background(
+                                                                      color = contentColor.copy(alpha = if (isItemActive) 0.14f else 0.06f),
+                                                                      shape = CircleShape
+                                                                  )
+                                                                  .padding(horizontal = 16.dp, vertical = 8.dp),
+                                                              horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                                              verticalAlignment = Alignment.CenterVertically
+                                                          ) {
+                                                              listOf(0f, 0.33f, 0.66f).forEach { offset ->
+                                                                  val pulse = if (isItemActive) {
+                                                                      val shifted = (instrumentalWavePhase + offset) % 1f
+                                                                      (kotlin.math.sin(shifted * Math.PI * 2).toFloat() * 0.5f + 0.5f)
+                                                                  } else 0f
+                                                                  Box(
+                                                                      modifier = Modifier
+                                                                          .size((7 + pulse * 4).dp)
+                                                                          .background(
+                                                                              color = if (isItemActive) contentColor else contentColor.copy(alpha = 0.5f),
+                                                                              shape = CircleShape
+                                                                          )
+                                                                  )
+                                                              }
+                                                              Spacer(modifier = Modifier.width(4.dp))
+                                                              Text(
+                                                                  text = "♪",
+                                                                  color = if (isItemActive) contentColor else contentColor.copy(alpha = 0.5f),
+                                                                  fontSize = 17.sp,
+                                                                  fontWeight = FontWeight.Bold
+                                                              )
                                                           }
-                                                      ),
+                                                      }
+                                                  }
+                                                  is Pair<*, *> -> {
+                                                      // Lyrics Line Item
+                                                      val lineIdx = item.first as Int
+                                                      val line = item.second as com.mocharealm.accompanist.lyrics.core.model.ISyncedLine
+                                                      val isPast = isSynced && line.timeMs != -1L && (currentPosition + lyricsOffset) > line.timeMs
+                                                      val nextLineTime = currentLyricsLines.getOrNull(lineIdx + 1)?.timeMs
 
+                                                      val lineDuration = remember(line.timeMs, nextLineTime) {
+                                                          if (nextLineTime != null && nextLineTime > 0 && line.timeMs > 0) nextLineTime - line.timeMs else 4000L
+                                                      }
+                                                      val activeDuration = remember(lineDuration) {
+                                                          (lineDuration * 0.95).toLong().coerceAtLeast(300L)
+                                                      }
+                                                      val lineRelTime = if (isItemActive && line.timeMs > 0) {
+                                                          ((currentPosition + lyricsOffset) - line.timeMs).coerceAtLeast(0L)
+                                                      } else if (isPast) activeDuration else 0L
+
+                                                      // Word / Syllable items for RichSync swipe
+                                                      val wordData = remember(line.text, activeDuration) {
+                                                          val words = line.text.split(" ").filter { it.isNotEmpty() }
+                                                          if (words.isEmpty()) {
+                                                              listOf(Triple(line.text, 0L, activeDuration))
+                                                          } else {
+                                                              val totalChars = line.text.length
+                                                              var accumulatedTime = 0L
+                                                              words.mapIndexed { wIdx, word ->
+                                                                  val charCount = if (wIdx < words.lastIndex) word.length + 1 else word.length
+                                                                  val wordStart = accumulatedTime
+                                                                  val wordDur = if (totalChars > 0) (activeDuration * charCount.toFloat() / totalChars).toLong() else activeDuration
+                                                                  accumulatedTime += wordDur
+                                                                  Triple(if (wIdx < words.lastIndex) "$word " else word, wordStart, wordStart + wordDur)
+                                                              }
+                                                          }
+                                                      }
+
+                                                      Column(
+                                                          modifier = Modifier
+                                                              .fillMaxWidth()
+                                                              .graphicsLayer {
+                                                                  scaleX = animScale
+                                                                  scaleY = animScale
+                                                                  alpha = animAlpha
+                                                                  transformOrigin = androidx.compose.ui.graphics.TransformOrigin(
+                                                                      when (lyricsTextPosition) {
+                                                                          "center" -> 0.5f
+                                                                          "right" -> 1f
+                                                                          else -> 0f
+                                                                      },
+                                                                      0.5f
+                                                                  )
+                                                              }
+                                                              .then(if (animBlur > 0.dp) Modifier.blur(animBlur) else Modifier)
+                                                              .clickable(
+                                                                  enabled = lyricsClickChange,
+                                                                  onClick = {
+                                                                      if (line.timeMs != -1L) onSeek((line.timeMs - lyricsOffset).coerceAtLeast(0L))
+                                                                      showLyricsControls = true
+                                                                      lyricsControlsHideTrigger++
+                                                                  }
+                                                              ),
+                                                          horizontalAlignment = when (lyricsTextPosition) {
+                                                              "center" -> Alignment.CenterHorizontally
+                                                              "right" -> Alignment.End
+                                                              else -> Alignment.Start
+                                                          }
+                                                      ) {
+                                                          @OptIn(ExperimentalLayoutApi::class)
+                                                          FlowRow(
+                                                              modifier = Modifier.fillMaxWidth(),
+                                                              horizontalArrangement = when (lyricsTextPosition) {
+                                                                  "center" -> Arrangement.Center
+                                                                  "right" -> Arrangement.End
+                                                                  else -> Arrangement.Start
+                                                              },
+                                                              verticalArrangement = Arrangement.spacedBy(2.dp)
+                                                          ) {
+                                                              wordData.forEach { (wordText, startRel, endRel) ->
+                                                                  val wordDur = (endRel - startRel).coerceAtLeast(1L)
+                                                                  val wordProgress by animateFloatAsState(
+                                                                      targetValue = when {
+                                                                          lineRelTime >= endRel -> 1f
+                                                                          lineRelTime < startRel -> 0f
+                                                                          else -> (lineRelTime - startRel).toFloat() / wordDur
+                                                                      },
+                                                                      animationSpec = tween(
+                                                                          durationMillis = wordDur.coerceIn(140L, 260L).toInt(),
+                                                                          easing = FastOutSlowInEasing
+                                                                      ),
+                                                                      label = "wordProgress"
+                                                                  )
+
+                                                                  val finalFontWeight = if (isItemActive) FontWeight.Black else FontWeight.Bold
+
+                                                                  Text(
+                                                                      text = wordText,
+                                                                      fontSize = lyricsTextSize.sp,
+                                                                      letterSpacing = (-0.03).sp,
+                                                                      style = TextStyle(
+                                                                          brush = if (isItemActive) Brush.horizontalGradient(
+                                                                              0.0f to Color.White,
+                                                                              (wordProgress - 0.04f).coerceAtLeast(0f) to Color.White,
+                                                                              (wordProgress + 0.04f).coerceAtMost(1f) to Color.White.copy(alpha = 0.55f),
+                                                                              1.0f to Color.White.copy(alpha = 0.55f)
+                                                                          ) else null,
+                                                                          fontWeight = finalFontWeight,
+                                                                          lineHeight = (lyricsTextSize * lyricsLineSpacing).sp,
+                                                                          shadow = if (lyricsGlowEffect && isItemActive && wordProgress > 0.05f) Shadow(
+                                                                              color = Color.White.copy(alpha = 0.95f * wordProgress),
+                                                                              offset = Offset.Zero,
+                                                                              blurRadius = (26f * wordProgress).coerceAtLeast(0.1f)
+                                                                          ) else null
+                                                                      ),
+                                                                      color = if (!isItemActive) contentColor.copy(alpha = 0.85f) else Color.Unspecified
+                                                                  )
+                                                              }
+                                                          }
+
+                                                          // Translated / Romanized Subtitle
+                                                          val translation = line.translationText
+                                                          if (!translation.isNullOrBlank()) {
+                                                              Spacer(modifier = Modifier.height(4.dp))
+                                                              Text(
+                                                                  text = translation,
+                                                                  fontSize = (lyricsTextSize * 0.62f).sp,
+                                                                  fontWeight = FontWeight.SemiBold,
+                                                                  color = contentColor.copy(alpha = if (isItemActive) 0.68f else 0.22f),
+                                                                  lineHeight = (lyricsTextSize * 0.78f).sp
+                                                              )
+                                                          }
+                                                      }
+                                                  }
+                                              }
+                                          }
+
+                                          // Provider Badge / Footer
+                                          item {
+                                              Spacer(modifier = Modifier.height(28.dp))
+                                              Row(
+                                                  modifier = Modifier
+                                                      .fillMaxWidth()
+                                                      .padding(bottom = 280.dp),
                                                   horizontalArrangement = when (lyricsTextPosition) {
                                                       "center" -> Arrangement.Center
                                                       "right" -> Arrangement.End
                                                       else -> Arrangement.Start
-                                                  },
-
-                                                  verticalArrangement = Arrangement.spacedBy(4.dp)
-
-                                              ) {
-
-                                                  wordData.forEach { (wordText, startRelative, endRelative) ->
-
-                                                      val wordDuration = (endRelative - startRelative).coerceAtLeast(1L)
-
-                                                      
-
-                                                      val wordProgress by androidx.compose.animation.core.animateFloatAsState(
-
-                                                          targetValue = when {
-
-                                                              lineRelTime >= endRelative -> 1f
-
-                                                              lineRelTime < startRelative -> 0f
-
-                                                              else -> (lineRelTime - startRelative).toFloat() / wordDuration
-
-                                                          },
-
-                                                          animationSpec = tween(
-
-                                                              durationMillis = wordDuration.coerceIn(140L, 260L).toInt(),
-
-                                                              easing = FastOutSlowInEasing
-
-                                                          ),
-
-                                                          label = "wordProgress"
-
-                                                      )
-
-                                                      
-
-                                                      val finalFontWeight = if (isCurrent) FontWeight.ExtraBold else FontWeight.Bold
-
-                                                      
-
-                                                      Text(
-
-                                                          text = wordText,
-
-                                                          fontSize = lyricsTextSize.sp,
-
-                                                          style = TextStyle(
-
-                                                              brush = if (isCurrent) Brush.horizontalGradient(
-
-                                                                  0.0f to contentColor,
-
-                                                                  (wordProgress - 0.05f).coerceAtLeast(0f) to contentColor,
-
-                                                                  (wordProgress + 0.05f).coerceAtMost(1f) to contentColor.copy(alpha = 0.4f),
-
-                                                                  1.0f to contentColor.copy(alpha = 0.4f)
-
-                                                              ) else null,
-
-                                                              fontWeight = finalFontWeight,
-
-                                                              lineHeight = (lyricsTextSize * lyricsLineSpacing).sp,
-
-                                                              shadow = if (lyricsGlowEffect && isCurrent && wordProgress > 0.1f) Shadow(
-
-                                                                  color = contentColor.copy(alpha = 0.6f * wordProgress),
-
-                                                                  offset = Offset.Zero,
-
-                                                                  blurRadius = (12f * wordProgress).coerceAtLeast(0.1f)
-
-                                                              ) else null
-
-                                                          ),
-
-                                                          color = if (!isCurrent) contentColor else Color.Unspecified
-
-                                                      )
-
                                                   }
+                                              ) {
+                                                  Row(
+                                                      modifier = Modifier
+                                                          .background(
+                                                              color = contentColor.copy(alpha = 0.10f),
+                                                              shape = RoundedCornerShape(20.dp)
+                                                          )
+                                                          .clickable {
+                                                              showLyricsOptionsMenu = true
+                                                          }
+                                                          .padding(horizontal = 14.dp, vertical = 8.dp),
+                                                      verticalAlignment = Alignment.CenterVertically,
+                                                      horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                  ) {
+                                                      Icon(
+                                                          imageVector = Icons.Default.MusicNote,
+                                                          contentDescription = null,
+                                                          tint = contentColor.copy(alpha = 0.65f),
+                                                          modifier = Modifier.size(15.dp)
+                                                      )
+                                                      Text(
+                                                          text = stringResource(
+                                                              R.string.lyrics_provided_by,
+                                                              currentLyricsProviderName.ifEmpty { "Better Lyrics" }
+                                                          ),
+                                                          color = contentColor.copy(alpha = 0.65f),
+                                                          fontSize = 12.sp,
+                                                          fontWeight = FontWeight.Medium
+                                                      )
+                                                  }
+                                              }
+                                          }
+                                      }
 
-                                              }            }
-
-                                         item { Spacer(modifier = Modifier.height(360.dp)) }
-
-                                     }
-
-                                 } else {
-
-                                     Box(
-                                         modifier = Modifier
-
-                                             .fillMaxSize()
-
-                                             .clipToBounds()
-
-                                             .pointerInput(Unit) {
-
-                                                 val swipeLyrics = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_swipe_to_change_song", "false") == "true"
-
-                                                 if (swipeLyrics) {
-
-                                                     var dragAccumulator = 0f
-
-                                                     detectHorizontalDragGestures(
-
-                                                         onDragStart = { dragAccumulator = 0f },
-
-                                                         onDragEnd = {
-
-                                                             if (dragAccumulator < -100f) {
-
-                                                                 onSkipNext()
-
-                                                             } else if (dragAccumulator > 100f) {
-
-                                                                 onSkipPrevious()
-
-                                                             }
-
-                                                         },
-
-                                                         onHorizontalDrag = { change, dragAmount ->
-
-                                                             change.consume()
-
-                                                             dragAccumulator += dragAmount
-
-                                                         }
-
-                                                     )
-
-                                                 }
-
-                                             }
-
-                                             .clickable(
-
-                                                 interactionSource = remember { MutableInteractionSource() },
-
-                                                 indication = null
-
-                                             ) {
-
-                                                 val lyricsThumbPlayPause = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_thumbnail_play_pause", "false") == "true"
-
-                                                 if (lyricsThumbPlayPause) {
-                                                     onTogglePlayPause()
-                                                 } else {
-                                                     showLyricsControls = !showLyricsControls
-                                                     if (showLyricsControls) {
-                                                         lyricsControlsHideTrigger++
-                                                     }
-                                                 }
-                                             },
-
-                                         contentAlignment = Alignment.Center
-
-                                     ) {
-
-                                         CircularProgressIndicator(color = contentColor)
-
-                                     }
-
-                                 }
-
-                            }
-
-                       }
-
+                                      // Floating Resume Auto-Scroll Button
+                                      androidx.compose.animation.AnimatedVisibility(
+                                          visible = !isAutoScrollEnabled && isSynced,
+                                          enter = fadeIn() + slideInVertically { it / 2 },
+                                          exit = fadeOut() + slideOutVertically { it / 2 },
+                                          modifier = Modifier
+                                              .align(Alignment.BottomCenter)
+                                              .padding(bottom = 24.dp)
+                                      ) {
+                                          Row(
+                                              modifier = Modifier
+                                                  .background(
+                                                      color = if (isLightBackground) Color(0xEEFFFFFF) else Color(0xEE1E1E1E),
+                                                      shape = RoundedCornerShape(24.dp)
+                                                  )
+                                                  .border(
+                                                      width = 1.dp,
+                                                      color = if (isLightBackground) Color.Black.copy(alpha = 0.1f) else Color.White.copy(alpha = 0.15f),
+                                                      shape = RoundedCornerShape(24.dp)
+                                                  )
+                                                  .clickable {
+                                                      isAutoScrollEnabled = true
+                                                      scrollToCurrentTrigger++
+                                                  }
+                                                  .padding(horizontal = 16.dp, vertical = 10.dp),
+                                              verticalAlignment = Alignment.CenterVertically,
+                                              horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                          ) {
+                                              Icon(
+                                                  imageVector = Icons.Default.VerticalAlignBottom,
+                                                  contentDescription = stringResource(R.string.lyrics_resume_autoscroll),
+                                                  tint = if (isLightBackground) Color.Black else Color.White,
+                                                  modifier = Modifier.size(16.dp)
+                                              )
+                                              Text(
+                                                  text = stringResource(R.string.lyrics_resume_autoscroll),
+                                                  color = if (isLightBackground) Color.Black else Color.White,
+                                                  fontSize = 13.sp,
+                                                  fontWeight = FontWeight.SemiBold
+                                              )
+                                          }
+                                      }
+                                  } else {
+                                      Box(
+                                          modifier = Modifier
+                                              .fillMaxSize()
+                                              .clipToBounds()
+                                              .pointerInput(Unit) {
+                                                  val swipeLyrics = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_swipe_to_change_song", "false") == "true"
+                                                  if (swipeLyrics) {
+                                                      var dragAccumulator = 0f
+                                                      detectHorizontalDragGestures(
+                                                          onDragStart = { dragAccumulator = 0f },
+                                                          onDragEnd = {
+                                                              if (dragAccumulator < -100f) {
+                                                                  onSkipNext()
+                                                              } else if (dragAccumulator > 100f) {
+                                                                  onSkipPrevious()
+                                                              }
+                                                          },
+                                                          onHorizontalDrag = { change, dragAmount ->
+                                                              change.consume()
+                                                              dragAccumulator += dragAmount
+                                                          }
+                                                      )
+                                                  }
+                                              }
+                                              .clickable(
+                                                  interactionSource = remember { MutableInteractionSource() },
+                                                  indication = null
+                                              ) {
+                                                  val lyricsThumbPlayPause = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_thumbnail_play_pause", "false") == "true"
+                                                  if (lyricsThumbPlayPause) {
+                                                      onTogglePlayPause()
+                                                  } else {
+                                                      showLyricsControls = !showLyricsControls
+                                                      if (showLyricsControls) {
+                                                          lyricsControlsHideTrigger++
+                                                      }
+                                                  }
+                                              },
+                                          contentAlignment = Alignment.Center
+                                      ) {
+                                          CircularProgressIndicator(color = contentColor)
+                                      }
+                                  }
+                              }
+                          }
                       }
-
-                      
-
                                         } // Closes Box of overlay
 
              } // Closes AnimatedVisibility of overlay
@@ -3595,6 +3581,46 @@ fun PlayerScreen(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
+
+                val currentAnimatedUrl = animatedArtworkUrl
+
+                if (!currentAnimatedUrl.isNullOrBlank()) {
+                    DisposableEffect(Unit) {
+                        onDispose {
+                            isVideoPlaying = false
+                        }
+                    }
+                    com.mrtdk.liquid_glass.ui.components.AnimatedArtworkPlayer(
+                        videoUrl = currentAnimatedUrl,
+                        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (isVideoPlaying) 1f else 0f },
+                        isPaused = false,
+                        enableFrameCapture = (dragProgress == 0f && !isOverlayActive),
+                        onPlaybackStarted = { isVideoPlaying = true },
+                        onFrameCaptured = { frameBitmap ->
+                            coverBitmap = frameBitmap.asImageBitmap()
+                            reflectionSkew = calculateDominantSkew(frameBitmap)
+
+                            try {
+                                // Promedio de la fila inferior de píxeles
+                                var r = 0L; var g = 0L; var b = 0L
+                                val yCoord = frameBitmap.height - 1
+                                val w = frameBitmap.width
+
+                                for (x in 0 until w) {
+                                    val pixel = frameBitmap.getPixel(x, yCoord)
+                                    r += android.graphics.Color.red(pixel)
+                                    g += android.graphics.Color.green(pixel)
+                                    b += android.graphics.Color.blue(pixel)
+                                }
+
+                                val avgColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
+                                bottomAverageColor = avgColor
+                                dominantColor = avgColor
+                                onDominantColorChanged(avgColor)
+                            } catch (e: Exception) { }
+                        }
+                    )
+                }
 
                 // Capa de desenfoque blur recortada exclusivamente en la sección bajo la curva elevada (1:1 en ancho y escala con difuminado suave en el borde curvo)
                 if (dragProgress < 1f && !isOverlayActive) {
@@ -3686,84 +3712,38 @@ fun PlayerScreen(
                     }
                 }
 
-
-
-
-
-                val currentAnimatedUrl = animatedArtworkUrl
-
-
-
-                if (!currentAnimatedUrl.isNullOrBlank()) {
-
-                    DisposableEffect(Unit) {
-
-                        onDispose {
-
-                            isVideoPlaying = false
-
-                        }
-
-                    }
-
-                    com.mrtdk.liquid_glass.ui.components.AnimatedArtworkPlayer(
-
-                        videoUrl = currentAnimatedUrl,
-
-                        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (isVideoPlaying) 1f else 0f },
-
-                        isPaused = false,
-
-                        enableFrameCapture = (dragProgress == 0f && !isOverlayActive),
-
-                        onPlaybackStarted = { isVideoPlaying = true },
-
-                        onFrameCaptured = { frameBitmap ->
-                            coverBitmap = frameBitmap.asImageBitmap()
-                            reflectionSkew = calculateDominantSkew(frameBitmap)
-
-                            try {
-
-                                // Promedio de la fila inferior de píxeles
-
-                                var r = 0L; var g = 0L; var b = 0L
-
-                                val yCoord = frameBitmap.height - 1
-
-                                val w = frameBitmap.width
-
-                                for (x in 0 until w) {
-
-                                    val pixel = frameBitmap.getPixel(x, yCoord)
-
-                                    r += android.graphics.Color.red(pixel)
-
-                                    g += android.graphics.Color.green(pixel)
-
-                                    b += android.graphics.Color.blue(pixel)
-
+                // Capa transparente para captura de gestos de deslizamiento hacia abajo (funciona tanto con imagen estática como animada)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(showLyrics, showQueue) {
+                            if (!showLyrics && !showQueue) {
+                                detectVerticalDragGestures(
+                                    onDragEnd = {
+                                        val currentOffsetY = dragOffsetY.value
+                                        if (currentOffsetY > with(density) { 150.dp.toPx() }) {
+                                            scope.launch {
+                                                dragOffsetY.animateTo(
+                                                    targetValue = maxDragDistance,
+                                                    animationSpec = tween(300, easing = FastOutSlowInEasing)
+                                                )
+                                                onClose()
+                                            }
+                                        } else {
+                                            scope.launch {
+                                                dragOffsetY.animateTo(0f, spring())
+                                            }
+                                        }
+                                    }
+                                ) { change, dragAmount ->
+                                    if (dragAmount > 0f || dragOffsetY.value > 0f) {
+                                        val newOffset = (dragOffsetY.value + dragAmount).coerceAtLeast(0f)
+                                        scope.launch { dragOffsetY.snapTo(newOffset) }
+                                    }
                                 }
-
-                                val avgColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
-
-                                bottomAverageColor = avgColor
-
-                                dominantColor = avgColor
-
-                                onDominantColorChanged(avgColor)
-
-                            } catch (e: Exception) { }
-
+                            }
                         }
-
-                    )
-
-                }
-
-
-
-
-
+                )
             }
 
 
@@ -3789,18 +3769,15 @@ fun PlayerScreen(
              ) {
 
                  Box(
-
-                     modifier = Modifier
-
-                         .fillMaxWidth()
-
-                         .height(maxHeight - (expandedY + expandedHeight))
-
-                         .pointerInput(Unit) {} // Consume all pointer inputs so clicks don't fall through to the lists underneath
-
-                         .background(Color.Transparent)
-
-                 ) {
+                      modifier = Modifier
+                          .fillMaxWidth()
+                          .height(maxHeight - (expandedY + expandedHeight))
+                          .graphicsLayer {
+                              alpha = contentAlpha
+                          }
+                          .pointerInput(Unit) {} // Consume all pointer inputs so clicks don't fall through to the lists underneath
+                          .background(Color.Transparent)
+                  ) {
 
                      Column(
 
@@ -3816,7 +3793,7 @@ fun PlayerScreen(
 
                      ) {
 
-                         Spacer(modifier = Modifier.height(76.dp)) // Fixed top spacer to push the slider lower and keep its position identical in all views
+                         Spacer(modifier = Modifier.height(72.dp)) 
 
                          AppleMusicSlider(
 
@@ -3915,18 +3892,15 @@ fun PlayerScreen(
              val isLightBackground = contentColor != Color.White
 
              Row(
-
-                 modifier = Modifier
-
-                     .offset(x = detailsOffsetX, y = detailsOffsetY)
-
-                     .width(detailsWidth)
-
-                     .heightIn(min = 48.dp),
-
-                 verticalAlignment = Alignment.CenterVertically
-
-             ) {
+                  modifier = Modifier
+                      .offset(x = detailsOffsetX, y = detailsOffsetY)
+                      .width(detailsWidth)
+                      .heightIn(min = 48.dp)
+                      .graphicsLayer {
+                          alpha = contentAlpha
+                      },
+                  verticalAlignment = Alignment.CenterVertically
+              ) {
 
                  var dragAccumulator by remember { mutableStateOf(0f) }
 
@@ -4487,19 +4461,23 @@ fun PlayerScreen(
                         lyricsLines = null // reset so user sees loading
 
                         val targetTitle = manualLyricsQueryTitle
-
                         val targetArtist = manualLyricsQueryArtist
+                        val durSec = (duration / 1000).toInt()
+                        val videoId = playerState?.videoId ?: ""
 
-                                                coroutineScope.launch {
-                            val lines = when (selectedLyricsProvider) {
+                        coroutineScope.launch {
+                            val result = when (selectedLyricsProvider) {
+                                "BetterLyrics" -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchBetterLyrics(targetTitle, targetArtist, durSec)
+                                "Unison" -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchUnisonLyrics(videoId, targetTitle, targetArtist, durSec, playerState?.album)
+                                "BiniLyrics", "LyricsPlus" -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchBiniLyrics(targetTitle, targetArtist, durSec)
+                                "LRCLIB" -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchLRCLib(targetTitle, targetArtist, durSec)
                                 "KuGou" -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchKuGouLyrics(targetTitle, targetArtist)
-                                "BetterLyrics" -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchBetterLyrics(targetTitle, targetArtist)
-                                "LyricsPlus" -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchLyricsPlus(targetTitle, targetArtist)
+                                "YouTube Captions", "YouTube Subtitle" -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchYouTubeCaptions(videoId)
+                                "YouTube Music" -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchYouTubeLyrics(videoId)
                                 "SimpMusic" -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchSimpMusicLyrics(targetTitle, targetArtist)
-                                "YouTube Music" -> playerState?.videoId?.let { com.mrtdk.liquid_glass.utils.LyricsProvider.fetchYouTubeLyrics(it) }
-                                "YouTube Subtitle" -> playerState?.videoId?.let { com.mrtdk.liquid_glass.utils.LyricsProvider.fetchYouTubeSubtitleLyrics(it) }
-                                else -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchLyrics(targetTitle, targetArtist)
+                                else -> com.mrtdk.liquid_glass.utils.LyricsProvider.fetchAutoLyrics(videoId, targetTitle, targetArtist, durSec, playerState?.album)
                             }
+                            val lines = result?.lyrics
                             if (lines != null) {
                                 val formatted = lines.lines.joinToString("\n") { line ->
                                     if (line.timeMs >= 0L) {
@@ -4679,16 +4657,10 @@ fun PlayerScreen(
                 },
 
                 containerColor = Color(0xFF2C2C2C)
-
             )
-
         }
-
-        }
-
     },
-
-        glassContent = {
+    glassContent = {
         val glassScope = this
         Box(
             modifier = Modifier
@@ -4696,59 +4668,88 @@ fun PlayerScreen(
                 .padding(bottom = 115.dp),
             contentAlignment = Alignment.BottomCenter
         ) {
-            androidx.compose.animation.AnimatedVisibility(
-                visible = showLyrics && !isAutoScrollEnabled,
-                enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically(initialOffsetY = { it }),
-                exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically(targetOffsetY = { it })
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                val dominantColor by LibraryManager.currentDominantColor.collectAsState()
-                glassScope.GlassBox(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .clickable {
-                            isAutoScrollEnabled = true
-                            scrollToCurrentTrigger++
-                        }
-                        .height(40.dp)
-                        .wrapContentWidth(),
-                    blur = 0.8f,
-                    scale = 0.02f,
-                    centerDistortion = 0.1f,
-                    warpEdges = 0.4f,
-                    elevation = 4.dp,
-                    shape = RoundedCornerShape(20.dp),
-                    tint = dominantColor.copy(alpha = 0.35f),
-                    darkness = 0.2f
+                // Sincronizar letra pill (if user scrolled away)
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = showLyrics && !isAutoScrollEnabled,
+                    enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically(initialOffsetY = { it }),
+                    exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.slideOutVertically(targetOffsetY = { it })
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxHeight().padding(horizontal = 16.dp)
+                    val dominantColor by LibraryManager.currentDominantColor.collectAsState()
+                    glassScope.GlassBox(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .border(1.dp, dominantColor.copy(alpha = 0.55f), RoundedCornerShape(50))
+                            .clickable {
+                                isAutoScrollEnabled = true
+                                scrollToCurrentTrigger++
+                            }
+                            .height(38.dp)
+                            .wrapContentWidth(),
+                        blur = 0.8f,
+                        scale = 0.02f,
+                        centerDistortion = 0.1f,
+                        warpEdges = 0.4f,
+                        elevation = 6.dp,
+                        shape = RoundedCornerShape(50),
+                        tint = dominantColor.copy(alpha = 0.35f),
+                        darkness = 0.2f
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Sincronizar",
-                            tint = Color.White,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Sincronizar letra",
-                            color = Color.White,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxHeight().padding(horizontal = 16.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = stringResource(R.string.sync_lyrics),
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(7.dp))
+                            Text(
+                                text = stringResource(R.string.sync_lyrics),
+                                color = Color.White,
+                                fontSize = 13.5.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                 }
+
             }
         }
         if (showLyricsOptionsMenu) {
-            LyricsOptionsMenu(
+            val lyricsMenuScope = rememberCoroutineScope()
+            glassScope.LyricsOptionsMenu(
                 backdrop = localBackdrop,
                 onDismiss = { showLyricsOptionsMenu = false },
                 playerState = playerState,
                 selectedProvider = selectedLyricsProvider,
                 onSelectProvider = { selectedLyricsProvider = it },
+                availableProviders = availableLyricsProviders,
+                currentProviderIndex = currentLyricsProviderIndex,
+                onSelectProviderIndex = { newIndex ->
+                    if (newIndex in availableLyricsProviders.indices) {
+                        currentLyricsProviderIndex = newIndex
+                        val activeResult = availableLyricsProviders[newIndex]
+                        selectedLyricsProvider = activeResult.providerName
+                        currentLyricsProviderName = activeResult.providerName
+                        currentLyricsSyncType = activeResult.syncType
+                        val lines = activeResult.lyrics
+                        lyricsLines = lines?.lines
+                        if (isRomajiEnabled && lines != null) {
+                            lyricsMenuScope.launch {
+                                val prefs = com.mrtdk.liquid_glass.utils.LyricsRomanizationPreferences(true, true, true, true, true)
+                                val processed = com.mrtdk.liquid_glass.utils.LyricsUtils.romanizeSyncedLyrics(lines, prefs)
+                                lyricsLines = processed.lines
+                            }
+                        }
+                    }
+                },
                 isRomajiEnabled = isRomajiEnabled,
                 onToggleRomaji = {
                     isRomajiEnabled = !isRomajiEnabled
@@ -4758,6 +4759,18 @@ fun PlayerScreen(
                 },
                 lyricsOffset = lyricsOffset,
                 onAdjustOffset = { showLyricsOffsetDialog = true },
+                onAdjustOffsetDelta = { deltaSec ->
+                    lyricsOffset += (deltaSec * 1000).toInt()
+                    if (playerState?.videoId != null) {
+                        com.mrtdk.liquid_glass.data.LibraryManager.saveString("lyrics_offset_${playerState.videoId}", lyricsOffset.toString())
+                    }
+                },
+                onResetOffset = {
+                    lyricsOffset = 0
+                    if (playerState?.videoId != null) {
+                        com.mrtdk.liquid_glass.data.LibraryManager.saveString("lyrics_offset_${playerState.videoId}", "0")
+                    }
+                },
                 onEditLyrics = { showLyricsEditDialog = true },
                 onReloadLyrics = {
                     if (playerState?.videoId != null) {
@@ -4766,7 +4779,7 @@ fun PlayerScreen(
                     }
                     lyricsOffset = 0
                     lyricsReloadTrigger++
-                    Toast.makeText(context, "Letras restablecidas", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.lyrics_restored_toast), Toast.LENGTH_SHORT).show()
                 },
                 onSearchManually = { showManualLyricsSearch = true },
                 onSearchOnline = {
@@ -5791,7 +5804,7 @@ fun LandscapePlayerLayout(
 
 
 
-        val threshold = 0.70f
+        val threshold = 0.85f
 
         
 
@@ -5801,13 +5814,15 @@ fun LandscapePlayerLayout(
 
         val imgOffsetXTarget: androidx.compose.ui.unit.Dp
 
-        val imgOffsetYTarget: androidx.compose.ui.unit.Dp
-
         val imageCornerTarget: androidx.compose.ui.unit.Dp
 
         val contentAlpha: Float
 
         
+
+        val p = dragProgress.coerceIn(0f, 1f)
+
+        val imgOffsetYTarget = androidx.compose.ui.unit.lerp(startOffsetY, targetOffsetY, p)
 
         if (dragProgress <= threshold) {
 
@@ -5818,8 +5833,6 @@ fun LandscapePlayerLayout(
             imgHeightTarget = startHeight
 
             imgOffsetXTarget = startOffsetX
-
-            imgOffsetYTarget = startOffsetY
 
             imageCornerTarget = startCorner
 
@@ -5834,8 +5847,6 @@ fun LandscapePlayerLayout(
             imgHeightTarget = androidx.compose.ui.unit.lerp(startHeight, 40.dp, p2)
 
             imgOffsetXTarget = androidx.compose.ui.unit.lerp(startOffsetX, targetOffsetX, p2)
-
-            imgOffsetYTarget = androidx.compose.ui.unit.lerp(startOffsetY, 0.dp, p2)
 
             imageCornerTarget = androidx.compose.ui.unit.lerp(startCorner, 20.dp, p2)
 
@@ -5864,12 +5875,6 @@ fun LandscapePlayerLayout(
                 .fillMaxSize()
 
                 .background(rightSideAverageColor.copy(alpha = bgAlpha))
-
-                .graphicsLayer {
-
-                    translationY = dragOffsetY.value
-
-                }
 
                 .pointerInput(showLyrics, showQueue) {
 
@@ -7043,7 +7048,7 @@ fun LandscapePlayerLayout(
                                 if (playerState != null) {
                                     item {
                                         Text(
-                                            text = "Reproduciendo",
+                                            text = stringResource(R.string.player_queue_now_playing),
                                             color = contentColor,
                                             fontSize = 17.sp,
                                             fontWeight = FontWeight.Bold,

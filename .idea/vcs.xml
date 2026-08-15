@@ -2,13 +2,8 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/Convx" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/Echo-Music" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/SimpMusic" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/SimpMusic/core" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/Spotui" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/better-lyrics" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/glassy-music-nankill" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/liquid-glass" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/liquid-glass-android" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/skills" vcs="Git" />
   </component>
 </project>

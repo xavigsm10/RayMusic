@@ -171,7 +171,7 @@ fun MainSettingsMenu(
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             Material3SettingsGroup(
-                title = "APARIENCIA",
+                title = stringResource(R.string.settings_section_appearance),
                 items = listOf(
                     Material3SettingsItem(
                         icon = painterResource(id = R.drawable.lyrics),
@@ -181,21 +181,21 @@ fun MainSettingsMenu(
                     ),
                     Material3SettingsItem(
                         icon = rememberPainter(Icons.Default.DarkMode),
-                        title = { Text("Tema de la aplicación") },
+                        title = { Text(stringResource(R.string.theme_app_title)) },
                         description = {
-                            Text(if (isDarkMode) "Modo Oscuro (Predeterminado)" else "Modo Claro")
+                            Text(if (isDarkMode) stringResource(R.string.theme_dark_mode_default) else stringResource(R.string.theme_light_mode))
                         },
                         onClick = { showThemeDialog = true }
                     ),
                     Material3SettingsItem(
                         icon = rememberPainter(Icons.Default.Palette),
-                        title = { Text("Liquid Glass") },
+                        title = { Text(stringResource(R.string.liquid_glass)) },
                         description = {
                             val currentStyle = LibraryManager.getGlassStyle()
                             val currentStyleName = when (currentStyle) {
-                                "transparent" -> "Vidrio líquido transparente"
-                                "semitransparent" -> "Semitransparente"
-                                else -> "Vidrio líquido transparente"
+                                "transparent" -> stringResource(R.string.vidrio_liquido_transparente)
+                                "semitransparent" -> stringResource(R.string.semitransparente)
+                                else -> stringResource(R.string.vidrio_liquido_transparente)
                             }
                             Text(currentStyleName)
                         },
@@ -207,7 +207,7 @@ fun MainSettingsMenu(
             if (showThemeDialog) {
                 AlertDialog(
                     onDismissRequest = { showThemeDialog = false },
-                    title = { Text("Tema de la aplicación", color = Color.White, fontWeight = FontWeight.Bold) },
+                    title = { Text(stringResource(R.string.theme_app_title), color = Color.White, fontWeight = FontWeight.Bold) },
                     text = {
                         Column {
                             Row(
@@ -228,7 +228,7 @@ fun MainSettingsMenu(
                                     }
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Modo Oscuro (Predeterminado)", color = Color.White)
+                                Text(stringResource(R.string.theme_dark_mode_default), color = Color.White)
                             }
                             Row(
                                 modifier = Modifier
@@ -248,14 +248,14 @@ fun MainSettingsMenu(
                                     }
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Modo Claro", color = Color.White)
+                                Text(stringResource(R.string.theme_light_mode), color = Color.White)
                             }
                         }
                     },
                     confirmButton = {},
                     dismissButton = {
                         TextButton(onClick = { showThemeDialog = false }) {
-                            Text("Cancelar", color = Color(0xFFFA243C))
+                            Text(stringResource(R.string.cancelar), color = Color(0xFFFA243C))
                         }
                     },
                     containerColor = com.mrtdk.liquid_glass.ui.theme.ThemeManager.surfaceColor
@@ -265,7 +265,7 @@ fun MainSettingsMenu(
             Spacer(modifier = Modifier.height(16.dp))
 
             Material3SettingsGroup(
-                title = "COMPORTAMIENTO Y REPRODUCCIÓN",
+                title = stringResource(R.string.settings_section_behavior),
                 items = listOf(
                     Material3SettingsItem(
                         icon = rememberPainter(Icons.Default.PlayArrow),
@@ -275,8 +275,8 @@ fun MainSettingsMenu(
                     ),
                     Material3SettingsItem(
                         icon = rememberPainter(Icons.Default.MusicNote),
-                        title = { Text("Spotify") },
-                        description = { Text("Sincronizar cuenta y playlists de Spotify") },
+                        title = { Text(stringResource(R.string.settings_spotify)) },
+                        description = { Text(stringResource(R.string.settings_spotify_desc)) },
                         onClick = { onNavigateTo(SettingsSubScreen.SPOTIFY) }
                     ),
                     Material3SettingsItem(
@@ -291,7 +291,7 @@ fun MainSettingsMenu(
             Spacer(modifier = Modifier.height(16.dp))
 
             Material3SettingsGroup(
-                title = "PRIVACIDAD Y SEGURIDAD",
+                title = stringResource(R.string.settings_section_privacy),
                 items = listOf(
                     Material3SettingsItem(
                         icon = rememberPainter(Icons.Default.Security),
@@ -305,7 +305,7 @@ fun MainSettingsMenu(
             Spacer(modifier = Modifier.height(16.dp))
 
             Material3SettingsGroup(
-                title = "APLICACIÓN",
+                title = stringResource(R.string.settings_section_app),
                 items = listOf(
                     Material3SettingsItem(
                         icon = rememberPainter(Icons.Default.Info),
@@ -322,10 +322,10 @@ fun MainSettingsMenu(
 
     if (showGlassStyleDialog) {
         SingleChoiceDialog(
-            title = "Estilo de Liquid Glass",
+            title = stringResource(R.string.apariencia_dialog_title),
             options = listOf(
-                "transparent" to "Vidrio líquido transparente",
-                "semitransparent" to "Semitransparente"
+                "transparent" to stringResource(R.string.vidrio_liquido_transparente),
+                "semitransparent" to stringResource(R.string.semitransparente)
             ),
             selectedValue = LibraryManager.getGlassStyle(),
             onDismiss = { showGlassStyleDialog = false },
@@ -395,7 +395,7 @@ fun LyricsSettingsScreen(onBack: () -> Unit) {
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             Material3SettingsGroup(
-                title = "CONFIGURACIÓN VISUAL",
+                title = stringResource(R.string.settings_section_visual),
                 items = listOf(
                     Material3SettingsItem(
                         icon = painterResource(id = R.drawable.lyrics),
@@ -472,7 +472,7 @@ fun LyricsSettingsScreen(onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Material3SettingsGroup(
-                title = "EFECTOS Y FONDOS",
+                title = stringResource(R.string.settings_section_effects),
                 items = listOfNotNull(
                     if (lyricsAnimationStyle == "echomusic_1") {
                         Material3SettingsItem(
@@ -522,7 +522,7 @@ fun LyricsSettingsScreen(onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Material3SettingsGroup(
-                title = "INTERACCIÓN",
+                title = stringResource(R.string.settings_section_interaction),
                 items = listOf(
                     Material3SettingsItem(
                         icon = painterResource(id = R.drawable.lyrics),
@@ -751,7 +751,7 @@ fun PlayerSettingsScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             Material3SettingsGroup(
-                title = "CALIDAD DE SONIDO Y EFECTOS",
+                title = stringResource(R.string.settings_section_sound_quality),
                 items = listOf(
                     Material3SettingsItem(
                         icon = rememberPainter(Icons.Default.GraphicEq),
@@ -778,7 +778,7 @@ fun PlayerSettingsScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Material3SettingsGroup(
-                title = "MÉTRICAS Y AUTOMATIZACIÓN",
+                title = stringResource(R.string.settings_section_metrics),
                 items = listOf(
                     Material3SettingsItem(
                         icon = rememberPainter(Icons.Default.AutoAwesome),
@@ -1208,7 +1208,7 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
                         Material3SettingsItem(
                             icon = rememberPainter(Icons.Default.AddHomeWork),
                             title = { Text(stringResource(R.string.together_btn_create)) },
-                            description = { Text("Iniciar una nueva sala y obtener código") },
+                            description = { Text(stringResource(R.string.together_create_room_desc)) },
                             onClick = {
                                 if (username.isBlank()) showUsernameDialog = true
                                 else {
@@ -1220,7 +1220,7 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
                         Material3SettingsItem(
                             icon = rememberPainter(Icons.Default.GroupAdd),
                             title = { Text(stringResource(R.string.together_btn_join)) },
-                            description = { Text("Ingresar el código de una sala existente") },
+                            description = { Text(stringResource(R.string.together_join_room_desc)) },
                             onClick = {
                                 if (username.isBlank()) showUsernameDialog = true
                                 else showJoinDialog = true
@@ -1233,12 +1233,12 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Material3SettingsGroup(
-                title = "PERFIL DE SALA",
+                title = stringResource(R.string.settings_section_room_profile),
                 items = listOf(
                     Material3SettingsItem(
                         icon = rememberPainter(Icons.Default.Person),
                         title = { Text(stringResource(R.string.together_username_title)) },
-                        description = { Text(if (username.isEmpty()) "Sin definir" else username) },
+                        description = { Text(if (username.isEmpty()) stringResource(R.string.together_undefined) else username) },
                         onClick = { showUsernameDialog = true }
                     )
                 )
@@ -1247,7 +1247,7 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Material3SettingsGroup(
-                title = "CONFIGURACIÓN DE SALA",
+                title = stringResource(R.string.settings_section_room_config),
                 items = listOf(
                     Material3SettingsItem(
                         icon = rememberPainter(Icons.Default.Sync),
@@ -1319,7 +1319,7 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
     if (showUsernameDialog) {
         InputDialog(
             title = stringResource(R.string.together_username_title),
-            placeholder = "Escribe tu alias...",
+            placeholder = stringResource(R.string.together_username_placeholder),
             initialValue = username,
             onDismiss = { showUsernameDialog = false },
             onSave = {
@@ -1345,8 +1345,8 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
 
     if (showJoinDialog) {
         InputDialog(
-            title = "Unirse a Sala",
-            placeholder = "Escribe el código de sala...",
+            title = stringResource(R.string.together_btn_join),
+            placeholder = stringResource(R.string.together_join_placeholder),
             initialValue = "",
             onDismiss = { showJoinDialog = false },
             onSave = { code ->
@@ -1415,7 +1415,7 @@ fun ContentSettingsScreen(onBack: () -> Unit) {
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             Material3SettingsGroup(
-                title = "IDIOMA Y LOCALIZACIÓN",
+                title = stringResource(R.string.settings_section_lang_locale),
                 items = listOf(
                     Material3SettingsItem(
                         icon = rememberPainter(Icons.Default.Translate),
@@ -1445,13 +1445,13 @@ fun ContentSettingsScreen(onBack: () -> Unit) {
                     Material3SettingsItem(
                         icon = rememberPainter(Icons.Default.Language),
                         title = { Text(stringResource(R.string.content_lang_title)) },
-                        description = { Text(if (contentLanguage == "system") "Predeterminado" else contentLanguage.uppercase()) },
+                        description = { Text(if (contentLanguage == "system") stringResource(R.string.predeterminado_sistema) else contentLanguage.uppercase()) },
                         onClick = { showCountryDialog = true }
                     ),
                     Material3SettingsItem(
                         icon = rememberPainter(Icons.Default.Place),
                         title = { Text(stringResource(R.string.content_region_title)) },
-                        description = { Text(if (suggestionRegion == "system") "Predeterminado" else suggestionRegion.uppercase()) },
+                        description = { Text(if (suggestionRegion == "system") stringResource(R.string.predeterminado_sistema) else suggestionRegion.uppercase()) },
                         onClick = { showRegionDialog = true }
                     )
                 )
@@ -1460,7 +1460,7 @@ fun ContentSettingsScreen(onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Material3SettingsGroup(
-                title = "FILTRADO DE CONTENIDO",
+                title = stringResource(R.string.settings_section_content_filtering),
                 items = listOf(
                     Material3SettingsItem(
                         icon = rememberPainter(Icons.Default.Explicit),
@@ -1649,7 +1649,7 @@ fun PrivacySettingsScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             Material3SettingsGroup(
-                title = "HISTORIAL DE REPRODUCCIÓN",
+                title = stringResource(R.string.settings_section_play_history),
                 items = listOf(
                     Material3SettingsItem(
                         icon = rememberPainter(Icons.Default.History),
@@ -1683,7 +1683,7 @@ fun PrivacySettingsScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Material3SettingsGroup(
-                title = "HISTORIAL DE BÚSQUEDAS",
+                title = stringResource(R.string.settings_section_search_history),
                 items = listOf(
                     Material3SettingsItem(
                         icon = rememberPainter(Icons.Default.SearchOff),
@@ -1717,7 +1717,7 @@ fun PrivacySettingsScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Material3SettingsGroup(
-                title = "SEGURIDAD DE PANTALLA",
+                title = stringResource(R.string.settings_section_screen_security),
                 items = listOf(
                     Material3SettingsItem(
                         icon = rememberPainter(Icons.Default.Screenshot),
@@ -1822,13 +1822,30 @@ fun AboutSettingsScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // App Brand Logo (Real RayMusic launcher icon)
-            androidx.compose.foundation.Image(
-                painter = painterResource(id = R.mipmap.ic_launcher),
-                contentDescription = "Logo RayMusic",
-                modifier = Modifier
-                    .size(96.dp)
-                    .clip(RoundedCornerShape(24.dp))
-            )
+            val appIconDrawable = remember(context) {
+                try {
+                    context.packageManager.getApplicationIcon(context.packageName)
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            if (appIconDrawable != null) {
+                coil.compose.AsyncImage(
+                    model = appIconDrawable,
+                    contentDescription = "Logo RayMusic",
+                    modifier = Modifier
+                        .size(96.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                )
+            } else {
+                androidx.compose.foundation.Image(
+                    painter = painterResource(id = R.drawable.splash_logo),
+                    contentDescription = "Logo RayMusic",
+                    modifier = Modifier
+                        .size(96.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                )
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
             Text(
@@ -1846,12 +1863,12 @@ fun AboutSettingsScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             Material3SettingsGroup(
-                title = "ACTUALIZACIONES Y DESARROLLO",
+                title = stringResource(R.string.settings_section_updates_dev),
                 items = listOf(
                     Material3SettingsItem(
                         icon = rememberPainter(Icons.Default.SystemUpdate),
                         title = { Text(stringResource(R.string.buscar_actualizaciones)) },
-                        description = { Text("Comprueba si hay nuevas versiones de RayMusic") },
+                        description = { Text(stringResource(R.string.settings_updates_check_desc)) },
                         onClick = {
                             Toast.makeText(context, context.getString(R.string.buscando_actualizaciones), Toast.LENGTH_SHORT).show()
                             Updater.checkUpdate { info ->
@@ -1876,7 +1893,7 @@ fun AboutSettingsScreen(
                     Material3SettingsItem(
                         icon = painterResource(id = R.drawable.ic_paypal),
                         title = { Text("PayPal") },
-                        description = { Text("Apoya el desarrollo de la aplicación") },
+                        description = { Text(stringResource(R.string.settings_paypal_desc)) },
                         onClick = {
                             uriHandler.openUri("https://www.paypal.me/XaviGranja")
                         }
@@ -2139,15 +2156,15 @@ fun SpotifySettingsScreen(onBack: () -> Unit) {
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             Material3SettingsGroup(
-                title = "CUENTA Y ASOCIACIÓN",
+                title = stringResource(R.string.settings_section_account_link),
                 items = listOf(
                     Material3SettingsItem(
                         icon = rememberPainter(Icons.Default.AccountCircle),
-                        title = { Text("Estado de la cuenta") },
+                        title = { Text(stringResource(R.string.spotify_account_status)) },
                         description = {
                             Text(
-                                if (isLoggedIn) "Conectado como ${com.mrtdk.liquid_glass.spotify.SpotifySession.userName.ifBlank { com.mrtdk.liquid_glass.spotify.SpotifySession.userId }}"
-                                else "No conectado"
+                                if (isLoggedIn) stringResource(R.string.spotify_connected_as, com.mrtdk.liquid_glass.spotify.SpotifySession.userName.ifBlank { com.mrtdk.liquid_glass.spotify.SpotifySession.userId })
+                                else stringResource(R.string.spotify_not_connected)
                             )
                         },
                         onClick = {
@@ -2163,30 +2180,30 @@ fun SpotifySettingsScreen(onBack: () -> Unit) {
 
             if (isLoggedIn) {
                 Material3SettingsGroup(
-                    title = "ACCIONES DE SPOTIFY",
+                    title = stringResource(R.string.settings_section_spotify_actions),
                     items = listOf(
                         Material3SettingsItem(
                             icon = rememberPainter(Icons.Default.Sync),
-                            title = { Text(if (isSyncing) "Sincronizando playlists..." else "Sincronizar Playlists ahora") },
-                            description = { Text("Importa tus playlists de Spotify a la Biblioteca de RayMusic") },
+                            title = { Text(if (isSyncing) stringResource(R.string.spotify_syncing_playlists) else stringResource(R.string.spotify_sync_playlists_now)) },
+                            description = { Text(stringResource(R.string.spotify_sync_desc)) },
                             onClick = {
                                 if (!isSyncing) {
                                     isSyncing = true
                                     scope.launch {
                                         LibraryManager.syncSpotifyPlaylists()
                                         isSyncing = false
-                                        Toast.makeText(context, "Playlists de Spotify sincronizadas", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, context.getString(R.string.spotify_synced_toast), Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             }
                         ),
                         Material3SettingsItem(
                             icon = rememberPainter(Icons.Default.Logout),
-                            title = { Text("Cerrar sesión de Spotify") },
-                            description = { Text("Desconectar tu cuenta de Spotify de RayMusic") },
+                            title = { Text(stringResource(R.string.spotify_logout)) },
+                            description = { Text(stringResource(R.string.spotify_logout_desc)) },
                             onClick = {
                                 com.mrtdk.liquid_glass.spotify.SpotifySession.logout()
-                                Toast.makeText(context, "Sesión de Spotify cerrada", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.spotify_logged_out_toast), Toast.LENGTH_SHORT).show()
                             }
                         )
                     )
@@ -2198,7 +2215,7 @@ fun SpotifySettingsScreen(onBack: () -> Unit) {
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1ED760)),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Iniciar sesión con Spotify", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(stringResource(R.string.spotify_login_btn), color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             }
         }
@@ -2209,7 +2226,7 @@ fun SpotifySettingsScreen(onBack: () -> Unit) {
             onDismiss = { showLoginDialog = false },
             onSuccess = {
                 showLoginDialog = false
-                Toast.makeText(context, "¡Sesión iniciada con éxito!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.spotify_login_success_toast), Toast.LENGTH_SHORT).show()
             }
         )
     }

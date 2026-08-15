@@ -183,16 +183,16 @@ fun PlaylistContextMenuOverlay(
                                             songs.forEach { song ->
                                                 downloadSong(context, song.id, song.title, song.subtitle, song.thumbnail, playlist.name)
                                             }
-                                            Toast.makeText(context, "Descargando ${songs.size} canciones...", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, context.getString(R.string.playlist_menu_download_songs_toast, songs.size), Toast.LENGTH_SHORT).show()
                                         } else {
-                                            Toast.makeText(context, "No hay canciones para descargar", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, context.getString(R.string.playlist_menu_no_songs_toast), Toast.LENGTH_SHORT).show()
                                         }
                                         onDismiss()
                                     }
                             ) {
                                 Icon(Icons.Default.ArrowDownward, null, tint = Color.White)
                                 Spacer(Modifier.height(4.dp))
-                                Text("Descargar", color = Color.White, fontSize = 10.sp)
+                                Text(stringResource(R.string.descargar), color = Color.White, fontSize = 10.sp)
                             }
 
                             // 2.2 Favorito / Pin Action (Toggles pin)
@@ -212,7 +212,7 @@ fun PlaylistContextMenuOverlay(
                                     tint = if (isPinned) Color(0xFFFA243C) else Color.White
                                 )
                                 Spacer(Modifier.height(4.dp))
-                                Text("Favorito", color = Color.White, fontSize = 10.sp)
+                                Text(stringResource(R.string.player_menu_favorite), color = Color.White, fontSize = 10.sp)
                             }
 
                             // 2.3 Compartir Action
@@ -224,22 +224,22 @@ fun PlaylistContextMenuOverlay(
                                         val intent = Intent(Intent.ACTION_SEND).apply {
                                             type = "text/plain"
                                             putExtra(Intent.EXTRA_SUBJECT, playlist.name)
-                                            putExtra(Intent.EXTRA_TEXT, "Escucha mi playlist '${playlist.name}' en RayMusic!")
+                                            putExtra(Intent.EXTRA_TEXT, context.getString(R.string.playlist_menu_share_text, playlist.name))
                                         }
-                                        context.startActivity(Intent.createChooser(intent, "Compartir Playlist"))
+                                        context.startActivity(Intent.createChooser(intent, context.getString(R.string.playlist_menu_share_playlist)))
                                         onDismiss()
                                     }
                             ) {
                                 Icon(Icons.Default.IosShare, null, tint = Color.White)
                                 Spacer(Modifier.height(4.dp))
-                                Text("Compartir", color = Color.White, fontSize = 10.sp)
+                                Text(stringResource(R.string.compartir), color = Color.White, fontSize = 10.sp)
                             }
                         }
 
                         Divider(color = Color.DarkGray.copy(alpha = 0.5f))
 
                         // 2.4 Reproducir Option
-                        MenuRow(Icons.Default.PlayArrow, "Reproducir") {
+                        MenuRow(Icons.Default.PlayArrow, stringResource(R.string.reproducir)) {
                             if (playlist.items.isNotEmpty()) {
                                 val first = playlist.items.first()
                                 val remainingQueue = playlist.items.drop(1).filter { it.type == ItemType.SONG }.map { t ->
@@ -264,7 +264,7 @@ fun PlaylistContextMenuOverlay(
                         }
 
                         // 2.5 Aleatorio Option
-                        MenuRow(Icons.Default.Shuffle, "Aleatorio") {
+                        MenuRow(Icons.Default.Shuffle, stringResource(R.string.aleatorio)) {
                             val songs = playlist.items.filter { it.type == ItemType.SONG }.shuffled()
                             if (songs.isNotEmpty()) {
                                 val first = songs.first()
@@ -294,41 +294,41 @@ fun PlaylistContextMenuOverlay(
                         // 2.6 Fijar / Quitar Fijado Option
                         MenuRow(
                             Icons.Default.PushPin,
-                            if (playlist.isPinned) "Quitar Fijado Playlist" else "Fijar Playlist"
+                            if (playlist.isPinned) stringResource(R.string.playlist_menu_unpin) else stringResource(R.string.playlist_menu_pin)
                         ) {
                             LibraryManager.togglePinPlaylist(playlist.id)
                             onDismiss()
                         }
 
                         // 2.7 Añadir a una Playlist Option
-                        MenuRow(Icons.Default.PlaylistAdd, "Añadir a una Playlist") {
+                        MenuRow(Icons.Default.PlaylistAdd, stringResource(R.string.playlist_menu_add_to_playlist)) {
                             showAddToPlaylistDialog = true
                         }
 
                         Divider(color = Color.DarkGray.copy(alpha = 0.5f))
 
                         // 2.8 Editar Option
-                        MenuRow(Icons.Default.Edit, "Editar") {
+                        MenuRow(Icons.Default.Edit, stringResource(R.string.editar)) {
                             showEditDialog = true
                         }
 
                         // 2.9 Gestionar Colaboración Option
-                        MenuRow(Icons.Default.People, "Gestionar Colaboración") {
+                        MenuRow(Icons.Default.People, stringResource(R.string.playlist_menu_manage_collab)) {
                             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                             val clip = ClipData.newPlainText("Enlace de Colaboración", "https://raymusic.mrtdk.com/collab/${playlist.id}")
                             clipboard.setPrimaryClip(clip)
-                            Toast.makeText(context, "Enlace de colaboración copiado al portapapeles", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.playlist_menu_collab_copied), Toast.LENGTH_SHORT).show()
                             onDismiss()
                         }
 
                         // 2.10 Mover a Carpeta Option
-                        MenuRow(Icons.Default.Folder, "Mover a Carpeta") {
-                            Toast.makeText(context, "Mover a carpeta estará disponible en una futura actualización", Toast.LENGTH_SHORT).show()
+                        MenuRow(Icons.Default.Folder, stringResource(R.string.playlist_menu_move_to_folder)) {
+                            Toast.makeText(context, context.getString(R.string.playlist_menu_move_to_folder_future), Toast.LENGTH_SHORT).show()
                             onDismiss()
                         }
 
                         // 2.11 Reproducir Siguiente Option
-                        MenuRow(Icons.Default.QueueMusic, "Reproducir Siguiente") {
+                        MenuRow(Icons.Default.QueueMusic, stringResource(R.string.menu_play_next)) {
                             val newItems = playlist.items.filter { it.type == ItemType.SONG }.map { t ->
                                 QueueItem(
                                     title = t.title,
@@ -339,7 +339,7 @@ fun PlaylistContextMenuOverlay(
                             }
                             PlaybackQueue.queue = newItems + PlaybackQueue.queue
                             PlaybackQueue.onQueueChanged?.invoke()
-                            Toast.makeText(context, "Playlist se reproducirá a continuación", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.playlist_menu_play_next_toast), Toast.LENGTH_SHORT).show()
                             onDismiss()
                         }
                     }
@@ -352,7 +352,7 @@ fun PlaylistContextMenuOverlay(
     if (showEditDialog) {
         AlertDialog(
             onDismissRequest = { showEditDialog = false },
-            title = { Text("Editar Playlist", color = Color.White) },
+            title = { Text(stringResource(R.string.playlist_menu_edit_playlist_title), color = Color.White) },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -393,7 +393,7 @@ fun PlaylistContextMenuOverlay(
                         ) {
                             Icon(
                                 Icons.Default.PhotoCamera,
-                                contentDescription = "Cambiar Imagen",
+                                contentDescription = stringResource(R.string.playlist_menu_change_image),
                                 tint = Color.White,
                                 modifier = Modifier.size(32.dp)
                             )
@@ -403,7 +403,7 @@ fun PlaylistContextMenuOverlay(
                     OutlinedTextField(
                         value = editNameText,
                         onValueChange = { editNameText = it },
-                        label = { Text("Nombre") },
+                        label = { Text(stringResource(R.string.nombre)) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,
@@ -429,12 +429,12 @@ fun PlaylistContextMenuOverlay(
                         onDismiss()
                     }
                 ) {
-                    Text("Guardar", color = Color(0xFFFA243C))
+                    Text(stringResource(R.string.save_action), color = Color(0xFFFA243C))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showEditDialog = false }) {
-                    Text("Cancelar", color = Color.Gray)
+                    Text(stringResource(R.string.cancelar), color = Color.Gray)
                 }
             },
             containerColor = Color(0xFF2C2C2C)
@@ -446,10 +446,10 @@ fun PlaylistContextMenuOverlay(
         val targetPlaylists = playlists.filter { it.id != playlist.id }
         AlertDialog(
             onDismissRequest = { showAddToPlaylistDialog = false },
-            title = { Text("Añadir a otra Playlist", color = Color.White) },
+            title = { Text(stringResource(R.string.playlist_menu_add_to_other_playlist), color = Color.White) },
             text = {
                 if (targetPlaylists.isEmpty()) {
-                    Text("No tienes otras playlists", color = Color.Gray)
+                    Text(stringResource(R.string.playlist_menu_no_other_playlists), color = Color.Gray)
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 200.dp)) {
                         items(targetPlaylists) { targetPl ->
@@ -460,7 +460,7 @@ fun PlaylistContextMenuOverlay(
                                         playlist.items.forEach { song ->
                                             LibraryManager.addSongToPlaylist(targetPl.id, song)
                                         }
-                                        Toast.makeText(context, "Añadidas canciones a ${targetPl.name}", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, context.getString(R.string.playlist_menu_added_songs_to_playlist, targetPl.name), Toast.LENGTH_SHORT).show()
                                         showAddToPlaylistDialog = false
                                         onDismiss()
                                     }
@@ -476,7 +476,7 @@ fun PlaylistContextMenuOverlay(
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { showAddToPlaylistDialog = false }) {
-                    Text("Cancelar", color = Color.Gray)
+                    Text(stringResource(R.string.cancelar), color = Color.Gray)
                 }
             },
             containerColor = Color(0xFF2C2C2C)
