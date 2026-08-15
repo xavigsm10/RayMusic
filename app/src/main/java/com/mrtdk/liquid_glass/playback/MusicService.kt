@@ -64,6 +64,7 @@ class MusicService : MediaSessionService() {
             player.prepare()
             player.play()
         } else if (state.videoId != null) {
+            com.mrtdk.liquid_glass.playback.MusicPlayer.songMetadataCache[state.videoId] = Pair(state.title, state.artist)
             val metadata = androidx.media3.common.MediaMetadata.Builder().apply {
                 setTitle(state.title)
                 setArtist(state.artist)
@@ -212,15 +213,17 @@ class MusicService : MediaSessionService() {
                     kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
                         com.mrtdk.liquid_glass.playback.MusicPlayer.resolveUrl(videoId)
                     }
+                } catch (e: Exception) {
+                    null
                 } finally {
                     activeResolutions.decrementAndGet()
                     mainHandler.post { updateWakeLocks() }
                 }
 
-                if (streamUrl != null) {
+                if (!streamUrl.isNullOrBlank()) {
                     dataSpec.withUri(android.net.Uri.parse(streamUrl))
                 } else {
-                    dataSpec
+                    throw java.io.IOException("No se pudo obtener el flujo de reproducción para $videoId")
                 }
             } else {
                 dataSpec

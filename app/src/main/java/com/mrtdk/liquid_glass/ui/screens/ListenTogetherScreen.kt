@@ -33,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
@@ -41,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.mrtdk.liquid_glass.R
 import com.mrtdk.liquid_glass.listentogether.*
 import com.mrtdk.liquid_glass.ui.theme.ThemeManager
 
@@ -84,9 +86,9 @@ fun ListenTogetherScreen(
             when (event) {
                 is ListenTogetherEvent.JoinRejected -> {
                     joinErrorMessage = when {
-                        event.reason.isBlank() -> "Solicitud rechazada por el anfitrion"
-                        event.reason.contains("invalid", ignoreCase = true) -> "Codigo de sala invalido"
-                        else -> "Solicitud rechazada: ${event.reason}"
+                        event.reason.isBlank() -> context.getString(R.string.together_join_rejected_host)
+                        event.reason.contains("invalid", ignoreCase = true) -> context.getString(R.string.together_join_rejected_invalid_code)
+                        else -> context.getString(R.string.together_join_rejected_reason, event.reason)
                     }
                     isJoiningRoom = false; isCreatingRoom = false
                 }
@@ -95,7 +97,7 @@ fun ListenTogetherScreen(
                     isCreatingRoom = false
                     val cb = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     cb.setPrimaryClip(ClipData.newPlainText("Room Code", event.roomCode))
-                    Toast.makeText(context, "Sala creada! Codigo: ${event.roomCode}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.together_room_created_toast, event.roomCode), Toast.LENGTH_SHORT).show()
                 }
                 else -> {}
             }
@@ -110,7 +112,7 @@ fun ListenTogetherScreen(
             username = selectedUsername ?: "",
             isDark = isDark,
             onKick = {
-                selectedUserForMenu?.let { manager.client.kickUser(it, "Removido por el anfitrion") }
+                selectedUserForMenu?.let { manager.client.kickUser(it, context.getString(R.string.together_kicked_by_host)) }
                 selectedUserForMenu = null; selectedUsername = null
             },
             onTransferOwnership = {
@@ -139,7 +141,7 @@ fun ListenTogetherScreen(
             }
             if (connectionState == ConnectionState.CONNECTED && !isInRoom) {
                 item {
-                    Text("La conexion se mantiene activa mientras estes en una sala.", style = MaterialTheme.typography.bodySmall,
+                    Text(stringResource(R.string.together_connection_note), style = MaterialTheme.typography.bodySmall,
                         color = labelColor(isDark), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp))
                 }
             }
@@ -170,7 +172,7 @@ fun ListenTogetherScreen(
                             shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = AmRed.copy(alpha = 0.12f))) {
                             Icon(Icons.Default.ExitToApp, null, tint = AmRed, modifier = Modifier.size(20.dp))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Salir de la Sala", color = AmRed, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                            Text(stringResource(R.string.together_leave_room), color = AmRed, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
                         }
                     }
                 }
@@ -186,14 +188,14 @@ fun ListenTogetherScreen(
                             if (name.isNotBlank()) {
                                 savedUsername = name; isCreatingRoom = true; isJoiningRoom = false; joinErrorMessage = null
                                 manager.connect(); manager.createRoom(name)
-                            } else Toast.makeText(context, "Ingresa tu nombre de usuario", Toast.LENGTH_SHORT).show()
+                            } else Toast.makeText(context, context.getString(R.string.together_enter_username_toast), Toast.LENGTH_SHORT).show()
                         },
                         onJoinRoom = {
                             val name = usernameInput.trim().ifBlank { savedUsername.trim() }
                             if (name.isNotBlank()) {
                                 savedUsername = name; isJoiningRoom = true; isCreatingRoom = false; joinErrorMessage = null
                                 manager.connect(); manager.joinRoom(roomCodeInput, name)
-                            } else Toast.makeText(context, "Ingresa tu nombre de usuario", Toast.LENGTH_SHORT).show()
+                            } else Toast.makeText(context, context.getString(R.string.together_enter_username_toast), Toast.LENGTH_SHORT).show()
                         }
                     )
                 }
@@ -205,8 +207,8 @@ fun ListenTogetherScreen(
 @Composable
 private fun AmNavigationHeader(isDark: Boolean, onBack: () -> Unit) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBackIosNew, "Atras", tint = AmRed, modifier = Modifier.size(20.dp)) }
-        Text("Escuchar Juntos", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = primaryText(isDark), modifier = Modifier.weight(1f))
+        IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBackIosNew, stringResource(R.string.lyrics_menu_back), tint = AmRed, modifier = Modifier.size(20.dp)) }
+        Text(stringResource(R.string.together_nav_title), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = primaryText(isDark), modifier = Modifier.weight(1f))
     }
 }
 
@@ -217,11 +219,14 @@ private fun AmHeroSection(isDark: Boolean) {
             Icon(Icons.Default.People, null, tint = AmRed, modifier = Modifier.size(40.dp))
         }
         Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text("Listen Together", fontSize = 26.sp, fontWeight = FontWeight.Bold, color = primaryText(isDark))
-            Spacer(modifier = Modifier.height(4.dp))
-            Text("Escucha musica en tiempo real con amigos", fontSize = 14.sp, color = labelColor(isDark), lineHeight = 18.sp)
-        }
+        Text(
+            text = stringResource(R.string.together_hero_desc),
+            fontSize = 18.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = primaryText(isDark),
+            lineHeight = 24.sp,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
@@ -234,11 +239,11 @@ private fun AmConnectionStatusCard(connectionState: ConnectionState, isDark: Boo
         ConnectionState.DISCONNECTED -> labelColor(isDark)
     }
     val statusText = when (connectionState) {
-        ConnectionState.CONNECTED -> "Conectado"
-        ConnectionState.CONNECTING -> "Conectando..."
-        ConnectionState.RECONNECTING -> "Reconectando..."
-        ConnectionState.ERROR -> "Error de conexion"
-        ConnectionState.DISCONNECTED -> "Desconectado"
+        ConnectionState.CONNECTED -> stringResource(R.string.together_status_connected)
+        ConnectionState.CONNECTING -> stringResource(R.string.together_status_connecting)
+        ConnectionState.RECONNECTING -> stringResource(R.string.together_status_reconnecting)
+        ConnectionState.ERROR -> stringResource(R.string.together_status_conn_error)
+        ConnectionState.DISCONNECTED -> stringResource(R.string.together_status_disconnected)
     }
     Surface(
         modifier = Modifier.fillMaxWidth().animateContentSize(spring(dampingRatio = Spring.DampingRatioMediumBouncy)),
@@ -262,15 +267,15 @@ private fun AmConnectionStatusCard(connectionState: ConnectionState, isDark: Boo
                     Button(onClick = onConnect, modifier = Modifier.weight(1f).height(42.dp), shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = AmRed)) {
                         Icon(Icons.Default.Link, null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Conectar", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        Text(stringResource(R.string.together_btn_connect), fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                     }
                 } else {
                     Button(onClick = onDisconnect, modifier = Modifier.weight(1f).height(42.dp), shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = if (isDark) Color(0xFF3A3A3C) else Color(0xFFE5E5EA))) {
-                        Text("Desconectar", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = primaryText(isDark))
+                        Text(stringResource(R.string.together_btn_disconnect), fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = primaryText(isDark))
                     }
                     FilledTonalButton(onClick = onReconnect, modifier = Modifier.weight(1f).height(42.dp), shape = RoundedCornerShape(12.dp)) {
-                        Text("Reconectar", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        Text(stringResource(R.string.together_btn_reconnect), fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                     }
                 }
             }
@@ -291,10 +296,10 @@ private fun AmJoinCreateRoomSection(
     Surface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), color = cardBg(isDark),
         border = androidx.compose.foundation.BorderStroke(1.dp, if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.06f))) {
         Column(modifier = Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("UNIRSE O CREAR SALA", fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp, color = AmRed, modifier = Modifier.fillMaxWidth())
-            AmTextField(value = usernameInput, onValueChange = onUsernameChange, label = "Nombre de usuario", placeholder = "Ej. Juan", leadingIcon = Icons.Default.Person, isDark = isDark,
+            Text(stringResource(R.string.together_section_join_create), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp, color = AmRed, modifier = Modifier.fillMaxWidth())
+            AmTextField(value = usernameInput, onValueChange = onUsernameChange, label = stringResource(R.string.together_field_username), placeholder = stringResource(R.string.together_field_username_hint), leadingIcon = Icons.Default.Person, isDark = isDark,
                 trailingContent = if (usernameInput.isNotBlank()) {{ IconButton(onClick = { onUsernameChange("") }) { Icon(Icons.Default.Clear, null, modifier = Modifier.size(18.dp), tint = labelColor(isDark)) }}} else null)
-            AmTextField(value = roomCodeInput, onValueChange = { if (it.length <= 8) onRoomCodeChange(it.uppercase()) }, label = "Codigo de sala (opcional)", placeholder = "Ej. AB12C345",
+            AmTextField(value = roomCodeInput, onValueChange = { if (it.length <= 8) onRoomCodeChange(it.uppercase()) }, label = stringResource(R.string.together_field_room_code), placeholder = stringResource(R.string.together_field_room_code_hint),
                 leadingIcon = Icons.Default.Group, isDark = isDark, keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
                 trailingContent = if (roomCodeInput.isNotBlank()) {{ IconButton(onClick = { onRoomCodeChange("") }) { Icon(Icons.Default.Clear, null, modifier = Modifier.size(18.dp), tint = labelColor(isDark)) }}} else null)
             AnimatedVisibility(visible = isJoiningRoom || isCreatingRoom, enter = fadeIn() + slideInVertically(), exit = fadeOut() + slideOutVertically()) {
@@ -302,7 +307,7 @@ private fun AmJoinCreateRoomSection(
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.padding(14.dp)) {
                         CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = AmBlue)
                         Spacer(modifier = Modifier.width(10.dp))
-                        Text(if (isCreatingRoom) "Creando sala..." else "Esperando aprobacion...", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = AmBlue)
+                        Text(if (isCreatingRoom) stringResource(R.string.together_status_creating) else stringResource(R.string.together_status_waiting_approval), fontSize = 14.sp, fontWeight = FontWeight.Medium, color = AmBlue)
                     }
                 }
             }
@@ -320,7 +325,7 @@ private fun AmJoinCreateRoomSection(
                     shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = AmRed)) {
                     Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Crear Sala", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(stringResource(R.string.together_btn_create_room_action), fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             }
             AnimatedVisibility(visible = hasUsername && hasRoomCode) {
@@ -328,7 +333,7 @@ private fun AmJoinCreateRoomSection(
                     shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = AmBlue)) {
                     Icon(Icons.Default.Login, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Unirse a la Sala", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(stringResource(R.string.together_btn_join_room_action), fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             }
         }
@@ -341,7 +346,7 @@ private fun AmRoomStatusCard(roomCode: String, isHost: Boolean, context: Context
     Surface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), color = cardBg(isDark),
         border = androidx.compose.foundation.BorderStroke(1.dp, if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.06f))) {
         Column(modifier = Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("CODIGO DE SALA", fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp, color = labelColor(isDark))
+            Text(stringResource(R.string.together_room_code_label), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp, color = labelColor(isDark))
             Spacer(modifier = Modifier.height(8.dp))
             Text(roomCode, fontSize = 42.sp, fontWeight = FontWeight.Black, color = AmRed, letterSpacing = 6.sp, textAlign = TextAlign.Center)
             Spacer(modifier = Modifier.height(6.dp))
@@ -349,7 +354,7 @@ private fun AmRoomStatusCard(roomCode: String, isHost: Boolean, context: Context
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
                     Icon(if (isHost) Icons.Default.WorkspacePremium else Icons.Default.Person, null, tint = if (isHost) AmRed else AmBlue, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(if (isHost) "Eres el Anfitrion" else "Eres Invitado", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = if (isHost) AmRed else AmBlue)
+                    Text(if (isHost) stringResource(R.string.together_you_are_host) else stringResource(R.string.together_you_are_guest), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = if (isHost) AmRed else AmBlue)
                 }
             }
             Spacer(modifier = Modifier.height(20.dp))
@@ -358,31 +363,31 @@ private fun AmRoomStatusCard(roomCode: String, isHost: Boolean, context: Context
                     FilledTonalButton(onClick = {
                         val cb = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                         cb.setPrimaryClip(ClipData.newPlainText("Link", inviteLink))
-                        Toast.makeText(context, "Enlace copiado", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.together_link_copied), Toast.LENGTH_SHORT).show()
                     }, modifier = Modifier.weight(1f).height(44.dp), shape = RoundedCornerShape(12.dp)) {
                         Icon(Icons.Default.Link, null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Copiar enlace", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.together_copy_link), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                     FilledTonalButton(onClick = {
                         val cb = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                         cb.setPrimaryClip(ClipData.newPlainText("Room Code", roomCode))
-                        Toast.makeText(context, "Codigo copiado: $roomCode", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.together_code_copied, roomCode), Toast.LENGTH_SHORT).show()
                     }, modifier = Modifier.weight(1f).height(44.dp), shape = RoundedCornerShape(12.dp)) {
                         Icon(Icons.Outlined.ContentCopy, null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Copiar codigo", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.together_copy_code), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             } else {
                 FilledTonalButton(onClick = {
                     val cb = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     cb.setPrimaryClip(ClipData.newPlainText("Room Code", roomCode))
-                    Toast.makeText(context, "Codigo copiado: $roomCode", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.together_code_copied, roomCode), Toast.LENGTH_SHORT).show()
                 }, modifier = Modifier.fillMaxWidth(0.7f).height(44.dp), shape = RoundedCornerShape(12.dp)) {
                     Icon(Icons.Outlined.ContentCopy, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Copiar codigo", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.together_copy_code), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
@@ -394,13 +399,13 @@ private fun AmConnectedUsersSection(users: List<UserInfo>, isHost: Boolean, curr
     Surface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), color = cardBg(isDark),
         border = androidx.compose.foundation.BorderStroke(1.dp, if (isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.06f))) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("USUARIOS CONECTADOS (${users.size})", fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp, color = AmRed)
+            Text(stringResource(R.string.together_connected_users, users.size), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp, color = AmRed)
             Spacer(modifier = Modifier.height(14.dp))
             Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 users.forEach { user ->
                     AmUserAvatar(user = user, isCurrentUser = user.userId == currentUserId, isClickable = isHost && user.userId != currentUserId, isDark = isDark, onClick = { onUserClick(user.userId, user.username) })
                 }
-                if (users.isEmpty()) Text("Sin usuarios conectados", fontSize = 14.sp, color = labelColor(isDark))
+                if (users.isEmpty()) Text(stringResource(R.string.together_no_connected_users), fontSize = 14.sp, color = labelColor(isDark))
             }
         }
     }
@@ -410,6 +415,8 @@ private fun AmConnectedUsersSection(users: List<UserInfo>, isHost: Boolean, curr
 private fun AmUserAvatar(user: UserInfo, isCurrentUser: Boolean, isClickable: Boolean, isDark: Boolean, onClick: () -> Unit) {
     val avatarColor = when { user.isHost -> AmRed; isCurrentUser -> AmBlue; else -> if (isDark) Color(0xFF3A3A3C) else Color(0xFFD1D1D6) }
     val textColor = if (user.isHost || isCurrentUser) Color.White else primaryText(isDark)
+    val hostLabel = stringResource(R.string.together_role_host_label)
+    val youLabel = stringResource(R.string.together_role_you_label)
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(70.dp).let { if (isClickable) it.clickable(onClick = onClick) else it }) {
         Box(contentAlignment = Alignment.Center) {
             Surface(modifier = Modifier.size(54.dp), shape = CircleShape, color = avatarColor) {
@@ -427,7 +434,7 @@ private fun AmUserAvatar(user: UserInfo, isCurrentUser: Boolean, isClickable: Bo
         }
         Spacer(modifier = Modifier.height(6.dp))
         Text(user.username, fontSize = 12.sp, fontWeight = if (isCurrentUser) FontWeight.Bold else FontWeight.Medium, color = primaryText(isDark), maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
-        Text(when { user.isHost -> "Anfitrion"; isCurrentUser -> "Tu"; else -> "" }, fontSize = 11.sp, color = if (user.isHost) AmRed else if (isCurrentUser) AmBlue else Color.Transparent)
+        Text(when { user.isHost -> hostLabel; isCurrentUser -> youLabel; else -> "" }, fontSize = 11.sp, color = if (user.isHost) AmRed else if (isCurrentUser) AmBlue else Color.Transparent)
     }
 }
 
@@ -438,7 +445,7 @@ private fun AmPendingJoinRequestsSection(requests: List<JoinRequestPayload>, isD
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.NotificationImportant, null, tint = AmRed, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("SOLICITUDES DE UNION (${requests.size})", fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp, color = AmRed)
+                Text(stringResource(R.string.together_join_requests_section, requests.size), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp, color = AmRed)
             }
             Spacer(modifier = Modifier.height(12.dp))
             requests.forEach { req ->
@@ -464,7 +471,7 @@ private fun AmPendingSuggestionsSection(suggestions: List<SuggestionReceivedPayl
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.QueueMusic, null, tint = AmRed, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("SUGERENCIAS DE CANCIONES (${suggestions.size})", fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp, color = AmRed)
+                Text(stringResource(R.string.together_suggestions_section, suggestions.size), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp, color = AmRed)
             }
             Spacer(modifier = Modifier.height(12.dp))
             suggestions.forEach { sug ->
@@ -493,12 +500,12 @@ private fun AmUserActionDialog(username: String, isDark: Boolean, onKick: () -> 
                 Surface(modifier = Modifier.size(56.dp), shape = CircleShape, color = AmRed.copy(alpha = 0.12f)) {
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) { Text(username.take(1).uppercase(), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = AmRed) }
                 }
-                Text("Gestionar usuario", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = primaryText(isDark))
+                Text(stringResource(R.string.together_manage_user_title), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = primaryText(isDark))
                 Text(username, fontSize = 14.sp, color = labelColor(isDark))
                 Spacer(modifier = Modifier.height(4.dp))
-                AmDialogOption(Icons.Default.PersonRemove, "Expulsar usuario", "El usuario podra intentar unirse de nuevo", AmRed, AmRed.copy(alpha = 0.08f), isDark, onKick)
-                AmDialogOption(Icons.Default.WorkspacePremium, "Transferir anfitrion", "Este usuario sera el nuevo anfitrion", AmBlue, AmBlue.copy(alpha = 0.08f), isDark, onTransferOwnership)
-                TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Cancelar", color = labelColor(isDark), fontWeight = FontWeight.SemiBold) }
+                AmDialogOption(Icons.Default.PersonRemove, stringResource(R.string.together_kick_user), stringResource(R.string.together_kick_user_desc), AmRed, AmRed.copy(alpha = 0.08f), isDark, onKick)
+                AmDialogOption(Icons.Default.WorkspacePremium, stringResource(R.string.together_transfer_host), stringResource(R.string.together_transfer_host_desc), AmBlue, AmBlue.copy(alpha = 0.08f), isDark, onTransferOwnership)
+                TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.dialog_cancel), color = labelColor(isDark), fontWeight = FontWeight.SemiBold) }
             }
         }
     }

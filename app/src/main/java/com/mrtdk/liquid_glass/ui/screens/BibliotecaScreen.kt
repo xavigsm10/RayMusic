@@ -363,7 +363,7 @@ fun BibliotecaScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Biblioteca",
+                    text = stringResource(R.string.nav_biblioteca),
                     color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                     fontSize = 34.sp,
                     fontWeight = FontWeight.Bold
@@ -371,7 +371,7 @@ fun BibliotecaScreen(
                 androidx.compose.material3.IconButton(onClick = { showSettings = true }) {
                     Icon(
                         imageVector = Icons.Default.Settings,
-                        contentDescription = "Ajustes",
+                        contentDescription = stringResource(R.string.ajustes),
                         tint = Color(0xFFFA243C)
                     )
                 }

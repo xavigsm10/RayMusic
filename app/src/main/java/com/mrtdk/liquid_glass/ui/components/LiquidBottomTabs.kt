@@ -189,10 +189,7 @@ fun LiquidBottomTabs(
                         }
                     },
                     layerBlock = {
-                        val progress = dampedDragAnimation.pressProgress
-                        val scale = lerp(1f, 1f + 16f.dp.toPx() / size.width, progress)
-                        scaleX = scale
-                        scaleY = scale
+                        clip = false
                     },
                     onDrawSurface = { drawRect(containerColor) }
                 )
@@ -294,6 +291,7 @@ fun LiquidBottomTabs(
                         val velocity = dampedDragAnimation.velocity / 10f
                         scaleX /= 1f - (velocity * 0.75f).fastCoerceIn(-0.2f, 0.2f)
                         scaleY *= 1f - (velocity * 0.25f).fastCoerceIn(-0.2f, 0.2f)
+                        clip = false
                     },
                     onDrawSurface = {
                         val progress = dampedDragAnimation.pressProgress

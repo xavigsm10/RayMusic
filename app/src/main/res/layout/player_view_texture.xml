@@ -5,6 +5,8 @@
     android:id="@+id/player_view"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:clickable="false"
+    android:focusable="false"
     app:use_controller="false"
     app:resize_mode="zoom"
     app:surface_type="texture_view" />

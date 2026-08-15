@@ -165,20 +165,8 @@ fun LiquidBottomNavBar(
                             placeable.place(0, 0)
                         }
                     }
-                    .clip(Capsule())
-                    .drawWithContent {
-                        drawContent()
-                        if (isSearchActive || collapseProgressState.value > 0f || searchProgressState.value > 0.001f) {
-                            val strokeWidth = 1.2.dp.toPx()
-                            val strokeColor = if (!isDarkMode) Color.Black.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.28f)
-                            drawRoundRect(
-                                color = strokeColor,
-                                topLeft = androidx.compose.ui.geometry.Offset(strokeWidth, strokeWidth),
-                                size = androidx.compose.ui.geometry.Size(size.width - strokeWidth * 2f, size.height - strokeWidth * 2f),
-                                cornerRadius = androidx.compose.ui.geometry.CornerRadius((size.height - strokeWidth * 2f) / 2f, (size.height - strokeWidth * 2f) / 2f),
-                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth)
-                            )
-                        }
+                    .let {
+                        if (searchProgressState.value > 0.001f || collapseProgressState.value > 0.001f) it.clip(Capsule()) else it
                     },
                 contentAlignment = Alignment.Center
             ) {
@@ -186,6 +174,7 @@ fun LiquidBottomNavBar(
                     modifier = Modifier
                         .requiredWidth(mainTabsMaxWidth)
                         .graphicsLayer {
+                            clip = false
                             val progress = if (searchProgressState.value > collapseProgressState.value) searchProgressState.value else collapseProgressState.value
                             val currentAvailableWidth = parentWidth - xWidthState.value - spacingSearchXState.value - 12.dp
                             val widthDp = currentAvailableWidth - 56.dp - (currentAvailableWidth - 112.dp) * progress

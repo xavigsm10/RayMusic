@@ -132,8 +132,17 @@ fun AnimatedArtworkPlayer(
 
         val tv = textureView ?: return@LaunchedEffect
 
+        // Immediately capture first frame without waiting
+        try {
+            val initialBmp = tv.getBitmap(150, 150)
+            if (initialBmp != null) {
+                onFrameCaptured(initialBmp)
+            }
+        } catch (e: Exception) { }
+
         // Periodically capture the frame of the TextureView
         while (true) {
+            kotlinx.coroutines.delay(250) // Capture frame every 250ms for smooth live updates
             try {
                 // Fetch a very small low-res bitmap to minimize overhead
                 val bmp = tv.getBitmap(150, 150)
@@ -143,19 +152,25 @@ fun AnimatedArtworkPlayer(
             } catch (e: Exception) {
                 e.printStackTrace()
             }
-            kotlinx.coroutines.delay(1000) // Capture frame every 1 second
         }
     }
 
-    // Render using AndroidView
+    // Render using AndroidView without consuming touch gestures
     AndroidView(
         factory = { ctx ->
-            (LayoutInflater.from(ctx).inflate(R.layout.player_view_texture, null) as PlayerView).also {
-                playerViewRef = it
+            (LayoutInflater.from(ctx).inflate(R.layout.player_view_texture, null) as PlayerView).also { view ->
+                view.useController = false
+                view.isClickable = false
+                view.isFocusable = false
+                view.setOnTouchListener { _, _ -> false }
+                playerViewRef = view
             }
         },
         update = { view ->
             view.player = exoPlayer
+            view.isClickable = false
+            view.isFocusable = false
+            view.setOnTouchListener { _, _ -> false }
             playerViewRef = view
         },
         modifier = modifier

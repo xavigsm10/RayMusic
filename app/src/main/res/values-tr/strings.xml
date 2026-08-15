@@ -1,5 +1,6 @@
-﻿<resources>
+<resources>
     <string name="app_name">RayMusic</string>
+    <string name="sync_lyrics">Otomatik kaydırmayı sürdür</string>
     <string name="nav_inicio">Ana Sayfa</string>
     <string name="nav_novedades">Yenilikler</string>
     <string name="nav_radio">Radyo</string>
@@ -376,6 +377,187 @@
     <string name="together_status_room">Oda: %1$s</string>
     <string name="together_status_role">Rol: %1$s</string>
     <string name="together_room_code_label">ODA KODU</string>
-    <string name="together_status_role_host">Ev Sahibi</string>
-    <string name="together_status_role_guest">Misafir</string>
+    <string name="together_status_role_host">Sunucu</string>
+    <string name="together_status_role_guest">Konuk</string>
+
+    <!-- Settings Sections and Items -->
+    <string name="settings_section_appearance">GÖRÜNÜM</string>
+    <string name="settings_section_behavior">DAVRANIŞ VE OYNATMA</string>
+    <string name="settings_section_privacy">GİZLİLİK VE GÜVENLİK</string>
+    <string name="settings_section_app">UYGULAMA</string>
+    <string name="settings_section_visual">GÖRSEL AYARLAR</string>
+    <string name="settings_section_effects">EFEKTLER VE ARKA PLANLAR</string>
+    <string name="settings_section_interaction">ETKİLEŞİM</string>
+    <string name="settings_section_sound_quality">SES KALİTESİ VE EFEKTLER</string>
+    <string name="settings_section_metrics">METRİKLER VE OTOMASYON</string>
+    <string name="settings_section_room_profile">ODA PROFİLİ</string>
+    <string name="settings_section_room_config">ODA AYARLARI</string>
+    <string name="settings_section_lang_locale">DİL VE BÖLGE</string>
+    <string name="settings_section_content_filtering">İÇERİK FİLTRELEME</string>
+    <string name="settings_section_play_history">OYNATMA GEÇMİŞİ</string>
+    <string name="settings_section_search_history">ARAMA GEÇMİŞİ</string>
+    <string name="settings_section_screen_security">EKRAN GÜVENLİĞİ</string>
+    <string name="settings_section_updates_dev">GÜNCELLEMELER VE GELİŞTİRME</string>
+    <string name="settings_section_account_link">HESAP VE BAĞLANTI</string>
+    <string name="settings_section_spotify_actions">SPOTIFY İŞLEMLERİ</string>
+
+    <string name="theme_app_title">Uygulama teması</string>
+    <string name="theme_dark_mode_default">Karanlık Mod (Varsayılan)</string>
+    <string name="theme_light_mode">Aydınlık Mod</string>
+    <string name="settings_spotify">Spotify</string>
+    <string name="settings_spotify_desc">Spotify hesabını ve çalma listelerini senkronize et</string>
+    <string name="settings_updates_check_desc">Yeni RayMusic sürümlerini kontrol edin</string>
+    <string name="settings_paypal_desc">Uygulama geliştirmeyi destekleyin</string>
+    <string name="spotify_account_status">Hesap durumu</string>
+    <string name="spotify_connected_as">%1$s olarak bağlandı</string>
+    <string name="spotify_not_connected">Bağlı değil</string>
+    <string name="spotify_sync_playlists_now">Çalma Listelerini şimdi senkronize et</string>
+    <string name="spotify_syncing_playlists">Çalma listeleri senkronize ediliyor...</string>
+    <string name="spotify_sync_desc">Spotify çalma listelerinizi RayMusic Kitaplığına aktarın</string>
+    <string name="spotify_logout">Spotify oturumunu kapat</string>
+    <string name="spotify_logout_desc">Spotify hesabınızın RayMusic bağlantısını kesin</string>
+    <string name="spotify_login_btn">Spotify ile giriş yap</string>
+    <string name="spotify_synced_toast">Spotify çalma listeleri senkronize edildi</string>
+    <string name="spotify_logged_out_toast">Spotify oturumu kapatıldı</string>
+    <string name="spotify_login_success_toast">Başarıyla giriş yapıldı!</string>
+    <string name="together_create_room_desc">Yeni bir oda başlatın ve kod alın</string>
+    <string name="together_join_room_desc">Mevcut bir odanın kodunu girin</string>
+    <string name="together_username_placeholder">Takma adınızı girin...</string>
+    <string name="together_join_placeholder">Oda kodunu girin...</string>
+    <string name="together_undefined">Tanımsız</string>
+
+    <!-- ListenTogetherScreen -->
+    <string name="together_join_rejected_host">İstek sunucu tarafından reddedildi</string>
+    <string name="together_join_rejected_invalid_code">Geçersiz oda kodu</string>
+    <string name="together_join_rejected_reason">İstek reddedildi: %1$s</string>
+    <string name="together_room_created_toast">Oda oluşturuldu! Kod: %1$s</string>
+    <string name="together_kicked_by_host">Sunucu tarafından kaldırıldı</string>
+    <string name="together_connection_note">Bir odadayken bağlantı aktif kalır.</string>
+    <string name="together_leave_room">Odadan Ayrıl</string>
+    <string name="together_enter_username_toast">Kullanıcı adınızı girin</string>
+    <string name="together_nav_title">Birlikte Dinle</string>
+    <string name="together_hero_desc">Arkadaşlarınızla gerçek zamanlı müzik dinleyin</string>
+    <string name="together_status_connecting">Bağlanıyor...</string>
+    <string name="together_status_reconnecting">Yeniden bağlanıyor...</string>
+    <string name="together_status_conn_error">Bağlantı hatası</string>
+    <string name="together_btn_connect">Bağlan</string>
+    <string name="together_btn_disconnect">Bağlantıyı Kes</string>
+    <string name="together_btn_reconnect">Yeniden Bağlan</string>
+    <string name="together_section_join_create">ODAYA KATIL VEYA OLUŞTUR</string>
+    <string name="together_field_username">Kullanıcı adı</string>
+    <string name="together_field_username_hint">Örn. Ahmet</string>
+    <string name="together_field_room_code">Oda kodu (isteğe bağlı)</string>
+    <string name="together_field_room_code_hint">Örn. AB12C345</string>
+    <string name="together_status_creating">Oda oluşturuluyor...</string>
+    <string name="together_status_waiting_approval">Onay bekleniyor...</string>
+    <string name="together_btn_create_room_action">Oda Oluştur</string>
+    <string name="together_btn_join_room_action">Odaya Katıl</string>
+    <string name="together_you_are_host">Sunucusunuz</string>
+    <string name="together_you_are_guest">Konuksunuz</string>
+    <string name="together_copy_link">Bağlantıyı kopyala</string>
+    <string name="together_copy_code">Kodu kopyala</string>
+    <string name="together_link_copied">Bağlantı kopyalandı</string>
+    <string name="together_code_copied">Kod kopyalandı: %1$s</string>
+    <string name="together_connected_users">BAĞLI KULLANICILAR (%1$d)</string>
+    <string name="together_no_connected_users">Bağlı kullanıcı yok</string>
+    <string name="together_role_host_label">Sunucu</string>
+    <string name="together_role_you_label">Sen</string>
+    <string name="together_join_requests_section">KATILIM İSTEKLERİ (%1$d)</string>
+    <string name="together_suggestions_section">ŞARKI ÖNERİLERİ (%1$d)</string>
+    <string name="together_manage_user_title">Kullanıcıyı yönet</string>
+    <string name="together_kick_user">Kullanıcıyı at</string>
+    <string name="together_kick_user_desc">Kullanıcı tekrar katılmayı deneyebilir</string>
+    <string name="together_transfer_host">Sunuculuğu devret</string>
+    <string name="together_transfer_host_desc">Bu kullanıcı yeni sunucu olacak</string>
+
+    <!-- Context Menus & Player Options -->
+    <string name="menu_removed_from_favorites">Favorilerden kaldırıldı</string>
+    <string name="menu_added_to_favorites">Favorilere eklendi</string>
+    <string name="menu_play_next_toast">Sıradaki olarak çalınacak</string>
+    <string name="menu_added_to_queue">Kuyruğa eklendi</string>
+    <string name="menu_share_song">Şarkıyı paylaş</string>
+    <string name="menu_iniciar_radio">Radyoyu başlat</string>
+    <string name="menu_agregar_a_fila">Kuyruğa ekle</string>
+    <string name="menu_guardar_en_biblioteca">Kitaplığa kaydet</string>
+    <string name="menu_eliminar_de_biblioteca">Kitaplıktan kaldır</string>
+    <string name="menu_eliminado_de_biblioteca">Kitaplıktan kaldırıldı</string>
+    <string name="menu_anadido_a_biblioteca">Kitaplığa eklendi</string>
+    <string name="menu_ir_al_album">Albümüne git</string>
+    <string name="menu_ir_al_artista">Sanatçıya git</string>
+    <string name="menu_ver_creditos">Şarkı künyesini görüntüle</string>
+    <string name="menu_fijar_accesos_directos">Kısayollara sabitle</string>
+    <string name="menu_fijado_accesos_directos">Kısayollara sabitlendi</string>
+    <string name="menu_anadir_a_playlist">Çalma listesine ekle</string>
+    <string name="menu_nueva_playlist_btn">Yeni çalma listesi...</string>
+    <string name="menu_anadido_a_playlist_format">%1$s listesine eklendi</string>
+    <string name="menu_canciones_count_format">%1$d şarkı</string>
+    <string name="menu_nueva_playlist_title">Yeni çalma listesi</string>
+    <string name="menu_nombre_playlist_label">Çalma listesi adı</string>
+    <string name="menu_playlist_creada_cancion_anadida">Çalma listesi oluşturuldu ve şarkı eklendi</string>
+    <string name="menu_creditos_titulo">Şarkı Künyesi</string>
+    <string name="menu_creditos_titulo_label">Başlık</string>
+    <string name="menu_creditos_artista_label">Sanatçı</string>
+    <string name="menu_creditos_album_label">Albüm</string>
+    <string name="menu_creditos_desconocido">Bilinmiyor</string>
+    <string name="menu_creditos_videoid_label">Video Kimliği</string>
+    <string name="menu_creditos_proveedor_label">Sağlayıcı</string>
+    <string name="menu_creditos_entendido">Anladım</string>
+
+    <string name="menu_album_add_to_queue">Kuyruğa Ekle</string>
+    <string name="menu_album_save_playlist">Çalma Listesini Kaydet</string>
+    <string name="menu_album_download_offline">Çevrimdışı için indir</string>
+    <string name="menu_album_fetching_tracks">Albüm parçaları alınıyor...</string>
+    <string name="menu_album_fetch_failed">Albüm parçaları alınamadı</string>
+    <string name="menu_album_starting_download_format">%1$d parçanın indirilmesi başlatılıyor...</string>
+    <string name="menu_album_fetch_error_format">Parçalar alınırken hata oluştu: %1$s</string>
+
+    <string name="menu_view_grid">Kılavuz</string>
+    <string name="menu_view_list">Liste</string>
+    <string name="menu_sort_title_label">Başlık</string>
+    <string name="menu_sort_date_added">Eklenme Tarihi</string>
+    <string name="menu_sort_last_played">Son Çalınan</string>
+    <string name="menu_sort_last_updated">Son Güncelleme</string>
+    <string name="menu_sort_playlist_type">Çalma Listesi Türü</string>
+
+    <string name="player_queue_now_playing">Çalıyor</string>
+    <string name="lyrics_restored_toast">Şarkı sözleri sıfırlandı</string>
+
+    <string name="playlist_menu_download_songs_toast">%1$d şarkı indiriliyor...</string>
+    <string name="playlist_menu_no_songs_toast">İndirilecek şarkı yok</string>
+    <string name="playlist_menu_share_playlist">Çalma Listesini Paylaş</string>
+    <string name="playlist_menu_share_text">RayMusic üzerinde \'%1$s\' çalma listemi dinle!</string>
+    <string name="playlist_menu_pin">Çalma Listesini Sabitle</string>
+    <string name="playlist_menu_unpin">Çalma Listesi Sabitlemesini Kaldır</string>
+    <string name="playlist_menu_add_to_playlist">Bir Çalma Listesine Ekle</string>
+    <string name="playlist_menu_manage_collab">İş Birliğini Yönet</string>
+    <string name="playlist_menu_collab_copied">İş birliği bağlantısı panoya kopyalandı</string>
+    <string name="playlist_menu_move_to_folder">Klasöre Taşı</string>
+    <string name="playlist_menu_move_to_folder_future">Klasöre taşı gelecekteki bir güncellemede kullanıma sunulacak</string>
+    <string name="playlist_menu_play_next_toast">Çalma listesi sıradaki olarak oynatılacak</string>
+    <string name="playlist_menu_edit_playlist_title">Çalma Listesini Düzenle</string>
+    <string name="playlist_menu_change_image">Resmi Değiştir</string>
+    <string name="playlist_menu_add_to_other_playlist">Başka bir Çalma Listesine Ekle</string>
+    <string name="playlist_menu_no_other_playlists">Başka çalma listeniz yok</string>
+    <string name="playlist_menu_added_songs_to_playlist">Şarkılar %1$s listesine eklendi</string>
+
+    <string name="dialog_favorite">Favori</string>
+    <string name="descargar">İndir</string>
+    <string name="dialog_cancel">İptal</string>
+    <string name="dialog_create">Oluştur</string>
+    <string name="aleatorio">Karışık</string>
+    <string name="editar">Düzenle</string>
+
+    <!-- Better Lyrics Strings -->
+    <string name="lyrics_resume_autoscroll">Otomatik kaydırmayı sürdür</string>
+    <string name="lyrics_provided_by">Şarkı sözleri %1$s tarafından sağlandı</string>
+    <string name="lyrics_provider_auto">Otomatik (Better Lyrics)</string>
+    <string name="lyrics_provider_betterlyrics">Better Lyrics (RichSync)</string>
+    <string name="lyrics_provider_unison">Unison (Topluluk)</string>
+    <string name="lyrics_provider_binilyrics">BiniLyrics / LyricsPlus</string>
+    <string name="lyrics_provider_lrclib">LRCLIB</string>
+    <string name="lyrics_provider_kugou">KuGou</string>
+    <string name="lyrics_provider_ytcaptions">YouTube Captions (Altyazılar)</string>
+    <string name="lyrics_provider_ytmusic">YouTube Music</string>
+    <string name="lyrics_provider_simpmusic">SimpMusic</string>
+    <string name="lyrics_instrumental">Enstrümantal</string>
 </resources>

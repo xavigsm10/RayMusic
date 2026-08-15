@@ -1,5 +1,6 @@
-﻿<resources>
+<resources>
     <string name="app_name">RayMusic</string>
+    <string name="sync_lyrics">Sincronizar letra</string>
     <string name="nav_inicio">Início</string>
     <string name="nav_novedades">Novidades</string>
     <string name="nav_radio">Rádio</string>
@@ -378,4 +379,185 @@
     <string name="together_room_code_label">CÓDIGO DA SALA</string>
     <string name="together_status_role_host">Anfitrião</string>
     <string name="together_status_role_guest">Convidado</string>
+
+    <!-- Settings Sections and Items -->
+    <string name="settings_section_appearance">APARÊNCIA</string>
+    <string name="settings_section_behavior">COMPORTAMENTO E REPRODUÇÃO</string>
+    <string name="settings_section_privacy">PRIVACIDADE E SEGURANÇA</string>
+    <string name="settings_section_app">APLICATIVO</string>
+    <string name="settings_section_visual">CONFIGURAÇÃO VISUAL</string>
+    <string name="settings_section_effects">EFEITOS E PLANOS DE FUNDO</string>
+    <string name="settings_section_interaction">INTERAÇÃO</string>
+    <string name="settings_section_sound_quality">QUALIDADE DE SOM E EFEITOS</string>
+    <string name="settings_section_metrics">MÉTRICAS E AUTOMAÇÃO</string>
+    <string name="settings_section_room_profile">PERFIL DA SALA</string>
+    <string name="settings_section_room_config">CONFIGURAÇÃO DA SALA</string>
+    <string name="settings_section_lang_locale">IDIOMA E REGIÃO</string>
+    <string name="settings_section_content_filtering">FILTRAGEM DE CONTEÚDO</string>
+    <string name="settings_section_play_history">HISTÓRICO DE REPRODUÇÃO</string>
+    <string name="settings_section_search_history">HISTÓRICO DE PESQUISAS</string>
+    <string name="settings_section_screen_security">SEGURANÇA DE TELA</string>
+    <string name="settings_section_updates_dev">ATUALIZAÇÕES E DESENVOLVIMENTO</string>
+    <string name="settings_section_account_link">CONTA E VINCULAÇÃO</string>
+    <string name="settings_section_spotify_actions">AÇÕES DO SPOTIFY</string>
+
+    <string name="theme_app_title">Tema do aplicativo</string>
+    <string name="theme_dark_mode_default">Modo Escuro (Padrão)</string>
+    <string name="theme_light_mode">Modo Claro</string>
+    <string name="settings_spotify">Spotify</string>
+    <string name="settings_spotify_desc">Sincronizar conta e playlists do Spotify</string>
+    <string name="settings_updates_check_desc">Verifique se há novas versões do RayMusic</string>
+    <string name="settings_paypal_desc">Apoie o desenvolvimento do aplicativo</string>
+    <string name="spotify_account_status">Status da conta</string>
+    <string name="spotify_connected_as">Conectado como %1$s</string>
+    <string name="spotify_not_connected">Não conectado</string>
+    <string name="spotify_sync_playlists_now">Sincronizar Playlists agora</string>
+    <string name="spotify_syncing_playlists">Sincronizando playlists...</string>
+    <string name="spotify_sync_desc">Importe suas playlists do Spotify para a Biblioteca do RayMusic</string>
+    <string name="spotify_logout">Sair do Spotify</string>
+    <string name="spotify_logout_desc">Desconectar sua conta do Spotify do RayMusic</string>
+    <string name="spotify_login_btn">Entrar com Spotify</string>
+    <string name="spotify_synced_toast">Playlists do Spotify sincronizadas</string>
+    <string name="spotify_logged_out_toast">Sessão do Spotify encerrada</string>
+    <string name="spotify_login_success_toast">Sessão iniciada com sucesso!</string>
+    <string name="together_create_room_desc">Iniciar uma nova sala e obter código</string>
+    <string name="together_join_room_desc">Inserir o código de uma sala existente</string>
+    <string name="together_username_placeholder">Digite seu apelido...</string>
+    <string name="together_join_placeholder">Digite o código da sala...</string>
+    <string name="together_undefined">Não definido</string>
+
+    <!-- ListenTogetherScreen -->
+    <string name="together_join_rejected_host">Solicitação rejeitada pelo anfitrião</string>
+    <string name="together_join_rejected_invalid_code">Código de sala inválido</string>
+    <string name="together_join_rejected_reason">Solicitação rejeitada: %1$s</string>
+    <string name="together_room_created_toast">Sala criada! Código: %1$s</string>
+    <string name="together_kicked_by_host">Removido pelo anfitrião</string>
+    <string name="together_connection_note">A conexão permanece ativa enquanto você estiver em uma sala.</string>
+    <string name="together_leave_room">Sair da Sala</string>
+    <string name="together_enter_username_toast">Digite seu nome de usuário</string>
+    <string name="together_nav_title">Ouvir Juntos</string>
+    <string name="together_hero_desc">Ouça música em tempo real com amigos</string>
+    <string name="together_status_connecting">Conectando...</string>
+    <string name="together_status_reconnecting">Reconectando...</string>
+    <string name="together_status_conn_error">Erro de conexão</string>
+    <string name="together_btn_connect">Conectar</string>
+    <string name="together_btn_disconnect">Desconectar</string>
+    <string name="together_btn_reconnect">Reconectar</string>
+    <string name="together_section_join_create">ENTRAR OU CRIAR SALA</string>
+    <string name="together_field_username">Nome de usuário</string>
+    <string name="together_field_username_hint">Ex. João</string>
+    <string name="together_field_room_code">Código da sala (opcional)</string>
+    <string name="together_field_room_code_hint">Ex. AB12C345</string>
+    <string name="together_status_creating">Criando sala...</string>
+    <string name="together_status_waiting_approval">Aguardando aprovação...</string>
+    <string name="together_btn_create_room_action">Criar Sala</string>
+    <string name="together_btn_join_room_action">Entrar na Sala</string>
+    <string name="together_you_are_host">Você é o Anfitrião</string>
+    <string name="together_you_are_guest">Você é Convidado</string>
+    <string name="together_copy_link">Copiar link</string>
+    <string name="together_copy_code">Copiar código</string>
+    <string name="together_link_copied">Link copiado</string>
+    <string name="together_code_copied">Código copiado: %1$s</string>
+    <string name="together_connected_users">USUÁRIOS CONECTADOS (%1$d)</string>
+    <string name="together_no_connected_users">Nenhum usuário conectado</string>
+    <string name="together_role_host_label">Anfitrião</string>
+    <string name="together_role_you_label">Você</string>
+    <string name="together_join_requests_section">SOLICITAÇÕES DE ENTRADA (%1$d)</string>
+    <string name="together_suggestions_section">SUGESTÕES DE MÚSICAS (%1$d)</string>
+    <string name="together_manage_user_title">Gerenciar usuário</string>
+    <string name="together_kick_user">Expulsar usuário</string>
+    <string name="together_kick_user_desc">O usuário poderá tentar entrar novamente</string>
+    <string name="together_transfer_host">Transferir anfitrião</string>
+    <string name="together_transfer_host_desc">Este usuário será o novo anfitrião</string>
+
+    <!-- Context Menus & Player Options -->
+    <string name="menu_removed_from_favorites">Removido dos favoritos</string>
+    <string name="menu_added_to_favorites">Adicionado aos favoritos</string>
+    <string name="menu_play_next_toast">Será reproduzido a seguir</string>
+    <string name="menu_added_to_queue">Adicionado à fila</string>
+    <string name="menu_share_song">Compartilhar música</string>
+    <string name="menu_iniciar_radio">Iniciar rádio</string>
+    <string name="menu_agregar_a_fila">Adicionar à fila</string>
+    <string name="menu_guardar_en_biblioteca">Salvar na biblioteca</string>
+    <string name="menu_eliminar_de_biblioteca">Remover da biblioteca</string>
+    <string name="menu_eliminado_de_biblioteca">Removido da biblioteca</string>
+    <string name="menu_anadido_a_biblioteca">Adicionado à biblioteca</string>
+    <string name="menu_ir_al_album">Ir para o álbum</string>
+    <string name="menu_ir_al_artista">Ir para o artista</string>
+    <string name="menu_ver_creditos">Ver créditos da música</string>
+    <string name="menu_fijar_accesos_directos">Fixar em Atalhos</string>
+    <string name="menu_fijado_accesos_directos">Fixado em atalhos</string>
+    <string name="menu_anadir_a_playlist">Adicionar à playlist</string>
+    <string name="menu_nueva_playlist_btn">Nova playlist...</string>
+    <string name="menu_anadido_a_playlist_format">Adicionado a %1$s</string>
+    <string name="menu_canciones_count_format">%1$d músicas</string>
+    <string name="menu_nueva_playlist_title">Nova playlist</string>
+    <string name="menu_nombre_playlist_label">Nome da playlist</string>
+    <string name="menu_playlist_creada_cancion_anadida">Playlist criada e música adicionada</string>
+    <string name="menu_creditos_titulo">Créditos da música</string>
+    <string name="menu_creditos_titulo_label">Título</string>
+    <string name="menu_creditos_artista_label">Artista</string>
+    <string name="menu_creditos_album_label">Álbum</string>
+    <string name="menu_creditos_desconocido">Desconhecido</string>
+    <string name="menu_creditos_videoid_label">ID do Vídeo</string>
+    <string name="menu_creditos_proveedor_label">Provedor</string>
+    <string name="menu_creditos_entendido">Entendi</string>
+
+    <string name="menu_album_add_to_queue">Adicionar à Fila</string>
+    <string name="menu_album_save_playlist">Salvar Playlist</string>
+    <string name="menu_album_download_offline">Baixar para offline</string>
+    <string name="menu_album_fetching_tracks">Obtendo faixas do álbum...</string>
+    <string name="menu_album_fetch_failed">Não foi possível obter as faixas do álbum</string>
+    <string name="menu_album_starting_download_format">Iniciando download de %1$d faixas...</string>
+    <string name="menu_album_fetch_error_format">Erro ao obter faixas: %1$s</string>
+
+    <string name="menu_view_grid">Grade</string>
+    <string name="menu_view_list">Lista</string>
+    <string name="menu_sort_title_label">Título</string>
+    <string name="menu_sort_date_added">Data de adição</string>
+    <string name="menu_sort_last_played">Última reprodução</string>
+    <string name="menu_sort_last_updated">Última atualização</string>
+    <string name="menu_sort_playlist_type">Tipo de playlist</string>
+
+    <string name="player_queue_now_playing">Reproduzindo</string>
+    <string name="lyrics_restored_toast">Letras redefinidas</string>
+
+    <string name="playlist_menu_download_songs_toast">Baixando %1$d músicas...</string>
+    <string name="playlist_menu_no_songs_toast">Não há músicas para baixar</string>
+    <string name="playlist_menu_share_playlist">Compartilhar Playlist</string>
+    <string name="playlist_menu_share_text">Ouça minha playlist \'%1$s\' no RayMusic!</string>
+    <string name="playlist_menu_pin">Fixar Playlist</string>
+    <string name="playlist_menu_unpin">Desafixar Playlist</string>
+    <string name="playlist_menu_add_to_playlist">Adicionar a uma Playlist</string>
+    <string name="playlist_menu_manage_collab">Gerenciar Colaboração</string>
+    <string name="playlist_menu_collab_copied">Link de colaboração copiado para a área de transferência</string>
+    <string name="playlist_menu_move_to_folder">Mover para Pasta</string>
+    <string name="playlist_menu_move_to_folder_future">Mover para pasta estará disponível em uma atualização futura</string>
+    <string name="playlist_menu_play_next_toast">A playlist será reproduzida a seguir</string>
+    <string name="playlist_menu_edit_playlist_title">Editar Playlist</string>
+    <string name="playlist_menu_change_image">Alterar Imagem</string>
+    <string name="playlist_menu_add_to_other_playlist">Adicionar a outra Playlist</string>
+    <string name="playlist_menu_no_other_playlists">Você não tem outras playlists</string>
+    <string name="playlist_menu_added_songs_to_playlist">Músicas adicionadas a %1$s</string>
+
+    <string name="dialog_favorite">Favorito</string>
+    <string name="descargar">Baixar</string>
+    <string name="dialog_cancel">Cancelar</string>
+    <string name="dialog_create">Criar</string>
+    <string name="aleatorio">Aleatório</string>
+    <string name="editar">Editar</string>
+
+    <!-- Better Lyrics Strings -->
+    <string name="lyrics_resume_autoscroll">Retomar rolagem</string>
+    <string name="lyrics_provided_by">Letras fornecidas por %1$s</string>
+    <string name="lyrics_provider_auto">Automático (Better Lyrics)</string>
+    <string name="lyrics_provider_betterlyrics">Better Lyrics (RichSync)</string>
+    <string name="lyrics_provider_unison">Unison (Comunidade)</string>
+    <string name="lyrics_provider_binilyrics">BiniLyrics / LyricsPlus</string>
+    <string name="lyrics_provider_lrclib">LRCLIB</string>
+    <string name="lyrics_provider_kugou">KuGou</string>
+    <string name="lyrics_provider_ytcaptions">YouTube Captions (Legendas)</string>
+    <string name="lyrics_provider_ytmusic">YouTube Music</string>
+    <string name="lyrics_provider_simpmusic">SimpMusic</string>
+    <string name="lyrics_instrumental">Instrumental</string>
 </resources>

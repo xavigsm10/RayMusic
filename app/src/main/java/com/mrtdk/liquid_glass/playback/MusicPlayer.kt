@@ -198,6 +198,9 @@ class MusicPlayer(private val context: Context) {
 
     fun playOnlineSong(videoId: String, title: String? = null, artist: String? = null, artUrl: String? = null) {
         _playbackError.value = null
+        if (title != null || artist != null) {
+            songMetadataCache[videoId] = Pair(title.orEmpty(), artist.orEmpty())
+        }
         android.util.Log.d("MusicPlayer", "Playing stream instantly: yt://$videoId")
         
         val localUriStr = com.mrtdk.liquid_glass.data.LibraryManager.getString("local_uri_$videoId")
@@ -235,12 +238,23 @@ class MusicPlayer(private val context: Context) {
 
     fun playOnlineSongs(songs: List<MediaItem>, startIndex: Int = 0) {
         _playbackError.value = null
+        songs.forEach { item ->
+            val vId = item.mediaId
+            val t = item.mediaMetadata.title?.toString().orEmpty()
+            val a = item.mediaMetadata.artist?.toString().orEmpty()
+            if (vId.isNotBlank() && (t.isNotBlank() || a.isNotBlank())) {
+                songMetadataCache[vId] = Pair(t, a)
+            }
+        }
         controller?.setMediaItems(songs, startIndex, 0L)
         controller?.prepare()
         controller?.play()
     }
 
     fun addOnlineSongToQueue(videoId: String, title: String? = null, artist: String? = null, artUrl: String? = null) {
+        if (title != null || artist != null) {
+            songMetadataCache[videoId] = Pair(title.orEmpty(), artist.orEmpty())
+        }
         val metadata = androidx.media3.common.MediaMetadata.Builder().apply {
             title?.let { setTitle(it) }
             artist?.let { setArtist(it) }
@@ -320,10 +334,12 @@ class MusicPlayer(private val context: Context) {
     companion object {
         private val songUrlCache = java.util.concurrent.ConcurrentHashMap<String, Pair<String, Long>>()
         private val spotifyToYtCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+        val songMetadataCache = java.util.concurrent.ConcurrentHashMap<String, Pair<String, String>>()
 
         fun clearCache(videoId: String) {
             songUrlCache.remove(videoId)
             spotifyToYtCache.remove(videoId)
+            songMetadataCache.remove(videoId)
         }
 
         private fun isYouTubeId(id: String): Boolean {
@@ -341,26 +357,32 @@ class MusicPlayer(private val context: Context) {
 
             var targetVideoId = videoId
 
+            val cachedMeta = songMetadataCache[videoId]
+            val currentSong = com.mrtdk.liquid_glass.playback.PlaybackQueue.currentSong
+            val queueItem = com.mrtdk.liquid_glass.playback.PlaybackQueue.queue.find { it.videoId == videoId }
+            val songTitle = cachedMeta?.first?.ifEmpty { null }
+                ?: currentSong?.takeIf { it.videoId == videoId }?.title
+                ?: queueItem?.title
+            val songArtist = cachedMeta?.second?.ifEmpty { null }
+                ?: currentSong?.takeIf { it.videoId == videoId }?.artist
+                ?: queueItem?.artist
+
             // If not a valid 11-char YouTube ID (e.g. Spotify ID or custom ID)
             if (!isYouTubeId(targetVideoId)) {
                 spotifyToYtCache[videoId]?.let { cachedYtId ->
                     targetVideoId = cachedYtId
                 } ?: run {
-                    val currentSong = com.mrtdk.liquid_glass.playback.PlaybackQueue.currentSong
-                    val query = if (currentSong != null && (currentSong.videoId == videoId || videoId.contains(currentSong.title, ignoreCase = true))) {
-                        "${currentSong.artist} ${currentSong.title}".trim()
-                    } else {
-                        videoId
-                    }
+                    val query = when {
+                        !songTitle.isNullOrBlank() && !songArtist.isNullOrBlank() -> "$songArtist $songTitle"
+                        !songTitle.isNullOrBlank() -> songTitle
+                        else -> videoId
+                    }.trim()
 
                     if (query.isNotBlank()) {
                         val foundYtId = try {
-                            YouTube.search(query, YouTube.SearchFilter.FILTER_SONG)
-                                .getOrNull()
-                                ?.items
-                                ?.filterIsInstance<com.echo.innertube.models.SongItem>()
-                                ?.firstOrNull()
-                                ?.id
+                            val searchResult = YouTube.search(query, YouTube.SearchFilter.FILTER_SONG).getOrNull()
+                                ?: YouTube.search(query, YouTube.SearchFilter.FILTER_VIDEO).getOrNull()
+                            searchResult?.items?.firstOrNull()?.id
                         } catch (e: Exception) {
                             android.util.Log.e("MusicPlayer", "Failed YouTube search for Spotify track $query", e)
                             null
@@ -378,23 +400,20 @@ class MusicPlayer(private val context: Context) {
             // Extract stream URL for targetVideoId
             var formatUrl = extractDirectStreamUrl(targetVideoId, preferLow)
 
-            // Fallback: If direct stream extraction failed, attempt search fallback
-            if (formatUrl == null && targetVideoId == videoId && !isYouTubeId(targetVideoId)) {
-                val currentSong = com.mrtdk.liquid_glass.playback.PlaybackQueue.currentSong
-                if (currentSong != null) {
-                    val fallbackQuery = "${currentSong.artist} ${currentSong.title}".trim()
-                    if (fallbackQuery.isNotBlank()) {
-                        val fallbackYtId = try {
-                            YouTube.search(fallbackQuery, YouTube.SearchFilter.FILTER_SONG)
-                                .getOrNull()
-                                ?.items
-                                ?.filterIsInstance<com.echo.innertube.models.SongItem>()
-                                ?.firstOrNull()
-                                ?.id
-                        } catch (_: Exception) { null }
+            // Fallback: If direct stream extraction failed and we have song info, attempt search fallback
+            if (formatUrl == null && (!songTitle.isNullOrBlank() || !songArtist.isNullOrBlank())) {
+                val fallbackQuery = listOfNotNull(songArtist, songTitle).joinToString(" ").trim()
+                if (fallbackQuery.isNotBlank()) {
+                    val fallbackYtId = try {
+                        val searchResult = YouTube.search(fallbackQuery, YouTube.SearchFilter.FILTER_SONG).getOrNull()
+                            ?: YouTube.search(fallbackQuery, YouTube.SearchFilter.FILTER_VIDEO).getOrNull()
+                        searchResult?.items?.firstOrNull()?.id
+                    } catch (_: Exception) { null }
 
-                        if (fallbackYtId != null && isYouTubeId(fallbackYtId)) {
-                            formatUrl = extractDirectStreamUrl(fallbackYtId, preferLow)
+                    if (fallbackYtId != null && isYouTubeId(fallbackYtId)) {
+                        formatUrl = extractDirectStreamUrl(fallbackYtId, preferLow)
+                        if (formatUrl != null) {
+                            spotifyToYtCache[videoId] = fallbackYtId
                         }
                     }
                 }
@@ -489,61 +508,18 @@ class MusicPlayer(private val context: Context) {
 
                             if (format != null) {
                                 val candidateUrl = try {
-                                    com.echo.innertube.NewPipeUtils.getStreamUrl(format, videoId).getOrNull() ?: throw Exception("NewPipe failed to extract")
+                                    com.echo.innertube.NewPipeUtils.getStreamUrl(format, videoId).getOrNull()
                                 } catch (_: Exception) {
-                                    if (client == com.echo.innertube.models.YouTubeClient.TVHTML5_SIMPLY_EMBEDDED_PLAYER ||
-                                        client == com.echo.innertube.models.YouTubeClient.ANDROID_VR_NO_AUTH) {
-                                        format.url
-                                    } else {
-                                        null
-                                    }
-                                }
-                                if (candidateUrl != null) {
-                                    val testUrl = if (candidateUrl.contains("c=")) candidateUrl else candidateUrl + (if (candidateUrl.contains("?")) "&" else "?") + "c=" + client.clientName
+                                    null
+                                } ?: format.url
 
-                                    val cName = client.clientName
-                                    val ua = when {
-                                        cName.equals("WEB_REMIX", ignoreCase = true) || cName.equals("WEB", ignoreCase = true) || cName.equals("WEB_CREATOR", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.USER_AGENT_WEB
-                                        cName.equals("TVHTML5", ignoreCase = true) || cName.contains("TVHTML5_SIMPLY", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.TVHTML5.userAgent
-                                        cName.startsWith("IOS", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.IOS.userAgent
-                                        cName.startsWith("ANDROID_VR", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.ANDROID_VR_NO_AUTH.userAgent
-                                        cName.startsWith("ANDROID", ignoreCase = true) -> com.echo.innertube.models.YouTubeClient.MOBILE.userAgent
-                                        else -> com.echo.innertube.models.YouTubeClient.ANDROID_VR_NO_AUTH.userAgent
-                                    }
-
-                                    val requestBuilder = okhttp3.Request.Builder()
-                                        .head()
-                                        .url(testUrl)
-                                        .header("User-Agent", ua)
-
-                                    val origin = when {
-                                        cName.equals("WEB_REMIX", ignoreCase = true) || cName.equals("WEB", ignoreCase = true) || cName.equals("WEB_CREATOR", ignoreCase = true) -> "https://music.youtube.com"
-                                        cName.equals("TVHTML5", ignoreCase = true) || cName.contains("TVHTML5_SIMPLY", ignoreCase = true) -> "https://www.youtube.com"
-                                        else -> null
-                                    }
-                                    val referer = when {
-                                        cName.equals("WEB_REMIX", ignoreCase = true) || cName.equals("WEB", ignoreCase = true) || cName.equals("WEB_CREATOR", ignoreCase = true) -> "https://music.youtube.com/"
-                                        cName.equals("TVHTML5", ignoreCase = true) || cName.contains("TVHTML5_SIMPLY", ignoreCase = true) -> "https://www.youtube.com/tv"
-                                        else -> null
-                                    }
-                                    if (origin != null) {
-                                        requestBuilder.header("Origin", origin)
-                                        requestBuilder.header("Referer", referer ?: "")
-                                    }
-
-                                    if (!cName.contains("NO_AUTH", ignoreCase = true) && !cName.contains("TVHTML5_SIMPLY", ignoreCase = true)) {
-                                        YouTube.cookie?.let { requestBuilder.header("Cookie", it) }
-                                    }
-
-                                    val response = httpClient.newCall(requestBuilder.build()).execute()
-                                    if (response.isSuccessful || response.code == 206) {
-                                        channel.trySend(Pair(candidateUrl, client.clientName))
-                                        return@launch
-                                    }
+                                if (!candidateUrl.isNullOrBlank()) {
+                                    channel.trySend(Pair(candidateUrl, client.clientName))
+                                    return@launch
                                 }
                             }
-                        } catch (_: Exception) {
-                            // Ignored
+                        } catch (e: Exception) {
+                            android.util.Log.w("MusicPlayer", "Client ${client.clientName} failed for $videoId: ${e.message}")
                         }
                         channel.trySend(null)
                     }
@@ -557,6 +533,20 @@ class MusicPlayer(private val context: Context) {
                         jobs.forEach { it.cancel() }
                         break
                     }
+                }
+            }
+
+            // Fallback: If still null, try raw NewPipe stream info directly
+            if (formatUrl == null) {
+                try {
+                    val fallbackStreams = YouTube.getNewPipeStreamUrls(videoId)
+                    val rawUrl = fallbackStreams.firstOrNull()?.second
+                    if (rawUrl != null) {
+                        formatUrl = rawUrl
+                        usedClient = "ANDROID"
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("MusicPlayer", "Final NewPipe fallback failed: ${e.message}")
                 }
             }
 

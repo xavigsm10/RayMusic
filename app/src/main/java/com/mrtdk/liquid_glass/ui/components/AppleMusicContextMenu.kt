@@ -1,4 +1,4 @@
-﻿package com.mrtdk.liquid_glass.ui.components
+package com.mrtdk.liquid_glass.ui.components
 
 import android.content.Context
 import android.content.Intent
@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -18,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -218,22 +220,22 @@ fun GlassBoxScope.AppleMusicSongMenu(
                             IconButton(onClick = {
                                 if (isSaved) {
                                     LibraryManager.removeItem(song.id)
-                                    Toast.makeText(context, "Eliminado de favoritos", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, context.getString(R.string.menu_removed_from_favorites), Toast.LENGTH_SHORT).show()
                                 } else {
                                     LibraryManager.saveItem(libraryItem)
-                                    Toast.makeText(context, "Añadido a favoritos", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, context.getString(R.string.menu_added_to_favorites), Toast.LENGTH_SHORT).show()
                                 }
                             }) {
                                 Icon(
                                     imageVector = if (isSaved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                    contentDescription = "Favorito",
+                                    contentDescription = stringResource(R.string.dialog_favorite),
                                     tint = if (isSaved) Color(0xFFFA243C) else Color.White
                                 )
                             }
 
                             // Close button
                             IconButton(onClick = { handleDismiss() }) {
-                                Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = Color.Gray)
+                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close_action), tint = Color.Gray)
                             }
                         }
 
@@ -248,7 +250,7 @@ fun GlassBoxScope.AppleMusicSongMenu(
                         ) {
                             HorizontalActionButton(
                                 icon = Icons.Default.QueuePlayNext,
-                                label = "Siguiente",
+                                label = stringResource(R.string.menu_play_next),
                                 onClick = {
                                     val current = PlaybackQueue.currentSong
                                     val qItem = QueueItem(song.title, song.artist, song.thumbnail, song.id, song.album)
@@ -257,7 +259,7 @@ fun GlassBoxScope.AppleMusicSongMenu(
                                     } else {
                                         PlaybackQueue.queue = listOf(qItem) + PlaybackQueue.queue
                                         PlaybackQueue.onQueueChanged?.invoke()
-                                        Toast.makeText(context, "Se reproducirá a continuación", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, context.getString(R.string.menu_play_next_toast), Toast.LENGTH_SHORT).show()
                                     }
                                     handleDismiss()
                                 }
@@ -265,13 +267,13 @@ fun GlassBoxScope.AppleMusicSongMenu(
 
                             HorizontalActionButton(
                                 icon = Icons.Default.PlaylistAdd,
-                                label = "Playlist",
+                                label = stringResource(R.string.playlists),
                                 onClick = { isPlaylistsScreen = true }
                             )
 
                             HorizontalActionButton(
                                 icon = Icons.Default.Share,
-                                label = "Compartir",
+                                label = stringResource(R.string.compartir),
                                 onClick = {
                                     val shareUrl = "https://music.youtube.com/watch?v=${song.id}"
                                     val shareIntent = Intent(Intent.ACTION_SEND).apply {
@@ -279,7 +281,7 @@ fun GlassBoxScope.AppleMusicSongMenu(
                                         putExtra(Intent.EXTRA_SUBJECT, song.title)
                                         putExtra(Intent.EXTRA_TEXT, shareUrl)
                                     }
-                                    context.startActivity(Intent.createChooser(shareIntent, "Compartir canción"))
+                                    context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.menu_share_song)))
                                     handleDismiss()
                                 }
                             )
@@ -298,7 +300,7 @@ fun GlassBoxScope.AppleMusicSongMenu(
                         ) {
                             VerticalMenuActionItem(
                                 icon = Icons.Default.Radio,
-                                label = "Iniciar radio",
+                                label = stringResource(R.string.menu_iniciar_radio),
                                 onClick = {
                                     onSongSelected(
                                         PlayerState(
@@ -316,7 +318,7 @@ fun GlassBoxScope.AppleMusicSongMenu(
 
                             VerticalMenuActionItem(
                                 icon = Icons.Default.Queue,
-                                label = "Agregar a la fila",
+                                label = stringResource(R.string.menu_agregar_a_fila),
                                 onClick = {
                                     val current = PlaybackQueue.currentSong
                                     val qItem = QueueItem(song.title, song.artist, song.thumbnail, song.id, song.album)
@@ -325,7 +327,7 @@ fun GlassBoxScope.AppleMusicSongMenu(
                                     } else {
                                         PlaybackQueue.queue = PlaybackQueue.queue + listOf(qItem)
                                         PlaybackQueue.onQueueChanged?.invoke()
-                                        Toast.makeText(context, "Añadido a la cola", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, context.getString(R.string.menu_added_to_queue), Toast.LENGTH_SHORT).show()
                                     }
                                     handleDismiss()
                                 }
@@ -333,14 +335,14 @@ fun GlassBoxScope.AppleMusicSongMenu(
 
                             VerticalMenuActionItem(
                                 icon = if (isSaved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                label = if (isSaved) "Eliminar de biblioteca" else "Guardar en biblioteca",
+                                label = stringResource(if (isSaved) R.string.menu_eliminar_de_biblioteca else R.string.menu_guardar_en_biblioteca),
                                 onClick = {
                                     if (isSaved) {
                                         LibraryManager.removeItem(song.id)
-                                        Toast.makeText(context, "Eliminado de biblioteca", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, context.getString(R.string.menu_eliminado_de_biblioteca), Toast.LENGTH_SHORT).show()
                                     } else {
                                         LibraryManager.saveItem(libraryItem)
-                                        Toast.makeText(context, "Añadido a biblioteca", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, context.getString(R.string.menu_anadido_a_biblioteca), Toast.LENGTH_SHORT).show()
                                     }
                                     handleDismiss()
                                 }
@@ -348,7 +350,7 @@ fun GlassBoxScope.AppleMusicSongMenu(
 
                             VerticalMenuActionItem(
                                 icon = Icons.Default.ArrowDownward,
-                                label = "Descargar",
+                                label = stringResource(R.string.descargar),
                                 onClick = {
                                     downloadSong(context, song.id, song.title, song.artist, song.thumbnail, song.album)
                                     handleDismiss()
@@ -358,7 +360,7 @@ fun GlassBoxScope.AppleMusicSongMenu(
                             if (onGoToAlbum != null && !song.album.isNullOrBlank()) {
                                 VerticalMenuActionItem(
                                     icon = Icons.Default.Album,
-                                    label = "Ir al álbum",
+                                    label = stringResource(R.string.menu_ir_al_album),
                                     onClick = {
                                         onGoToAlbum()
                                         handleDismiss()
@@ -369,7 +371,7 @@ fun GlassBoxScope.AppleMusicSongMenu(
                             if (onGoToArtist != null) {
                                 VerticalMenuActionItem(
                                     icon = Icons.Default.Mic,
-                                    label = "Ir al artista",
+                                    label = stringResource(R.string.menu_ir_al_artista),
                                     onClick = {
                                         onGoToArtist()
                                         handleDismiss()
@@ -379,16 +381,16 @@ fun GlassBoxScope.AppleMusicSongMenu(
 
                             VerticalMenuActionItem(
                                 icon = Icons.Default.Info,
-                                label = "Ver créditos de la canción",
+                                label = stringResource(R.string.menu_ver_creditos),
                                 onClick = { showCreditsDialog = true }
                             )
 
                             VerticalMenuActionItem(
                                 icon = Icons.Default.PushPin,
-                                label = "Fijar en Accesos directos",
+                                label = stringResource(R.string.menu_fijar_accesos_directos),
                                 onClick = {
                                     LibraryManager.saveItem(libraryItem)
-                                    Toast.makeText(context, "Fijado en accesos directos", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, context.getString(R.string.menu_fijado_accesos_directos), Toast.LENGTH_SHORT).show()
                                     handleDismiss()
                                 }
                             )
@@ -400,17 +402,17 @@ fun GlassBoxScope.AppleMusicSongMenu(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             IconButton(onClick = { isPlaylistsScreen = false }) {
-                                Icon(Icons.Default.ArrowBackIosNew, contentDescription = "Atrás", tint = Color(0xFFFA243C))
+                                Icon(Icons.Default.ArrowBackIosNew, contentDescription = stringResource(R.string.lyrics_menu_back), tint = Color(0xFFFA243C))
                             }
                             Text(
-                                text = "Añadir a playlist",
+                                text = stringResource(R.string.menu_anadir_a_playlist),
                                 color = Color.White,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.weight(1f)
                             )
                             IconButton(onClick = { handleDismiss() }) {
-                                Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = Color.Gray)
+                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close_action), tint = Color.Gray)
                             }
                         }
 
@@ -427,9 +429,9 @@ fun GlassBoxScope.AppleMusicSongMenu(
                             // "Create new playlist" action
                             Row(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { showNewPlaylistDialog = true }
-                                    .padding(vertical = 14.dp, horizontal = 8.dp),
+                                .fillMaxWidth()
+                                .clickable { showNewPlaylistDialog = true }
+                                .padding(vertical = 14.dp, horizontal = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
@@ -440,7 +442,7 @@ fun GlassBoxScope.AppleMusicSongMenu(
                                 )
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Text(
-                                    text = "Nueva playlist...",
+                                    text = stringResource(R.string.menu_nueva_playlist_btn),
                                     color = Color(0xFFFA243C),
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.SemiBold
@@ -454,7 +456,7 @@ fun GlassBoxScope.AppleMusicSongMenu(
                                         .fillMaxWidth()
                                         .clickable {
                                             LibraryManager.addSongToPlaylist(playlist.id, libraryItem)
-                                            Toast.makeText(context, "Añadido a ${playlist.name}", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, context.getString(R.string.menu_anadido_a_playlist_format, playlist.name), Toast.LENGTH_SHORT).show()
                                             handleDismiss()
                                         }
                                         .padding(vertical = 14.dp, horizontal = 8.dp),
@@ -475,7 +477,7 @@ fun GlassBoxScope.AppleMusicSongMenu(
                                             fontWeight = FontWeight.Medium
                                         )
                                         Text(
-                                            text = "${playlist.items.size} canciones",
+                                            text = stringResource(R.string.menu_canciones_count_format, playlist.items.size),
                                             color = Color.Gray,
                                             fontSize = 12.sp
                                         )
@@ -503,7 +505,7 @@ fun GlassBoxScope.AppleMusicSongMenu(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "Nueva playlist",
+                        text = stringResource(R.string.menu_nueva_playlist_title),
                         color = Color.White,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
@@ -513,7 +515,7 @@ fun GlassBoxScope.AppleMusicSongMenu(
                     OutlinedTextField(
                         value = playlistName,
                         onValueChange = { playlistName = it },
-                        label = { Text("Nombre de la playlist", color = Color.Gray) },
+                        label = { Text(stringResource(R.string.menu_nombre_playlist_label), color = Color.Gray) },
                         singleLine = true,
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.Transparent,
@@ -533,7 +535,7 @@ fun GlassBoxScope.AppleMusicSongMenu(
                         horizontalArrangement = Arrangement.End
                     ) {
                         TextButton(onClick = { showNewPlaylistDialog = false }) {
-                            Text("Cancelar", color = Color.Gray)
+                            Text(stringResource(R.string.dialog_cancel), color = Color.Gray)
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Button(
@@ -545,14 +547,14 @@ fun GlassBoxScope.AppleMusicSongMenu(
                                     newPlaylist?.let {
                                         LibraryManager.addSongToPlaylist(it.id, libraryItem)
                                     }
-                                    Toast.makeText(context, "Playlist creada y canción añadida", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, context.getString(R.string.menu_playlist_creada_cancion_anadida), Toast.LENGTH_SHORT).show()
                                     showNewPlaylistDialog = false
                                     handleDismiss()
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFA243C))
                         ) {
-                            Text("Crear", color = Color.White)
+                            Text(stringResource(R.string.dialog_create), color = Color.White)
                         }
                     }
                 }
@@ -572,18 +574,18 @@ fun GlassBoxScope.AppleMusicSongMenu(
             ) {
                 Column {
                     Text(
-                        text = "Créditos de la canción",
+                        text = stringResource(R.string.menu_creditos_titulo),
                         color = Color.White,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
 
-                    CreditItem(label = "Título", value = song.title)
-                    CreditItem(label = "Artista", value = song.artist)
-                    CreditItem(label = "Álbum", value = song.album ?: "Desconocido")
-                    CreditItem(label = "ID del Video", value = song.id)
-                    CreditItem(label = "Proveedor", value = "YouTube Music / InnerTube")
+                    CreditItem(label = stringResource(R.string.menu_creditos_titulo_label), value = song.title)
+                    CreditItem(label = stringResource(R.string.menu_creditos_artista_label), value = song.artist)
+                    CreditItem(label = stringResource(R.string.menu_creditos_album_label), value = song.album ?: stringResource(R.string.menu_creditos_desconocido))
+                    CreditItem(label = stringResource(R.string.menu_creditos_videoid_label), value = song.id)
+                    CreditItem(label = stringResource(R.string.menu_creditos_proveedor_label), value = "YouTube Music / InnerTube")
 
                     Spacer(modifier = Modifier.height(24.dp))
 
@@ -595,7 +597,7 @@ fun GlassBoxScope.AppleMusicSongMenu(
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFA243C)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Entendido", color = Color.White)
+                        Text(stringResource(R.string.menu_creditos_entendido), color = Color.White)
                     }
                 }
             }
@@ -682,7 +684,7 @@ fun GlassBoxScope.AppleMusicAlbumMenu(
                     ) {
                         Icon(Icons.Default.Queue, null, tint = Color.White, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text("Add to Queue", color = Color.White, fontSize = 15.sp)
+                        Text(stringResource(R.string.menu_album_add_to_queue), color = Color.White, fontSize = 15.sp)
                     }
 
                     Divider(color = Color.White.copy(alpha = 0.08f))
@@ -700,7 +702,7 @@ fun GlassBoxScope.AppleMusicAlbumMenu(
                     ) {
                         Icon(Icons.Default.FavoriteBorder, null, tint = Color.White, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text("Save Playlist", color = Color.White, fontSize = 15.sp)
+                        Text(stringResource(R.string.menu_album_save_playlist), color = Color.White, fontSize = 15.sp)
                     }
 
                     Divider(color = Color.White.copy(alpha = 0.08f))
@@ -712,7 +714,7 @@ fun GlassBoxScope.AppleMusicAlbumMenu(
                             .clickable {
                                 handleDismiss()
                                 // Run background download of all tracks of this album/playlist
-                                Toast.makeText(context, "Obteniendo pistas del álbum...", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.menu_album_fetching_tracks), Toast.LENGTH_SHORT).show()
                                 scope.launch {
                                     try {
                                         withContext(Dispatchers.IO) {
@@ -737,9 +739,9 @@ fun GlassBoxScope.AppleMusicAlbumMenu(
                                             
                                             withContext(Dispatchers.Main) {
                                                 if (tracksToDownload.isNullOrEmpty()) {
-                                                    Toast.makeText(context, "No se pudieron obtener las pistas del álbum", Toast.LENGTH_SHORT).show()
+                                                    Toast.makeText(context, context.getString(R.string.menu_album_fetch_failed), Toast.LENGTH_SHORT).show()
                                                 } else {
-                                                    Toast.makeText(context, "Iniciando descarga de ${tracksToDownload.size} pistas...", Toast.LENGTH_SHORT).show()
+                                                    Toast.makeText(context, context.getString(R.string.menu_album_starting_download_format, tracksToDownload.size), Toast.LENGTH_SHORT).show()
                                                     tracksToDownload.forEach { track ->
                                                         downloadSong(
                                                             context = context,
@@ -755,7 +757,7 @@ fun GlassBoxScope.AppleMusicAlbumMenu(
                                             }
                                         }
                                     } catch (e: Exception) {
-                                        Toast.makeText(context, "Error al obtener pistas: ${e.localizedMessage ?: e.message}", Toast.LENGTH_LONG).show()
+                                        Toast.makeText(context, context.getString(R.string.menu_album_fetch_error_format, e.localizedMessage ?: (e.message ?: "")), Toast.LENGTH_LONG).show()
                                     }
                                 }
                             }
@@ -764,7 +766,7 @@ fun GlassBoxScope.AppleMusicAlbumMenu(
                     ) {
                         Icon(Icons.Default.ArrowDownward, null, tint = Color(0xFFFA243C), modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text("Descargar para offline", color = Color(0xFFFA243C), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.menu_album_download_offline), color = Color(0xFFFA243C), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -1925,7 +1927,7 @@ fun GlassBoxScope.PlaylistsPageMoreMenu(
                     Spacer(modifier = Modifier.width(8.dp))
                     Icon(Icons.Default.GridView, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("Cuadrícula", color = Color.White, fontSize = 15.sp)
+                    Text(stringResource(R.string.menu_view_grid), color = Color.White, fontSize = 15.sp)
                 }
 
                 Row(
@@ -1946,18 +1948,18 @@ fun GlassBoxScope.PlaylistsPageMoreMenu(
                     Spacer(modifier = Modifier.width(8.dp))
                     Icon(Icons.Default.List, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(12.dp))
-                    Text("Lista", color = Color.White, fontSize = 15.sp)
+                    Text(stringResource(R.string.menu_view_list), color = Color.White, fontSize = 15.sp)
                 }
 
                 Divider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 4.dp))
 
                 // Sort Options
                 val sortOptions = listOf(
-                    "title" to "Título",
-                    "date_added" to "Fecha de inclusión",
-                    "last_played" to "Fecha de última reproducción",
-                    "last_updated" to "Fecha de actualización",
-                    "type" to "Tipo de playlist"
+                    "title" to stringResource(R.string.menu_sort_title_label),
+                    "date_added" to stringResource(R.string.menu_sort_date_added),
+                    "last_played" to stringResource(R.string.menu_sort_last_played),
+                    "last_updated" to stringResource(R.string.menu_sort_last_updated),
+                    "type" to stringResource(R.string.menu_sort_playlist_type)
                 )
 
                 sortOptions.forEach { (optionKey, optionLabel) ->
@@ -2077,11 +2079,11 @@ fun GlassBoxScope.PlaylistsPageSortMenu(
                     .padding(vertical = 8.dp)
             ) {
                 val sortOptions = listOf(
-                    "title" to "Título",
-                    "date_added" to "Fecha de inclusión",
-                    "last_played" to "Fecha de última reproducción",
-                    "last_updated" to "Fecha de actualización",
-                    "type" to "Tipo de playlist"
+                    "title" to stringResource(R.string.menu_sort_title_label),
+                    "date_added" to stringResource(R.string.menu_sort_date_added),
+                    "last_played" to stringResource(R.string.menu_sort_last_played),
+                    "last_updated" to stringResource(R.string.menu_sort_last_updated),
+                    "type" to stringResource(R.string.menu_sort_playlist_type)
                 )
 
                 sortOptions.forEach { (optionKey, optionLabel) ->
@@ -2489,10 +2491,15 @@ fun GlassBoxScope.LyricsOptionsMenu(
     playerState: PlayerState?,
     selectedProvider: String,
     onSelectProvider: (String) -> Unit,
+    availableProviders: List<com.mrtdk.liquid_glass.utils.LyricsFetchResult> = emptyList(),
+    currentProviderIndex: Int = 0,
+    onSelectProviderIndex: (Int) -> Unit = {},
     isRomajiEnabled: Boolean,
     onToggleRomaji: () -> Unit,
     lyricsOffset: Int,
     onAdjustOffset: () -> Unit,
+    onAdjustOffsetDelta: (Float) -> Unit = {},
+    onResetOffset: () -> Unit = {},
     onEditLyrics: () -> Unit,
     onReloadLyrics: () -> Unit,
     onSearchManually: () -> Unit,
@@ -2560,7 +2567,7 @@ fun GlassBoxScope.LyricsOptionsMenu(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.4f))
+            .background(Color.Black.copy(alpha = 0.45f))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -2571,9 +2578,9 @@ fun GlassBoxScope.LyricsOptionsMenu(
         modifier = Modifier.fillMaxSize()
     ) {
         val density = LocalDensity.current
-        val menuWidth = 280.dp
+        val menuWidth = 300.dp
         val padding = 16.dp
-        val estimatedHeight = 240.dp
+        val estimatedHeight = 440.dp
 
         val screenWidthDp = maxWidth
         val screenHeightDp = maxHeight
@@ -2619,19 +2626,20 @@ fun GlassBoxScope.LyricsOptionsMenu(
                     }
                 }
                 .width(menuWidth)
-                .wrapContentHeight(),
+                .heightIn(max = screenHeightDp - 60.dp),
             blur = 0.8f,
             scale = 0.02f,
             centerDistortion = 0.1f,
             warpEdges = 0.4f,
-            elevation = 4.dp,
+            elevation = 6.dp,
             shape = RoundedCornerShape(cornerRadius.dp),
-            tint = dominantColor.copy(alpha = 0.25f),
-            darkness = 0.2f
+            tint = dominantColor.copy(alpha = 0.28f),
+            darkness = 0.22f
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .let { if (blurPx > 0.1f) it.blur(blurPx.dp) else it }
                     .padding(vertical = 12.dp)
             ) {
@@ -2639,64 +2647,101 @@ fun GlassBoxScope.LyricsOptionsMenu(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(onClick = { showProviderSelection = false }) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.lyrics_menu_back), tint = Color.White)
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.lyrics_menu_back), tint = Color.White)
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = stringResource(R.string.lyrics_menu_provider_title),
+                            text = "Distribuidores (${availableProviders.size})",
                             color = Color.White,
-                            fontSize = 17.sp,
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
 
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 8.dp))
-
-                    val providers = listOf(
-                        "LRCLIB",
-                        "KuGou",
-                        "BetterLyrics",
-                        "LyricsPlus",
-                        "SimpMusic",
-                        "YouTube Music",
-                        "YouTube Subtitle"
-                    )
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 6.dp))
 
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 8.dp)
+                            .padding(horizontal = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        providers.forEach { provider ->
-                            val isSelected = provider == selectedProvider
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        onSelectProvider(provider)
-                                        showProviderSelection = false
-                                    }
-                                    .padding(vertical = 12.dp, horizontal = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = if (isSelected) "$provider (${stringResource(R.string.lyrics_menu_active)})" else provider,
-                                    color = if (isSelected) Color(0xFFFA243C) else Color.White,
-                                    fontSize = 15.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                if (isSelected) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = stringResource(R.string.lyrics_menu_selected),
-                                        tint = Color(0xFFFA243C),
-                                        modifier = Modifier.size(18.dp)
+                        if (availableProviders.isNotEmpty()) {
+                            availableProviders.forEachIndexed { index, provider ->
+                                val isSelected = index == currentProviderIndex || provider.providerName.equals(selectedProvider, ignoreCase = true)
+                                val itemSyncColor = when (provider.syncType.lowercase()) {
+                                    "syllable", "richsync" -> Color(0xFFFDE69B)
+                                    "word" -> Color(0xFFAAD1FF)
+                                    "line", "linesync" -> Color(0xFFC9F8DA)
+                                    else -> Color.White.copy(alpha = 0.6f)
+                                }
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(if (isSelected) Color.White.copy(alpha = 0.12f) else Color.Transparent)
+                                        .clickable {
+                                            onSelectProviderIndex(index)
+                                            onSelectProvider(provider.providerName)
+                                            showProviderSelection = false
+                                        }
+                                        .padding(vertical = 10.dp, horizontal = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    SyncTypeBadge(syncType = provider.syncType, color = itemSyncColor, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(
+                                        text = provider.providerName,
+                                        color = if (isSelected) itemSyncColor else Color.White,
+                                        fontSize = 14.5.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        modifier = Modifier.weight(1f)
                                     )
+                                    if (isSelected) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = "Selected",
+                                            tint = itemSyncColor,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            listOf("Better Lyrics", "BiniLyrics", "LRCLib", "Musixmatch", "YouTube").forEach { name ->
+                                val isSelected = name.equals(selectedProvider, ignoreCase = true)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(if (isSelected) Color.White.copy(alpha = 0.12f) else Color.Transparent)
+                                        .clickable {
+                                            onSelectProvider(name)
+                                            showProviderSelection = false
+                                        }
+                                        .padding(vertical = 10.dp, horizontal = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = name,
+                                        color = if (isSelected) Color(0xFFFDE69B) else Color.White,
+                                        fontSize = 14.5.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    if (isSelected) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = "Selected",
+                                            tint = Color(0xFFFDE69B),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -2705,36 +2750,30 @@ fun GlassBoxScope.LyricsOptionsMenu(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(onClick = { showExportFormatSelection = false }) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.lyrics_menu_back), tint = Color.White)
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.lyrics_menu_back), tint = Color.White)
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = stringResource(R.string.lyrics_menu_export_lyrics),
                             color = Color.White,
-                            fontSize = 17.sp,
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
 
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 8.dp))
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 6.dp))
 
                     val formats = listOf("LRC", "ELRC", "TTML")
-                    val formatLabels = listOf(
-                        stringResource(R.string.lyrics_menu_export_lrc),
-                        stringResource(R.string.lyrics_menu_export_elrc),
-                        stringResource(R.string.lyrics_menu_export_ttml)
-                    )
-
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 8.dp)
                     ) {
-                        formats.forEachIndexed { index, format ->
+                        formats.forEach { format ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -2746,7 +2785,7 @@ fun GlassBoxScope.LyricsOptionsMenu(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = formatLabels[index],
+                                    text = format,
                                     color = Color.White,
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Normal,
@@ -2762,210 +2801,318 @@ fun GlassBoxScope.LyricsOptionsMenu(
                         }
                     }
                 } else {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable {
-                                    onEditLyrics()
-                                    handleDismiss()
-                                }
-                                .padding(vertical = 8.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.lyrics_menu_edit), tint = Color.White, modifier = Modifier.size(24.dp))
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(stringResource(R.string.lyrics_menu_edit), color = Color.White, fontSize = 11.sp, textAlign = TextAlign.Center)
-                        }
-
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable {
-                                    onReloadLyrics()
-                                    handleDismiss()
-                                }
-                                .padding(vertical = 8.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.lyrics_menu_reload), tint = Color.White, modifier = Modifier.size(24.dp))
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(stringResource(R.string.lyrics_menu_reload), color = Color.White, fontSize = 11.sp, textAlign = TextAlign.Center)
-                        }
-
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable {
-                                    onSearchManually()
-                                    handleDismiss()
-                                }
-                                .padding(vertical = 8.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(Icons.Default.Search, contentDescription = stringResource(R.string.lyrics_menu_search), tint = Color.White, modifier = Modifier.size(24.dp))
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(stringResource(R.string.lyrics_menu_search), color = Color.White, fontSize = 11.sp, textAlign = TextAlign.Center)
-                        }
-                    }
-
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 8.dp))
-
+                    // --- Better Lyrics & Glassy Music Settings Panel (Separated Pill Cards) ---
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .padding(horizontal = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        VerticalMenuActionItem(
-                            icon = Icons.Default.QueueMusic,
-                            label = stringResource(R.string.lyrics_menu_provider_label, selectedProvider),
-                            onClick = {
-                                showProviderSelection = true
-                            }
+                        // Title
+                        Text(
+                            text = "Ajustes de Letras",
+                            color = Color.White.copy(alpha = 0.95f),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                         )
 
-                        VerticalMenuActionItem(
-                            icon = Icons.Default.History,
-                            label = stringResource(R.string.lyrics_menu_adjust_offset),
-                            trailingContent = {
-                                Text(
-                                    text = "${if (lyricsOffset >= 0) "+" else ""}${lyricsOffset}ms",
-                                    color = Color.White.copy(alpha = 0.6f),
-                                    fontSize = 14.sp
-                                )
-                            },
-                            onClick = {
-                                onAdjustOffset()
-                                handleDismiss()
+                        // --- Pill 1: Distribuidor y Tipografía ---
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color.White.copy(alpha = 0.08f))
+                                .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
+                        ) {
+                            val activeProvName = availableProviders.getOrNull(currentProviderIndex)?.providerName ?: selectedProvider.ifEmpty { "Better Lyrics" }
+                            val activeSyncType = availableProviders.getOrNull(currentProviderIndex)?.syncType ?: "syllable"
+                            val provSyncColor = when (activeSyncType.lowercase()) {
+                                "syllable", "richsync" -> Color(0xFFFDE69B)
+                                "word" -> Color(0xFFAAD1FF)
+                                "line", "linesync" -> Color(0xFFC9F8DA)
+                                else -> Color.White.copy(alpha = 0.6f)
                             }
-                        )
 
-                        VerticalMenuActionItem(
-                            icon = Icons.Default.Translate,
-                            label = stringResource(R.string.lyrics_menu_romanize),
-                            trailingContent = {
-                                androidx.compose.material3.Switch(
-                                    checked = isRomajiEnabled,
-                                    onCheckedChange = {
-                                        onToggleRomaji()
-                                    },
-                                    colors = androidx.compose.material3.SwitchDefaults.colors(
-                                        checkedThumbColor = Color(0xFFFA243C),
-                                        checkedTrackColor = Color(0xFFFA243C).copy(alpha = 0.4f)
-                                    ),
-                                    modifier = Modifier.graphicsLayer { scaleX = 0.8f; scaleY = 0.8f }
-                                )
-                            },
-                            onClick = {
-                                onToggleRomaji()
-                            }
-                        )
+                            VerticalMenuActionItem(
+                                icon = Icons.AutoMirrored.Filled.QueueMusic,
+                                label = "Distribuidor de Letras",
+                                trailingContent = {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        SyncTypeBadge(syncType = activeSyncType, color = provSyncColor, modifier = Modifier.size(12.dp))
+                                        Text(
+                                            text = "$activeProvName (${if (availableProviders.isNotEmpty()) "${currentProviderIndex + 1}/${availableProviders.size}" else "1/1"})",
+                                            color = provSyncColor,
+                                            fontSize = 12.5.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    showProviderSelection = true
+                                }
+                            )
 
-                        VerticalMenuActionItem(
-                            icon = Icons.Default.Language,
-                            label = stringResource(R.string.lyrics_menu_show_translation),
-                            trailingContent = {
-                                androidx.compose.material3.Switch(
-                                    checked = isTranslationEnabled,
-                                    onCheckedChange = {
-                                        onToggleTranslation()
-                                    },
-                                    colors = androidx.compose.material3.SwitchDefaults.colors(
-                                        checkedThumbColor = Color(0xFFFA243C),
-                                        checkedTrackColor = Color(0xFFFA243C).copy(alpha = 0.4f)
-                                    ),
-                                    modifier = Modifier.graphicsLayer { scaleX = 0.8f; scaleY = 0.8f }
-                                )
-                            },
-                            onClick = {
-                                onToggleTranslation()
-                            }
-                        )
+                            HorizontalDivider(color = Color.White.copy(alpha = 0.06f), modifier = Modifier.padding(horizontal = 12.dp))
 
-                        VerticalMenuActionItem(
-                            icon = Icons.Default.MusicNote,
-                            label = stringResource(R.string.lyrics_menu_show_accompaniment),
-                            trailingContent = {
-                                androidx.compose.material3.Switch(
-                                    checked = isAccompanimentEnabled,
-                                    onCheckedChange = {
-                                        onToggleAccompaniment()
-                                    },
-                                    colors = androidx.compose.material3.SwitchDefaults.colors(
-                                        checkedThumbColor = Color(0xFFFA243C),
-                                        checkedTrackColor = Color(0xFFFA243C).copy(alpha = 0.4f)
-                                    ),
-                                    modifier = Modifier.graphicsLayer { scaleX = 0.8f; scaleY = 0.8f }
-                                )
-                            },
-                            onClick = {
-                                onToggleAccompaniment()
+                            var currentFont by remember { 
+                                mutableStateOf(com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_font_family") ?: "Satoshi") 
                             }
-                        )
+                            VerticalMenuActionItem(
+                                icon = Icons.Default.FontDownload,
+                                label = "Fuente de Letras",
+                                trailingContent = {
+                                    Text(
+                                        text = currentFont,
+                                        color = Color.White.copy(alpha = 0.75f),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                },
+                                onClick = {
+                                    val nextFont = when (currentFont) {
+                                        "Satoshi" -> "Inter"
+                                        "Inter" -> "Sistema"
+                                        else -> "Satoshi"
+                                    }
+                                    currentFont = nextFont
+                                    com.mrtdk.liquid_glass.data.LibraryManager.saveString("lyrics_font_family", nextFont)
+                                }
+                            )
+                        }
 
-                        VerticalMenuActionItem(
-                            icon = Icons.Default.Mic,
-                            label = stringResource(R.string.lyrics_menu_enable_karaoke),
-                            trailingContent = {
-                                androidx.compose.material3.Switch(
-                                    checked = isKaraokeEnabled,
-                                    onCheckedChange = {
-                                        onToggleKaraoke()
-                                    },
-                                    colors = androidx.compose.material3.SwitchDefaults.colors(
-                                        checkedThumbColor = Color(0xFFFA243C),
-                                        checkedTrackColor = Color(0xFFFA243C).copy(alpha = 0.4f)
-                                    ),
-                                    modifier = Modifier.graphicsLayer { scaleX = 0.8f; scaleY = 0.8f }
-                                )
-                            },
-                            onClick = {
-                                onToggleKaraoke()
+                        // --- Pill 2: Animaciones y Motor ---
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color.White.copy(alpha = 0.08f))
+                                .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
+                        ) {
+                            var isGlowEnabled by remember {
+                                mutableStateOf((com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_glow_enabled") ?: "true") == "true")
                             }
-                        )
+                            VerticalMenuActionItem(
+                                icon = Icons.Default.AutoAwesome,
+                                label = "Resplandor Karaoke (Glow)",
+                                trailingContent = {
+                                    androidx.compose.material3.Switch(
+                                        checked = isGlowEnabled,
+                                        onCheckedChange = {
+                                            isGlowEnabled = it
+                                            com.mrtdk.liquid_glass.data.LibraryManager.saveString("lyrics_glow_enabled", it.toString())
+                                        },
+                                        colors = androidx.compose.material3.SwitchDefaults.colors(
+                                            checkedThumbColor = Color(0xFFFDE69B),
+                                            checkedTrackColor = Color(0xFFFDE69B).copy(alpha = 0.4f)
+                                        ),
+                                        modifier = Modifier.graphicsLayer { scaleX = 0.8f; scaleY = 0.8f }
+                                    )
+                                },
+                                onClick = {
+                                    isGlowEnabled = !isGlowEnabled
+                                    com.mrtdk.liquid_glass.data.LibraryManager.saveString("lyrics_glow_enabled", isGlowEnabled.toString())
+                                }
+                            )
 
-                        VerticalMenuActionItem(
-                            icon = Icons.Default.People,
-                            label = stringResource(R.string.lyrics_menu_enable_duet),
-                            trailingContent = {
-                                androidx.compose.material3.Switch(
-                                    checked = isDuetEnabled,
-                                    onCheckedChange = {
-                                        onToggleDuet()
-                                    },
-                                    colors = androidx.compose.material3.SwitchDefaults.colors(
-                                        checkedThumbColor = Color(0xFFFA243C),
-                                        checkedTrackColor = Color(0xFFFA243C).copy(alpha = 0.4f)
-                                    ),
-                                    modifier = Modifier.graphicsLayer { scaleX = 0.8f; scaleY = 0.8f }
-                                )
-                            },
-                            onClick = {
-                                onToggleDuet()
-                            }
-                        )
+                            HorizontalDivider(color = Color.White.copy(alpha = 0.06f), modifier = Modifier.padding(horizontal = 12.dp))
 
-                        VerticalMenuActionItem(
-                            icon = Icons.Default.ContentCopy,
-                            label = stringResource(R.string.lyrics_menu_export_lyrics),
-                            onClick = {
-                                showExportFormatSelection = true
+                            var scrollMode by remember {
+                                mutableStateOf(com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_scroll_mode") ?: "GlassyFlow")
                             }
-                        )
+                            VerticalMenuActionItem(
+                                icon = Icons.Default.SwapVert,
+                                label = "Desplazamiento",
+                                trailingContent = {
+                                    Text(
+                                        text = scrollMode,
+                                        color = Color(0xFFC9F8DA),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                },
+                                onClick = {
+                                    val nextMode = if (scrollMode == "GlassyFlow") "Smooth" else "GlassyFlow"
+                                    scrollMode = nextMode
+                                    com.mrtdk.liquid_glass.data.LibraryManager.saveString("lyrics_scroll_mode", nextMode)
+                                }
+                            )
+                        }
 
-                        VerticalMenuActionItem(
-                            icon = Icons.Default.Language,
-                            label = stringResource(R.string.lyrics_menu_search_online),
-                            onClick = {
-                                onSearchOnline()
-                                handleDismiss()
+                        // --- Pill 3: Traducción y Desfase ---
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color.White.copy(alpha = 0.08f))
+                                .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
+                        ) {
+                            VerticalMenuActionItem(
+                                icon = Icons.Default.Translate,
+                                label = "Romanización (Romaji / Pinyin)",
+                                trailingContent = {
+                                    androidx.compose.material3.Switch(
+                                        checked = isRomajiEnabled,
+                                        onCheckedChange = {
+                                            onToggleRomaji()
+                                        },
+                                        colors = androidx.compose.material3.SwitchDefaults.colors(
+                                            checkedThumbColor = Color(0xFFFA243C),
+                                            checkedTrackColor = Color(0xFFFA243C).copy(alpha = 0.4f)
+                                        ),
+                                        modifier = Modifier.graphicsLayer { scaleX = 0.8f; scaleY = 0.8f }
+                                    )
+                                },
+                                onClick = {
+                                    onToggleRomaji()
+                                }
+                            )
+
+                            HorizontalDivider(color = Color.White.copy(alpha = 0.06f), modifier = Modifier.padding(horizontal = 12.dp))
+
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Icon(Icons.Default.Schedule, contentDescription = null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
+                                        Text("Desfase de Tiempo", color = Color.White, fontSize = 14.sp)
+                                    }
+                                    Text(
+                                        text = "${if (lyricsOffset >= 0) "+" else ""}${String.format("%.1f", lyricsOffset / 1000f)}s",
+                                        color = Color(0xFFFDE69B),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Color.White.copy(alpha = 0.10f))
+                                            .clickable { onAdjustOffsetDelta(-0.5f) }
+                                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("-0.5s", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Color.White.copy(alpha = 0.10f))
+                                            .clickable { onAdjustOffsetDelta(-0.1f) }
+                                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("-0.1s", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Color.White.copy(alpha = 0.18f))
+                                            .clickable { onResetOffset() }
+                                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("0.0s", color = Color(0xFFFDE69B), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Color.White.copy(alpha = 0.10f))
+                                            .clickable { onAdjustOffsetDelta(0.1f) }
+                                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("+0.1s", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Color.White.copy(alpha = 0.10f))
+                                            .clickable { onAdjustOffsetDelta(0.5f) }
+                                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("+0.5s", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
                             }
-                        )
+                        }
+
+                        // --- Pill 4: Acciones Rápidas ---
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color.White.copy(alpha = 0.08f))
+                                .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
+                                .padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable {
+                                        onEditLyrics()
+                                        handleDismiss()
+                                    }
+                                    .padding(vertical = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(Icons.Default.Edit, contentDescription = "Editar", tint = Color.White, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text("Editar", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
+                            }
+
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable {
+                                        onReloadLyrics()
+                                        handleDismiss()
+                                    }
+                                    .padding(vertical = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(Icons.Default.Refresh, contentDescription = "Recargar", tint = Color.White, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text("Recargar", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
+                            }
+
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable {
+                                        onSearchManually()
+                                        handleDismiss()
+                                    }
+                                    .padding(vertical = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(Icons.Default.Flag, contentDescription = "Reportar", tint = Color.White, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text("Reportar", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
+                            }
+                        }
                     }
                 }
             }
