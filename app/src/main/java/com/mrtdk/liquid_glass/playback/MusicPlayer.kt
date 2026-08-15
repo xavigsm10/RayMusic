@@ -439,10 +439,11 @@ class MusicPlayer(private val context: Context) {
 
             kotlinx.coroutines.coroutineScope {
                 val clientsToTry = listOf(
-                    com.echo.innertube.models.YouTubeClient.IOS,
-                    com.echo.innertube.models.YouTubeClient.WEB_REMIX,
                     com.echo.innertube.models.YouTubeClient.ANDROID_VR_NO_AUTH,
-                    com.echo.innertube.models.YouTubeClient.TVHTML5_SIMPLY_EMBEDDED_PLAYER
+                    com.echo.innertube.models.YouTubeClient.ANDROID_VR_1_61_48,
+                    com.echo.innertube.models.YouTubeClient.TVHTML5_SIMPLY_EMBEDDED_PLAYER,
+                    com.echo.innertube.models.YouTubeClient.WEB_REMIX,
+                    com.echo.innertube.models.YouTubeClient.IOS
                 )
 
                 val httpClient = okhttp3.OkHttpClient.Builder()
@@ -548,10 +549,6 @@ class MusicPlayer(private val context: Context) {
                 } catch (e: Exception) {
                     android.util.Log.e("MusicPlayer", "Final NewPipe fallback failed: ${e.message}")
                 }
-            }
-
-            if (formatUrl != null && !formatUrl!!.contains("c=")) {
-                formatUrl = formatUrl + (if (formatUrl!!.contains("?")) "&" else "?") + "c=" + usedClient
             }
 
             formatUrl
