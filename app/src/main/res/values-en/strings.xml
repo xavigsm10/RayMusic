@@ -2,7 +2,7 @@
     <string name="app_name">RayMusic</string>
     <string name="sync_lyrics">Resume auto-scroll</string>
     <string name="nav_inicio">Home</string>
-    <string name="nav_novedades">New Releases</string>
+    <string name="nav_novedades">New</string>
     <string name="nav_radio">Radio</string>
     <string name="nav_biblioteca">Library</string>
     <string name="search_placeholder">Search RayMusic</string>

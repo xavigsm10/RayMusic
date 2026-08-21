@@ -218,7 +218,8 @@ object YouTube {
             )
         } else {
             val playlistId = AlbumPage.getPlaylistId(response)
-                ?: response.microformat?.microformatDataRenderer?.urlCanonical?.substringAfterLast('=')
+                ?: response.microformat?.microformatDataRenderer?.urlCanonical?.substringAfterLast('=').takeIf { !it.isNullOrBlank() && !it.startsWith("http") }
+                ?: if (browseId.startsWith("MPREb_")) "OLAK5uy_${browseId.removePrefix("MPREb_")}" else null
                 ?: throw Exception("Playlist ID not found")
 
             val title = AlbumPage.getTitle(response)
@@ -1279,6 +1280,10 @@ object YouTube {
                 } ?: false
             }
             .jsonPrimitive.content
+    }
+
+    suspend fun refreshVisitorData(): Result<String> = visitorData().onSuccess {
+        visitorData = it
     }
 
     suspend fun accountInfo(): Result<AccountInfo> = runCatching {

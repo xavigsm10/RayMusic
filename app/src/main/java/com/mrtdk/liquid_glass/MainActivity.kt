@@ -9,6 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -31,6 +32,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -133,8 +135,19 @@ class MainActivity : ComponentActivity() {
             } catch (e: Exception) { }
         }
 
-        // Configure global Coil ImageLoader to automatically upgrade all images to HD
+        // Configure global Coil ImageLoader with memory and disk caches
         val globalImageLoader = coil.ImageLoader.Builder(this)
+            .memoryCache {
+                coil.memory.MemoryCache.Builder(this)
+                    .maxSizePercent(0.25)
+                    .build()
+            }
+            .diskCache {
+                coil.disk.DiskCache.Builder()
+                    .directory(cacheDir.resolve("image_cache"))
+                    .maxSizePercent(0.05)
+                    .build()
+            }
             .components {
                 add(com.mrtdk.liquid_glass.utils.CoilUtils.HdThumbnailInterceptor())
             }
@@ -143,51 +156,6 @@ class MainActivity : ComponentActivity() {
         musicPlayer = MusicPlayer(this)
         com.mrtdk.liquid_glass.data.LibraryManager.init(applicationContext)
 
-        // ListenTogether integration
-        com.mrtdk.liquid_glass.playback.ListenTogetherManager.onPlaybackActionReceived = { action, position, trackId, title, artist, artUrl ->
-            musicPlayer?.let { player ->
-                com.mrtdk.liquid_glass.playback.ListenTogetherManager.isSyncing = true
-                try {
-                    val isNewSong = trackId != null && trackId.isNotEmpty() && trackId != player.controller?.currentMediaItem?.mediaId
-                    if (isNewSong) {
-                        player.playOnlineSong(trackId!!, title, artist, artUrl)
-                    }
-
-                    when (action) {
-                        "play" -> {
-                            if (player.isPlaying.value == false) {
-                                player.controller?.play()
-                            }
-                            if (position != null && position > 0L) {
-                                val currentPos = player.currentPosition.value
-                                if (isNewSong || Math.abs(currentPos - position) > 2000L) {
-                                    player.seekTo(position)
-                                }
-                            }
-                        }
-                        "pause" -> {
-                            if (player.isPlaying.value == true) {
-                                player.pause()
-                            }
-                            if (position != null) {
-                                player.seekTo(position)
-                            }
-                        }
-                        "seek" -> {
-                            if (position != null) {
-                                player.seekTo(position)
-                            }
-                        }
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.e("MainActivity", "Error applying ListenTogether action", e)
-                } finally {
-                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                        com.mrtdk.liquid_glass.playback.ListenTogetherManager.isSyncing = false
-                    }, 800)
-                }
-            }
-        }
         val showDownloads = intent.getBooleanExtra("navigate_to_downloads", false)
         if (showDownloads) {
             navigateToDownloads = true
@@ -395,33 +363,37 @@ class MainActivity : ComponentActivity() {
                     LaunchedEffect(playerState?.artUrl) {
                         val url = playerState?.artUrl
                         if (url != null) {
-                            val hdUrl = if (url is String) {
-                                when {
-                                    url.contains("=w") || url.contains("=s") -> {
-                                        val idx = url.indexOf("=w").takeIf { j -> j != -1 } ?: url.indexOf("=s")
-                                        url.substring(0, idx) + "=w300-h300-rj"
+                            withContext(Dispatchers.Default) {
+                                val hdUrl = if (url is String) {
+                                    when {
+                                        url.contains("=w") || url.contains("=s") -> {
+                                            val idx = url.indexOf("=w").takeIf { j -> j != -1 } ?: url.indexOf("=s")
+                                            url.substring(0, idx) + "=w300-h300-rj"
+                                        }
+                                        url.contains("ytimg.com/vi/") -> url.replace("hqdefault", "mqdefault")
+                                        else -> url
                                     }
-                                    url.contains("ytimg.com/vi/") -> url.replace("hqdefault", "mqdefault")
-                                    else -> url
+                                } else url
+                                val request = coil.request.ImageRequest.Builder(context)
+                                    .data(hdUrl).allowHardware(false).size(80).build()
+                                val result = coil.Coil.imageLoader(context).execute(request)
+                                if (result is coil.request.SuccessResult) {
+                                    val drawable = result.drawable
+                                    val bitmap = (drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                                        ?: android.graphics.Bitmap.createBitmap(1, 1, android.graphics.Bitmap.Config.ARGB_8888).also {
+                                            val canvas = android.graphics.Canvas(it)
+                                            drawable.setBounds(0, 0, canvas.width, canvas.height)
+                                            drawable.draw(canvas)
+                                        }
+                                    try {
+                                        val sampledColor = Color(bitmap.getPixel(bitmap.width / 2, bitmap.height - 1))
+                                        withContext(Dispatchers.Main) {
+                                            globalDominantColor = sampledColor
+                                            LibraryManager.currentDominantColor.value = sampledColor
+                                            contentTintColor = Color.White
+                                        }
+                                    } catch (e: Exception) { }
                                 }
-                            } else url
-                            val request = coil.request.ImageRequest.Builder(context)
-                                .data(hdUrl).allowHardware(false).size(100).build()
-                            val result = coil.Coil.imageLoader(context).execute(request)
-                            if (result is coil.request.SuccessResult) {
-                                val drawable = result.drawable
-                                val bitmap = (drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
-                                    ?: android.graphics.Bitmap.createBitmap(1, 1, android.graphics.Bitmap.Config.ARGB_8888).also {
-                                        val canvas = android.graphics.Canvas(it)
-                                        drawable.setBounds(0, 0, canvas.width, canvas.height)
-                                        drawable.draw(canvas)
-                                    }
-                                try {
-                                    val sampledColor = Color(bitmap.getPixel(bitmap.width / 2, bitmap.height - 1))
-                                    globalDominantColor = sampledColor
-                                    LibraryManager.currentDominantColor.value = sampledColor
-                                    contentTintColor = Color.White
-                                } catch (e: Exception) { }
                             }
                         } else {
                             globalDominantColor = Color.White.copy(alpha = 0.15f)
@@ -533,31 +505,49 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
+                    var radioLoadingJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+                    val radioScope = rememberCoroutineScope()
+
                     LaunchedEffect(Unit) {
                         androidx.compose.runtime.snapshotFlow { 
                             Pair(playerState?.videoId, playerState?.isExclusiveQueue)
                         }.collect { (vid, isExclusive) ->
                             if (vid == null) return@collect
                             if (isExclusive == true) {
+                                radioLoadingJob?.cancel()
                                 upNextSongs = emptyList()
                                 com.mrtdk.liquid_glass.playback.PlaybackQueue.upNextSongs = emptyList()
                                 com.mrtdk.liquid_glass.playback.PlaybackQueue.onQueueChanged?.invoke()
                                 return@collect
                             }
-                            if (upNextSongs.isEmpty()) {
-                                queueSeedVideoId = vid
-                                com.mrtdk.liquid_glass.playback.PlaybackQueue.queueSeedVideoId = vid
-                                val isAutoplayEnabled = com.mrtdk.liquid_glass.data.LibraryManager.getString("autoplay_similar", "true") == "true"
-                                if (isAutoplayEnabled) {
-                                    withContext(kotlinx.coroutines.Dispatchers.IO) {
-                                        val endpoint = com.echo.innertube.models.WatchEndpoint(videoId = vid)
-                                        com.echo.innertube.YouTube.next(endpoint).onSuccess { nextResult ->
-                                            queueEndpoint = nextResult.endpoint
-                                            com.mrtdk.liquid_glass.playback.PlaybackQueue.queueEndpoint = nextResult.endpoint
-                                            queueContinuation = nextResult.continuation
-                                            com.mrtdk.liquid_glass.playback.PlaybackQueue.queueContinuation = nextResult.continuation
-                                            val items = nextResult.items
-                                            val nextItems = if (items.isNotEmpty() && items.first().id == vid) items.drop(1) else items
+                            
+                            val isAutoplayEnabled = com.mrtdk.liquid_glass.data.LibraryManager.getString("autoplay_similar", "true") == "true"
+                            if (isAutoplayEnabled) {
+                                radioLoadingJob?.cancel()
+                                radioLoadingJob = radioScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                    queueSeedVideoId = vid
+                                    com.mrtdk.liquid_glass.playback.PlaybackQueue.queueSeedVideoId = vid
+
+                                    val endpoint = com.echo.innertube.models.WatchEndpoint(videoId = vid)
+                                    var result = com.echo.innertube.YouTube.next(endpoint).getOrNull()
+
+                                    // Fallback to RDAMVM radio playlist if primary endpoint failed or is empty
+                                    if (result == null || result.items.isEmpty()) {
+                                        val fallbackEndpoint = com.echo.innertube.models.WatchEndpoint(videoId = vid, playlistId = "RDAMVM$vid")
+                                        result = com.echo.innertube.YouTube.next(fallbackEndpoint).getOrNull()
+                                    }
+
+                                    if (result != null) {
+                                        val ep = result.endpoint
+                                        val cont = result.continuation
+                                        val items = result.items
+                                        val nextItems = if (items.isNotEmpty() && items.first().id == vid) items.drop(1) else items
+
+                                        withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                            queueEndpoint = ep
+                                            com.mrtdk.liquid_glass.playback.PlaybackQueue.queueEndpoint = ep
+                                            queueContinuation = cont
+                                            com.mrtdk.liquid_glass.playback.PlaybackQueue.queueContinuation = cont
                                             upNextSongs = nextItems
                                             com.mrtdk.liquid_glass.playback.PlaybackQueue.upNextSongs = nextItems
                                             com.mrtdk.liquid_glass.playback.PlaybackQueue.onQueueChanged?.invoke()
@@ -572,22 +562,28 @@ class MainActivity : ComponentActivity() {
                     LaunchedEffect(Unit) {
                         androidx.compose.runtime.snapshotFlow { upNextSongs.size }
                             .collect { size ->
-                                if (size in 1..3 && queueEndpoint != null && queueContinuation != null) {
+                                val currentEp = queueEndpoint
+                                val currentCont = queueContinuation
+                                if (size in 1..3 && currentEp != null && currentCont != null) {
                                     val isAutoplayEnabled = com.mrtdk.liquid_glass.data.LibraryManager.getString("autoplay_similar", "true") == "true"
                                     if (isAutoplayEnabled) {
                                         withContext(kotlinx.coroutines.Dispatchers.IO) {
-                                            com.echo.innertube.YouTube.next(queueEndpoint!!, queueContinuation).onSuccess { nextResult ->
-                                                queueEndpoint = nextResult.endpoint
-                                                com.mrtdk.liquid_glass.playback.PlaybackQueue.queueEndpoint = nextResult.endpoint
-                                                queueContinuation = nextResult.continuation
-                                                com.mrtdk.liquid_glass.playback.PlaybackQueue.queueContinuation = nextResult.continuation
+                                            com.echo.innertube.YouTube.next(currentEp, currentCont).onSuccess { nextResult ->
+                                                val newEp = nextResult.endpoint
+                                                val newCont = nextResult.continuation
                                                 val existingIds = upNextSongs.map { it.id }.toSet()
                                                 val newSongs = nextResult.items.filter { it.id !in existingIds }
                                                 if (newSongs.isNotEmpty()) {
-                                                    val updatedList = upNextSongs + newSongs
-                                                    upNextSongs = updatedList
-                                                    com.mrtdk.liquid_glass.playback.PlaybackQueue.upNextSongs = updatedList
-                                                    com.mrtdk.liquid_glass.playback.PlaybackQueue.onQueueChanged?.invoke()
+                                                    withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                                        queueEndpoint = newEp
+                                                        com.mrtdk.liquid_glass.playback.PlaybackQueue.queueEndpoint = newEp
+                                                        queueContinuation = newCont
+                                                        com.mrtdk.liquid_glass.playback.PlaybackQueue.queueContinuation = newCont
+                                                        val updatedList = upNextSongs + newSongs
+                                                        upNextSongs = updatedList
+                                                        com.mrtdk.liquid_glass.playback.PlaybackQueue.upNextSongs = updatedList
+                                                        com.mrtdk.liquid_glass.playback.PlaybackQueue.onQueueChanged?.invoke()
+                                                    }
                                                 }
                                             }
                                         }

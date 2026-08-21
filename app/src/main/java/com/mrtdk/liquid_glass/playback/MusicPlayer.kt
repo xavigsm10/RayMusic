@@ -49,6 +49,9 @@ class MusicPlayer(private val context: Context) {
     private val _playbackError = MutableStateFlow<String?>(null)
     val playbackError: StateFlow<String?> = _playbackError
 
+    private var retryAttempts = 0
+    private val MAX_RETRY_ATTEMPTS = 3
+
     init {
         val sessionToken = SessionToken(context, ComponentName(context, MusicService::class.java))
         controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
@@ -64,29 +67,18 @@ class MusicPlayer(private val context: Context) {
                     }
 
                     // ListenTogether sync broadcast
-                    if (com.mrtdk.liquid_glass.playback.ListenTogetherManager.isConnected &&
-                        com.mrtdk.liquid_glass.playback.ListenTogetherManager.role == "host" &&
-                        !com.mrtdk.liquid_glass.playback.ListenTogetherManager.isSyncing) {
-                        val currentPos = controller?.currentPosition ?: 0L
-                        val trackId = controller?.currentMediaItem?.mediaId
-                        val metadata = controller?.currentMediaItem?.mediaMetadata
-                        val title = metadata?.title?.toString()
-                        val artist = metadata?.artist?.toString()
-                        val artUrl = metadata?.artworkUri?.toString()
-                        com.mrtdk.liquid_glass.playback.ListenTogetherManager.sendPlaybackAction(
-                            if (isPlaying) "play" else "pause",
-                            currentPos,
-                            trackId,
-                            title,
-                            artist,
-                            artUrl
-                        )
+                    val ltManager = com.mrtdk.liquid_glass.listentogether.ListenTogetherManager.getInstance(context)
+                    if (ltManager.isInRoom && ltManager.isHost && !ltManager.isSyncing) {
+                        ltManager.broadcastPlayPause(isPlaying)
                     }
                 }
 
                 override fun onPlaybackStateChanged(playbackState: Int) {
                     if (playbackState == Player.STATE_READY) {
                         _duration.value = controller?.duration ?: 0L
+                        _playbackError.value = null
+                        retryAttempts = 0
+                        com.mrtdk.liquid_glass.utils.BotDetectionMitigator.notifyPlaybackSuccess()
                     }
                     if (playbackState == Player.STATE_ENDED) {
                         _songEnded.value = _songEnded.value + 1
@@ -95,31 +87,46 @@ class MusicPlayer(private val context: Context) {
 
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                     val rootCause = error.cause ?: error
+                    val errorMsg = error.message.orEmpty()
+                    val causeMsg = rootCause.message.orEmpty()
+                    val is403OrNetwork = errorMsg.contains("403") ||
+                            causeMsg.contains("403") ||
+                            error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ||
+                            error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
+                            error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ||
+                            error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_UNSPECIFIED ||
+                            rootCause is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException
+
+                    val currentMediaItem = controller?.currentMediaItem
+                    val currentVideoId = currentMediaItem?.mediaId
+
+                    if (is403OrNetwork && retryAttempts < MAX_RETRY_ATTEMPTS) {
+                        retryAttempts++
+                        android.util.Log.d("MusicPlayer", "Recoverable playback error ($errorMsg), silent recovery attempt #$retryAttempts")
+
+                        scope.launch(Dispatchers.IO) {
+                            if (!currentVideoId.isNullOrBlank()) {
+                                clearCache(currentVideoId)
+                                com.echo.innertube.YouTubeExtractor.clearCache()
+                            }
+                            if (errorMsg.contains("403") || causeMsg.contains("403") || rootCause is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException) {
+                                com.mrtdk.liquid_glass.utils.BotDetectionMitigator.notifyPlaybackFailure(YouTube.cookie != null, error.message)
+                                com.mrtdk.liquid_glass.utils.BotDetectionMitigator.rotateGuestSession()
+                            }
+                            delay(350)
+                            withContext(Dispatchers.Main) {
+                                reloadCurrentSong()
+                            }
+                        }
+                        return
+                    }
+
                     _playbackError.value = "Playback error (code ${error.errorCode}): ${error.message}\nCause: ${rootCause.localizedMessage ?: rootCause.toString()}"
                 }
                 
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                     _duration.value = controller?.duration ?: 0L
                     _playbackError.value = null
-
-                    // ListenTogether sync broadcast
-                    if (com.mrtdk.liquid_glass.playback.ListenTogetherManager.isConnected &&
-                        com.mrtdk.liquid_glass.playback.ListenTogetherManager.role == "host" &&
-                        !com.mrtdk.liquid_glass.playback.ListenTogetherManager.isSyncing) {
-                        val trackId = mediaItem?.mediaId
-                        val metadata = mediaItem?.mediaMetadata
-                        val title = metadata?.title?.toString()
-                        val artist = metadata?.artist?.toString()
-                        val artUrl = metadata?.artworkUri?.toString()
-                        com.mrtdk.liquid_glass.playback.ListenTogetherManager.sendPlaybackAction(
-                            "play",
-                            0L,
-                            trackId,
-                            title,
-                            artist,
-                            artUrl
-                        )
-                    }
                 }
 
                 override fun onPositionDiscontinuity(
@@ -129,22 +136,9 @@ class MusicPlayer(private val context: Context) {
                 ) {
                     if (reason == Player.DISCONTINUITY_REASON_SEEK) {
                         // ListenTogether sync broadcast
-                        if (com.mrtdk.liquid_glass.playback.ListenTogetherManager.isConnected &&
-                            com.mrtdk.liquid_glass.playback.ListenTogetherManager.role == "host" &&
-                            !com.mrtdk.liquid_glass.playback.ListenTogetherManager.isSyncing) {
-                            val trackId = controller?.currentMediaItem?.mediaId
-                            val metadata = controller?.currentMediaItem?.mediaMetadata
-                            val title = metadata?.title?.toString()
-                            val artist = metadata?.artist?.toString()
-                            val artUrl = metadata?.artworkUri?.toString()
-                            com.mrtdk.liquid_glass.playback.ListenTogetherManager.sendPlaybackAction(
-                                "seek",
-                                newPosition.positionMs,
-                                trackId,
-                                title,
-                                artist,
-                                artUrl
-                            )
+                        val ltManager = com.mrtdk.liquid_glass.listentogether.ListenTogetherManager.getInstance(context)
+                        if (ltManager.isInRoom && ltManager.isHost && !ltManager.isSyncing) {
+                            ltManager.broadcastSeek(newPosition.positionMs)
                         }
                     }
                 }
@@ -400,20 +394,37 @@ class MusicPlayer(private val context: Context) {
             // Extract stream URL for targetVideoId
             var formatUrl = extractDirectStreamUrl(targetVideoId, preferLow)
 
-            // Fallback: If direct stream extraction failed and we have song info, attempt search fallback
-            if (formatUrl == null && (!songTitle.isNullOrBlank() || !songArtist.isNullOrBlank())) {
-                val fallbackQuery = listOfNotNull(songArtist, songTitle).joinToString(" ").trim()
-                if (fallbackQuery.isNotBlank()) {
-                    val fallbackYtId = try {
-                        val searchResult = YouTube.search(fallbackQuery, YouTube.SearchFilter.FILTER_SONG).getOrNull()
-                            ?: YouTube.search(fallbackQuery, YouTube.SearchFilter.FILTER_VIDEO).getOrNull()
-                        searchResult?.items?.firstOrNull()?.id
-                    } catch (_: Exception) { null }
+            // Fallback: If direct stream extraction failed, attempt metadata lookup and search fallback
+            if (formatUrl == null) {
+                var resolvedTitle = songTitle
+                var resolvedArtist = songArtist
 
-                    if (fallbackYtId != null && isYouTubeId(fallbackYtId)) {
-                        formatUrl = extractDirectStreamUrl(fallbackYtId, preferLow)
-                        if (formatUrl != null) {
-                            spotifyToYtCache[videoId] = fallbackYtId
+                if (resolvedTitle.isNullOrBlank() && resolvedArtist.isNullOrBlank()) {
+                    try {
+                        val nextResult = YouTube.next(com.echo.innertube.models.WatchEndpoint(videoId = targetVideoId)).getOrNull()
+                        val item = nextResult?.items?.firstOrNull()
+                        if (item != null) {
+                            resolvedTitle = item.title
+                            resolvedArtist = item.artists?.firstOrNull()?.name
+                        }
+                    } catch (_: Exception) {}
+                }
+
+                if (!resolvedTitle.isNullOrBlank() || !resolvedArtist.isNullOrBlank()) {
+                    val fallbackQuery = listOfNotNull(resolvedArtist, resolvedTitle).joinToString(" ").trim()
+                    if (fallbackQuery.isNotBlank()) {
+                        val fallbackYtId = try {
+                            val searchResult = YouTube.search(fallbackQuery, YouTube.SearchFilter.FILTER_SONG).getOrNull()
+                                ?: YouTube.search(fallbackQuery, YouTube.SearchFilter.FILTER_VIDEO).getOrNull()
+                            searchResult?.items?.firstOrNull()?.id
+                        } catch (_: Exception) { null }
+
+                        if (fallbackYtId != null && isYouTubeId(fallbackYtId) && fallbackYtId != targetVideoId) {
+                            formatUrl = extractDirectStreamUrl(fallbackYtId, preferLow)
+                            if (formatUrl != null) {
+                                spotifyToYtCache[videoId] = fallbackYtId
+                                android.util.Log.d("MusicPlayer", "Recovered dead videoId $videoId -> playable $fallbackYtId for '$fallbackQuery'")
+                            }
                         }
                     }
                 }
@@ -434,124 +445,12 @@ class MusicPlayer(private val context: Context) {
                 try { YouTube.visitorData = YouTube.visitorData().getOrNull() } catch (_: Exception) {}
             }
 
-            var formatUrl: String? = null
-            var usedClient = "ANDROID"
-
-            kotlinx.coroutines.coroutineScope {
-                val clientsToTry = listOf(
-                    com.echo.innertube.models.YouTubeClient.ANDROID_VR_NO_AUTH,
-                    com.echo.innertube.models.YouTubeClient.ANDROID_VR_1_61_48,
-                    com.echo.innertube.models.YouTubeClient.TVHTML5_SIMPLY_EMBEDDED_PLAYER,
-                    com.echo.innertube.models.YouTubeClient.WEB_REMIX,
-                    com.echo.innertube.models.YouTubeClient.IOS
-                )
-
-                val httpClient = okhttp3.OkHttpClient.Builder()
-                    .proxy(YouTube.proxy)
-                    .connectTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
-                    .readTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
-                    .fastFallback(true)
-                    .build()
-
-                val channel = kotlinx.coroutines.channels.Channel<Pair<String, String>?>(clientsToTry.size + 1)
-
-                // Job 1: NewPipe Extraction
-                launch(Dispatchers.IO) {
-                    try {
-                        val fallbackStreams = YouTube.getNewPipeStreamUrls(videoId)
-                        val sortedFallback = fallbackStreams.filter { it.first == 251 || it.first == 140 || it.first == 250 || it.first == 249 || it.first == 139 || it.first == 171 }
-                            .sortedBy { itag ->
-                                when (itag.first) {
-                                    139 -> 48
-                                    249 -> 50
-                                    250 -> 70
-                                    140 -> 128
-                                    171 -> 128
-                                    251 -> 160
-                                    else -> 128
-                                }
-                            }
-                        val fallback = if (preferLow) {
-                            sortedFallback.firstOrNull() ?: fallbackStreams.firstOrNull()
-                        } else {
-                            sortedFallback.lastOrNull() ?: fallbackStreams.firstOrNull()
-                        }
-                        if (fallback != null) {
-                            android.util.Log.d("MusicPlayer", "Fast playback using NEWPIPE")
-                            channel.trySend(Pair(fallback.second, "ANDROID"))
-                            return@launch
-                        }
-                    } catch (e: Exception) {
-                        android.util.Log.e("MusicPlayer", "NewPipe fallback failed: ${e.message}")
-                    }
-                    channel.trySend(null)
-                }
-
-                val jobs = clientsToTry.map { client ->
-                    launch(Dispatchers.IO) {
-                        try {
-                            val signatureTimestamp = if (client.useSignatureTimestamp) com.echo.innertube.NewPipeUtils.getSignatureTimestamp(videoId).getOrNull() else null
-                            val playerResponse = YouTube.player(videoId, null, client, signatureTimestamp).getOrNull()
-
-                            val responseToUse = try {
-                                if (playerResponse != null) YouTube.newPipePlayer(videoId, playerResponse) ?: playerResponse else null
-                            } catch (_: Exception) {
-                                playerResponse
-                            }
-
-                            val formats = responseToUse?.streamingData?.adaptiveFormats ?: emptyList()
-                            val audioFormats = formats.filter { it.mimeType.startsWith("audio/") }
-                            val format = if (preferLow) {
-                                audioFormats.minByOrNull { it.bitrate } ?: formats.find { it.mimeType.startsWith("audio/") }
-                            } else {
-                                audioFormats.maxByOrNull { it.bitrate } ?: formats.find { it.mimeType.startsWith("audio/") }
-                            }
-
-                            if (format != null) {
-                                val candidateUrl = try {
-                                    com.echo.innertube.NewPipeUtils.getStreamUrl(format, videoId).getOrNull()
-                                } catch (_: Exception) {
-                                    null
-                                } ?: format.url
-
-                                if (!candidateUrl.isNullOrBlank()) {
-                                    channel.trySend(Pair(candidateUrl, client.clientName))
-                                    return@launch
-                                }
-                            }
-                        } catch (e: Exception) {
-                            android.util.Log.w("MusicPlayer", "Client ${client.clientName} failed for $videoId: ${e.message}")
-                        }
-                        channel.trySend(null)
-                    }
-                }
-
-                for (i in 0..clientsToTry.size) {
-                    val result = channel.receive()
-                    if (result != null) {
-                        formatUrl = result.first
-                        usedClient = result.second
-                        jobs.forEach { it.cancel() }
-                        break
-                    }
-                }
+            try {
+                com.mrtdk.liquid_glass.utils.YTPlayerUtils.resolveStreamUrl(videoId, preferLow)
+            } catch (e: Exception) {
+                android.util.Log.e("MusicPlayer", "YTPlayerUtils resolution failed: ${e.message}")
+                null
             }
-
-            // Fallback: If still null, try raw NewPipe stream info directly
-            if (formatUrl == null) {
-                try {
-                    val fallbackStreams = YouTube.getNewPipeStreamUrls(videoId)
-                    val rawUrl = fallbackStreams.firstOrNull()?.second
-                    if (rawUrl != null) {
-                        formatUrl = rawUrl
-                        usedClient = "ANDROID"
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.e("MusicPlayer", "Final NewPipe fallback failed: ${e.message}")
-                }
-            }
-
-            formatUrl
         }
     }
 }

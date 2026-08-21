@@ -12,5 +12,7 @@
 /captures
 .externalNativeBuild
 .cxx
-local.properties
 RayMusicEscritorioNativo/
+vivi-music/
+/.idea/
+**/build/

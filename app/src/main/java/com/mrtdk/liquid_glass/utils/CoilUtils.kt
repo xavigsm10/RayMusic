@@ -24,50 +24,46 @@ object CoilUtils {
         
         val upgraded = when {
             url.contains("mzstatic.com") -> {
-                url.replace(REGEX_MZSTATIC_1, "/1000x1000bb.jpg")
-                   .replace(REGEX_MZSTATIC_2, "/1000x1000bb.jpg")
-                   .replace(REGEX_MZSTATIC_3, "/1000x1000bb.jpg")
-                   .replace(REGEX_MZSTATIC_4, "/1000x1000bb.jpg")
+                url.replace(REGEX_MZSTATIC_1, "/500x500bb.jpg")
+                   .replace(REGEX_MZSTATIC_2, "/500x500bb.jpg")
+                   .replace(REGEX_MZSTATIC_3, "/500x500bb.jpg")
+                   .replace(REGEX_MZSTATIC_4, "/500x500bb.jpg")
             }
            
             url.contains("yt3.ggpht.com") -> {
                 val baseUrl = url.split("=")[0].split("-s")[0]
-                "$baseUrl=s1200"
+                "$baseUrl=s540"
             }
            
             url.contains("googleusercontent.com") || url.contains("ggpht.com") -> {
                 if (url.contains(REGEX_WS_1)) {
-                    url.replace(REGEX_WS_1_REPLACE, "=w1200-h1200-l90-rj")
+                    url.replace(REGEX_WS_1_REPLACE, "=w540-h540-l90-rj")
                 } else if (url.contains(REGEX_WS_2)) {
-                    url.replace(REGEX_WS_2_REPLACE, "-w1200-h1200")
+                    url.replace(REGEX_WS_2_REPLACE, "-w540-h540")
                 } else if (url.contains(REGEX_WS_3)) {
-                    url.replace(REGEX_WS_3_REPLACE, "/s1200")
+                    url.replace(REGEX_WS_3_REPLACE, "/s540")
                 } else {
                     val index = url.indexOf("=w").takeIf { it != -1 } ?: url.indexOf("=s")
                     if (index != -1) {
-                        url.substring(0, index) + "=w1200-h1200-l90-rj"
+                        url.substring(0, index) + "=w540-h540-l90-rj"
                     } else {
                         val clean = url.substringBefore("?")
-                        clean + "=w1200-h1200-l90-rj"
+                        clean + "=w540-h540-l90-rj"
                     }
                 }
             }
            
             url.contains("ytimg.com/vi") -> {
-                url.replace("/default.jpg", "/maxresdefault.jpg")
-                   .replace("/hqdefault.jpg", "/maxresdefault.jpg")
-                   .replace("/mqdefault.jpg", "/maxresdefault.jpg")
-                   .replace("/sddefault.jpg", "/maxresdefault.jpg")
-                   .replace("/default.webp", "/maxresdefault.jpg")
-                   .replace("/hqdefault.webp", "/maxresdefault.jpg")
-                   .replace("/mqdefault.webp", "/maxresdefault.jpg")
-                   .replace("/sddefault.webp", "/maxresdefault.jpg")
+                url.replace("/default.jpg", "/hqdefault.jpg")
+                   .replace("/default.webp", "/hqdefault.jpg")
+                   .replace("/sddefault.jpg", "/hqdefault.jpg")
+                   .replace("/sddefault.webp", "/hqdefault.jpg")
             }
              
             url.contains("=w") || url.contains("=s") -> {
                 val index = url.indexOf("=w").takeIf { it != -1 } ?: url.indexOf("=s")
                 if (index != -1) {
-                    url.substring(0, index) + "=w1200-h1200-l90-rj"
+                    url.substring(0, index) + "=w540-h540-l90-rj"
                 } else {
                     url
                 }

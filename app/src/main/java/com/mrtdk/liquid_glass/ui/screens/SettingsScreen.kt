@@ -869,18 +869,25 @@ fun PlayerSettingsScreen(
 fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
     val scrollState = rememberScrollState()
     val context = LocalContext.current
+    val ltManager = remember { com.mrtdk.liquid_glass.listentogether.ListenTogetherManager.getInstance(context) }
 
-    var isConnected by remember { mutableStateOf(com.mrtdk.liquid_glass.playback.ListenTogetherManager.isConnected) }
-    var roomCode by remember { mutableStateOf(com.mrtdk.liquid_glass.playback.ListenTogetherManager.roomCode) }
-    var role by remember { mutableStateOf(com.mrtdk.liquid_glass.playback.ListenTogetherManager.role) }
-    var username by remember { mutableStateOf(com.mrtdk.liquid_glass.playback.ListenTogetherManager.username) }
-    var serverUrl by remember { mutableStateOf(com.mrtdk.liquid_glass.playback.ListenTogetherManager.serverUrl) }
-    var usersCount by remember { mutableIntStateOf(com.mrtdk.liquid_glass.playback.ListenTogetherManager.users.size) }
-    // Fix: connectedUsers must be a reactive Compose state — reading MutableList directly
-    // from ListenTogetherManager is NOT observable and Compose won't recompose when it changes
-    var connectedUsers by remember { mutableStateOf(com.mrtdk.liquid_glass.playback.ListenTogetherManager.users.toList()) }
-    var hostUsername by remember { mutableStateOf(com.mrtdk.liquid_glass.playback.ListenTogetherManager.hostUsername) }
-    var isConnecting by remember { mutableStateOf(false) }
+    val roomState by ltManager.roomState.collectAsState()
+    val role by ltManager.role.collectAsState()
+    val connState by ltManager.connectionState.collectAsState()
+
+    val isConnected = ltManager.isInRoom
+    val roomCode = roomState?.roomCode ?: ""
+    val roleStr = when (role) {
+        com.mrtdk.liquid_glass.listentogether.RoomRole.HOST -> "host"
+        com.mrtdk.liquid_glass.listentogether.RoomRole.GUEST -> "guest"
+        else -> "none"
+    }
+    var username by remember { mutableStateOf(ltManager.client.storedUsername ?: LibraryManager.getString("listen_together_username", "") ?: "") }
+    var serverUrl by remember { mutableStateOf(ltManager.client.currentServerUrl) }
+    val usersCount = roomState?.users?.size ?: 0
+    val connectedUsers = roomState?.users?.map { it.username } ?: emptyList()
+    val hostUsername = roomState?.users?.find { it.isHost }?.username ?: ""
+    val isConnecting = connState == com.mrtdk.liquid_glass.listentogether.ConnectionState.CONNECTING || connState == com.mrtdk.liquid_glass.listentogether.ConnectionState.RECONNECTING
 
     var smartResync by remember { mutableStateOf(LibraryManager.getString("listen_together_smart_resync", "true") == "true") }
     var syncVolume by remember { mutableStateOf(LibraryManager.getString("listen_together_sync_volume", "true") == "true") }
@@ -889,28 +896,6 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
     var showUsernameDialog by remember { mutableStateOf(false) }
     var showServerDialog by remember { mutableStateOf(false) }
     var showJoinDialog by remember { mutableStateOf(false) }
-
-    DisposableEffect(Unit) {
-        val prevCallback = com.mrtdk.liquid_glass.playback.ListenTogetherManager.onStateChanged
-        com.mrtdk.liquid_glass.playback.ListenTogetherManager.onStateChanged = {
-            isConnected = com.mrtdk.liquid_glass.playback.ListenTogetherManager.isConnected
-            roomCode = com.mrtdk.liquid_glass.playback.ListenTogetherManager.roomCode
-            role = com.mrtdk.liquid_glass.playback.ListenTogetherManager.role
-            username = com.mrtdk.liquid_glass.playback.ListenTogetherManager.username
-            serverUrl = com.mrtdk.liquid_glass.playback.ListenTogetherManager.serverUrl
-            usersCount = com.mrtdk.liquid_glass.playback.ListenTogetherManager.users.size
-            // Snapshot the list into a new List so Compose detects the change
-            connectedUsers = com.mrtdk.liquid_glass.playback.ListenTogetherManager.users.toList()
-            hostUsername = com.mrtdk.liquid_glass.playback.ListenTogetherManager.hostUsername
-            // Once we get any state update, we are no longer "connecting"
-            if (isConnected || !com.mrtdk.liquid_glass.playback.ListenTogetherManager.isConnected) {
-                isConnecting = false
-            }
-        }
-        onDispose {
-            com.mrtdk.liquid_glass.playback.ListenTogetherManager.onStateChanged = prevCallback
-        }
-    }
 
     Column(
         modifier = Modifier
@@ -1035,7 +1020,7 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
                             fontWeight = FontWeight.ExtraBold,
                             letterSpacing = 8.sp
                         )
-                        if (role == "guest" && hostUsername.isNotBlank()) {
+                        if (roleStr == "guest" && hostUsername.isNotBlank()) {
                             Spacer(Modifier.height(6.dp))
                             Text(
                                 text = "Sala de $hostUsername",
@@ -1053,14 +1038,14 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
                             Box(
                                 modifier = Modifier
                                     .background(
-                                        color = if (role == "host") Color(0xFFFA243C).copy(alpha = 0.15f) else Color.White.copy(alpha = 0.08f),
+                                        color = if (roleStr == "host") Color(0xFFFA243C).copy(alpha = 0.15f) else Color.White.copy(alpha = 0.08f),
                                         shape = RoundedCornerShape(50.dp)
                                     )
                                     .padding(horizontal = 12.dp, vertical = 4.dp)
                             ) {
                                 Text(
-                                    text = if (role == "host") "👑 Anfitrión" else "🎵 Invitado",
-                                    color = if (role == "host") Color(0xFFFA243C) else Color.White,
+                                    text = if (roleStr == "host") "👑 Anfitrión" else "🎵 Invitado",
+                                    color = if (roleStr == "host") Color(0xFFFA243C) else Color.White,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold
                                 )
@@ -1135,8 +1120,8 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         
-                        val connectedUsers = com.mrtdk.liquid_glass.playback.ListenTogetherManager.users.toList()
-                        if (connectedUsers.isEmpty()) {
+                        val connectedUsersList = connectedUsers
+                        if (connectedUsersList.isEmpty()) {
                             Text(
                                 text = "Solo tú estás en la sala.",
                                 color = Color.Gray,
@@ -1144,7 +1129,7 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
                                 modifier = Modifier.padding(vertical = 4.dp)
                             )
                         } else {
-                            connectedUsers.forEach { userInRoom ->
+                            connectedUsersList.forEach { userInRoom ->
                                 val isHostUser = userInRoom == hostUsername
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -1190,7 +1175,7 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
 
                 // ---- Leave Room Button ----
                 Button(
-                    onClick = { com.mrtdk.liquid_glass.playback.ListenTogetherManager.leaveRoom() },
+                    onClick = { ltManager.leaveRoom() },
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFA243C).copy(alpha = 0.15f)),
                     modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
@@ -1212,8 +1197,7 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
                             onClick = {
                                 if (username.isBlank()) showUsernameDialog = true
                                 else {
-                                    isConnecting = true
-                                    com.mrtdk.liquid_glass.playback.ListenTogetherManager.createRoom(username)
+                                    ltManager.createRoom(username)
                                 }
                             }
                         ),
@@ -1324,7 +1308,7 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
             onDismiss = { showUsernameDialog = false },
             onSave = {
                 username = it
-                com.mrtdk.liquid_glass.playback.ListenTogetherManager.username = it
+                ltManager.client.storedUsername = it
                 LibraryManager.saveString("listen_together_username", it)
             }
         )
@@ -1338,7 +1322,7 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
             onDismiss = { showServerDialog = false },
             onSave = {
                 serverUrl = it
-                com.mrtdk.liquid_glass.playback.ListenTogetherManager.serverUrl = it
+                ltManager.client.currentServerUrl = it
             }
         )
     }
@@ -1352,8 +1336,7 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
             onSave = { code ->
                 val trimmedCode = code.uppercase().trim()
                 if (trimmedCode.isNotBlank()) {
-                    isConnecting = true
-                    com.mrtdk.liquid_glass.playback.ListenTogetherManager.joinRoom(trimmedCode, username)
+                    ltManager.joinRoom(trimmedCode, username)
                 }
             }
         )

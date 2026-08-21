@@ -432,7 +432,7 @@ fun MainTabs(
             } else {
                 if (isSelected) Color(0xFFFA243C) else Color.Black.copy(alpha = 0.6f)
             }
-            val iconSize = 26.dp
+            val iconSize = 24.dp
             val tabWeight = 1f
 
             LiquidBottomTab(
@@ -446,7 +446,7 @@ fun MainTabs(
                     modifier = Modifier
                         .size(iconSize)
                         .graphicsLayer {
-                            translationY = androidx.compose.ui.unit.lerp(5.dp, 7.dp, combineProgress()).toPx()
+                            translationY = androidx.compose.ui.unit.lerp(3.dp, 5.dp, combineProgress()).toPx()
                             alpha = if (index == 0) 1f else (1f - combineProgress())
                             val color = if (index == 0) {
                                 androidx.compose.ui.graphics.lerp(
@@ -463,11 +463,13 @@ fun MainTabs(
                 Text(
                     text = tabText,
                     color = baseColor,
-                    fontSize = 10.sp,
+                    fontSize = 10.5.sp,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
                     maxLines = 1,
+                    softWrap = false,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     modifier = Modifier
-                        .offset(y = (-3).dp)
+                        .padding(top = 1.dp)
                         .graphicsLayer {
                             alpha = 1f - combineProgress()
                         }

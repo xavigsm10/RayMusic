@@ -20,13 +20,48 @@ data class AlbumPage(
 ) {
     companion object {
         fun getPlaylistId(response: BrowseResponse): String? {
-            var playlistId = response.microformat?.microformatDataRenderer?.urlCanonical?.substringAfterLast('=')
-            if (playlistId == null)
-            {
-                playlistId = response.header?.musicDetailHeaderRenderer?.menu?.menuRenderer?.topLevelButtons?.firstOrNull()
-                    ?.buttonRenderer?.navigationEndpoint?.watchPlaylistEndpoint?.playlistId
+            // 1. From canonical URL
+            val canonical = response.microformat?.microformatDataRenderer?.urlCanonical
+            if (canonical != null && canonical.contains("=")) {
+                val extracted = canonical.substringAfterLast('=')
+                if (extracted.isNotBlank() && !extracted.startsWith("http")) {
+                    return extracted
+                }
             }
-            return playlistId
+
+            // 2. From header musicDetailHeaderRenderer
+            val fromDetailHeader = response.header?.musicDetailHeaderRenderer?.menu?.menuRenderer?.topLevelButtons
+                ?.mapNotNull { it.buttonRenderer?.navigationEndpoint?.watchPlaylistEndpoint?.playlistId ?: it.buttonRenderer?.navigationEndpoint?.browseEndpoint?.browseId }
+                ?.firstOrNull()
+            if (!fromDetailHeader.isNullOrBlank()) return fromDetailHeader
+
+            // 3. From header musicResponsiveHeaderRenderer
+            val responsiveHeader = getHeader(response)
+            val fromButtons = responsiveHeader?.buttons?.mapNotNull {
+                it.musicPlayButtonRenderer?.playNavigationEndpoint?.watchPlaylistEndpoint?.playlistId
+                    ?: it.menuRenderer?.topLevelButtons?.mapNotNull { btn ->
+                        btn.buttonRenderer?.navigationEndpoint?.watchPlaylistEndpoint?.playlistId
+                            ?: btn.buttonRenderer?.navigationEndpoint?.browseEndpoint?.browseId
+                    }?.firstOrNull()
+            }?.firstOrNull()
+            if (!fromButtons.isNullOrBlank()) return fromButtons
+
+            // 4. From tabs / section list contents
+            val tabs = response.contents?.twoColumnBrowseResultsRenderer?.tabs
+                ?: response.contents?.singleColumnBrowseResultsRenderer?.tabs
+            val fromTabs = tabs?.firstNotNullOfOrNull { tab ->
+                tab?.tabRenderer?.content?.sectionListRenderer?.contents?.firstNotNullOfOrNull { section ->
+                    section.musicResponsiveHeaderRenderer?.buttons?.firstNotNullOfOrNull { btn ->
+                        btn.musicPlayButtonRenderer?.playNavigationEndpoint?.watchPlaylistEndpoint?.playlistId
+                            ?: btn.menuRenderer?.topLevelButtons?.firstNotNullOfOrNull { tb ->
+                                tb.buttonRenderer?.navigationEndpoint?.watchPlaylistEndpoint?.playlistId
+                            }
+                    }
+                }
+            }
+            if (!fromTabs.isNullOrBlank()) return fromTabs
+
+            return null
         }
 
         fun getTitle(response: BrowseResponse): String? {

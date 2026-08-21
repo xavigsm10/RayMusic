@@ -29,6 +29,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.mrtdk.liquid_glass.R
 
 
@@ -92,6 +93,11 @@ class MusicService : MediaSessionService() {
         eqProcessor = com.mrtdk.liquid_glass.playback.eq.CustomEqualizerAudioProcessor()
         com.mrtdk.liquid_glass.playback.eq.EqualizerService.addAudioProcessor(eqProcessor)
 
+        com.mrtdk.liquid_glass.utils.YTPlayerUtils.init(applicationContext)
+        serviceScope.launch(Dispatchers.IO) {
+            com.echo.innertube.YouTubeExtractor.ensureInitialized()
+        }
+
         val okHttpDataSourceFactory = androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(
             OkHttpClient.Builder()
                 .proxy(YouTube.proxy)
@@ -103,24 +109,10 @@ class MusicService : MediaSessionService() {
                     } ?: response.request
                 }
                 .fastFallback(true)
-                .addInterceptor { chain ->
-                    val request = chain.request()
-                    val host = request.url.host
-                    val builder = request.newBuilder()
-                    
-                    builder.header("User-Agent", com.echo.innertube.models.YouTubeClient.USER_AGENT_WEB)
-                    
-                    if (!host.contains("googlevideo.com")) {
-                        YouTube.cookie?.let { builder.header("Cookie", it) }
-                    }
-                    
-                    chain.proceed(builder.build())
-                }
-                .connectTimeout(8, TimeUnit.SECONDS)
-                .readTimeout(10, TimeUnit.SECONDS)
-                .callTimeout(15, TimeUnit.SECONDS)
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(15, TimeUnit.SECONDS)
                 .build()
-        )
+        ).setUserAgent(com.echo.innertube.models.YouTubeClient.IOS.userAgent)
 
         val downloadUtil = com.mrtdk.liquid_glass.playback.DownloadUtil.getInstance(this)
         val downloadCache = downloadUtil.downloadCache
@@ -176,8 +168,15 @@ class MusicService : MediaSessionService() {
 
         val defaultDataSourceFactory = androidx.media3.datasource.DefaultDataSource.Factory(this, resolvingDataSourceFactory)
 
-        val mediaSourceFactory = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(this)
-            .setDataSourceFactory(defaultDataSourceFactory)
+        val extractorsFactory = androidx.media3.extractor.ExtractorsFactory {
+            arrayOf(
+                androidx.media3.extractor.mkv.MatroskaExtractor(),        // .webm / Opus (YouTube)
+                androidx.media3.extractor.mp4.FragmentedMp4Extractor(),   // fragmented .mp4 / AAC (YouTube)
+                androidx.media3.extractor.mp4.Mp4Extractor(),             // regular .mp4 / AAC (JioSaavn)
+            )
+        }
+
+        val mediaSourceFactory = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(defaultDataSourceFactory, extractorsFactory)
 
         val renderersFactory = object : androidx.media3.exoplayer.DefaultRenderersFactory(this) {
             override fun buildAudioSink(
@@ -207,12 +206,82 @@ class MusicService : MediaSessionService() {
             .build()
 
         player.addListener(object : androidx.media3.common.Player.Listener {
-            private var lastFailedMediaId: String? = null
-            private var retryCount = 0
+            private var recoveryJob: Job? = null
+            private val songRetryCounts = java.util.concurrent.ConcurrentHashMap<String, Int>()
+
+            private fun getHttpResponseCode(error: androidx.media3.common.PlaybackException): Int {
+                var cause: Throwable? = error
+                while (cause != null) {
+                    if (cause is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException) {
+                        return cause.responseCode
+                    }
+                    val msg = cause.message ?: ""
+                    if (msg.contains("Response code: 403") || msg.contains("403")) {
+                        return 403
+                    }
+                    cause = cause.cause
+                }
+                return -1
+            }
+
+            private fun handlePlaybackRecovery(error: androidx.media3.common.PlaybackException, mediaId: String) {
+                val httpCode = getHttpResponseCode(error)
+                val is403 = httpCode == 403
+                val isNetworkError = is403 ||
+                        error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ||
+                        error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
+                        error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ||
+                        error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_UNSPECIFIED ||
+                        error.cause is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException ||
+                        error.cause is java.io.IOException
+
+                if (!isNetworkError) return
+
+                val currentRetries = songRetryCounts.getOrDefault(mediaId, 0)
+                if (currentRetries >= 3) {
+                    android.util.Log.e("MusicService", "Max retries (3) reached for $mediaId. Halting retry.")
+                    return
+                }
+
+                songRetryCounts[mediaId] = currentRetries + 1
+                android.util.Log.w("MusicService", "Recovering from error (http=$httpCode, code=${error.errorCode}) for $mediaId, retry #${currentRetries + 1}/3")
+
+                com.mrtdk.liquid_glass.playback.MusicPlayer.clearCache(mediaId)
+                com.echo.innertube.YouTubeExtractor.clearCache()
+
+                val currentPos = player.currentPosition
+                val currentIndex = player.currentMediaItemIndex
+
+                recoveryJob?.cancel()
+                recoveryJob = serviceScope.launch(Dispatchers.IO) {
+                    try {
+                        playerCache.removeResource(mediaId)
+                    } catch (_: Exception) {}
+                    if (is403) {
+                        com.mrtdk.liquid_glass.utils.BotDetectionMitigator.notifyPlaybackFailure(YouTube.cookie != null, error.message)
+                        com.mrtdk.liquid_glass.utils.BotDetectionMitigator.rotateGuestSession()
+                    }
+                    delay(300)
+                    withContext(Dispatchers.Main) {
+                        try {
+                            player.seekTo(currentIndex, currentPos)
+                            player.prepare()
+                            player.play()
+                            android.util.Log.d("MusicService", "Playback silently recovered and re-prepared at $currentPos ms for $mediaId")
+                        } catch (e: Exception) {
+                            android.util.Log.e("MusicService", "Silent recovery prepare failed for $mediaId", e)
+                        }
+                    }
+                }
+            }
 
             override fun onPlaybackStateChanged(playbackState: Int) {
                 updateWakeLocks()
                 checkForegroundState()
+
+                if (playbackState == androidx.media3.common.Player.STATE_READY) {
+                    songRetryCounts.clear()
+                }
 
                 if (playbackState == androidx.media3.common.Player.STATE_ENDED) {
                     val nextState = com.mrtdk.liquid_glass.playback.PlaybackQueue.getNextSongAndAdvance(player.repeatMode)
@@ -229,29 +298,8 @@ class MusicService : MediaSessionService() {
 
             override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                 val currentMediaId = player.currentMediaItem?.mediaId
-                val isNetworkError = error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ||
-                        error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
-                        error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ||
-                        error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_UNSPECIFIED ||
-                        error.cause is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException ||
-                        error.cause is java.io.IOException
-
-                if (isNetworkError && currentMediaId != null) {
-                    if (currentMediaId == lastFailedMediaId) {
-                        retryCount++
-                    } else {
-                        lastFailedMediaId = currentMediaId
-                        retryCount = 1
-                    }
-
-                    if (retryCount <= 3) {
-                        android.util.Log.w("MusicService", "Playback failed with network error (code ${error.errorCode}), retrying ($retryCount/3): ${error.message}")
-                        com.mrtdk.liquid_glass.playback.MusicPlayer.clearCache(currentMediaId)
-                        player.prepare()
-                        player.play()
-                    } else {
-                        android.util.Log.e("MusicService", "Max retries reached for mediaId $currentMediaId. Stopping playback.")
-                    }
+                if (currentMediaId != null) {
+                    handlePlaybackRecovery(error, currentMediaId)
                 }
             }
         })

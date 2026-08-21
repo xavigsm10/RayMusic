@@ -364,9 +364,21 @@ private fun GlassContainerWithShader(
     val density = LocalDensity.current
     val glassScope = remember { GlassScopeImpl(density) }
 
-    val shader = remember(glassScope.updateCounter) {
+    val shader = remember {
         RuntimeShader(GLASS_DISPLACEMENT_SHADER)
     }
+
+    val maxElements = 10
+    val positions = remember { FloatArray(maxElements * 2) }
+    val sizes = remember { FloatArray(maxElements * 2) }
+    val scales = remember { FloatArray(maxElements) }
+    val radii = remember { FloatArray(maxElements) }
+    val elevations = remember { FloatArray(maxElements) }
+    val centerDistortions = remember { FloatArray(maxElements) }
+    val tints = remember { FloatArray(maxElements * 4) }
+    val darkness = remember { FloatArray(maxElements) }
+    val warpEdges = remember { FloatArray(maxElements) }
+    val blurs = remember { FloatArray(maxElements) }
 
     // SideEffect is removed to prevent recompositions from clearing active elements.
     // DisposableEffect handles accurate component cleanup on destruction.
@@ -388,58 +400,49 @@ private fun GlassContainerWithShader(
                     val a = glassScope.updateCounter
 
                     val elements = glassScope.elements
-
-                    val maxElements = 10
-                    val positions = FloatArray(maxElements * 2)
-                    val sizes = FloatArray(maxElements * 2)
-                    val scales = FloatArray(maxElements)
-                    val radii = FloatArray(maxElements)
-                    val elevations = FloatArray(maxElements)
-                    val centerDistortions = FloatArray(maxElements)
-                    val tints = FloatArray(maxElements * 4)
-                    val darkness = FloatArray(maxElements)
-                    val warpEdges = FloatArray(maxElements)
-                    val blurs = FloatArray(maxElements)
-
                     val elementsCount = minOf(elements.size, maxElements)
                     shader.setIntUniform("elementsCount", elementsCount)
 
-                    for (i in 0 until elementsCount) {
-                        val element = elements[i]
-                        val relativePos = element.position - containerPosition
-                        positions[i * 2] = relativePos.x
-                        positions[i * 2 + 1] = relativePos.y
-                        sizes[i * 2] = element.size.width
-                        sizes[i * 2 + 1] = element.size.height
-                        scales[i] = element.scale
-                        radii[i] = element.cornerRadius
-                        elevations[i] = element.elevation
-                        centerDistortions[i] = element.centerDistortion
+                    if (elementsCount > 0) {
+                        for (i in 0 until elementsCount) {
+                            val element = elements[i]
+                            val relativePos = element.position - containerPosition
+                            positions[i * 2] = relativePos.x
+                            positions[i * 2 + 1] = relativePos.y
+                            sizes[i * 2] = element.size.width
+                            sizes[i * 2 + 1] = element.size.height
+                            scales[i] = element.scale
+                            radii[i] = element.cornerRadius
+                            elevations[i] = element.elevation
+                            centerDistortions[i] = element.centerDistortion
 
-                        tints[i * 4] = element.tint.red
-                        tints[i * 4 + 1] = element.tint.green
-                        tints[i * 4 + 2] = element.tint.blue
-                        tints[i * 4 + 3] = element.tint.alpha
+                            tints[i * 4] = element.tint.red
+                            tints[i * 4 + 1] = element.tint.green
+                            tints[i * 4 + 2] = element.tint.blue
+                            tints[i * 4 + 3] = element.tint.alpha
 
-                        darkness[i] = element.darkness
-                        warpEdges[i] = element.warpEdges
-                        blurs[i] = element.blur
+                            darkness[i] = element.darkness
+                            warpEdges[i] = element.warpEdges
+                            blurs[i] = element.blur
+                        }
+
+                        shader.setFloatUniform("glassPositions", positions)
+                        shader.setFloatUniform("glassSizes", sizes)
+                        shader.setFloatUniform("glassScales", scales)
+                        shader.setFloatUniform("cornerRadii", radii)
+                        shader.setFloatUniform("elevations", elevations)
+                        shader.setFloatUniform("centerDistortions", centerDistortions)
+                        shader.setFloatUniform("glassTints", tints)
+                        shader.setFloatUniform("glassDarkness", darkness)
+                        shader.setFloatUniform("glassWarpEdges", warpEdges)
+                        shader.setFloatUniform("glassBlurs", blurs)
+
+                        renderEffect = RenderEffect.createRuntimeShaderEffect(
+                            shader, "contents"
+                        ).asComposeRenderEffect()
+                    } else {
+                        renderEffect = null
                     }
-
-                    shader.setFloatUniform("glassPositions", positions)
-                    shader.setFloatUniform("glassSizes", sizes)
-                    shader.setFloatUniform("glassScales", scales)
-                    shader.setFloatUniform("cornerRadii", radii)
-                    shader.setFloatUniform("elevations", elevations)
-                    shader.setFloatUniform("centerDistortions", centerDistortions)
-                    shader.setFloatUniform("glassTints", tints)
-                    shader.setFloatUniform("glassDarkness", darkness)
-                    shader.setFloatUniform("glassWarpEdges", warpEdges)
-                    shader.setFloatUniform("glassBlurs", blurs)
-
-                    renderEffect = RenderEffect.createRuntimeShaderEffect(
-                        shader, "contents"
-                    ).asComposeRenderEffect()
                 }
         ) {
             content()
@@ -601,6 +604,10 @@ private val GLASS_DISPLACEMENT_SHADER = """
     }
 
     float4 main(float2 fragCoord) {
+        if (elementsCount <= 0) {
+            return contents.eval(fragCoord);
+        }
+
         float2 finalCoord = fragCoord;
         float shadowAlpha = 0.0;
         float rimHighlight = 0.0;
@@ -678,7 +685,7 @@ private val GLASS_DISPLACEMENT_SHADER = """
         // Sample background
         float4 color = contents.eval(finalCoord);
         
-        // Apply  blur
+        // Apply blur
         if (blurRadius > 0.0) {
             float4 blurredColor = float4(0.0);
             float totalWeight = 0.0;
@@ -691,9 +698,9 @@ private val GLASS_DISPLACEMENT_SHADER = """
             // Golden angle in radians (~137.5 degrees)
             float goldenAngle = 2.3999632;
             
-            for (int i = 0; i < 22; i++) {
+            for (int i = 0; i < 10; i++) {
                 // Radial distance using square root distribution for even area coverage
-                float r = sqrt(float(i + 1) / 22.0) * blurRadius;
+                float r = sqrt(float(i + 1) / 10.0) * blurRadius;
                 float theta = float(i) * goldenAngle;
                 
                 // Spiral offset
@@ -706,7 +713,7 @@ private val GLASS_DISPLACEMENT_SHADER = """
                 );
                 
                 // Gaussian-like weight based on distance
-                float weight = exp(-float(i + 1) / 11.0);
+                float weight = exp(-float(i + 1) / 5.0);
                 
                 blurredColor += contents.eval(finalCoord + rotatedOffset) * weight;
                 totalWeight += weight;

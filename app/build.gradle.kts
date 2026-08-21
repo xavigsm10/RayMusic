@@ -13,7 +13,7 @@ android {
 
     defaultConfig {
         applicationId = "com.mrtdk.liquid_glass"
-        minSdk = 23
+        minSdk = 26
         targetSdk = 36
         versionCode = 6
         versionName = "0.6.4"

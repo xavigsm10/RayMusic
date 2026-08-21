@@ -51,6 +51,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 
 import androidx.compose.foundation.rememberScrollState
 
@@ -1809,109 +1810,78 @@ fun PlayerScreen(
             reflectionSkew = 0.12f
 
             if (hdArtUrl != null) {
+                withContext(Dispatchers.Default) {
+                    val request = ImageRequest.Builder(context)
+                        .data(hdArtUrl)
+                        .allowHardware(false)
+                        .size(200)
+                        .memoryCachePolicy(coil.request.CachePolicy.READ_ONLY)
+                        .build()
 
-                val request = ImageRequest.Builder(context)
+                    val result = coil.Coil.imageLoader(context).execute(request)
+                    if (result is coil.request.SuccessResult) {
+                        val drawable = result.drawable
+                        val bitmap = (drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                            ?: android.graphics.Bitmap.createBitmap(
+                                drawable.intrinsicWidth.coerceAtLeast(1),
+                                drawable.intrinsicHeight.coerceAtLeast(1),
+                                android.graphics.Bitmap.Config.ARGB_8888
+                            ).also {
+                                val canvas = android.graphics.Canvas(it)
+                                drawable.setBounds(0, 0, canvas.width, canvas.height)
+                                drawable.draw(canvas)
+                            }
 
-                    .data(hdArtUrl)
+                        if (bitmap != null) {
+                            val asComposeBmp = bitmap.asImageBitmap()
+                            val skew = calculateDominantSkew(bitmap)
 
-                    .allowHardware(false)
+                            try {
+                                var r = 0L; var g = 0L; var b = 0L
+                                val yCoord = bitmap.height - 1
+                                val w = bitmap.width
+                                val stepX = maxOf(1, w / 16)
+                                var countX = 0
+                                for (x in 0 until w step stepX) {
+                                    val pixel = bitmap.getPixel(x, yCoord)
+                                    r += android.graphics.Color.red(pixel)
+                                    g += android.graphics.Color.green(pixel)
+                                    b += android.graphics.Color.blue(pixel)
+                                    countX++
+                                }
+                                val avgColor = Color((r / countX).toInt(), (g / countX).toInt(), (b / countX).toInt())
 
-                    .size(300)
+                                var rRight = 0L; var gRight = 0L; var bRight = 0L
+                                val xCoord = bitmap.width - 1
+                                val h = bitmap.height
+                                val stepY = maxOf(1, h / 16)
+                                var countY = 0
+                                for (y in 0 until h step stepY) {
+                                    val pixel = bitmap.getPixel(xCoord, y)
+                                    rRight += android.graphics.Color.red(pixel)
+                                    gRight += android.graphics.Color.green(pixel)
+                                    bRight += android.graphics.Color.blue(pixel)
+                                    countY++
+                                }
+                                val rightColor = Color((rRight / countY).toInt(), (gRight / countY).toInt(), (bRight / countY).toInt())
 
-                    .memoryCachePolicy(coil.request.CachePolicy.READ_ONLY)
-
-                    .build()
-
-                val result = coil.Coil.imageLoader(context).execute(request)
-
-                if (result is coil.request.SuccessResult) {
-
-                    val drawable = result.drawable
-
-                    val bitmap = (drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
-
-                        ?: android.graphics.Bitmap.createBitmap(
-
-                            drawable.intrinsicWidth.coerceAtLeast(1),
-
-                            drawable.intrinsicHeight.coerceAtLeast(1),
-
-                            android.graphics.Bitmap.Config.ARGB_8888
-
-                        ).also {
-
-                            val canvas = android.graphics.Canvas(it)
-
-                            drawable.setBounds(0, 0, canvas.width, canvas.height)
-
-                            drawable.draw(canvas)
-
+                                withContext(Dispatchers.Main) {
+                                    coverBitmap = asComposeBmp
+                                    reflectionSkew = skew
+                                    bottomAverageColor = avgColor
+                                    dominantColor = avgColor
+                                    onDominantColorChanged(avgColor)
+                                    rightSideAverageColor = rightColor
+                                }
+                            } catch (e: Exception) {
+                                withContext(Dispatchers.Main) {
+                                    coverBitmap = asComposeBmp
+                                    reflectionSkew = skew
+                                }
+                            }
                         }
-
-                    if (bitmap != null) {
-                        coverBitmap = bitmap.asImageBitmap()
-                        reflectionSkew = calculateDominantSkew(bitmap)
-
-                        try {
-
-                            // Mismo método de los álbumes (promedio de la fila inferior de píxeles)
-
-                            var r = 0L; var g = 0L; var b = 0L
-
-                            val yCoord = bitmap.height - 1
-
-                            val w = bitmap.width
-
-                            for (x in 0 until w) {
-
-                                val pixel = bitmap.getPixel(x, yCoord)
-
-                                r += android.graphics.Color.red(pixel)
-
-                                g += android.graphics.Color.green(pixel)
-
-                                b += android.graphics.Color.blue(pixel)
-
-                            }
-
-                            val avgColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
-
-                            bottomAverageColor = avgColor
-
-                            dominantColor = avgColor
-
-                            onDominantColorChanged(avgColor)
-
-
-
-                            // Promedio de la columna derecha de píxeles
-
-                            var rRight = 0L; var gRight = 0L; var bRight = 0L
-
-                            val xCoord = bitmap.width - 1
-
-                            val h = bitmap.height
-
-                            for (y in 0 until h) {
-
-                                val pixel = bitmap.getPixel(xCoord, y)
-
-                                rRight += android.graphics.Color.red(pixel)
-
-                                gRight += android.graphics.Color.green(pixel)
-
-                                bRight += android.graphics.Color.blue(pixel)
-
-                            }
-
-                            rightSideAverageColor = Color((rRight / h).toInt(), (gRight / h).toInt(), (bRight / h).toInt())
-
-                        } catch (e: Exception) { }
-
                     }
-
                 }
-
             }
 
         }
@@ -2890,11 +2860,10 @@ fun PlayerScreen(
 
                                if (playerState?.isExclusiveQueue != true) {
                                    val state = playerState
-                                   items(
-                                       count = upNextSongs.size,
-                                       key = { index -> "${upNextSongs[index].id}_$index" }
-                                   ) { i ->
-                                       val song = upNextSongs[i]
+                                   itemsIndexed(
+                                       items = upNextSongs,
+                                       key = { index, song -> "${song.id}_$index" }
+                                   ) { i, song ->
                                        val isCurrent = state != null && song.id == state.videoId
 
                                        val rowData = remember(song.title, song.artists, song.thumbnail) {
@@ -7140,11 +7109,10 @@ fun LandscapePlayerLayout(
 
                                  if (playerState?.isExclusiveQueue != true) {
                                      val state = playerState
-                                     items(
-                                         count = upNextSongs.size,
-                                         key = { index -> "${upNextSongs[index].id}_$index" }
-                                     ) { i ->
-                                         val song = upNextSongs[i]
+                                     itemsIndexed(
+                                         items = upNextSongs,
+                                         key = { index, song -> "${song.id}_$index" }
+                                     ) { i, song ->
                                          val isCurrent = state != null && song.id == state.videoId
 
                                          val rowData = remember(song.title, song.artists, song.thumbnail) {

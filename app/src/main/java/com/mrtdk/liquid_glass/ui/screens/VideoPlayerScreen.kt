@@ -136,9 +136,9 @@ fun VideoPlayerScreen(
             withContext(Dispatchers.IO) {
                 // Try first 3 most reliable clients in parallel for faster response
                 val priorityClients = listOf(
-                    YouTubeClient.ANDROID_VR_NO_AUTH,
+                    YouTubeClient.IPADOS,
                     YouTubeClient.IOS,
-                    YouTubeClient.WEB
+                    YouTubeClient.VISIONOS
                 )
                 
                 Log.d("VideoPlayer", "Starting parallel requests for videoId: $videoId")
@@ -204,8 +204,10 @@ fun VideoPlayerScreen(
                 if (bestPlayerResponse == null) {
                     Log.d("VideoPlayer", "Trying fallback clients")
                     val fallbackClients = listOf(
+                        YouTubeClient.ANDROID_CREATOR,
+                        YouTubeClient.MOBILE,
                         YouTubeClient.TVHTML5_SIMPLY_EMBEDDED_PLAYER,
-                        YouTubeClient.ANDROID_VR_1_61_48
+                        YouTubeClient.WEB
                     )
                     
                     for (client in fallbackClients) {
