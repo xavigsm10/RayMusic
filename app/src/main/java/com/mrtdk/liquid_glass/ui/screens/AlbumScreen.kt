@@ -198,39 +198,46 @@ fun AlbumScreen(
     // Extract dominant colour
     LaunchedEffect(headerArt) {
         if (!headerArt.isNullOrBlank()) {
-            val request = ImageRequest.Builder(context)
-                .data(headerArt)
-                .allowHardware(false)
-                .size(200)
-                .memoryCachePolicy(coil.request.CachePolicy.READ_ONLY)
-                .build()
-            val result = coil.Coil.imageLoader(context).execute(request)
-            if (result is coil.request.SuccessResult) {
-                val drawable = result.drawable
-                val bmp = (drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
-                    ?: android.graphics.Bitmap.createBitmap(
-                        drawable.intrinsicWidth.coerceAtLeast(1),
-                        drawable.intrinsicHeight.coerceAtLeast(1),
-                        android.graphics.Bitmap.Config.ARGB_8888
-                    ).also { b ->
-                        val c = android.graphics.Canvas(b)
-                        drawable.setBounds(0, 0, c.width, c.height)
-                        drawable.draw(c)
-                    }
-                try {
-                    var r = 0L; var g = 0L; var b = 0L
-                    val y = bmp.height - 1
-                    val w = bmp.width
-                    for (x in 0 until w) {
-                        val pixel = bmp.getPixel(x, y)
-                        r += android.graphics.Color.red(pixel)
-                        g += android.graphics.Color.green(pixel)
-                        b += android.graphics.Color.blue(pixel)
-                    }
-                    val sampledColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
-                    dominantColor = sampledColor
-                    onDominantColorChanged(sampledColor)
-                } catch (e: Exception) { }
+            withContext(Dispatchers.Default) {
+                val request = ImageRequest.Builder(context)
+                    .data(headerArt)
+                    .allowHardware(false)
+                    .size(150)
+                    .memoryCachePolicy(coil.request.CachePolicy.READ_ONLY)
+                    .build()
+                val result = coil.Coil.imageLoader(context).execute(request)
+                if (result is coil.request.SuccessResult) {
+                    val drawable = result.drawable
+                    val bmp = (drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                        ?: android.graphics.Bitmap.createBitmap(
+                            drawable.intrinsicWidth.coerceAtLeast(1),
+                            drawable.intrinsicHeight.coerceAtLeast(1),
+                            android.graphics.Bitmap.Config.ARGB_8888
+                        ).also { b ->
+                            val c = android.graphics.Canvas(b)
+                            drawable.setBounds(0, 0, c.width, c.height)
+                            drawable.draw(c)
+                        }
+                    try {
+                        var r = 0L; var g = 0L; var b = 0L
+                        val y = bmp.height - 1
+                        val w = bmp.width
+                        val step = maxOf(1, w / 16)
+                        var count = 0
+                        for (x in 0 until w step step) {
+                            val pixel = bmp.getPixel(x, y)
+                            r += android.graphics.Color.red(pixel)
+                            g += android.graphics.Color.green(pixel)
+                            b += android.graphics.Color.blue(pixel)
+                            count++
+                        }
+                        val sampledColor = Color((r / count).toInt(), (g / count).toInt(), (b / count).toInt())
+                        withContext(Dispatchers.Main) {
+                            dominantColor = sampledColor
+                            onDominantColorChanged(sampledColor)
+                        }
+                    } catch (e: Exception) { }
+                }
             }
         }
     }

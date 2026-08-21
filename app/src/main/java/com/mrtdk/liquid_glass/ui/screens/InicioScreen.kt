@@ -131,22 +131,32 @@ fun InicioScreen(
     // Initial load — restore from cache first, then fetch youtube homepage in background
     LaunchedEffect(Unit) {
         if (!state.isLoaded) {
-            // Restore from cache immediately
-            val cachedSuggestionsStr = LibraryManager.getString("cache_featured_suggestions")
-            val cachedQuickPicksStr = LibraryManager.getString("cache_quick_picks")
-            val cachedSeleccionesStr = LibraryManager.getString("cache_selecciones")
-            val cachedPlaylistsStr = LibraryManager.getString("cache_playlists")
-            val cachedSimilarStr = LibraryManager.getString("cache_similar_sections")
-            val cachedTitle = LibraryManager.getString("cache_selecciones_title")
+            withContext(Dispatchers.Default) {
+                // Restore from cache immediately in background thread
+                val cachedSuggestionsStr = LibraryManager.getString("cache_featured_suggestions")
+                val cachedQuickPicksStr = LibraryManager.getString("cache_quick_picks")
+                val cachedSeleccionesStr = LibraryManager.getString("cache_selecciones")
+                val cachedPlaylistsStr = LibraryManager.getString("cache_playlists")
+                val cachedSimilarStr = LibraryManager.getString("cache_similar_sections")
+                val cachedTitle = LibraryManager.getString("cache_selecciones_title")
 
-            if (!cachedSuggestionsStr.isNullOrBlank()) {
-                state.featuredSuggestions = deserializeYTItemList(cachedSuggestionsStr)
-                state.quickPickSongs = deserializeYTItemList(cachedQuickPicksStr ?: "").filterIsInstance<SongItem>()
-                state.seleccionesParaTi = deserializeYTItemList(cachedSeleccionesStr ?: "").filterIsInstance<SongItem>()
-                state.featuredPlaylists = deserializeYTItemList(cachedPlaylistsStr ?: "").filterIsInstance<PlaylistItem>()
-                state.similarSections = deserializeSimilarSections(cachedSimilarStr ?: "")
-                state.seleccionesTitle = cachedTitle
-                state.isLoaded = true
+                if (!cachedSuggestionsStr.isNullOrBlank()) {
+                    val sList = deserializeYTItemList(cachedSuggestionsStr)
+                    val qList = deserializeYTItemList(cachedQuickPicksStr ?: "").filterIsInstance<SongItem>()
+                    val pList = deserializeYTItemList(cachedSeleccionesStr ?: "").filterIsInstance<SongItem>()
+                    val plList = deserializeYTItemList(cachedPlaylistsStr ?: "").filterIsInstance<PlaylistItem>()
+                    val simList = deserializeSimilarSections(cachedSimilarStr ?: "")
+                    
+                    withContext(Dispatchers.Main) {
+                        state.featuredSuggestions = sList
+                        state.quickPickSongs = qList
+                        state.seleccionesParaTi = pList
+                        state.featuredPlaylists = plList
+                        state.similarSections = simList
+                        state.seleccionesTitle = cachedTitle
+                        state.isLoaded = true
+                    }
+                }
             }
 
             withContext(Dispatchers.IO) {
@@ -1863,38 +1873,51 @@ private fun FeaturedSuggestionCard(
 
     LaunchedEffect(hdThumb) {
         if (hdThumb != null) {
-            val request = ImageRequest.Builder(context)
-                .data(hdThumb)
-                .allowHardware(false)
-                .size(150)
-                .build()
-            val result = Coil.imageLoader(context).execute(request)
-            if (result is SuccessResult) {
-                val drawable = result.drawable
-                val bitmap = (drawable as? BitmapDrawable)?.bitmap
-                    ?: Bitmap.createBitmap(
-                        drawable.intrinsicWidth.coerceAtLeast(1),
-                        drawable.intrinsicHeight.coerceAtLeast(1),
-                        Bitmap.Config.ARGB_8888
-                    ).also {
-                        val canvas = Canvas(it)
-                        drawable.setBounds(0, 0, canvas.width, canvas.height)
-                        drawable.draw(canvas)
+            withContext(Dispatchers.Default) {
+                val request = ImageRequest.Builder(context)
+                    .data(hdThumb)
+                    .allowHardware(false)
+                    .size(100)
+                    .build()
+                val result = Coil.imageLoader(context).execute(request)
+                if (result is SuccessResult) {
+                    val drawable = result.drawable
+                    val bitmap = (drawable as? BitmapDrawable)?.bitmap
+                        ?: Bitmap.createBitmap(
+                            drawable.intrinsicWidth.coerceAtLeast(1),
+                            drawable.intrinsicHeight.coerceAtLeast(1),
+                            Bitmap.Config.ARGB_8888
+                        ).also {
+                            val canvas = Canvas(it)
+                            drawable.setBounds(0, 0, canvas.width, canvas.height)
+                            drawable.draw(canvas)
+                        }
+                    
+                    val asComposeBmp = bitmap.asImageBitmap()
+                    try {
+                        var r = 0L; var g = 0L; var b = 0L
+                        val y = bitmap.height - 1
+                        val w = bitmap.width
+                        val step = maxOf(1, w / 16)
+                        var count = 0
+                        for (x in 0 until w step step) {
+                            val pixel = bitmap.getPixel(x, y)
+                            r += android.graphics.Color.red(pixel)
+                            g += android.graphics.Color.green(pixel)
+                            b += android.graphics.Color.blue(pixel)
+                            count++
+                        }
+                        val sampledColor = Color((r / count).toInt(), (g / count).toInt(), (b / count).toInt())
+                        withContext(Dispatchers.Main) {
+                            coverBitmap = asComposeBmp
+                            dominantColor = sampledColor
+                        }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            coverBitmap = asComposeBmp
+                        }
                     }
-                
-                coverBitmap = bitmap.asImageBitmap()
-                try {
-                    var r = 0L; var g = 0L; var b = 0L
-                    val y = bitmap.height - 1
-                    val w = bitmap.width
-                    for (x in 0 until w) {
-                        val pixel = bitmap.getPixel(x, y)
-                        r += android.graphics.Color.red(pixel)
-                        g += android.graphics.Color.green(pixel)
-                        b += android.graphics.Color.blue(pixel)
-                    }
-                    dominantColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
-                } catch (e: Exception) { }
+                }
             }
         }
     }

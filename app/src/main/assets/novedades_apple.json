@@ -1,22 +1,106 @@
 {
   "featuredAlbums": [
     {
-      "browseId": "MPREb_I5OryN8szPX",
-      "playlistId": "OLAK5uy_lvsnVNUuwEr_zFQYdcnx1Mrdd4z784vo0",
+      "browseId": "MPREb_tZC7e1H5mfm",
+      "playlistId": "OLAK5uy_tZC7e1H5mfm",
+      "title": "DeBÍ TiRAR MáS FOToS",
+      "artists": [
+        {
+          "name": "Bad Bunny",
+          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
+        }
+      ],
+      "year": 2025,
+      "thumbnail": "https://yt3.googleusercontent.com/yBcpSTWxVqyJr7enMy7HFv14Yb8p1jI5AS5o49Cvbeyc6zjvCvdLn_0_iAxz50MqxLx6hQDngWBeaC26=w544-h544-l90-rj",
+      "explicit": true
+    },
+    {
+      "browseId": "MPREb_1zBJxVRBDNN",
+      "playlistId": "OLAK5uy_1zBJxVRBDNN",
+      "title": "Especial",
+      "artists": [
+        {
+          "name": "Viejas Locas",
+          "id": "UCRWg6ojsIzk2kDCx-YZ_7ig"
+        }
+      ],
+      "year": 1999,
+      "thumbnail": "https://yt3.googleusercontent.com/izrQILx27F0bnnIvQ5JJKysKpsnaEGggwOqEzwvzemQdzY451xQby5gGG9vEv-JFdGPyWySJ9DRMrbP_og=w544-h544-s-l90-rj",
+      "explicit": false
+    },
+    {
+      "browseId": "MPREb_BSQoqRT7Om3",
+      "playlistId": "OLAK5uy_BSQoqRT7Om3",
+      "title": "Renacer",
+      "artists": [
+        {
+          "name": "Edgardo Nuñez",
+          "id": "UCohgH17dyp4c_V7U9LoBLdA"
+        }
+      ],
+      "year": 2026,
+      "thumbnail": "https://yt3.googleusercontent.com/bCtnivQ7DRaKd9pGnubWwX-eLrfyFd7MWK9-tTm2-0uipJIyC5xWLYOl_4WjeVw571ow1TIqhAOgFK9k=w544-h544-l90-rj",
+      "explicit": false
+    },
+    {
+      "browseId": "MPREb_IYfe9Etab3k",
+      "playlistId": "OLAK5uy_IYfe9Etab3k",
+      "title": "thank u, next",
+      "artists": [
+        {
+          "name": "Ariana Grande",
+          "id": "UC0076UMUgEng8HORUw_MYHA"
+        }
+      ],
+      "year": 2019,
+      "thumbnail": "https://yt3.googleusercontent.com/3LV6GoLom0Vb_oNFTXI_e2NIua0D-WocCifEFnSQattWpLfswpayWPzZ2BeClAB5QxR2EnGZkgh7QI7j=w544-h544-l90-rj",
+      "explicit": true
+    },
+    {
+      "browseId": "MPREb_G2iVd7o4Pgh",
+      "playlistId": "OLAK5uy_G2iVd7o4Pgh",
+      "title": "GUTS (spilled)",
+      "artists": [
+        {
+          "name": "Olivia Rodrigo",
+          "id": "UCE5XNpliPM-SmyFEp61tL_g"
+        }
+      ],
+      "year": 2024,
+      "thumbnail": "https://yt3.googleusercontent.com/LK1SpvU_sw-dT5MsGcDiN4Jmr7E6gIu0Xj2hYUDyrpaEW5yoJ5swueAyFUY_m-WCseB2_Eq5fsUv54E=w544-h544-l90-rj",
+      "explicit": true
+    },
+    {
+      "browseId": "MPREb_NMmY1n1NJFS",
+      "playlistId": "OLAK5uy_NMmY1n1NJFS",
+      "title": "Un Verano Sin Ti",
+      "artists": [
+        {
+          "name": "Bad Bunny",
+          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
+        }
+      ],
+      "year": 2022,
+      "thumbnail": "https://yt3.googleusercontent.com/0Ke36SSY53TQbmpqzKP4hMPoGiWYQiGI0KJ2CzcwjW4ore9vUMUmyzEi7irEU2MR3FCpNPdwIIuNslS6hg=w544-h544-l90-rj",
+      "explicit": true
+    },
+    {
+      "browseId": "MPREb_s9dlN04Ikzi",
+      "playlistId": "OLAK5uy_s9dlN04Ikzi",
       "title": "NOCTURNO",
       "artists": [
         {
-          "name": "Eslabon Armado",
-          "id": "UCmqrOR5GZcSNS5BLAAt6hPg"
+          "name": "Eslabon",
+          "id": "UCQfzhcnvFjpA1wtU47_zf0g"
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/LiBBldVQV0LnU_o1BfQUNDEJBb8fs9uQPGUC2IiVbE1aep4Cw55DdiPXBaxPuGthe0eTBoHU0hFZoWQ=w60-h60-l90-rj",
       "year": 2026,
+      "thumbnail": "https://yt3.googleusercontent.com/jGfKcXStYqt4gIzE7B2cGddcLGTnNPe2nfpp_nwf3QwBLq_fOiN28CiWYZaCD2s_y6xBWKR2oFTkTiCp=w544-h544-l90-rj",
       "explicit": false
     },
     {
       "browseId": "MPREb_7KWCAlW4pCR",
-      "playlistId": "OLAK5uy_nOJDztdj3BREvx0KefYy2tOBAR-nveUKA",
+      "playlistId": "OLAK5uy_7KWCAlW4pCR",
       "title": "Tutankamon",
       "artists": [
         {
@@ -24,1193 +108,939 @@
           "id": "UCB6w3YIXxmlpbGg8YDVpPgA"
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/8VQw4Oi6BzBW9Oob_ILS8q0gGtxbOLdjBGECwK7sO10dKliG6rD5AM1Fdv8OCQtuXkWqyGzKZRrjIkjLyg=w60-h60-l90-rj",
       "year": 2025,
-      "explicit": false
+      "thumbnail": "https://yt3.googleusercontent.com/8VQw4Oi6BzBW9Oob_ILS8q0gGtxbOLdjBGECwK7sO10dKliG6rD5AM1Fdv8OCQtuXkWqyGzKZRrjIkjLyg=w544-h544-l90-rj",
+      "explicit": true
     },
     {
-      "browseId": "MPREb_UEa8d1Rsnuc",
-      "playlistId": "OLAK5uy_nJ4_a9utAdjMghHprwuG6GKtovk3uNa4o",
-      "title": "Asi Como Tu",
+      "browseId": "MPREb_L1nZRJrdsEr",
+      "playlistId": "OLAK5uy_L1nZRJrdsEr",
+      "title": "Antes de Ameri",
       "artists": [
         {
-          "name": "Los Tigres Del Norte",
-          "id": "UCaflwdWdaSGPNSyrAG0Uffw"
+          "name": "DUKI",
+          "id": "UCtLchRAZex11gn-ah1_1Pgw"
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/KFHnIT8N8fHhMzCCYUrDucKvvBIGrBF0rxkZEIFhvNhCXoS431NdEHyMW67B7jEtajYFQz_KnYRI57Ii1w=w60-h60-s-l90-rj",
-      "year": 1997,
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_E3hpS0kUInv",
-      "playlistId": "OLAK5uy_lAnF7PGHNIxTF-8iO1FPAM0aJmYJa-6J0",
-      "title": "Loko Soñador",
-      "artists": [
-        {
-          "name": "Kane Rodriguez",
-          "id": "UC5BKBeBWnZqKJw1gY7bwBOA"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/1pOeqQkhaPqYQk2mEwG8l8zpf2Sr3GFIcWnYxy8fPlBvJT6rmBsiPAbX4N6dlAO59q0daPlcFna486Y_=w60-h60-l90-rj",
-      "year": 2026,
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_wX0uESY5LaO",
-      "playlistId": "OLAK5uy_m3wtHkKxeu8fHUOCpSfCNJK_m7dOFqnK8",
-      "title": "sesbianlex",
-      "artists": [
-        {
-          "name": "Chzter",
-          "id": "UCNWdBHFJV6W0t0Q5OCc-exA"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/O-kTz5diMvY_tuA69V-e3qEWL-tElliR-GmJIcmyd1KerpfHEGVEQeywJDr2tpHON6ihhWPTQUZ0Ofo=w60-h60-l90-rj",
-      "year": 2026,
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_1B4JLLNsBKP",
-      "playlistId": "OLAK5uy_lCsscTD6uvPykAzhgVGSRl9IVxOV8gKZs",
-      "title": "Dale Play",
-      "artists": [
-        {
-          "name": "DALE PLAY",
-          "id": "UCFlISIcxweFSgCtbpdS9SFg"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/4_7dPRiKETQ7tPc6e8J-swr09MZE1atZLgKxELviWd9onHuIKW_qOwE0ax_DVfnUP45SmfjKIu_fMujE=w60-h60-l90-rj",
-      "year": 2025,
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_A4QXe5RQrw7",
-      "playlistId": "OLAK5uy_liz7GMw7cIoCossHUC_7UQ8sOrNqouuIM",
-      "title": "111XPANTIA",
-      "artists": [
-        {
-          "name": "Fuerza Regida",
-          "id": "UC0kxNxFQCK6d2spPz5Sme7Q"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/wcctzBOL_SevQ9q9eq-J1V1fnQluovKWND7x5U3aYJLijtTeBXOIMICPrMnHQGL6FmOzasTAv6DsT79V=w60-h60-l90-rj",
-      "year": 2025,
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_DirPjWkkgM5",
-      "playlistId": "OLAK5uy_kcQyicoRkCDJ_E0wpnDuqUS7wMOE8pA2s",
-      "title": "Mix: Pop Latino",
-      "artists": [
-        {
-          "name": "Various Artists",
-          "id": null
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/-XLImbYSFvzYQMOAyK9XU5vRKzboBcm2MjBch8KvEJktR83q1DMDhgwOBy4EyfptPyO59nYJIbSmens=w60-h60-l90-rj",
       "year": 2023,
-      "explicit": false
+      "thumbnail": "https://yt3.googleusercontent.com/dh40jzmpleE2LLvk_Df5vE49qX-mlWKzCoapmnx6XPs9Z0YEnIbfxeMraD7aWWDlbPf4VOhtwfv9RT24=w544-h544-l90-rj",
+      "explicit": true
     },
     {
-      "browseId": "MPREb_9wf53SPDJGM",
-      "playlistId": "OLAK5uy_neAckvY6_-xnGNgZ4iJTZProZLi6nesmg",
-      "title": "alpha",
+      "browseId": "MPREb_BX5b2gJmX4c",
+      "playlistId": "OLAK5uy_BX5b2gJmX4c",
+      "title": "MAÑANA SERÁ BONITO",
       "artists": [
         {
-          "name": "Aitana",
-          "id": "UCkyzcFsGWVYSUGaR7YB9OYQ"
+          "name": "KAROL G",
+          "id": "UC7n3gWRN0vQzgiOKc51aZ4w"
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/fDOCplh1Nxl999BGi2cmQsqPj_pgXdVbgtEEfgV5DcIXXPmwbKrwq03-aLqRf4uKQesqjU8l95s5cpiisA=w60-h60-l90-rj",
       "year": 2023,
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_YMSEP8cAkVN",
-      "playlistId": "OLAK5uy_lhaiuAfWKq_Op2IDWknW48RFimIzBC9GI",
-      "title": "Grandes Exitos",
-      "artists": [
-        {
-          "name": "Shakira",
-          "id": "UCo6JijJGA3IvIiPsawDK3Ww"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/M6plWQDM5duPHltLwrSuyIFUAMSiIhvIaFb9J601x5tSE0XFDabazQJkD_EidHKKSEe2v0u7Y0uBc8_h=w60-h60-l90-rj",
-      "year": 2002,
-      "explicit": false
+      "thumbnail": "https://yt3.googleusercontent.com/Ao6HZJhSwmVZJ2TzgOtqLQ1j1iEKshnw5SA9G8aMwCpy-rNqE5UYFwVrSEEFt5nNOtPayoNJA4e20S9LmA=w544-h544-l90-rj",
+      "explicit": true
     }
   ],
   "featuredNewSongs": [
     {
-      "id": "GhMX5llEOy8",
-      "title": "F's",
+      "id": "MsbWsDJGo1A",
+      "title": "Te Olvido (La La)",
       "artists": [
         {
-          "name": "Fuerza Regida",
-          "id": "UC0kxNxFQCK6d2spPz5Sme7Q"
+          "name": "benny blanco",
+          "id": "UCzqz_ksRu_WkIzmivMdIS7A"
         },
         {
-          "name": "y",
-          "id": null
+          "name": "Selena Gomez",
+          "id": "UCeBYRgPhy8kcRmIGQWKuqdQ"
         },
-        {
-          "name": "Gabito Ballesteros",
-          "id": "UCYMm2JZ_mvXYr7vT9-8_thw"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/ozzMHKW5Dj7nLOg4_dPiiBlMn5Q-tudXQ847sYrB8CEAtP61sdpK9a6pVfPekXlBfpxjWW6Ce3uMmclV2w=w60-h60-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "c2yVqyNalfI",
-      "title": "AMIGOS CON DERECHOS",
-      "artists": [
-        {
-          "name": "Eslabon Armado",
-          "id": "UCmqrOR5GZcSNS5BLAAt6hPg"
-        },
-        {
-          "name": "y",
-          "id": null
-        },
-        {
-          "name": "Peso Pluma",
-          "id": "UCzmabbKsmXlWnI9N2kKQ4lA"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/LiBBldVQV0LnU_o1BfQUNDEJBb8fs9uQPGUC2IiVbE1aep4Cw55DdiPXBaxPuGthe0eTBoHU0hFZoWQ=w60-h60-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "8FLFzOmsb88",
-      "title": "Myke Towers: Bzrp Music Sessions, Vol. 42/66",
-      "artists": [
-        {
-          "name": "Bizarrap",
-          "id": "UCONiUl5u7y2bMaVZJcuRDEQ"
-        },
-        {
-          "name": "y",
-          "id": null
-        },
-        {
-          "name": "Myke Towers",
-          "id": "UCYPsIfSIEwWcoynHBP5k1dg"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/8QArS95hf1W14AHHEp1sazJrZx63TOm4yfvutbWd7wibAgLn_0_ogqb0X0WHhqrdPjZjD49PYtVRatwD=w60-h60-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "bqsAhnJ-QAY",
-      "title": "Wink Wink",
-      "artists": [
-        {
-          "name": "Charli xcx",
-          "id": "UCI4YNnmHjXFaaKvfdmpWvJQ"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/AI3LBsdjSNsSC7_TJPXWg0t7BDD3hOyYRdSKnZlBS3TZqANoVR4HcILRLVNHqnD_tfgJPvRZHedWPk6U=w60-h60-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "DjqIuXEs1N4",
-      "title": "SI SE ACABA EL MUNDO",
-      "artists": [
-        {
-          "name": "DANNA",
-          "id": "UCu4o_5UkGmx3vyqRkk9kVOQ"
-        },
-        {
-          "name": "y",
-          "id": null
-        },
-        {
-          "name": "El Malilla",
-          "id": "UCz0CQ5kSCMG1zXNDQR5jWgQ"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/HUsH6fG-Vh5sQxxp2_q7G4HrIusrZ1D-K38qMYaT84ju3cjtJhzSrHtrRu_sRtmWLLvW3NKmGg0IyGNl=w60-h60-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "s_pYN0sYk_c",
-      "title": "Watch It Burn",
-      "artists": [
-        {
-          "name": "Katy Perry",
-          "id": "UC_7s69e1mDS3lgcTMJEPjCg"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/DCMfRp0y7ZpplOyYrMY3JZxoLyOoTaDvg1IHmgKXzTXFZy9itdeWqBa1pv8SMJoQGiTdvcGik-jpb1Ru=w60-h60-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "6As-FdaTwfc",
-      "title": "¿SERÁ EL ALCOHOL?",
-      "artists": [
-        {
-          "name": "Oscar Maydon",
-          "id": "UCxTyOt1nVVexDlQub6kvvNQ"
-        },
-        {
-          "name": "y",
-          "id": null
-        },
-        {
-          "name": "Omar Camacho",
-          "id": "UC5TYeA9Hw3L5VlZYtMt3pqg"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/gGH8PDWDXL_onkea-afVVeNoKFbpMDC0dxuDadkVjyVPD1H-GfxZvuQfVa0zvg29rwLcibCvH5FK7us=w60-h60-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "OsMUzqnrCEQ",
-      "title": "Pensando En Ti",
-      "artists": [
-        {
-          "name": "Xavi",
-          "id": "UCfmeXjlCXi37LGF7O2VT2zA"
-        },
-        {
-          "name": "y",
-          "id": null
-        },
-        {
-          "name": "De La Rose",
-          "id": "UCkUHeLHwch0QrYQ3X1wLfzg"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/n-fu_8u8xeMO0oJFnL0inHmX79rw8nMcAE-vaiwAY3hSPGWd0sObFIXkJrVbMaNx0kI4j7WRB53pqGQx=w60-h60-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "SH556wkCoxY",
-      "title": "NOTA",
-      "artists": [
-        {
-          "name": "Paloma Mami",
-          "id": "UCCKFlwqKsCXP6T9pmidZUwQ"
-        },
-        {
-          "name": "y",
-          "id": null
-        },
-        {
-          "name": "Cris MJ",
-          "id": "UCOykHV9q0qb0vrBsxO_5fkQ"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/dk6bAKvTK8HFodd6g7WLTdJ3dd_URF8Q4h5z8VbD7vXjS5SEy8euoADkp78XHHvwkXGrtL0I1qDskuI6=w60-h60-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "axS35a-ngS8",
-      "title": "Radio",
-      "artists": [
-        {
-          "name": "Future",
-          "id": "UC1_liDR4fRFJgH4HoJeV8cw"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/dL51JLPPU_gReX_YC7pTpMk7vNhVaJ0IYWau-95qXFmEdsWpc7AW1T4feRuSeqKrrPOMNlwVueu3KfPX=w60-h60-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "kGjNdQxeAoA",
-      "title": "Bandido Estrella",
-      "artists": [
-        {
-          "name": "Jasiel Nuñez",
-          "id": "UCf-KzXFKLRFmK5G2QwNDRaA"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/Zup5mKNZEsZRK0ooTA607V_cS_hjPjMx5g1xQIVfxZUaVzAjXETMGYZNTTHPqGLjMPqx0wYKhpWU9Ki7=w60-h60-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "mVdnT6w5C2w",
-      "title": "Jealous Lover",
-      "artists": [
-        {
-          "name": "The Rolling Stones",
-          "id": "UCNYhhkQqeFLUc-YEDcLpSYQ"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/ioqxnqatCQtOs4O7dRgchSLpkX3W3xZRzcwD17lvm6KlA9N-CfrvLCT3Ri0EbLLDGpUEkqNbsbR3lpE=w60-h60-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "bGo20gg0BF8",
-      "title": "ROMO",
-      "artists": [
-        {
-          "name": "Chimbala",
-          "id": "UCj36ACUuHAPPesaM_ydfrxw"
-        },
-        {
-          "name": "y",
-          "id": null
-        },
-        {
-          "name": "J Balvin",
-          "id": "UCWw-Guyr5ul9B-d5kJlHMng"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/9JrZDa_aFhRH4NmGaWfVFaLzeUBpRIEP2QDya0fc5Cb1ZwNx07MTq2rOVdV2HvKYEJPhiXQcTT8IErrUCg=w60-h60-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "roUyOFwVeWA",
-      "title": "PATRONA",
-      "artists": [
         {
           "name": "Becky G",
-          "id": "UC3UkDuAQjoRvTH7OEWm3cHQ"
+          "id": "UC5HWrwM_tGBYTeIWjcGvfZA"
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/95prktbU4qey6X1FrSN_vuDha4DxAWQhwpa5I7oZTZTLEpss7oXesE3u4jOilDdeYeDfPkDYhPmLLY4=w60-h60-l90-rj",
+      "thumbnail": "https://yt3.googleusercontent.com/idHzCtgaHQSqUpwxPEIEnkotIM28OrEraHAfQUPgTepNTiSdi5J_hXOD8n5aZsfYWETn5kXVHLy7Ju9OQA=w120-h120-l90-rj",
       "explicit": true
     },
     {
-      "id": "1yiCb2TK81Q",
-      "title": "Quiero Verte",
+      "id": "5xJP3p4LSKw",
+      "title": "Las mas bonitas son p#tas",
       "artists": [
         {
-          "name": "Gaby Music",
-          "id": "UCVAtSz_69M2ULexewXFrB_g"
-        },
-        {
-          "name": "Yandel",
-          "id": "UCc1QpDE0iT0n6ZLckjflNHw"
-        },
-        {
-          "name": "El Bogueto",
-          "id": "UC8r_j-qnSCj1t4h6EVN5TrQ"
-        },
-        {
-          "name": "y",
-          "id": null
-        },
-        {
-          "name": "Luis R Conriquez",
-          "id": "UCm7mbvc5QOn5JzkeCrk-wdw"
+          "name": "Anuel AA",
+          "id": "UCbBaYg2UToDaoOwo-R6xi4g"
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/HeAVDKa-jXyPk09oirBOwbhg6f3Nh4mAV2l8p2ad2LtM4Cbtoof-Z8JXhVTAVsV2ju5p1fbvyy7qujUH=w60-h60-l90-rj",
+      "thumbnail": "https://yt3.googleusercontent.com/iSX0Ox29sf_SpZMr51jUbgHDKsvqQ-54KksqIlFADT9i-nFG590d6D-z61kYxMKF7r5lHX7wWvMjdqbA=w120-h120-l90-rj",
       "explicit": true
     },
     {
-      "id": "TXXAmTEyTlA",
-      "title": "El Klavo",
+      "id": "az3_6jmrcHY",
+      "title": "KOKO",
       "artists": [
         {
-          "name": "Jombriel",
-          "id": "UCcg-nLw72KrpK4-urD_9wNw"
-        },
-        {
-          "name": "Kris R.",
-          "id": "UCGTKMCLP6zCiTumnyJzpyAQ"
-        },
-        {
-          "name": "y",
-          "id": null
-        },
-        {
-          "name": "Jøtta",
-          "id": "UC6C7NNrdw54OXhi6PYLILTQ"
+          "name": "Omar Courtz",
+          "id": "UCieB8sWI6qEOX6r_UnJU12w"
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/u5IRujJjv0CIwBIxzQlXdl7-xUrzkXRw72C3bVQEIY3CMyJ4G_O7kVhc4AH_cvUgvJFDntmhFm-vTVET=w60-h60-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "QaHE76FTd7I",
-      "title": "ROMANCE MARGINAL",
-      "artists": [
-        {
-          "name": "MC Rick",
-          "id": "UCkpDNelZmkUPvFLz99im9iA"
-        },
-        {
-          "name": "EL Bogueto",
-          "id": "UC8r_j-qnSCj1t4h6EVN5TrQ"
-        },
-        {
-          "name": "y",
-          "id": null
-        },
-        {
-          "name": "Mc Morena",
-          "id": "UCshLCNqAHZYSCwL48qyfmvw"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/aRUjJ30E-yztvqYjiKdSJ7ZvfDvA5JtDMk5RaZi3BQxymb0pf4kt9YnglPOMeSSk_pAKoNcd8kMAoNQ=w60-h60-l90-rj",
+      "thumbnail": "https://yt3.googleusercontent.com/EqBlvzNmm_B2otzdTqYJzhHguR94SVFH96sOWBUlKZ6zJ4CGeXj9YkpcI7MFYEf9DPovp-4RZssESLbv=w120-h120-l90-rj",
       "explicit": true
     },
     {
-      "id": "XQY5Ap_7GQE",
-      "title": "JET",
+      "id": "rEPRjm4z_NE",
+      "title": "Keloke (con Peco)",
       "artists": [
         {
-          "name": "Yng Lvcas",
-          "id": "UCOxbTdISAb-MfHMVBDiDJ1w"
+          "name": "Dillom",
+          "id": "UC65hy5d0grCwJumfAKNBGJg"
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/ymDtVy22e6i1_dDoWrwC9G2kK-Hrnfgi2p5DHSFB3SNCCuP0QvSHrPMnIfvB4o4qtOTb9qH7h4lmNKw=w60-h60-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "xDPbg6ino-U",
-      "title": "AFILANDO (con El Osito Wito, Estrikto, Nuno.w y Chris LA)",
-      "artists": [
-        {
-          "name": "SINAKA",
-          "id": "UCBAymPwzV7tOJb0tx2nV1Nw"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/J1e-PlHPMMZK2rdmlciudKdpDa4bjTXZ2mhTmw2jIjkX0bB7XG8gGc171LFEvyXWgA8E0_kvsspmzUrOYA=w60-h60-l90-rj",
+      "thumbnail": "https://yt3.googleusercontent.com/EONI8jXbKYcvMkR7URo9sjznWBfxDV-LpIrtiV6Lan9f8Bm3MFlHxfIteeDv_DBTE2WZSaDHlEpmWLOC=w120-h120-l90-rj",
       "explicit": true
     },
     {
-      "id": "FhPUx_CwO8g",
-      "title": "NI SIQUIERA SOMOS AMIGOS",
+      "id": "WPMujZtjEGw",
+      "title": "Edgardo Núñez - El Moscast Music | Cap. 92",
       "artists": [
         {
-          "name": "La Arrolladora Banda el Limón de René Camacho",
-          "id": "UC_vwQJlETC2l_45U43l4QMA"
-        },
-        {
-          "name": "y",
-          "id": null
-        },
-        {
-          "name": "Natiuska",
-          "id": "UChy0ZTNl3OFKuD5r4eU05eQ"
+          "name": "Episodio",
+          "id": ""
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/G4_sNbctuzPMmsCUu6nLiV_ApOfDfR62-x0jCHIibqZ-mRev174fbvcEV6z2BsvZlGlRrng4SZhrqSnM=w60-h60-l90-rj",
-      "explicit": false
-    }
-  ],
-  "newReleaseAlbums": [
-    {
-      "browseId": "MPREb_E3hpS0kUInv",
-      "playlistId": "OLAK5uy_lAnF7PGHNIxTF-8iO1FPAM0aJmYJa-6J0",
-      "title": "Loko Soñador",
-      "artists": [
-        {
-          "name": "Kane Rodriguez",
-          "id": "UC5BKBeBWnZqKJw1gY7bwBOA"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/1pOeqQkhaPqYQk2mEwG8l8zpf2Sr3GFIcWnYxy8fPlBvJT6rmBsiPAbX4N6dlAO59q0daPlcFna486Y_=w60-h60-l90-rj",
-      "year": 2026,
+      "thumbnail": "https://i.ytimg.com/vi/WPMujZtjEGw/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3k9LrV1OS5nOPmh_D6WsjOnBUm_LQ",
       "explicit": false
     },
     {
-      "browseId": "MPREb_I5OryN8szPX",
-      "playlistId": "OLAK5uy_lvsnVNUuwEr_zFQYdcnx1Mrdd4z784vo0",
-      "title": "NOCTURNO",
+      "id": "2Jgulp_Ba8Q",
+      "title": "Bad Bunny, Drake - Mia Feat. Sean Paul",
       "artists": [
         {
-          "name": "Eslabon Armado",
-          "id": "UCmqrOR5GZcSNS5BLAAt6hPg"
+          "name": "Sean Paul",
+          "id": ""
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/LiBBldVQV0LnU_o1BfQUNDEJBb8fs9uQPGUC2IiVbE1aep4Cw55DdiPXBaxPuGthe0eTBoHU0hFZoWQ=w60-h60-l90-rj",
-      "year": 2026,
+      "thumbnail": "https://i.ytimg.com/vi/2Jgulp_Ba8Q/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3kIbCjALpagAY4OmAfb-7L-g5oJ_g",
       "explicit": false
     },
     {
-      "browseId": "MPREb_NCeTkyRkVX0",
-      "playlistId": "OLAK5uy_koonMIYTdB6uDTOn-9wzLAF7fAcS5DTFI",
-      "title": "No Signal EP",
-      "artists": [
-        {
-          "name": "pepe arcade",
-          "id": "UCrpv5q6x7vf7mCXZY3ClxHw"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/iewcTIqkdKmYO1UH9HTQBP5QZR5PSNwdNsUpj7h-gIN7-OaQPRkBDM1kb0-YnzcZbieKo4qCEYW15Oiu=w60-h60-l90-rj",
-      "year": 2016,
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_aG9eSSxgBdE",
-      "playlistId": "OLAK5uy_lSfMvrX-2P2XQf6Q4ZMl0Wd0ggeIsGAZQ",
-      "title": "ROMO",
-      "artists": [
-        {
-          "name": "Chimbala",
-          "id": "UCj36ACUuHAPPesaM_ydfrxw"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/5N2qHFpHBdDyZ5GKUuvNN351Q_r8ramqFSdZgFU5NsOMrG48liI549EubFluoAMtDRnQbaL82nbFvnM=w60-h60-l90-rj",
-      "year": 2026,
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_wX0uESY5LaO",
-      "playlistId": "OLAK5uy_m3wtHkKxeu8fHUOCpSfCNJK_m7dOFqnK8",
-      "title": "sesbianlex",
-      "artists": [
-        {
-          "name": "Chzter",
-          "id": "UCNWdBHFJV6W0t0Q5OCc-exA"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/O-kTz5diMvY_tuA69V-e3qEWL-tElliR-GmJIcmyd1KerpfHEGVEQeywJDr2tpHON6ihhWPTQUZ0Ofo=w60-h60-l90-rj",
-      "year": 2026,
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_9Hg28kW64J0",
-      "playlistId": "OLAK5uy_lbs5fI3m6mdOn77vRcOWguTd8h3Sx25d8",
-      "title": "Epic Phonk Songs Hard Heavy Bass Aggressive Sigma Phonk Beats",
-      "artists": [
-        {
-          "name": "Best Phonk Music",
-          "id": "UCtF33rp7MGelfoGLSpIdFDg"
-        },
-        {
-          "name": "Phonk Music 2023",
-          "id": "UC53SLi6_c7FJ1E68HC9Dl4A"
-        },
-        {
-          "name": "y",
-          "id": null
-        },
-        {
-          "name": "Phonk Christmas Music",
-          "id": "UCRguRDtVPv4eh0lExFWxhzg"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/JXUD1gmRO0b8vJ_a332WBlST7-VNm2ANyjQPJkkaOnMBMxls7o4ysPePDGeTO-B6DoO0_42UqHOVzfU=w60-h60-l90-rj",
-      "year": 2024,
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_0Hp3qq7YuSg",
-      "playlistId": "OLAK5uy_lEtk5mVlOEAyx0vNqcaJ5T3V4a6hBMdc8",
-      "title": "Tres De Espadas",
-      "artists": [
-        {
-          "name": "1OO1O",
-          "id": "UCZlxRH_fJ4uwE75R588lJLQ"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/Pp_zGflGFqehlmEsMyhBcRwTT-EFPaCjoAvi6FVMIZRb-PMf2NcgQZqDpxxN6JvOw1bOZahgF3KOZuM_og=w60-h60-l90-rj",
-      "year": 2026,
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_wIa93QHCgQo",
-      "playlistId": "OLAK5uy_lSlSEGzIW_ddDxPJq2YzWf7hRowHHIiq0",
-      "title": "ZOMBIES 4: Dawn of the Vampires (Original Soundtrack)",
-      "artists": [
-        {
-          "name": "ZOMBIES – Cast",
-          "id": "UCc2_g_9LC2VK2mNKRYSbykg"
-        },
-        {
-          "name": "y",
-          "id": null
-        },
-        {
-          "name": "Disney",
-          "id": "UC0L4FNvqduCM49XPjb8dZHQ"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/EABwEqAJxgCA94oPB46qmsacf1y0fK8QZbgcMucb55-xvZwfaaUQYknQNpHH-BjtcdGB8AGUqil7jmhL=w60-h60-l90-rj",
-      "year": 2025,
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_wsuDXSGG1AN",
-      "playlistId": "OLAK5uy_lGyANcDWZYDAUOwZEOJE2ZrxiL9iiA7rQ",
-      "title": "perfectas",
-      "artists": [
-        {
-          "name": "Emilia",
-          "id": "UCvXoAG_trv-m2pv5_1HVFvA"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/wEseKvxvSkGWiLK_JubR8e68grON45HpoKkquiPTzluFNlsBarCDAfQ2sifix8yQchLLT2EPZoHSYshK=w60-h60-l90-rj",
-      "year": 2025,
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_UzCBw0XTqOd",
-      "playlistId": "OLAK5uy_mdscw7L2slizCz6_vuxP0jfxUrMbAWq9o",
-      "title": "Dos",
-      "artists": [
-        {
-          "name": "Fanny Lu",
-          "id": "UCTUdU_6W-hupRABjkM3a5nw"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/voFEYrWoPeqysRkRiYY7P8a_s2Zov_eTPoVxipWBeQFm-ksRugIz8-MhTWKbyABauKr8iro2FF11eER8=w60-h60-l90-rj",
-      "year": 2008,
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_iEXZr4ChGwH",
-      "playlistId": "OLAK5uy_kcp2iNMwh5jDVu8gE8AGHJL_bFki_hWIc",
-      "title": "SWAG LIVE FROM COACHELLA (Weekend I)",
-      "artists": [
-        {
-          "name": "Justin Bieber",
-          "id": "UCGvj8kfUV5Q6lzECIrGY19g"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/82uhjk3fKtkmLF3cr7wgkwuQT4WEDK2ggzXggPo0IAKl3lZmslAoSGV1zgnzNtOSzJ4jXyUXiHm0HtdF=w60-h60-l90-rj",
-      "year": 2026,
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_MdOeuSgmXVT",
-      "playlistId": "OLAK5uy_mv-9h--NTXamogIucvGvrclMzBV4xB6Zw",
-      "title": "Moana (Original Motion Picture Soundtrack)",
-      "artists": [
-        {
-          "name": "Disney",
-          "id": "UC0L4FNvqduCM49XPjb8dZHQ"
-        },
-        {
-          "name": "Lin-Manuel Miranda",
-          "id": "UCAFIersvPYEQzT7XPRWUj8g"
-        },
-        {
-          "name": "Catherine Laga'aia",
-          "id": "UCVDDIg8So6g7TQKua28dcAw"
-        },
-        {
-          "name": "y",
-          "id": null
-        },
-        {
-          "name": "Dwayne Johnson",
-          "id": "UCUsyzSctz8ZkE6RBHs8Vwxg"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/tABuKQzonum1-pDWTV4Qz8IrIRwtxwtYehFGCAdtnWKQZbbo-Bq4lDuv2-_mzhEH4h3xtvlm3l2IhmCD=w60-h60-l90-rj",
-      "year": 2026,
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_inXxgnrcJFP",
-      "playlistId": "OLAK5uy_l3mEEq1wu4TkAODa0FZNuY9K3vZa9GbwM",
-      "title": "Free for Profit",
-      "artists": [
-        {
-          "name": "free for profit type beat",
-          "id": "UCG8Poao44Q7cFHpyEvuFYTQ"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/BUehGh9NdcsGxfeAl7JVJM-0T4S0QPzp1EYMf4vwEGwMuldgpQW27ynNFQrQeetxIwn9RIfrDnnNMgk=w60-h60-l90-rj",
-      "year": 2024,
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_YwhlerQNpTE",
-      "playlistId": "OLAK5uy_mEqFXWyxInmNL9aIkvUONVi_p10SbfCAI",
-      "title": "All We Need Is Now",
-      "artists": [
-        {
-          "name": "Las Robertas",
-          "id": "UC2BXJNoU3u4HVCDS-CpSSVg"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/6kpR04luX9pGAUJy22pNy5taEJDYcZbIReA2xCnL7MRom9kWZvIHcEB6hfGFt37c5S4oek1y8nLFrugc=w60-h60-l90-rj",
-      "year": 2026,
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_w1Vs745RU4V",
-      "playlistId": "OLAK5uy_kc4Tuk8HiOsYnFsknXrQwjcYJ1M5WJKQI",
-      "title": "Public Luxury",
-      "artists": [
-        {
-          "name": "Downtown Boys",
-          "id": "UCnFJGY5md_Ic1QwNFbhkZDg"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/P9r7I38JzzCsH8aB-HS8XvG6i6M3qLTwer1gc0fUUchE-jC3l6MMPC64hRJqAvCGxs6v9ewfTdKU_iuzoQ=w60-h60-l90-rj",
-      "year": 2026,
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_hpp75regaZQ",
-      "playlistId": "OLAK5uy_mY8J8JnfbFFJCJ6QI10nIExJa1E-DtYjU",
-      "title": "Deluxe Notre-Dame",
-      "artists": [
-        {
-          "name": "Morrissey",
-          "id": "UC_Lm9hIkUlRr4pURZg5nE3g"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/NavJNXnSGWXbWeMSE5R5MuyIQsLDHQkIT31yv1ffRwuZy3HMuRa7mlXzxiyozOBxSXtqk94FQ3ynoFtm=w60-h60-l90-rj",
-      "year": 2026,
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_QYjg4PSQ0Ny",
-      "playlistId": "OLAK5uy_mXzCOsgnxTWu723kqSc1WEZUwQsryT1i8",
-      "title": "A Tiempo",
-      "artists": [
-        {
-          "name": "Espinoza Paz",
-          "id": "UCZOfC1kYm_MZeT-Kq-KYHvA"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/3eX5l7Q0JF5I_0_CMhevvKbknZTFENDVtVo6zICKxwn27XHgNsa4PsJgsO7GRzmEo35ZkTrvkezwVtQ=w60-h60-l90-rj",
-      "year": 2026,
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_ejZfpXRQCyY",
-      "playlistId": "OLAK5uy_nO_1llxrmdlKm5Fs2b96vEazL_6e80640",
-      "title": "Offering",
-      "artists": [
-        {
-          "name": "Ibeyi",
-          "id": "UCiQ979Y__qwtNlEw71JEyow"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/o8W7upA3fKZYu8ysTOVKk6TABz4OSuDsytb1n3xje11W-L4jNDJPOnnoG82h6dO7Gytvl0tqKy_cktSnIw=w60-h60-l90-rj",
-      "year": 2026,
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_lbxRnhQDMgs",
-      "playlistId": "OLAK5uy_lnXsIfI2mlcSH8i6o_b0fakl0u1CSHqB4",
-      "title": "Harmony",
-      "artists": [
-        {
-          "name": "Brutalismus 3000",
-          "id": "UCV0kzMt4a95ji7OISiVSWYQ"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/kJatWjDtWmQ_cniM9IRaSkujJ9TXXd5EXNucGcohCn9pBWjNFQtSKm6l52nuye9Zx13GHCiZPQ0AHYk=w60-h60-l90-rj",
-      "year": 2026,
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_hAQrUlKI7Vx",
-      "playlistId": "OLAK5uy_lxvbKXFp0hr5V36WE1_zK3uKHSR9rFwRM",
-      "title": "Music Sounds Better With You",
-      "artists": [
-        {
-          "name": "Stardust",
-          "id": "UCjuD2g8i12Kwl-7NUOthFgw"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/jw3j8NVO6TpOHEy_T33qc8repeE5_QKVWhweJD4pGxHSh6tlaQJXU6nu2FJVf9qe65Ov0kiDqMCvke9f=w60-h60-l90-rj",
-      "year": 1998,
-      "explicit": false
-    }
-  ],
-  "trendingSongs": [
-    {
-      "id": "kC98BXMwuYk",
-      "title": "Skokka",
-      "artists": [
-        {
-          "name": "Huan 62",
-          "id": "UCtVysF6yD3MqLulPTrtU_bQ"
-        },
-        {
-          "name": "y",
-          "id": null
-        },
-        {
-          "name": "Kelvin Avm",
-          "id": "UCDaIKEU7-TyrfdRkJ6MAsMQ"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/_WBMx_ici5s0FzIBK76VOvo-tTgl0e-obaNjwVBoM7MNdUxRmyLD0immBi2GpCgHic20aIuHHefRKjmuww=w60-h60-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "P7VgXIZSN_w",
-      "title": "stupid song",
-      "artists": [
-        {
-          "name": "Olivia Rodrigo",
-          "id": "UCE5XNpliPM-SmyFEp61tL_g"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/q0szuVtXvUdftTC8k9fjwazdEpoaCyWTZ1d5Xa3GWHhQPD6_59W_rPlmZRFa2rSFPLTmfOGEgvPfF9uBVg=w60-h60-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "lFQdcPTTzSg",
-      "title": "Dai Dai",
-      "artists": [
-        {
-          "name": "Shakira",
-          "id": "UCo6JijJGA3IvIiPsawDK3Ww"
-        },
-        {
-          "name": "y",
-          "id": null
-        },
-        {
-          "name": "Burna Boy",
-          "id": "UCr61sufuLt7_eB7ak1bXHIg"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/moXpr_lvHpb9m70jTjr-0GE63_VyHivgmyH7UPBJmgwWPHwwmvhxDPPZtdAhCFo7CdzmzIGwBE3cn4VuCQ=w60-h60-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "DAXXRuW5-mM",
-      "title": "Nalguita y Teta",
-      "artists": [
-        {
-          "name": "Neton Vega",
-          "id": "UCHqMn3yv_kft6-kpbiMgDoA"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/-ZvtOuzOnCNy5dviZPvNDbMtirOKd3OhH6pOiOjHt-rsYoQFWYuxh7yen--6PFGDEllJejc4vE1s2tU=w60-h60-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "iEZVDHGUoi0",
-      "title": "Madrugada",
-      "artists": [
-        {
-          "name": "Chino Pacas",
-          "id": "UCkY8mKtAicIMSCG9dYP94zw"
-        },
-        {
-          "name": "y",
-          "id": null
-        },
-        {
-          "name": "FLVCKKA",
-          "id": "UCh7_RzWLmYtlXTD0ua7wcvw"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/2Ob7_hapOHhAl8VBsGcnIS7V2I8JAK0OsFXyKjCbx4y6hAPAxw1e4gNoqhhc-OMq4MtgLEMytDmDot7Y=w60-h60-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "O6s8PJpeObo",
-      "title": "Entre Tu y Yo",
-      "artists": [
-        {
-          "name": "Bayriton",
-          "id": "UCEhmRulBDpFm3lIoEJr2jIw"
-        },
-        {
-          "name": "Piero 47",
-          "id": "UCP0AcNtq9vpaotuFR2IPixA"
-        },
-        {
-          "name": "Raven la R",
-          "id": "UCA1GtMQIoVnIFM9N9rxMRgQ"
-        },
-        {
-          "name": "y",
-          "id": null
-        },
-        {
-          "name": "JORGE BAIRON CAMILO NANCUPIL VERA",
-          "id": "UCFeDmjGUtXCa_cIbGbaBd1Q"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/FfsiTUxKISoP84OTonJf6k_wzhBaxsUHhpzY90pH15LZEEXbCRwJTkZtRDE7VznDfw7Qwp9lqJadwhA=w60-h60-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "ntyEivMRJgs",
-      "title": "GAMINA",
-      "artists": [
-        {
-          "name": "Kris R.",
-          "id": "UCGTKMCLP6zCiTumnyJzpyAQ"
-        },
-        {
-          "name": "y",
-          "id": null
-        },
-        {
-          "name": "Los Money Makers",
-          "id": "UC4e3KA1brwpODpV23ansI0A"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/m09XfzywKwkxWKZdAbGHvHA1dPjdJe8zQANXSofXdEQVaXLzXSQO3_mvU1lfliDIsNPSDoYiLjizIvFxVQ=w60-h60-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "REXM8ueqrJA",
-      "title": "Ware",
-      "artists": [
-        {
-          "name": "Skinny Tlw",
-          "id": "UCqyblkFFIZ4at8itfQB6hAA"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/yXsmyNcGh-QOi2gWxfHpTp9J1pWGfdx_RuOWyK8Fv0kdyL5MmCkghR6823qsDB1AnFkeiGOw-e7Taweftg=w60-h60-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "xlmJZOxb-Nk",
-      "title": "Just The Way You Are",
-      "artists": [
-        {
-          "name": "Milky",
-          "id": "UC8FfIzD5DkuqxwBu9bTJ1mA"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/83z9xXHuINwUZCGZqwOWdmLYJwENbrnYbHzWi6FsP9pDsWdr7j4RCt-iUQTPTucjNi9RQUjpA5tFpTw=w60-h60-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "4IYsSKH7uCE",
-      "title": "ME VALE V",
-      "artists": [
-        {
-          "name": "Tito Double P",
-          "id": "UCATfo9SAdXImyc6ygfbzJBg"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/1kzWBZnTlchYleUEYiXN4mwIvBHxG26nQsNsqWfJIU4VLTV21FcCdGIZ8Nr0Zc8i2Ro_JxFuysT2ae8=w60-h60-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "qOnf2oPUtVE",
-      "title": "PROVÓCATE",
-      "artists": [
-        {
-          "name": "Blessd, Cris Mj y SOG",
-          "id": null
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/wRE2jz8OVKYjLYbucUlYWAQT439rIMXByizwcjhgnbNyowX25hS52dILdJdbdXiUS7FGk1Ds1ohVY3H8=w60-h60-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "7CUz7Ec7cWc",
-      "title": "hate that i made you love me",
+      "id": "pLBXk3nMVAQ",
+      "title": "we can’t be friends (wait for your love) (Live)",
       "artists": [
         {
           "name": "Ariana Grande",
           "id": "UC0076UMUgEng8HORUw_MYHA"
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/Mq8kh-Qg2QJr9kIjuk25IT2o2Dwyry87xMWt2YV0SOfbjufAu3oZTMigL4LYXx8PbF0WotMBocMPUvSJ=w60-h60-l90-rj",
+      "thumbnail": "https://i.ytimg.com/vi/pLBXk3nMVAQ/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3ky6DrlORkyWLPTanhQ2WlgMPTqtw",
       "explicit": false
     },
     {
-      "id": "bTtmUXC8sYU",
-      "title": "Encantadora",
+      "id": "AKM503c2TL8",
+      "title": "Intro + yes, and? — Ariana Grande (Live from Oakland 2026-06-06)",
       "artists": [
         {
-          "name": "Yandel",
-          "id": "UCc1QpDE0iT0n6ZLckjflNHw"
+          "name": "Miguel Soria",
+          "id": ""
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/VHxYqbeMKEiky2hGht-1UL47Ebr7QKn7t_SAzN545QdVkdCwuJz8di15qvK3AfDikNSIkgRk86dcbwd7-Q=w60-h60-l90-rj",
+      "thumbnail": "https://i.ytimg.com/vi/AKM503c2TL8/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3nDvuxR_iOlUGVf1_MgHUDwUPg_bQ",
       "explicit": false
     },
     {
-      "id": "mzhbRUniU4U",
-      "title": "Life Goes On",
+      "id": "UWn9RdueB7E",
+      "title": "Gata Only",
       "artists": [
         {
-          "name": "Oliver Tree",
-          "id": "UCoOFEu6s0wk7CUljMh8wisw"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/2OUpQNjY58jQq1STwHz2CRClwWkzhCCKtSBo6SC2N78LAMmFaXJdSGkUENX7yw0g2CpCQ3RjejB_Fj4=w60-h60-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "U1bc5rI4RrE",
-      "title": "UNA BABY EN SANTIAGO",
-      "artists": [
-        {
-          "name": "Lil Naay",
-          "id": "UCu_qmyIu8uT-stU7Mx-kcgw"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/3v4LhEiqsXh6dLiLp36qNoJylCkRjaFpUdVUr8RhyCTLhWomidXens5jrUsKXe9YXiB_F6EWberIdpTrFQ=w60-h60-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "dkH6bUnsy1Y",
-      "title": "De Lejitos (Remix)",
-      "artists": [
-        {
-          "name": "Jay Wheeler",
-          "id": "UC17u1K8tiqxxFhPMbM50ASA"
-        },
-        {
-          "name": "y",
-          "id": null
-        },
-        {
-          "name": "Omar Courtz",
-          "id": "UCECf5Do7fabQCuF3h38sFDQ"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/M4gC49M_z88QHhFXnc-Vgnh3pQk7TmJIavtedKqcHxWM7DYa24sCMNE3-C1HMVjT9RRwIVpwWHjN0eHU=w60-h60-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "SzJXikN_4wA",
-      "title": "I Knew It, I Knew You (From \"Toy Story 5\")",
-      "artists": [
-        {
-          "name": "Taylor Swift",
-          "id": "UCPC0L1d253x-KuMNwa05TpA"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/gugx1oABoi0MrNgzaLtUJib6Xm44OC8aoAYx66zxLM_N1kG6xT_BUH7IO-0eaFAyQzxk43srK4gW7hip=w60-h60-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "UKfa__-Ns0I",
-      "title": "Watekeo",
-      "artists": [
-        {
-          "name": "CARIT BR, MAURY, dimelooolexx y AIVAN BEATZ",
-          "id": null
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/K2eP2mgsQTHXkDwxvFaBKKHbS3G90NFNc5RjLHf1tNun8niKeWjNrcjODAO0XkD5Xdaox-lHo-SlKONf=w60-h60-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "ZsWDn821tIY",
-      "title": "Q Hubo Amor (Medellín)",
-      "artists": [
-        {
-          "name": "Ovy On The Drums",
-          "id": "UCtfkGa4ie0BivwCPWCHalOw"
-        },
-        {
-          "name": "Jere Klein",
-          "id": "UC_MAEhBzOKDyKLhFsVbnAqQ"
-        },
-        {
-          "name": "y",
-          "id": null
-        },
-        {
-          "name": "Blessd",
-          "id": "UC3vpYFFzqIzsXbMgneDTSeQ"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/JOuAKtu_d1UM96zeIcn63krDznYx1sh2K5bxQVulrOiImXDVnHb7phb6N-MRAxVPf70BL1Gyc962EvBtgA=w60-h60-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "wkVKZRtJdcA",
-      "title": "GANAS REMIX",
-      "artists": [
-        {
-          "name": "Kris R.",
-          "id": "UCGTKMCLP6zCiTumnyJzpyAQ"
-        },
-        {
-          "name": "Ryan Castro",
-          "id": "UCDxiGGtBV3CQiE-NKLEFgUg"
-        },
-        {
-          "name": "De La Rose",
-          "id": "UC2-PV0lS78r65j_3f5_vPvA"
-        },
-        {
-          "name": "y",
-          "id": null
+          "name": "FloyyMenor",
+          "id": "UCQgRygEjKPuNQWlhjXQGm6A"
         },
         {
           "name": "Cris Mj",
           "id": "UCOykHV9q0qb0vrBsxO_5fkQ"
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/ljiwp_LRnC6DfnVA91onUZoD0V8k0ZyTma5UcOCFmHSzzaAi0167zOEZtx5AJdwZs7m9ImpAzTOEAjB7ow=w60-h60-l90-rj",
+      "thumbnail": "https://yt3.googleusercontent.com/diUI1hB3OleAoXadcG_L7xN3F3jEb-gpe6YsouyFpQXAdbInTHa3kmshHMVOJfCfS0Akjnqviq7lWds=w120-h120-l90-rj",
       "explicit": true
+    },
+    {
+      "id": "xT9Ym9gsNjg",
+      "title": "Si Antes Te Hubiera Conocido (Remix)",
+      "artists": [
+        {
+          "name": "DJ Francisco Freites",
+          "id": "UCjsUNTMi3HzNnU4dbXNxYYA"
+        },
+        {
+          "name": "KAROL G",
+          "id": "UC7n3gWRN0vQzgiOKc51aZ4w"
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/xT9Ym9gsNjg/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3msmzNP0GlYcbiiRkdolHnsyn5cfA",
+      "explicit": false
+    },
+    {
+      "id": "gNoZulHH96k",
+      "title": "Luna (Remix) - Feid ft. Maluma",
+      "artists": [
+        {
+          "name": "Luna IA Music",
+          "id": ""
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/gNoZulHH96k/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3koZyY7QmRiUlcf7Bi1LkIaNw_PuA",
+      "explicit": false
+    },
+    {
+      "id": "a6tgD_CsYTQ",
+      "title": "Perro Negro",
+      "artists": [
+        {
+          "name": "Bad Bunny",
+          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
+        },
+        {
+          "name": "Feid",
+          "id": "UCc3e8O2V5_7OA300ursDyFQ"
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/a6tgD_CsYTQ/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3ljAKZryXghzVPITd33cNhtQJkAKA",
+      "explicit": false
+    },
+    {
+      "id": "sZygRgjKoGE",
+      "title": "Baile Inolvidable - Bad Bunny & Rubén Blades (En Vivo - Coliseo de Puerto Rico José Miguel Agrelot)",
+      "artists": [
+        {
+          "name": "CUVER",
+          "id": ""
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/sZygRgjKoGE/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3lLQMAMZNGfUSMn0P4gBPhTArpLQg",
+      "explicit": false
+    },
+    {
+      "id": "BnFTPZIi-A4",
+      "title": "Peso Pluma, KAROL G - QLONA (Music Video)+ Lalo Ebrath, Dennis Fernando, Danny Deglein (REMIX)",
+      "artists": [
+        {
+          "name": "UNIONN LATINA",
+          "id": ""
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/BnFTPZIi-A4/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3megyEXPiuEjIZGSnt5Yd-SHz69-A",
+      "explicit": false
+    },
+    {
+      "id": "_EofbmStkMw",
+      "title": "Un Poco Perdido",
+      "artists": [],
+      "thumbnail": "https://yt3.googleusercontent.com/idHzCtgaHQSqUpwxPEIEnkotIM28OrEraHAfQUPgTepNTiSdi5J_hXOD8n5aZsfYWETn5kXVHLy7Ju9OQA=w120-h120-l90-rj",
+      "explicit": true
+    },
+    {
+      "id": "cxC_v6_vh58",
+      "title": "Memoria De Paz (con The Marías)",
+      "artists": [
+        {
+          "name": "benny blanco",
+          "id": "UCzqz_ksRu_WkIzmivMdIS7A"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/idHzCtgaHQSqUpwxPEIEnkotIM28OrEraHAfQUPgTepNTiSdi5J_hXOD8n5aZsfYWETn5kXVHLy7Ju9OQA=w120-h120-l90-rj",
+      "explicit": false
+    },
+    {
+      "id": "CyPdQiQD9Z8",
+      "title": "Doctor (Work It Out)",
+      "artists": [
+        {
+          "name": "Pharrell Williams",
+          "id": "UCJw8VyO6e3v6S0327AsgwcQ"
+        },
+        {
+          "name": "Miley Cyrus",
+          "id": "UCREdEwBdZcnQLIT0ThaAtmQ"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/SYLSUuiiu8S4_4u4Fd5TYPnl1fLsLGu1UD4rzumwTprU5po-yrrl6R0ByVTJSFn6rfoWrdDEk6batvk=w120-h120-l90-rj",
+      "explicit": false
+    },
+    {
+      "id": "HNViGifyReQ",
+      "title": "Houdini (Live From Mexico)",
+      "artists": [
+        {
+          "name": "Dua Lipa",
+          "id": "UCzVb0SIXp9q9PeKCcFjsBtA"
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/HNViGifyReQ/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3niytnfil-2MOONxhWKMUvb90c_0Q",
+      "explicit": false
     }
   ],
-  "everyoneListening": [
+  "newReleaseAlbums": [
     {
-      "id": "T_UEawa2wCk",
-      "title": "u + me = <3",
+      "browseId": "MPREb_IYfe9Etab3k",
+      "playlistId": "OLAK5uy_IYfe9Etab3k",
+      "title": "thank u, next",
+      "artists": [
+        {
+          "name": "Ariana Grande",
+          "id": "UC0076UMUgEng8HORUw_MYHA"
+        }
+      ],
+      "year": 2019,
+      "thumbnail": "https://yt3.googleusercontent.com/3LV6GoLom0Vb_oNFTXI_e2NIua0D-WocCifEFnSQattWpLfswpayWPzZ2BeClAB5QxR2EnGZkgh7QI7j=w544-h544-l90-rj",
+      "explicit": true
+    },
+    {
+      "browseId": "MPREb_1zBJxVRBDNN",
+      "playlistId": "OLAK5uy_1zBJxVRBDNN",
+      "title": "Especial",
+      "artists": [
+        {
+          "name": "Viejas Locas",
+          "id": "UCRWg6ojsIzk2kDCx-YZ_7ig"
+        }
+      ],
+      "year": 1999,
+      "thumbnail": "https://yt3.googleusercontent.com/izrQILx27F0bnnIvQ5JJKysKpsnaEGggwOqEzwvzemQdzY451xQby5gGG9vEv-JFdGPyWySJ9DRMrbP_og=w544-h544-s-l90-rj",
+      "explicit": false
+    },
+    {
+      "browseId": "MPREb_G2iVd7o4Pgh",
+      "playlistId": "OLAK5uy_G2iVd7o4Pgh",
+      "title": "GUTS (spilled)",
       "artists": [
         {
           "name": "Olivia Rodrigo",
           "id": "UCE5XNpliPM-SmyFEp61tL_g"
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/REA_Otoa5g-YBrDU0lRxSPu5YBP3tZHiIs2DWnO9mqXRZjTWDXyL8Zv83I56-Benty2h5Q0UzX9xBw7g=w60-h60-l90-rj",
+      "year": 2024,
+      "thumbnail": "https://yt3.googleusercontent.com/LK1SpvU_sw-dT5MsGcDiN4Jmr7E6gIu0Xj2hYUDyrpaEW5yoJ5swueAyFUY_m-WCseB2_Eq5fsUv54E=w544-h544-l90-rj",
       "explicit": true
     },
     {
-      "id": "5ca_0UYtYXY",
-      "title": "REGRESA Versión Salsa + IA",
+      "browseId": "MPREb_KowXPQ8d0As",
+      "playlistId": "OLAK5uy_KowXPQ8d0As",
+      "title": "CONFESSIONS II",
       "artists": [
         {
-          "name": "GABO CAMPOS -IA PRODUCTIONS",
-          "id": "UCtpWF2Gq56s248XHmbkApXA"
+          "name": "Madonna",
+          "id": "UCo4CrqhIV_tSOGdDWfVyCsg"
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/UbxJ3_Ii-IZrWNhc8wttXCw91EDOOLHAEf3cEnSP1IMGken--cRHYzvweiKBSCNDEl2n9EzicE2yviGJ=w60-h60-l90-rj",
+      "year": 2026,
+      "thumbnail": "https://yt3.googleusercontent.com/sCserwMJjYLKuR_jrwOeiWWN8sRfSA89i3AETEOjwwjN_--J4YIUtsOAs8B74NxTUq6jEHUWjK2MyoM3=w544-h544-l90-rj",
+      "explicit": true
+    },
+    {
+      "browseId": "MPREb_IrTVSodLnvP",
+      "playlistId": "OLAK5uy_IrTVSodLnvP",
+      "title": "Lost Weekend",
+      "artists": [
+        {
+          "name": "Phoebe Bridgers",
+          "id": "UCprIJgC2-qqSHNVztFjRFmw"
+        }
+      ],
+      "year": 2026,
+      "thumbnail": "https://yt3.googleusercontent.com/SrGnL6w4JCPoeATM1Pz9eqnA15i8ZjvLzVBL-RIv0fiOxy_oRYM_4rWYQx2MbM_RSy30yMHC1WmokQTH=w544-h544-l90-rj",
       "explicit": false
     },
     {
-      "id": "jyUUYrJEUcE",
-      "title": "BRILLO",
+      "browseId": "MPREb_cLAwkqCiDuK",
+      "playlistId": "OLAK5uy_cLAwkqCiDuK",
+      "title": "POR SI MAÑANA NO ESTOY",
       "artists": [
         {
-          "name": "Tito Double P",
-          "id": "UCATfo9SAdXImyc6ygfbzJBg"
+          "name": "Omar Courtz",
+          "id": "UCieB8sWI6qEOX6r_UnJU12w"
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/hpCqg7FV_Fyw1ZieuRx-5YAtlFTkCiA0q-9FQOiG-IhERwUolaC-SjJ7i3Bn6aGnAs0y_UI73UpTimt6=w60-h60-l90-rj",
+      "year": 2026,
+      "thumbnail": "https://yt3.googleusercontent.com/EqBlvzNmm_B2otzdTqYJzhHguR94SVFH96sOWBUlKZ6zJ4CGeXj9YkpcI7MFYEf9DPovp-4RZssESLbv=w544-h544-l90-rj",
       "explicit": true
     },
     {
-      "id": "bVav9Z1MqxI",
-      "title": "MENTE POSITIVA",
+      "browseId": "MPREb_HX4JPKKRWzI",
+      "playlistId": "OLAK5uy_HX4JPKKRWzI",
+      "title": "NewJeans 2nd EP 'Get Up'",
       "artists": [
         {
-          "name": "Blessd",
-          "id": "UC3vpYFFzqIzsXbMgneDTSeQ"
+          "name": "NewJeans",
+          "id": "UCxOqS3cYg4FaHbobICo7nFQ"
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/wRE2jz8OVKYjLYbucUlYWAQT439rIMXByizwcjhgnbNyowX25hS52dILdJdbdXiUS7FGk1Ds1ohVY3H8=w60-h60-l90-rj",
+      "year": 2023,
+      "thumbnail": "https://yt3.googleusercontent.com/FzLKj6zFEJna0gRNDeZRH4nuQwEyN-YbCaC-bIGLoia6EhirHUachdvdEdR3VdB7pArgFCW8mtpLPL0=w544-h544-l90-rj",
+      "explicit": false
+    },
+    {
+      "browseId": "MPREb_NMmY1n1NJFS",
+      "playlistId": "OLAK5uy_NMmY1n1NJFS",
+      "title": "Un Verano Sin Ti",
+      "artists": [
+        {
+          "name": "Bad Bunny",
+          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
+        }
+      ],
+      "year": 2022,
+      "thumbnail": "https://yt3.googleusercontent.com/0Ke36SSY53TQbmpqzKP4hMPoGiWYQiGI0KJ2CzcwjW4ore9vUMUmyzEi7irEU2MR3FCpNPdwIIuNslS6hg=w544-h544-l90-rj",
       "explicit": true
     },
     {
-      "id": "lXTU664qsyo",
-      "title": "OK (con Don Toliver)",
+      "browseId": "MPREb_ay3UerEHn5t",
+      "playlistId": "OLAK5uy_ay3UerEHn5t",
+      "title": "OCEAN",
       "artists": [
         {
-          "name": "Kanye West",
-          "id": "UCRY5dYsbIN5TylSbd7gVnZg"
-        },
-        {
-          "name": "Ye",
-          "id": "UCWnCIGml93obHBTwlxb2N8g"
-        },
-        {
-          "name": "y",
-          "id": null
-        },
-        {
-          "name": "Don Toliver",
-          "id": "UCSzWQmDsKG37iKN2vw1G-2Q"
+          "name": "KAROL G",
+          "id": "UC7n3gWRN0vQzgiOKc51aZ4w"
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/jNOFpeeRZsiliLBUBCLeKu1UZo67_2Tuqyg2MxfdOAVV0ctETgBkvlKesKx0NGq5oIVHjHUHioBwDTDHgQ=w60-h60-l90-rj",
+      "year": 2019,
+      "thumbnail": "https://yt3.googleusercontent.com/6nd0FE1ujr43AByxQFGVWB9DDDzHeMZiiAHGvl4xeU9tNTEUGRDTAwJINx1z2QOujBInhyv4elXoX-4=w544-h544-l90-rj",
+      "explicit": false
+    },
+    {
+      "browseId": "MPREb_SVBn99xIpAK",
+      "playlistId": "OLAK5uy_SVBn99xIpAK",
+      "title": "en dormir sin Madrid",
+      "artists": [
+        {
+          "name": "Bizarrap",
+          "id": "UCONiUl5u7y2bMaVZJcuRDEQ"
+        },
+        {
+          "name": "Milo j",
+          "id": "UCLabAHLHMy2MdTWaZATUmQQ"
+        }
+      ],
+      "year": 2023,
+      "thumbnail": "https://yt3.googleusercontent.com/6P-ylxWdVQW9t_z_49rC7GkDsSJVJ6iXm9dddwKWtnZykzQbvHOj1XmyCOuzqsB-W6QIpwHbo9r8jibS=w544-h544-l90-rj",
       "explicit": true
+    },
+    {
+      "browseId": "MPREb_PeiujkKB6WE",
+      "playlistId": "OLAK5uy_PeiujkKB6WE",
+      "title": "ARIRANG: Piano Instrumental Tribute to BTS",
+      "artists": [
+        {
+          "name": "Piano Echoes",
+          "id": "UChnPI1xXBpWvCDZ55OCCfYQ"
+        }
+      ],
+      "year": 2026,
+      "thumbnail": "https://yt3.googleusercontent.com/EFh6eeLXdjIS55VuCc49ipnulq-IC4QRZaSAaAh77rCZLuVr8mRdnqQs98S7z9ryVHwU8eL1vYtgJmaF6w=w544-h544-l90-rj",
+      "explicit": false
+    },
+    {
+      "browseId": "MPREb_tZC7e1H5mfm",
+      "playlistId": "OLAK5uy_tZC7e1H5mfm",
+      "title": "DeBÍ TiRAR MáS FOToS",
+      "artists": [
+        {
+          "name": "Bad Bunny",
+          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
+        }
+      ],
+      "year": 2025,
+      "thumbnail": "https://yt3.googleusercontent.com/yBcpSTWxVqyJr7enMy7HFv14Yb8p1jI5AS5o49Cvbeyc6zjvCvdLn_0_iAxz50MqxLx6hQDngWBeaC26=w544-h544-l90-rj",
+      "explicit": true
+    },
+    {
+      "browseId": "MPREb_Kw7dvFVmzU0",
+      "playlistId": "OLAK5uy_Kw7dvFVmzU0",
+      "title": "Wuthering Heights",
+      "artists": [
+        {
+          "name": "Charli xcx",
+          "id": "UCI4YNnmHjXFaaKvfdmpWvJQ"
+        }
+      ],
+      "year": 2026,
+      "thumbnail": "https://yt3.googleusercontent.com/inyPgzFkfcxbN_XAKWE2MvGh3uKyVpLtRgg0Ogpbq27_dCpdH0iSq_Gx9rBhAP2kYo6_bG3Ffd6v6zAG=w544-h544-l90-rj",
+      "explicit": false
+    },
+    {
+      "browseId": "MPREb_HOCJNhTbimb",
+      "playlistId": "OLAK5uy_HOCJNhTbimb",
+      "title": "Sunshine",
+      "artists": [],
+      "year": 2026,
+      "thumbnail": "https://yt3.googleusercontent.com/4SO364uiQP3znMipyUkyL3i-ln8XEP2CODeRq90pxnhhVAJZSruhO2gTNNgPIUvTZ38Q23mHEn0rKqo73A=w544-h544-l90-rj",
+      "explicit": false
+    },
+    {
+      "browseId": "MPREb_zh5uc9IzRx3",
+      "playlistId": "OLAK5uy_zh5uc9IzRx3",
+      "title": "EL BAIFO",
+      "artists": [
+        {
+          "name": "Quevedo",
+          "id": "UC7PL9aor5qNRhvhWWVXyOqA"
+        }
+      ],
+      "year": 2026,
+      "thumbnail": "https://yt3.googleusercontent.com/nVCZmnacT8ffaAzaBKj5zrTxNJfwSB3RPKAZXANxWuRQy15OHujO9E-P7gM9j64eXsermkgTTPM2hGmq=w544-h544-l90-rj",
+      "explicit": false
+    },
+    {
+      "browseId": "MPREb_ZU3au63U3gn",
+      "playlistId": "OLAK5uy_ZU3au63U3gn",
+      "title": "LUX (Complete Works)",
+      "artists": [
+        {
+          "name": "ROSALÍA",
+          "id": "UCeYz6rzUGhVwqxRM37FUo8w"
+        }
+      ],
+      "year": 2026,
+      "thumbnail": "https://yt3.googleusercontent.com/refwsqDZACYO9U0QbvT2NJQbKiHuzBn_N8yrR5gBSSBRa0ZzPvhkBO5owzOiqdo722TVFHtx6_VRGrU=w544-h544-l90-rj",
+      "explicit": true
+    }
+  ],
+  "trendingSongs": [
+    {
+      "id": "5xJP3p4LSKw",
+      "title": "Las mas bonitas son p#tas",
+      "artists": [
+        {
+          "name": "Anuel AA",
+          "id": "UCbBaYg2UToDaoOwo-R6xi4g"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/iSX0Ox29sf_SpZMr51jUbgHDKsvqQ-54KksqIlFADT9i-nFG590d6D-z61kYxMKF7r5lHX7wWvMjdqbA=w120-h120-l90-rj",
+      "explicit": true
+    },
+    {
+      "id": "az3_6jmrcHY",
+      "title": "KOKO",
+      "artists": [
+        {
+          "name": "Omar Courtz",
+          "id": "UCieB8sWI6qEOX6r_UnJU12w"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/EqBlvzNmm_B2otzdTqYJzhHguR94SVFH96sOWBUlKZ6zJ4CGeXj9YkpcI7MFYEf9DPovp-4RZssESLbv=w120-h120-l90-rj",
+      "explicit": true
+    },
+    {
+      "id": "2Jgulp_Ba8Q",
+      "title": "Bad Bunny, Drake - Mia Feat. Sean Paul",
+      "artists": [
+        {
+          "name": "Sean Paul",
+          "id": ""
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/2Jgulp_Ba8Q/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3kIbCjALpagAY4OmAfb-7L-g5oJ_g",
+      "explicit": false
+    },
+    {
+      "id": "7GDp7S1HgSk",
+      "title": "Ojitos Lindos",
+      "artists": [
+        {
+          "name": "Bad Bunny",
+          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
+        },
+        {
+          "name": "Bomba Estéreo",
+          "id": "UCt7E5esO1UIPkZifW08r9hA"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/0Ke36SSY53TQbmpqzKP4hMPoGiWYQiGI0KJ2CzcwjW4ore9vUMUmyzEi7irEU2MR3FCpNPdwIIuNslS6hg=w120-h120-l90-rj",
+      "explicit": false
+    },
+    {
+      "id": "BBUrPlgHWMo",
+      "title": "Sensualidad (con Mambo Kingz y DJ Luian)",
+      "artists": [
+        {
+          "name": "Hear This Music",
+          "id": "UC8cUny_5O6m0yTMSnBmjKnw"
+        },
+        {
+          "name": "Bad Bunny",
+          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
+        },
+        {
+          "name": "Prince Royce",
+          "id": "UC1amDmVt3wHmB7zKpkmf3rg"
+        },
+        {
+          "name": "J Balvin",
+          "id": "UCWw-Guyr5ul9B-d5kJlHMng"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/SG1imNVLLrYUDXmAv7AS4iSFbt-3IjYaI7y7myg2Kurjl2eF_AVlCpoj_paRklYDcgLak7aboFPYCgk=w120-h120-l90-rj",
+      "explicit": false
+    },
+    {
+      "id": "llZJ-9e4Yeo",
+      "title": "SUPERESTRELLA (Live Edit)",
+      "artists": [
+        {
+          "name": "Aitana",
+          "id": "UCkyzcFsGWVYSUGaR7YB9OYQ"
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/llZJ-9e4Yeo/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3mdN6x9CnLRfN-2FjfvHVrk_ft_Gw",
+      "explicit": false
+    },
+    {
+      "id": "fuBMrVffb84",
+      "title": "petal",
+      "artists": [
+        {
+          "name": "Ariana Grande",
+          "id": "UC0076UMUgEng8HORUw_MYHA"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/6LDZTIjk3nbSSsG8J0M2_ME4KWzt4MTZ7oqrZlWg-uZ1gRWnBKt9ySPibZ5l7GJ_-j6gB6hv-qLNaPE=w120-h120-l90-rj",
+      "explicit": true
+    },
+    {
+      "id": "hhB4PNkw6DI",
+      "title": "Hate That I Made You Love Me - LIVE from The Eternal Sunshine Tour (edit by Monster Films)",
+      "artists": [
+        {
+          "name": "Andrés Zamora",
+          "id": ""
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/hhB4PNkw6DI/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3lW_5_fe1pkqcqfcOm3OPrDwMtuKw",
+      "explicit": false
+    },
+    {
+      "id": "gGmJPGVWh7w",
+      "title": "Hasta Que Dios Diga",
+      "artists": [
+        {
+          "name": "Anuel AA",
+          "id": "UCbBaYg2UToDaoOwo-R6xi4g"
+        },
+        {
+          "name": "Bad Bunny",
+          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/YMZykrPBM5idYg5PW8bUlKJS6usZzbVmJYHqEufzJN88195TeoPvwxiD1eL19sIHQH3BlLVmhEjsCEUp=w120-h120-l90-rj",
+      "explicit": true
+    },
+    {
+      "id": "oGZXQEK4dcU",
+      "title": "Jay Wheeler x Omar Courtz - De Lejitos Remix (Visualizer)",
+      "artists": [
+        {
+          "name": "Team Of Kingz",
+          "id": ""
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/oGZXQEK4dcU/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3niUYaa13ci0un21pfYP6O5OTWtUw",
+      "explicit": false
+    },
+    {
+      "id": "FPELTXZBnrg",
+      "title": "AL GOLPITO",
+      "artists": [
+        {
+          "name": "Quevedo",
+          "id": "UC7PL9aor5qNRhvhWWVXyOqA"
+        },
+        {
+          "name": "Nueva Línea",
+          "id": "UCQa89yOPPyOyXHZc3rcJ6ow"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/nVCZmnacT8ffaAzaBKj5zrTxNJfwSB3RPKAZXANxWuRQy15OHujO9E-P7gM9j64eXsermkgTTPM2hGmq=w120-h120-l90-rj",
+      "explicit": false
+    },
+    {
+      "id": "PCBGDvmQUVw",
+      "title": "ZIZI",
+      "artists": [
+        {
+          "name": "Ozuna",
+          "id": "UCKEFjh4JL-OyMI8z3h5Coaw"
+        },
+        {
+          "name": "Omar Courtz",
+          "id": "UCieB8sWI6qEOX6r_UnJU12w"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/Y993cOAb1TiVc5uY3uz83amsHFpuk9TGtr4v5EtgUq6W0kyMjYV8w_hI2CetiEmaTYwMCS8KDEhS228Z-Q=w120-h120-l90-rj",
+      "explicit": true
+    },
+    {
+      "id": "2x9aY0QJR04",
+      "title": "DÁKITI",
+      "artists": [
+        {
+          "name": "Bad Bunny",
+          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
+        },
+        {
+          "name": "Jhayco",
+          "id": "UChZEzxer-QvRMbADJJGOMuQ"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/Iysj4pTBhx_j4Uk2xzUoq6IN9rfnb6GlaZp9g4rvLndsJXLY5IxpIlX3YHC_at2h6lVdMNkoLplmWvhfkQ=w120-h120-l90-rj",
+      "explicit": true
+    },
+    {
+      "id": "g5dLe5VPAAo",
+      "title": "Callaita",
+      "artists": [
+        {
+          "name": "Bad Bunny",
+          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
+        },
+        {
+          "name": "Tainy",
+          "id": "UCeN6GRz4bN054slorYxms0w"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/0Ke36SSY53TQbmpqzKP4hMPoGiWYQiGI0KJ2CzcwjW4ore9vUMUmyzEi7irEU2MR3FCpNPdwIIuNslS6hg=w120-h120-l90-rj",
+      "explicit": true
+    },
+    {
+      "id": "K0vXF7lJcWY",
+      "title": "Me Porto Bonito",
+      "artists": [
+        {
+          "name": "Bad Bunny",
+          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
+        },
+        {
+          "name": "Chencho Corleone",
+          "id": "UC4_xgMYQfEUnKTAuuys62JQ"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/0Ke36SSY53TQbmpqzKP4hMPoGiWYQiGI0KJ2CzcwjW4ore9vUMUmyzEi7irEU2MR3FCpNPdwIIuNslS6hg=w120-h120-l90-rj",
+      "explicit": true
+    },
+    {
+      "id": "JbVP_aZiFSY",
+      "title": "Se Preparó",
+      "artists": [
+        {
+          "name": "Ozuna",
+          "id": "UCKEFjh4JL-OyMI8z3h5Coaw"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/ux07P9XtdxQNM2Lt5v-tmitc_Ts6wi-4ajQUXyWYLym2-dVdCcyENZy3MECKwGu1tx0lRbfulxYArm5e=w120-h120-l90-rj",
+      "explicit": false
+    },
+    {
+      "id": "4LkSB5xm5Sg",
+      "title": "Q U E V A S H A C E R H O Y ?",
+      "artists": [
+        {
+          "name": "Omar Courtz",
+          "id": "UCieB8sWI6qEOX6r_UnJU12w"
+        },
+        {
+          "name": "De La Rose",
+          "id": "UC2-PV0lS78r65j_3f5_vPvA"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/xGZFBAYha4wjuPZoY_vZTNDFg8ouyBcQWa1-yuW-Poso2p7kKO6oemtD5LixCSTJlPhOZVI523lziUYZdw=w120-h120-l90-rj",
+      "explicit": true
+    },
+    {
+      "id": "6sE5F9Y8f1o",
+      "title": "Cuando No Era Cantante (Remix)",
+      "artists": [
+        {
+          "name": "El Bogueto",
+          "id": "UC8r_j-qnSCj1t4h6EVN5TrQ"
+        },
+        {
+          "name": "Anuel AA",
+          "id": "UCbBaYg2UToDaoOwo-R6xi4g"
+        },
+        {
+          "name": "fuerza regida",
+          "id": "UC0kxNxFQCK6d2spPz5Sme7Q"
+        },
+        {
+          "name": "Yung Beef",
+          "id": "UCfodAOnzAk1TpuPDRmZ8NjQ"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/IxzfmcUdsRg50lnGnb2iFVid0mWOiBNx-4uwV6A1ElDQIjOHXRt6M3XhLqWcZbRE7J19oUzeHBkPbUo=w120-h120-l90-rj",
+      "explicit": true
+    },
+    {
+      "id": "xi8dBKVQCo8",
+      "title": "LA GRACIOSA REMIX  - Quevedo, Elvis Crespo , Bad Bunny (MASHUP DIEGO RIOS)",
+      "artists": [
+        {
+          "name": "DIEGO RIOS & JAVIKI",
+          "id": ""
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/xi8dBKVQCo8/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3kbrqm59svtKHkfkBbQo-qy9ZwzZw",
+      "explicit": false
+    },
+    {
+      "id": "yIQ2VtGPt_E",
+      "title": "VeLDÁ",
+      "artists": [
+        {
+          "name": "Bad Bunny",
+          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
+        },
+        {
+          "name": "Omar Courtz",
+          "id": "UCieB8sWI6qEOX6r_UnJU12w"
+        },
+        {
+          "name": "Dei V",
+          "id": "UC5zqJWKjXuHZYT8SU_gPgmQ"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/yBcpSTWxVqyJr7enMy7HFv14Yb8p1jI5AS5o49Cvbeyc6zjvCvdLn_0_iAxz50MqxLx6hQDngWBeaC26=w120-h120-l90-rj",
+      "explicit": true
+    }
+  ],
+  "everyoneListening": [
+    {
+      "id": "B88eLylKYHo",
+      "title": "FOREVER TU GANTEL",
+      "artists": [
+        {
+          "name": "Omar Courtz",
+          "id": "UCieB8sWI6qEOX6r_UnJU12w"
+        },
+        {
+          "name": "Ñengo Flow",
+          "id": "UCeNt9djCuN7-Vr5J3kK_GkQ"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/EqBlvzNmm_B2otzdTqYJzhHguR94SVFH96sOWBUlKZ6zJ4CGeXj9YkpcI7MFYEf9DPovp-4RZssESLbv=w120-h120-l90-rj",
+      "explicit": true
+    },
+    {
+      "id": "sZygRgjKoGE",
+      "title": "Baile Inolvidable - Bad Bunny & Rubén Blades (En Vivo - Coliseo de Puerto Rico José Miguel Agrelot)",
+      "artists": [
+        {
+          "name": "CUVER",
+          "id": ""
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/sZygRgjKoGE/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3lLQMAMZNGfUSMn0P4gBPhTArpLQg",
+      "explicit": false
+    },
+    {
+      "id": "9-JyUbzrZbA",
+      "title": "Amanece",
+      "artists": [
+        {
+          "name": "Anuel Aa",
+          "id": "UCbBaYg2UToDaoOwo-R6xi4g"
+        },
+        {
+          "name": "Haze",
+          "id": "UCFV8pv7slPIV_ebs6j6SPHw"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/F_lfnHIS_IB53vkQdtyD_pdKSFUJdPspymlTxGCkXGBcGVL6VFDpna1G9yZj8vNrsKMiOnVqRctLrdaRcA=w120-h120-l90-rj",
+      "explicit": false
+    },
+    {
+      "id": "QFyL7QnJTXU",
+      "title": "Dile a él-Raw Alejandro Remix CarAudio",
+      "artists": [
+        {
+          "name": "Dj Emotion DeVenezuela",
+          "id": ""
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/QFyL7QnJTXU/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3kUTYVgYHbMLpxCHA7kpZLPRm-6hA",
+      "explicit": false
+    },
+    {
+      "id": "l1T1fvkMEoc",
+      "title": "Dichavate",
+      "artists": [
+        {
+          "name": "Ya Ice Dilan",
+          "id": "UC9aJbR9Q8nscvZaMw_cH4Ww"
+        },
+        {
+          "name": "Rey Tony",
+          "id": "UCDhExL0uVtumv_DEjPPq5qg"
+        },
+        {
+          "name": "Helabusador",
+          "id": "UC89ct8d1ZKEXS03nSpntgPg"
+        },
+        {
+          "name": "JipMusic Global",
+          "id": "UC1Fc1q7TOSnVmvUNSmL3oIw"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/S8qDdDfjr5dPQOhs47VUcQWKJa76q7wwEz1Sp31_5TNa1GlqzXbXj59W8PEDVp07nTd-3m1aTqjEVcA=w120-h120-l90-rj",
+      "explicit": false
+    },
+    {
+      "id": "4YQ06rGPfOc",
+      "title": "oh well",
+      "artists": [
+        {
+          "name": "Ariana Grande",
+          "id": "UC0076UMUgEng8HORUw_MYHA"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/6LDZTIjk3nbSSsG8J0M2_ME4KWzt4MTZ7oqrZlWg-uZ1gRWnBKt9ySPibZ5l7GJ_-j6gB6hv-qLNaPE=w120-h120-l90-rj",
+      "explicit": false
+    },
+    {
+      "id": "j0ZPw3pScew",
+      "title": "⁠LUCES DE COLORES",
+      "artists": [
+        {
+          "name": "Omar Courtz",
+          "id": "UCieB8sWI6qEOX6r_UnJU12w"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/xGZFBAYha4wjuPZoY_vZTNDFg8ouyBcQWa1-yuW-Poso2p7kKO6oemtD5LixCSTJlPhOZVI523lziUYZdw=w120-h120-l90-rj",
+      "explicit": false
+    },
+    {
+      "id": "is8UDe2PhKQ",
+      "title": "KATSEYE (캣츠아이) 'Hootie Frutti' Official MV",
+      "artists": [
+        {
+          "name": "Vídeo",
+          "id": ""
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/is8UDe2PhKQ/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3nE5_DFLerZ4A2bjnpLLR4NKn6xwA",
+      "explicit": false
+    },
+    {
+      "id": "WsGnCt-gT44",
+      "title": "LA CANCIÓN",
+      "artists": [
+        {
+          "name": "J Balvin",
+          "id": "UCWw-Guyr5ul9B-d5kJlHMng"
+        },
+        {
+          "name": "Bad Bunny",
+          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/Rw2pqT1wp-Qp1J-Mex8gS1z1OZEy9fFF-OL4gULrMD9aW64bRkikpKr9qLcJeJK_ktsobZk57ZUjO7Br=w120-h120-l90-rj",
+      "explicit": false
     },
     {
       "id": "2WaPoIQLJYs",
@@ -1221,219 +1051,203 @@
           "id": "UCieB8sWI6qEOX6r_UnJU12w"
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/EqBlvzNmm_B2otzdTqYJzhHguR94SVFH96sOWBUlKZ6zJ4CGeXj9YkpcI7MFYEf9DPovp-4RZssESLbv=w60-h60-l90-rj",
+      "thumbnail": "https://yt3.googleusercontent.com/EqBlvzNmm_B2otzdTqYJzhHguR94SVFH96sOWBUlKZ6zJ4CGeXj9YkpcI7MFYEf9DPovp-4RZssESLbv=w120-h120-l90-rj",
       "explicit": true
     },
     {
-      "id": "vMZRn5bGoSQ",
-      "title": "CÓRCEGA",
+      "id": "dTP19ZcGngY",
+      "title": "stupid song",
       "artists": [
         {
-          "name": "Mora",
-          "id": "UCgDpp8Ex8Yz6hhHjbl3W5mg"
-        },
-        {
-          "name": "y",
-          "id": null
-        },
-        {
-          "name": "Álvaro Díaz",
-          "id": "UCoHRmfxqEHTHoNTddLS3ErQ"
+          "name": "Olivia Rodrigo",
+          "id": "UCE5XNpliPM-SmyFEp61tL_g"
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/kODMCeEzi99KVNAlQQCfRlmye5jRb0vaCnPgXmnqpsZn5Nj11R4Qy5HqfA_fMO6AHqi9Siz2ztrgOCFR=w60-h60-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "EoAeouOh23k",
-      "title": "Tú_SabeSs",
-      "artists": [
-        {
-          "name": "SAIKO",
-          "id": "UCN7aCXjfOVY-YOj_OWD-hSQ"
-        },
-        {
-          "name": "Raul Clyde",
-          "id": "UCujg6darOzMZ5iyoI_5hdOw"
-        },
-        {
-          "name": "Gotay \"El Autentiko\"",
-          "id": "UCZ2GmlVoTqbW0xymZ11Nqcw"
-        },
-        {
-          "name": "y",
-          "id": null
-        },
-        {
-          "name": "Jory Boy",
-          "id": "UCPp63ne-_75OVrLrrlWHGng"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/qA3-DKk0GXVcp3A5zkTrVSAWGl_taSZtJSlpbfFX931Oakg7RglLvl2pNIHWiu4MlDAAC2QbElZvGlB7=w60-h60-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "trY18nXV0fs",
-      "title": "Nunca Voy a Morir",
-      "artists": [
-        {
-          "name": "Omar Camacho",
-          "id": "UC5TYeA9Hw3L5VlZYtMt3pqg"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/9F_-c4UktUzhc3W3L7vTU-aluNVE4d6VOmdFlYUgMMR6Fplqen2ooXOzXh8w7HnMuGmLl7pAW2dozTkO=w60-h60-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "NBghhjuMNKM",
-      "title": "Moscow Mule",
-      "artists": [
-        {
-          "name": "Bad Bunny",
-          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/0Ke36SSY53TQbmpqzKP4hMPoGiWYQiGI0KJ2CzcwjW4ore9vUMUmyzEi7irEU2MR3FCpNPdwIIuNslS6hg=w60-h60-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "ObBfqHvlKQM",
-      "title": "Mi Vida (Mix 2024)",
-      "artists": [
-        {
-          "name": "José José",
-          "id": "UCiMcavnI3L8L-ayXZtrrwgA"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/KPzjkEmjr2LrfOWsXOxLtcV7V0bN0wmu_nrcKBTPVG0gOImirxBV5un9rJmT0ofVfyMIYeeYeu8WoUSz=w60-h60-l90-rj",
+      "thumbnail": "https://i.ytimg.com/vi/dTP19ZcGngY/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3lR0-0xUjbtI6mopVqUcDP0lMYKew",
       "explicit": false
     },
     {
-      "id": "QycL5-xST4U",
-      "title": "Euforia",
+      "id": "_SPsjENFqbc",
+      "title": "like i do",
       "artists": [
         {
-          "name": "Kidd Voodoo",
-          "id": "UCY1ficxbS1vAreE9j1Q58gw"
+          "name": "Ariana Grande",
+          "id": "UC0076UMUgEng8HORUw_MYHA"
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/a_VTOygRjAUKlF635aDFDJddmDMNDpL13htCzZMogJkWmO01_c-SAzZFqPJzvuT2twbdoYr8O6Zi-FSZqA=w60-h60-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "hlA-HLmEqfM",
-      "title": "The Way You Make Me Feel (Single Version)",
-      "artists": [
-        {
-          "name": "Michael Jackson",
-          "id": "UCoIOOL7QKuBhQHVKL8y7BEQ"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/N3dO2K1MIFWJtEqZNpQ4yfISUC3gDaIIZNYCs6kwcX5G46AHtK6W_fxfHeQ30sdBdRgyyqXkbbqzPuI=w60-h60-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "DG8_5fbd0jM",
-      "title": "Mix Salsa Clásica: Idilio / Fuego en el 23 / Me Liberé / Mi Gente / Yo Quisiera / Lluvia / Timbalero (En Vivo)",
-      "artists": [
-        {
-          "name": "Septeto Acarey",
-          "id": "UCndXvQeT7yyq9R-x3pSaybQ"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/PsMSDj_QG19aJFctbvTisZA6f7rA5yZJ7v2-3ViQAkPVKmJWslWMj0nRToP4VTZqll0cmU0RugxWwON4=w60-h60-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "5MPE_7-HR3k",
-      "title": "La Voz Favorita",
-      "artists": [
-        {
-          "name": "Jay Wheeler",
-          "id": "UC17u1K8tiqxxFhPMbM50ASA"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/M4gC49M_z88QHhFXnc-Vgnh3pQk7TmJIavtedKqcHxWM7DYa24sCMNE3-C1HMVjT9RRwIVpwWHjN0eHU=w60-h60-l90-rj",
+      "thumbnail": "https://yt3.googleusercontent.com/6LDZTIjk3nbSSsG8J0M2_ME4KWzt4MTZ7oqrZlWg-uZ1gRWnBKt9ySPibZ5l7GJ_-j6gB6hv-qLNaPE=w120-h120-l90-rj",
       "explicit": true
     },
     {
-      "id": "SmGCO13YiUo",
-      "title": "PIENXA EN MI",
+      "id": "pGrRcXM6Qxg",
+      "title": "Adicto",
       "artists": [
         {
-          "name": "Feid",
-          "id": "UCc3e8O2V5_7OA300ursDyFQ"
+          "name": "Tainy",
+          "id": "UCeN6GRz4bN054slorYxms0w"
         },
         {
-          "name": "y",
-          "id": null
+          "name": "Anuel AA",
+          "id": "UCbBaYg2UToDaoOwo-R6xi4g"
         },
         {
-          "name": "Sfera Ebbasta",
-          "id": "UC7-K3cpctiu-1pUllHQqkvg"
+          "name": "Ozuna",
+          "id": "UCKEFjh4JL-OyMI8z3h5Coaw"
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/HhIpbEdqcky0pILaQT-oynh8aiaONrcGbbgLH-JSfHNUkPRG1S4T7-KRCokmu1AVXmmreCSNvg9eUf4=w60-h60-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "DOBIQfQ_Y2A",
-      "title": "Femme Fatale",
-      "artists": [
-        {
-          "name": "Mon Laferte",
-          "id": "UCxOBODdj5wEIZF74kPma7Gw"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/dJSz5X2s4ROujAQHw8p9jnLWbhJdMgw-DqHArRN6iYmEhG5p3GlRfZWBbnLNWrFx5fCT6NbHgrTZG5M3=w60-h60-l90-rj",
+      "thumbnail": "https://yt3.googleusercontent.com/hWUNXLhYIQAB9N1wv1SCDjWROgHhZjfgGGcLPBMXyMxypWvPLK3nViUYt7hZP2e2JZA_t1FUYkmEMFI=w120-h120-l90-rj",
       "explicit": false
     },
     {
-      "id": "u32rPttWrnY",
-      "title": "Enganchado Rock Nacional Argentino #1",
+      "id": "DRvWE82NuG8",
+      "title": "Bad Bunny - Amorfoda (XOVOX & BIZARRAP Remix)",
       "artists": [
         {
-          "name": "Nico Vallorani DJ",
-          "id": "UCu7N_HCrA2Lrj14iEQOtnMA"
+          "name": "Bizarrap",
+          "id": "UCONiUl5u7y2bMaVZJcuRDEQ"
+        },
+        {
+          "name": "Nicki Nicole",
+          "id": "UCei_d3N_YJKny96V_5-dO9w"
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/nwxgy2CHmBA0RfH60_ftSMk-PAEAYvRIcrc_v7qnQZ3Y21ZpucvwdZ1xC2FNfvtmeQi3DPwLVpKwI4Ry=w60-h60-l90-rj",
+      "thumbnail": "https://i.ytimg.com/vi/DRvWE82NuG8/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3lwBOCrtM5E5oEJ_6LsEk7iweVizg",
       "explicit": false
     },
     {
-      "id": "kZJHob65Hbw",
-      "title": "Omerta",
+      "id": "LJTZXZWxEAY",
+      "title": "the cure in the Live Lounge",
       "artists": [
         {
-          "name": "J Balvin",
-          "id": "UCWw-Guyr5ul9B-d5kJlHMng"
-        },
-        {
-          "name": "Ryan Castro",
-          "id": "UCDxiGGtBV3CQiE-NKLEFgUg"
-        },
-        {
-          "name": "y",
-          "id": null
-        },
-        {
-          "name": "SOG",
-          "id": "UCC4ySHYLOmudD7sreG5KWTQ"
+          "name": "Olivia Rodrigo",
+          "id": "UCE5XNpliPM-SmyFEp61tL_g"
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/DWiey1fJDx3ed0p2VKxZ99xj_65J9JhOV0OcyieH7bGdppuHP1eRb6eYMRa2gxwsJQEqlhVvWJwxaXyA=w60-h60-l90-rj",
+      "thumbnail": "https://i.ytimg.com/vi/LJTZXZWxEAY/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3ky8P9UlqKd0w0wUa8jK2bmzBxpIA",
+      "explicit": false
+    },
+    {
+      "id": "HtVNgNIr1KE",
+      "title": "L a k e n o s h i",
+      "artists": [
+        {
+          "name": "Omar Courtz",
+          "id": "UCieB8sWI6qEOX6r_UnJU12w"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/EqBlvzNmm_B2otzdTqYJzhHguR94SVFH96sOWBUlKZ6zJ4CGeXj9YkpcI7MFYEf9DPovp-4RZssESLbv=w120-h120-l90-rj",
       "explicit": true
     },
     {
-      "id": "C0U1d2ecob4",
-      "title": "Entre dos tierras",
+      "id": "uRgJGnwHofM",
+      "title": "Donde Hubo Fuego Cenizas Quedan",
       "artists": [
         {
-          "name": "Héroes del Silencio",
-          "id": "UCR85xzwE1PevoGId8HOnErw"
+          "name": "Anuel AA",
+          "id": "UCbBaYg2UToDaoOwo-R6xi4g"
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/nwqYy3LkBFN2VJCrg_M0Ig1v-MipkiTyepkG9pHIp-f7UTlNqsWFjzEgOXrOoIRwnqzouUEA9ygJozA=w60-h60-l90-rj",
+      "thumbnail": "https://yt3.googleusercontent.com/lFceI5z3upCDt0ld0fL3fHQBaAtdhwUbAwTxCwPnoq8D9N_Y8jcjIKaah5UXJ76g_EhIraEvvyzeV9rmlA=w120-h120-l90-rj",
+      "explicit": true
+    },
+    {
+      "id": "Uv6F0wKOlMU",
+      "title": "Little Demon Remix - Anuel AA X Cdobleta X Yovngchimi",
+      "artists": [
+        {
+          "name": "ProodbyNG",
+          "id": ""
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/Uv6F0wKOlMU/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3lHvDrcPu01O2PEFeVXOff2amRYRg",
+      "explicit": false
+    },
+    {
+      "id": "KtGuUP3Dmss",
+      "title": "Dile Que Tu Me Quieres",
+      "artists": [
+        {
+          "name": "Ozuna",
+          "id": "UCKEFjh4JL-OyMI8z3h5Coaw"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/ux07P9XtdxQNM2Lt5v-tmitc_Ts6wi-4ajQUXyWYLym2-dVdCcyENZy3MECKwGu1tx0lRbfulxYArm5e=w120-h120-l90-rj",
+      "explicit": false
+    },
+    {
+      "id": "NKLvoqQTpqE",
+      "title": "The Kid LAROI, Justin Bieber, Ariana Grande - STAY (Remix)",
+      "artists": [
+        {
+          "name": "LeakGrande",
+          "id": ""
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/NKLvoqQTpqE/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3ldB89N2g_4UHfL81NSyKe4eq1_cg",
+      "explicit": false
+    },
+    {
+      "id": "tc24N9-dp1w",
+      "title": "Bad Bunny-Eoo Live on Amazon Prime",
+      "artists": [
+        {
+          "name": "CUEROLIFE🆑",
+          "id": ""
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/tc24N9-dp1w/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3nhLD8HV18o5-Sv-hN-1_XJ1sg_rw",
+      "explicit": false
+    },
+    {
+      "id": "fUZVwTQF3LQ",
+      "title": "kiss me",
+      "artists": [
+        {
+          "name": "Ariana Grande",
+          "id": "UC0076UMUgEng8HORUw_MYHA"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/6LDZTIjk3nbSSsG8J0M2_ME4KWzt4MTZ7oqrZlWg-uZ1gRWnBKt9ySPibZ5l7GJ_-j6gB6hv-qLNaPE=w120-h120-l90-rj",
+      "explicit": false
+    },
+    {
+      "id": "om6HdemgTKQ",
+      "title": "SWIM (Live)",
+      "artists": [
+        {
+          "name": "BTS",
+          "id": "UC9vrvNSL3xcWGSkV86REBSg"
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/om6HdemgTKQ/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3l5-CFgwGt7MLPsEvK-jYbI-wctpA",
+      "explicit": false
+    },
+    {
+      "id": "5XvHpU0Fdm0",
+      "title": "EL NENE",
+      "artists": [
+        {
+          "name": "Anuel AA",
+          "id": "UCbBaYg2UToDaoOwo-R6xi4g"
+        },
+        {
+          "name": "Foreign Teck",
+          "id": "UC6R8VJBHXvKdsrRf1N1tj1Q"
+        }
+      ],
+      "thumbnail": "https://yt3.googleusercontent.com/jhda1ytwSS36b1A0Kajp0LvpCTt_RvIUjRg-PV3RW7qnqBraDpL0Hmj9ajW43IAkP18hB9KgaYKLN7Md=w120-h120-l90-rj",
+      "explicit": true
+    },
+    {
+      "id": "HMt4uQL3Ta4",
+      "title": "DILLOM - LA NUEVA VIOLENCIA (FULL ALBUM)‎",
+      "artists": [
+        {
+          "name": "Vídeo",
+          "id": ""
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/HMt4uQL3Ta4/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3mt4ogITt_AyLlI-cOPFJqapsR9Ow",
       "explicit": false
     }
   ]

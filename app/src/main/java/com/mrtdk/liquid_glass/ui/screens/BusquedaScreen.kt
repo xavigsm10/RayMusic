@@ -149,15 +149,23 @@ fun BusquedaScreen(
             withContext(Dispatchers.IO) {
                 if (state.selectedTab == 0) {
                     // Top Results: search for songs and show mixed results
-                    YouTube.search(query, YouTube.SearchFilter.FILTER_SONG).onSuccess { result ->
-                        val songs = result.items.filterIsInstance<SongItem>().take(30)
-                        // Also search for artists and albums in parallel
+                    val songRes = YouTube.search(query, YouTube.SearchFilter.FILTER_SONG)
+                    if (songRes.isSuccess) {
+                        val result = songRes.getOrNull()
+                        val songs = result?.items?.filterIsInstance<SongItem>()?.take(30) ?: emptyList()
                         val artists = try { YouTube.search(query, YouTube.SearchFilter.FILTER_ARTIST).getOrNull()?.items?.filterIsInstance<ArtistItem>()?.take(3) ?: emptyList() } catch (_: Exception) { emptyList() }
                         val albums = try { YouTube.search(query, YouTube.SearchFilter.FILTER_ALBUM).getOrNull()?.items?.filterIsInstance<AlbumItem>()?.take(3) ?: emptyList() } catch (_: Exception) { emptyList() }
                         state.displayResults = artists + albums + songs
-                    }.onFailure { err ->
-                        state.displayResults = emptyList()
-                        state.searchError = err.localizedMessage ?: err.toString()
+                    } else {
+                        val summaryRes = YouTube.searchSummary(query)
+                        if (summaryRes.isSuccess) {
+                            val items = summaryRes.getOrNull()?.summaries?.flatMap { it.items }.orEmpty()
+                            state.displayResults = items
+                        } else {
+                            state.displayResults = emptyList()
+                            val err = songRes.exceptionOrNull() ?: summaryRes.exceptionOrNull()
+                            state.searchError = err?.localizedMessage ?: err?.toString()
+                        }
                     }
                 } else {
                     val filter = when (state.selectedTab) {
@@ -166,15 +174,18 @@ fun BusquedaScreen(
                         3 -> YouTube.SearchFilter.FILTER_SONG
                         else -> YouTube.SearchFilter.FILTER_SONG
                     }
-                    YouTube.search(query, filter).onSuccess { result ->
+                    val filterRes = YouTube.search(query, filter)
+                    if (filterRes.isSuccess) {
+                        val result = filterRes.getOrNull()
                         state.displayResults = when (state.selectedTab) {
-                            1 -> result.items.filterIsInstance<ArtistItem>().take(30)
-                            2 -> result.items.filterIsInstance<AlbumItem>().take(30)
-                            else -> result.items.filterIsInstance<SongItem>().take(30)
+                            1 -> result?.items?.filterIsInstance<ArtistItem>()?.take(30) ?: emptyList()
+                            2 -> result?.items?.filterIsInstance<AlbumItem>()?.take(30) ?: emptyList()
+                            else -> result?.items?.filterIsInstance<SongItem>()?.take(30) ?: emptyList()
                         }
-                    }.onFailure { err ->
+                    } else {
                         state.displayResults = emptyList()
-                        state.searchError = err.localizedMessage ?: err.toString()
+                        val err = filterRes.exceptionOrNull()
+                        state.searchError = err?.localizedMessage ?: err?.toString()
                     }
                 }
             }

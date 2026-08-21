@@ -500,9 +500,197 @@
     ]
   },
   "Radio": {
-    "songs": [],
-    "albums": [],
-    "playlists": [],
+    "songs": [
+      {
+        "id": "gLNl3qwXbZ0",
+        "title": "Top Hits 2026 Playlist - Pop Music 2026 - Top Songs 2026 - New Music 2026 Playlist - Hits Radio 1",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/gLNl3qwXbZ0/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3nSp1azpK3ZxOOb4ogXo05ahvkhJA",
+        "explicit": false
+      },
+      {
+        "id": "vxb3kN32x_M",
+        "title": "Pop Hits 2026 Playlist Hyperparty vibes",
+        "artists": [
+          {
+            "name": "Hidden Tunes",
+            "id": "UCRG-ksOc8Xk3e5QtQLqbLOA"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/e_ybk8ghZfiu72lz0004FfFNtrGl9nwl-SfKu3eYpWrKEZy46fM2INKMEr3gEuS5Mj0mVOoEr5XYNwg=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "7XGONapUVCY",
+        "title": "Top Hits 2026 🎵 Best Pop Music Playlist 🎵 Spotify Top Hits Today - Hits Radio 1",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/7XGONapUVCY/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3lPc0GtJomR_IIUJlViMsj5nlr-jw",
+        "explicit": false
+      },
+      {
+        "id": "wk69oLcecRc",
+        "title": "Top Hits 2026 Playlist - Pop Music 2026 - Best Songs 2026 - New Music 2026 Playlist - Hits Radio 1",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/wk69oLcecRc/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3mGiRS-R-IL-RsbketjfxTj-ElJCw",
+        "explicit": false
+      },
+      {
+        "id": "iEjW-SEWw6w",
+        "title": "RADIO EN DIRECTO Hits 2026 - Music & Radio Hits 2026 -La mejor música del momento #radio #endirecto",
+        "artists": [
+          {
+            "name": "Episodio",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/iEjW-SEWw6w/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3n94ggiNo1g8JmGgUIrWl9GJqoS2g",
+        "explicit": false
+      },
+      {
+        "id": "MZfAYHkhpzA",
+        "title": "MASICKA – FOREVER REIGN MIX 2026 🔥 NEW ALBUM | Latest Dancehall Hits",
+        "artists": [
+          {
+            "name": "Episodio",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/MZfAYHkhpzA/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3liIqKeCZcvMq9v3p64SW3mYo11pQ",
+        "explicit": false
+      },
+      {
+        "id": "y110HTK2gYk",
+        "title": "Hits Radio - Musica Actual 2026 - Estación GNG - Exitos y Musica Variada. #radio #radioshow #podcast",
+        "artists": [
+          {
+            "name": "Episodio",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/y110HTK2gYk/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3kMqkHcBQGunEBJhBAWsS7pCJM1ew",
+        "explicit": false
+      },
+      {
+        "id": "1qmrq6I_jHI",
+        "title": "Raindance",
+        "artists": [
+          {
+            "name": "Dave",
+            "id": "UCu8B46V0mU2Wqii6qUatrvw"
+          },
+          {
+            "name": "Tems",
+            "id": "UCXg6YtKpgC59gRKUfxQw8Fw"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/jy3_SUdI0E_08t3WijpZKLjOu-HfpZv94s6P3hZcIVic2P6z4B0RGdf3TSI5xloGfa8GS84ly34bKvwHfA=w120-h120-l90-rj",
+        "explicit": false
+      }
+    ],
+    "albums": [
+      {
+        "browseId": "MPREb_Umxy4V4DSNT",
+        "playlistId": "OLAK5uy_Umxy4V4DSNT",
+        "title": "Top Hits Playlist ~ Trending Music 2026",
+        "artists": [
+          {
+            "name": "Lyrixora",
+            "id": "UC38R3wV9DiwkTANhRwDMSqg"
+          }
+        ],
+        "year": 2026,
+        "thumbnail": "https://yt3.googleusercontent.com/qPYxqgSTQ9zPpMg30cMMqLQfH_oM73qeT2TKKgxr7naW0XvSeuWFDR_Kx2tfzyUKkiZAHLC3OFCOAEPi=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_BIhJpLj7x8J",
+        "playlistId": "OLAK5uy_BIhJpLj7x8J",
+        "title": "Éxitos de baile 2026: Los mejores éxitos dance y pop para sentirte bien de Hoop Records",
+        "artists": [],
+        "year": 2024,
+        "thumbnail": "https://yt3.googleusercontent.com/1ISoMTtqlzvapSyaT5luCDAlUTGMFLIaRWV2do3yaqlkyPgFnOC3sXmszeJoA3qYSituMyH99gz4CNPr=w544-h544-l90-rj",
+        "explicit": true
+      },
+      {
+        "browseId": "MPREb_Tm74NyycY9p",
+        "playlistId": "OLAK5uy_Tm74NyycY9p",
+        "title": "Música Tiktok 2026: La mejor música Tiktok - Tiktok Hit - Música social - Éxito viral de Hoop Records",
+        "artists": [],
+        "year": 2024,
+        "thumbnail": "https://yt3.googleusercontent.com/7dR3zBk2iDJdNO1M2QI4SdBxUF-fLyjy_Ah7uRD33Zkr6cZvXc2dIM3Ti-USyUsO7uhJVoEEiJJvhh2y=w544-h544-l90-rj",
+        "explicit": true
+      },
+      {
+        "browseId": "MPREb_6xgn2o7MaqN",
+        "playlistId": "OLAK5uy_6xgn2o7MaqN",
+        "title": "Rap Trap 2026 Playlist (Best Rap Songs 2026 & New Trap Music 2026)",
+        "artists": [
+          {
+            "name": "OrbanOnTheBeat",
+            "id": "UCAHfvqKrZyauxlpxpBLWVDg"
+          }
+        ],
+        "year": 2025,
+        "thumbnail": "https://yt3.googleusercontent.com/QKK_WdFNAip77D6kJZ0epPKB1brYSkxBjh8Wb7AbmEndBEGYhU28oxFy3woXSINwhIQhNUuy7gUtgBurow=w544-h544-l90-rj",
+        "explicit": true
+      },
+      {
+        "browseId": "MPREb_DfYxvChQwBm",
+        "playlistId": "OLAK5uy_DfYxvChQwBm",
+        "title": "Most Popular Music Mix Playlist Radio 2023",
+        "artists": [
+          {
+            "name": "Best Music Hits",
+            "id": "UC6pnNuCgv9Jfbp_S5sfbwSA"
+          },
+          {
+            "name": "Popular Songs",
+            "id": "UC62CljhBqTZyicmQvYrQVlg"
+          }
+        ],
+        "year": 2023,
+        "thumbnail": "https://yt3.googleusercontent.com/OxDK4-U5IueHtydgAY_2rewttakkBxBGH540caDwvQ4zr6HOI21KTzf31SuwKUvdlbw0sYugm86BWuOquA=w544-h544-l90-rj",
+        "explicit": false
+      }
+    ],
+    "playlists": [
+      {
+        "id": "PLL2lAlYzgEXtgGdyN6Qc5Sh4I8NnZejlj",
+        "title": "Top 100: Nigeria Apple Music (2026)",
+        "author": "NathwealthDc",
+        "thumbnail": "https://i.ytimg.com/pl_c/PLL2lAlYzgEXtgGdyN6Qc5Sh4I8NnZejlj/studio_square_thumbnail.jpg?sqp=CNmRhNQG-oaymwEKCKAEEKAEIABIWqLzl_8DBgjz0OHTBg&rs=AMzJL3nC5GtyczgpMyiklMoDdrUXeu7dEA",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PL9V-Dt4XA4CN3jQK1LclKv0zJR6lhuHNe",
+        "title": "Country Music Playlist 2026 - Top Country Songs 2026",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://i.ytimg.com/pl_c/PL9V-Dt4XA4CN3jQK1LclKv0zJR6lhuHNe/studio_square_thumbnail.jpg?sqp=CNmRhNQG-oaymwEKCMAWENQMIABIWqLzl_8DBgiQjuHTBg&rs=AMzJL3n4jXEjbqviYbrz_jUQqCUFGiPEgQ",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PLOHoVaTp8R7dWeCQrKfh7a1a_Gu6KvfWP",
+        "title": "Today's Hits 2026 - Today's Top Hits - Today's Hits - Spotify Playlist 2026",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.googleusercontent.com/PSJ4b5xzI182e-KnzvJDimcyvaO2TYV1Gi5N2ET7JNwjdQEonKUZnGwS3Q73w06E2_bIh8gE9w=s1200",
+        "playEndpointParams": ""
+      }
+    ],
     "artists": [
       {
         "id": "UCn-MpywoDcRk60F-EbyR8Nw",
@@ -1778,20 +1966,159 @@
     ]
   },
   "Rock español": {
-    "songs": [],
-    "albums": [
+    "songs": [
       {
-        "browseId": "MPREb_ElOWQiMdRfv",
-        "playlistId": "OLAK5uy_kFpUIAKIYdqjBfELL9FSDyORp8x38nsxk",
-        "title": "Rock & Ríos (Edición 40º Aniversario)",
+        "id": "eto69CSDYNE",
+        "title": "Enganchado Rock Nacional 🇦🇷 | Soda Stereo - Fito Páez - Andrés Calamaro | DJ Set 2026",
         "artists": [
           {
-            "name": "Miguel Ríos",
-            "id": "UCVEkiQC4_uBtVwxX1wt3tLg"
+            "name": "Vídeo",
+            "id": ""
           }
         ],
-        "thumbnail": "https://yt3.googleusercontent.com/OKrp_-noBIyGb5nR54d4G5bQlDtRgPOaoGObnK3z8_qK0KUqgUP0njRdmRuNLBUvV7LrytkqN9Cdubw=w60-h60-l90-rj",
-        "year": 2022,
+        "thumbnail": "https://i.ytimg.com/vi/eto69CSDYNE/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3lWj6aAPjH1tBbZ7X6AIX2VCHcknQ",
+        "explicit": false
+      },
+      {
+        "id": "u32rPttWrnY",
+        "title": "Enganchado Rock Nacional Argentino #1",
+        "artists": [
+          {
+            "name": "Nico Vallorani DJ",
+            "id": "UCu7N_HCrA2Lrj14iEQOtnMA"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/nwxgy2CHmBA0RfH60_ftSMk-PAEAYvRIcrc_v7qnQZ3Y21ZpucvwdZ1xC2FNfvtmeQi3DPwLVpKwI4Ry=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "C6v5X3x_Gpw",
+        "title": "Fito Páez Soda Stereo Andrés Calamaro Gustavo Cerati Bersuit Vergarabat Charly García",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/C6v5X3x_Gpw/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3n3PLz57kDP6oPEkX6waEO9p5sXZg",
+        "explicit": false
+      },
+      {
+        "id": "Iyll9AE10Ag",
+        "title": "Rock Nacional Enganchado (Soda Stereo, Los Enanitos Verdes, Andrés Calamaro...) | DJ THE POWER MIX",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/Iyll9AE10Ag/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3lRlun-4ckeBJO3HtaapidiXVcLqA",
+        "explicit": false
+      },
+      {
+        "id": "QlWvuc0ALbg",
+        "title": "Al lado del camino",
+        "artists": [
+          {
+            "name": "Fito Paez",
+            "id": "UClZe0IYvLDbdCQwq2Xi5KxQ"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/1OsP_HjldqnsEF_QakL-giMnqIXNfAo8WfPZILSArFVsso8dTWtw6B78IzQa2HhZQKYn1pS027aR7riZpw=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "K2bMaMYcZwg",
+        "title": "Superextraño",
+        "artists": [
+          {
+            "name": "Fito Paez",
+            "id": "UClZe0IYvLDbdCQwq2Xi5KxQ"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/WWgZAKCir7Vo9jSdXtMrYRxZBgplaIS72Ru1gcipZcHJ76c963IQEa4k8I-G3nTH0eiv8zoUoxJfnRI=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "JE77yYbC1fs",
+        "title": "La Rueda Mágica - EADDA9223 (con Andrés Calamaro y Conociendo Rusia)",
+        "artists": [
+          {
+            "name": "Fito Paez",
+            "id": "UClZe0IYvLDbdCQwq2Xi5KxQ"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/OECbNZyBI438Z6jiDkJuuR8X6Bp7V5zghjKNzoYMSiUxdZq65918AKWKQJWMtfONY3h1pGm5_i2cUUSE=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "1DYUNaJ_rfU",
+        "title": "A rodar mi vida",
+        "artists": [
+          {
+            "name": "Fito Paez",
+            "id": "UClZe0IYvLDbdCQwq2Xi5KxQ"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/6GAkF0PgX0xbM_QPdvY1uuNtZV9q_LS-YnsXZE0-5iOFbdf6wQZu0uG3qLIWtDWavYD8Oh0Yfq1rLl45Zg=w120-h120-l90-rj",
+        "explicit": false
+      }
+    ],
+    "albums": [
+      {
+        "browseId": "MPREb_FY5wMWTZiL6",
+        "playlistId": "OLAK5uy_FY5wMWTZiL6",
+        "title": "Soda Stereo",
+        "artists": [
+          {
+            "name": "Soda Stereo",
+            "id": "UCQJuTjhtb6Oyy2kStA1BUKw"
+          }
+        ],
+        "year": 1984,
+        "thumbnail": "https://yt3.googleusercontent.com/6Ft5PD2tnbp5B2VNDSVyDYtrR5sBrNiOpUuTNFzrjqkXN0ByUVjBD90_ImbybxOZngKpDVDdaKthedoFrA=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_HeEqM9OwAjQ",
+        "playlistId": "OLAK5uy_HeEqM9OwAjQ",
+        "title": "El Amor Después del Amor",
+        "artists": [
+          {
+            "name": "Fito Paez",
+            "id": "UClZe0IYvLDbdCQwq2Xi5KxQ"
+          }
+        ],
+        "year": 1992,
+        "thumbnail": "https://yt3.googleusercontent.com/6GAkF0PgX0xbM_QPdvY1uuNtZV9q_LS-YnsXZE0-5iOFbdf6wQZu0uG3qLIWtDWavYD8Oh0Yfq1rLl45Zg=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_WagEFFzJbJv",
+        "playlistId": "OLAK5uy_WagEFFzJbJv",
+        "title": "Giros",
+        "artists": [
+          {
+            "name": "Fito Páez",
+            "id": "UClZe0IYvLDbdCQwq2Xi5KxQ"
+          }
+        ],
+        "year": 1985,
+        "thumbnail": "https://yt3.googleusercontent.com/XhsPrXSXBliWXTz1YDzey-0lqQy-HBxz9KnLHZaFJKiVN9HCec5sXwOcKOca9SWOb7HyvuGfgeOqX7jR=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_ZMGnFMwKuo8",
+        "playlistId": "OLAK5uy_ZMGnFMwKuo8",
+        "title": "Canción Animal",
+        "artists": [
+          {
+            "name": "Soda Stereo",
+            "id": "UCQJuTjhtb6Oyy2kStA1BUKw"
+          }
+        ],
+        "year": 1990,
+        "thumbnail": "https://yt3.googleusercontent.com/fqzemW0CAQ7WkgOlJfUkW-WT7eWe1SFjoOnSAkqty0VGV-zQF_6CRxhvNJ0xCg1jRJPayvSrKI7A5R8=w544-h544-l90-rj",
         "explicit": false
       }
     ],
@@ -1840,13 +2167,339 @@
     ]
   },
   "Sonidos del verano": {
-    "songs": [],
-    "albums": [],
-    "playlists": [],
-    "artists": []
+    "songs": [
+      {
+        "id": "SxocPtpZzSI",
+        "title": "MIX VERANO 2026 LO QUE SUENA ENGANCHADO",
+        "artists": [
+          {
+            "name": "Previa & Fiesta",
+            "id": "UCLfmRUhjCYKK1Od2K5HNnrA"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/sq-mV8jeErWIHjJqDyR_Z7MODFPNrKIxIyDs6Xn1eiZznLAL6C20Nxa2mcb-uM-hFLv__b6JJi7TR6c=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "6yzwky6bNu4",
+        "title": "Latinos Movidos 90 (Set Extended)",
+        "artists": [
+          {
+            "name": "Dj Maxi Seco",
+            "id": "UCU1O-XNahauM9ZqqXNTEhfg"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/F5TFIh3ir4FsGhtJsxz3A5_wf0YXdblhhxD25q36HVgZ2DMFToXgijzd9cFmM92zVRAQ0SrV_-FfLRw=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "BZIqOKGmDV4",
+        "title": "Fiesta Latina Mix 2026 | The Best Latin Party Hits | KARYO & LOVUMBA LIVESET",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/BZIqOKGmDV4/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3nF0PISjKq-L7f2ERy6hdQlAKioSQ",
+        "explicit": false
+      },
+      {
+        "id": "YM4MrPC5RG0",
+        "title": "Rio de Janeiro Party Fever",
+        "artists": [
+          {
+            "name": "Cuban Latin Collection",
+            "id": "UCbXmKmcSu7vDP_xM7fYdTQw"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/d_XDT8f1vqSvgfaNvtg4dpXDpHp8jTr772icwvZlVspQfYbjrmZkDh9J1ObsIaekj2ygCksj42WGHUwB=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "m-r41HvuQ04",
+        "title": "Vamos A La Playa (Dance Version)",
+        "artists": [
+          {
+            "name": "The Latino Hit Machine",
+            "id": "UCioFn1LLYaXa0hS7ynHGaKA"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/O7wVmOpH1rAdWvnLu7b5zLX2kmcmPQCjYHHi8JP-U6Vrg1HqrBZGRJIoEOZO2V5jfR3WJQidRRyoOvkY=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "hZDvUu6CXwQ",
+        "title": "Mix Verano 2024 | Tropical Mix | Latin Summer Mix | Lo Nuevo y Clasico | Live DJ Set",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/hZDvUu6CXwQ/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3lDZUpRrJwSqpjce-nCdybX0CbsdA",
+        "explicit": false
+      },
+      {
+        "id": "PbB_dF7Hetc",
+        "title": "Fiesta Latina Mix 2024 | Latin Party Mix 2024 | The Best Latin Party Hits by OSOCITY",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/PbB_dF7Hetc/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3kVyPxOh2R7JFcG9-EyRW-I-v-VXQ",
+        "explicit": false
+      },
+      {
+        "id": "A61K7GZNpvs",
+        "title": "La Morena / La Hora de Bailar / El Venao / Macarena / El Tiburon / Esta Pegao' / El Baile del Perrito / Chupa Cabras / Brinca / La Chica Sexy / Fiesta Caliente (Latino House Mix)",
+        "artists": [
+          {
+            "name": "Da Madd Dominikans",
+            "id": "UCI9torrAI2vdaHAj0Wa24Kw"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/eYw3MoEkPaj30RfUJYtBbZssOCBtzw-N1I7MdTvv9ty9VR796_i27MTykos86rpwHFFUA1okOvcl3UA=w120-h120-l90-rj",
+        "explicit": false
+      }
+    ],
+    "albums": [
+      {
+        "browseId": "MPREb_lBAXNZ4Jmxf",
+        "playlistId": "OLAK5uy_lBAXNZ4Jmxf",
+        "title": "Hot Cuban Latin Mix: 2018 Verano Playlist, Havana Caliente Club en la Playa, Fever Party Songs All Night Long",
+        "artists": [
+          {
+            "name": "Cuban Latin Collection",
+            "id": "UCbXmKmcSu7vDP_xM7fYdTQw"
+          }
+        ],
+        "year": 2018,
+        "thumbnail": "https://yt3.googleusercontent.com/HvzSnxg7_ZuhFsGtqZ855uLi1nuYe8iS9nKf7zGWiPIHawMgpG93qWn0CltbucCMvbO086L_gKZz4jzh=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_YaQxYBdQIld",
+        "playlistId": "OLAK5uy_YaQxYBdQIld",
+        "title": "Hot Party Till Morning (Disco Esenciales para Todos, Dance Hits Verano 2017, Club en La Playa del Mar, Amazing Latino Rhythms Fever)",
+        "artists": [
+          {
+            "name": "Cafe Latino Dance Club",
+            "id": "UCs5gYCepHFclzAr0zgujZmA"
+          }
+        ],
+        "year": 2016,
+        "thumbnail": "https://yt3.googleusercontent.com/WClytGWFGyuUezBiLgdPrrC-imiwp4hNLtLAu2egS4Ws9krF8MVwR7mFD_VwRepnMPhgOgoeo-sARbQ=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_f9BXx8gQ0om",
+        "playlistId": "OLAK5uy_f9BXx8gQ0om",
+        "title": "Baile de Verano 2026: la mejor música dance para tu verano por Hoop Records",
+        "artists": [],
+        "year": 2024,
+        "thumbnail": "https://yt3.googleusercontent.com/tWya_9iuFpqolCVpve8jM08R4Pux_KxFKI6Zkh57kpDlLtjr9rosuvbB1DIv2bGqDUIUoZ7Ds_mrod1R=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_NMmY1n1NJFS",
+        "playlistId": "OLAK5uy_NMmY1n1NJFS",
+        "title": "Un Verano Sin Ti",
+        "artists": [
+          {
+            "name": "Bad Bunny",
+            "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
+          }
+        ],
+        "year": 2022,
+        "thumbnail": "https://yt3.googleusercontent.com/0Ke36SSY53TQbmpqzKP4hMPoGiWYQiGI0KJ2CzcwjW4ore9vUMUmyzEi7irEU2MR3FCpNPdwIIuNslS6hg=w544-h544-l90-rj",
+        "explicit": true
+      }
+    ],
+    "playlists": [
+      {
+        "id": "PLGXbBW1RbSb4tQGY6R72kLYINcBfYg_vy",
+        "title": "Summer Pool Party Music - Best Summer Tropical House Songs (Playlist Updated 2026)",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.googleusercontent.com/FfsJ0yR5ZzDHEZwi1lpw1NXNJdMK-fx5uzN-QP6WsIj8_7RbaF6mF8-fEByR_cym9hz7mZeiwXQ=s1200",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PLvj-_bXUAF7xisyS-XYo9yNlBcKXwkuad",
+        "title": "Reggaeton Cuba 2025 - Top Cuban Reggaeton Songs 2026 (Cuba Reggaeton 2027)",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.googleusercontent.com/d2jJwj7g5IPXtRmrmOH8z6oUfOuEyOuBD1zSjg5svXS3VxVnFymJ8Ir0rxPIkPTjkB1ZxSnquGk=s1200",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PLTDm6nyaHbP48r2SOrBk0fCvYVFIzX9DH",
+        "title": "Reggaeton Italia 2026 Italy Latin Hits Italian Summer Party Mix: Dembow HipHop Rap Italiano Estate",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://i.ytimg.com/pl_c/PLTDm6nyaHbP48r2SOrBk0fCvYVFIzX9DH/studio_square_thumbnail.jpg?sqp=CO-RhNQG-oaymwEKCKAEEKAEIABIWqLzl_8DBgj1_e7SBg&rs=AMzJL3m5pNKo2_B6zaLyouj5d5zVZv_M2Q",
+        "playEndpointParams": ""
+      }
+    ],
+    "artists": [
+      {
+        "id": "UCiY3z8HAGD6BlSNKVn2kSvQ",
+        "name": "Bad Bunny",
+        "thumbnail": "https://yt3.googleusercontent.com/ploU_4iWpDoJlX3FOlwwd_yQcex0I8A0_665lePXAEBbNp1zn5g42eNwg5Q7lvYc2mG2--UNIYcIhww=w120-h120-p-l90-rj"
+      },
+      {
+        "id": "UC6QXZsAOOweLfhVPbqMyG4g",
+        "name": "Farruko",
+        "thumbnail": "https://yt3.googleusercontent.com/7LcUfJ1CzFPLi1BxeTqlEp29UFP3B6KZUxAFcnzGpxDQkF8Pn7Ivl7v_dzgsJvbrOFGZIQnXsZPIJJo=w120-h120-p-l90-rj"
+      },
+      {
+        "id": "UCDVyfTofLdUmOI7c6smg6RQ",
+        "name": "Hit Latino TV",
+        "thumbnail": "https://yt3.googleusercontent.com/Vo7C6mQNkKiSzCKfxdUKra2KMCPB4JMXc6SFS0F0Ng25tpCHqP7IpKj2ppL9MJdATeoo_qGD=w120-c-h120-k-c0x00ffffff-no-l90-rj"
+      },
+      {
+        "id": "UCodIJi_Yf146t7sCqnm3_jg",
+        "name": "Vibra Latina Oficial",
+        "thumbnail": "https://yt3.googleusercontent.com/s8Zb_hsAhuvHxPJaCSL8siIaCx8V7MP-gQj6E507_zTSaJwa7xeEu-TfN3gYERQg7OFmk0YE2w=w120-c-h120-k-c0x00ffffff-no-l90-rj"
+      },
+      {
+        "id": "UCwKXRgGxevUoIz4BP2rZWGA",
+        "name": "CHEKO DJ",
+        "thumbnail": "https://yt3.googleusercontent.com/G4y6KQmNSFBN4Wu_iYYsenAMi_pMw1-lTUWLacVxj2E8X_UoX9Hy7WIr8sisPq4S_drmP7PKig=w120-c-h120-k-c0x00ffffff-no-l90-rj"
+      }
+    ]
   },
   "Pop español": {
-    "songs": [],
+    "songs": [
+      {
+        "id": "deN1VLjShU4",
+        "title": "Antes de Morirme (con ROSALÍA)",
+        "artists": [
+          {
+            "name": "C. Tangana",
+            "id": "UCLuHOvsT_LbOGVjqmXudvBg"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/n5GzGvmBuwSBDuTBnvl0FDZEa5LTrYWzX34UcAnP-N8wPMcchaP2PwKbrDeGMGqPW_kK6EUuLwSb7sBwTA=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "Y9WJOopLYBQ",
+        "title": "Ateo (Video Oficial)",
+        "artists": [
+          {
+            "name": "C. Tangana",
+            "id": "UCLuHOvsT_LbOGVjqmXudvBg"
+          },
+          {
+            "name": "NATHY PELUSO",
+            "id": "UCkaQTGWajEjXlTEZ_649BVA"
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/Y9WJOopLYBQ/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3mZGmgOQnfpR3hipNDE8S7Ic_gztQ",
+        "explicit": false
+      },
+      {
+        "id": "ElvzE2cPclc",
+        "title": "SUPERESTRELLA",
+        "artists": [
+          {
+            "name": "Aitana",
+            "id": "UCkyzcFsGWVYSUGaR7YB9OYQ"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/0L0ZTzFxlfrVZIwreYxYiMfjOJq1l9lTxZ5PW4qPMYlPfP0ZSOkHt6k3cQtUEgMeImkz8DzsqwJqII2x=w120-h120-l90-rj",
+        "explicit": true
+      },
+      {
+        "id": "ol07nv1p6Kk",
+        "title": "Un Veneno (G-Mix)",
+        "artists": [
+          {
+            "name": "C. Tangana",
+            "id": "UCLuHOvsT_LbOGVjqmXudvBg"
+          },
+          {
+            "name": "José Feliciano",
+            "id": "UCvfvzksb9tPHjZ7BkRWKaaA"
+          },
+          {
+            "name": "Niño de Elche",
+            "id": "UCM38C9sHml-VnHCE4hqVQtw"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/s4IQ-TWiXDoBkrSG0yAIlMz2_pFj_nS4a0g56oxBERBUo4lEyi8C7G0Ofzuy6Z2PSv5_ujKpVvIXYfU=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "b1Wv72nYJwA",
+        "title": "Tú Me Dejaste De Querer",
+        "artists": [
+          {
+            "name": "C. Tangana",
+            "id": "UCLuHOvsT_LbOGVjqmXudvBg"
+          },
+          {
+            "name": "Niño de Elche",
+            "id": "UCM38C9sHml-VnHCE4hqVQtw"
+          },
+          {
+            "name": "La Hungara",
+            "id": "UCdcFj7unm5pDigv7dkUvZtQ"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/s4IQ-TWiXDoBkrSG0yAIlMz2_pFj_nS4a0g56oxBERBUo4lEyi8C7G0Ofzuy6Z2PSv5_ujKpVvIXYfU=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "0CcrxGtDE4M",
+        "title": "Perdimos La Razón",
+        "artists": [
+          {
+            "name": "Aitana",
+            "id": "UCkyzcFsGWVYSUGaR7YB9OYQ"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/Qn_ochCjQVpne798_oCGg7N9U6mlRSxctYaNZj9D81ONz1ziS5-tBgJXDXe5U-j2pLMj4tdvvA3wk58aNA=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "hfSsPaiJQC4",
+        "title": "CAMBIA!",
+        "artists": [
+          {
+            "name": "C. Tangana",
+            "id": "UCLuHOvsT_LbOGVjqmXudvBg"
+          },
+          {
+            "name": "Carin León",
+            "id": "UCGr3AcxG5Ubp4kByu7l5SSA"
+          },
+          {
+            "name": "Adriel Favela",
+            "id": "UCr8GuisRZBe8R2K35whcj6w"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/s4IQ-TWiXDoBkrSG0yAIlMz2_pFj_nS4a0g56oxBERBUo4lEyi8C7G0Ofzuy6Z2PSv5_ujKpVvIXYfU=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "w7pjt9ZH3NM",
+        "title": "La Perla",
+        "artists": [
+          {
+            "name": "ROSALÍA",
+            "id": "UCeYz6rzUGhVwqxRM37FUo8w"
+          },
+          {
+            "name": "Yahritza Y Su Esencia",
+            "id": "UC5oOy_NEadrnh0lXtJpzgjA"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/dTpYWRisnoZ56BD2GCI_DblY8iJdhwAEg3IAlqbVfn0zBuZBNFBFmX8ZH-OwNV3Cq2k1zojPYcMVgz7e=w120-h120-l90-rj",
+        "explicit": true
+      }
+    ],
     "albums": [
       {
         "browseId": "MPREb_0d16dbfRpEO",
@@ -2339,10 +2992,202 @@
     ]
   },
   "Fiesta": {
-    "songs": [],
-    "albums": [],
-    "playlists": [],
-    "artists": []
+    "songs": [
+      {
+        "id": "lnIziDXhKRQ",
+        "title": "Mix Reggaeton 2025",
+        "artists": [
+          {
+            "name": "Previa & Fiesta",
+            "id": "UCLfmRUhjCYKK1Od2K5HNnrA"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/RxKq3yzOT2uPTUMTneq16hKKOYUBtvDJ_UhH1yRSkNdC-bRaOssZprLWiEwm18ruam8JOSFfOnCoE_U=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "smAjMTw7Lwk",
+        "title": "LIVE SET REGGAETON OLD SCHOOL by RAMAPAL | WASABI FEST",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/smAjMTw7Lwk/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3kVI0nNK6lgJrz4mzwzc_-orKIydA",
+        "explicit": false
+      },
+      {
+        "id": "1rWwqxwuzHs",
+        "title": "MIX REGGAETON 2026 Enganchado",
+        "artists": [
+          {
+            "name": "Previa & Fiesta",
+            "id": "UCLfmRUhjCYKK1Od2K5HNnrA"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/6IIBA-ETvwOM4F9hzSUYQsQUZdNYA2QLNDYFgEFFu84ThTHWYSm4iT8gsS-XEtk5a0-gGmBU9fvv9NM=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "3zD5ZthNWdE",
+        "title": "MIX LO NUEVO 2025 Enganchado",
+        "artists": [
+          {
+            "name": "Previa & Fiesta",
+            "id": "UCLfmRUhjCYKK1Od2K5HNnrA"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/zN6AyVglg8oLAF6gJwfA6SJnlMG7kcg5QuxCXmDys7aAWnopHuKmkx_dULLC4iQqDVefis_LrPkTQlLd=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "eBqthnZnu3Y",
+        "title": "MIX REGGAETON 2025 | Enganchado | Fer Palacio Set En Vivo @ Cruzarecoleta",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/eBqthnZnu3Y/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3kNQbRVpVG-ci_yhsxHq6z0PX-_AQ",
+        "explicit": false
+      },
+      {
+        "id": "EdaJnxFSYmY",
+        "title": "MIX REGGAETON VIEJO #1 FIEBRE FIESTA en Club AMK (Buenos Aires; Argentina)",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/EdaJnxFSYmY/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3mNVUAcgy5Zoh4hkY4yAl1aBhPwdQ",
+        "explicit": false
+      },
+      {
+        "id": "cMXhPDFQQao",
+        "title": "MIX LO NUEVO 2026",
+        "artists": [
+          {
+            "name": "Previa & Fiesta",
+            "id": "UCLfmRUhjCYKK1Od2K5HNnrA"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/FKH5BcVdyXtnR-2ovmkUChq04U5BGBe4wGdbFcGIY8boGVyYH3bFwf0F3yOZipqaVAoP4JrZlw8Mzk3p=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "Z5kwy0DbF0Y",
+        "title": "Reggaeton Old School (Viejito) (con DJ Sebastian Fernández)",
+        "artists": [
+          {
+            "name": "Dj Smith Casma",
+            "id": "UCCEGAiieet4ZCRe9K7-1DBg"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/4kUXmg1J7TyT5Usxxr6yj1lRamsxIeqqNoWr73DmnyRCBaYhzvzVpYMjvzLR4sgooo0wgCkuToZWesk=w120-h120-l90-rj",
+        "explicit": false
+      }
+    ],
+    "albums": [
+      {
+        "browseId": "MPREb_Lmyy1hp0tb0",
+        "playlistId": "OLAK5uy_Lmyy1hp0tb0",
+        "title": "MIX BOLICHE DISCOTECA - REGGAETON, PERREO FUNK , DEMBOW , TECH HOUSE",
+        "artists": [
+          {
+            "name": "Previa & Fiesta",
+            "id": "UCLfmRUhjCYKK1Od2K5HNnrA"
+          }
+        ],
+        "year": 2025,
+        "thumbnail": "https://yt3.googleusercontent.com/ZgWvAKXQck2MDDTaXWmWVZKdo_a9B8VRVSRlPm3M_cUKndZB_DBS3GY_oZm55sCE-drhxNsWINrhzLU=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_CnQ4H9sSdY1",
+        "playlistId": "OLAK5uy_CnQ4H9sSdY1",
+        "title": "Mix Reggaeton 2025",
+        "artists": [
+          {
+            "name": "Previa & Fiesta",
+            "id": "UCLfmRUhjCYKK1Od2K5HNnrA"
+          }
+        ],
+        "year": 2025,
+        "thumbnail": "https://yt3.googleusercontent.com/RxKq3yzOT2uPTUMTneq16hKKOYUBtvDJ_UhH1yRSkNdC-bRaOssZprLWiEwm18ruam8JOSFfOnCoE_U=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_mP5UXjkjVoK",
+        "playlistId": "OLAK5uy_mP5UXjkjVoK",
+        "title": "Reggaeton 2000",
+        "artists": [],
+        "year": 2023,
+        "thumbnail": "https://yt3.googleusercontent.com/wZO6FAd-4mj0zDdDsR1uxTr8LtC4iHNOhehxeycx-Y8XGCUx9rbyLPcgY9kZB48zlrRRZKg_73OjzZy0=w544-h544-l90-rj",
+        "explicit": true
+      },
+      {
+        "browseId": "MPREb_2uHqnJ6X43A",
+        "playlistId": "OLAK5uy_2uHqnJ6X43A",
+        "title": "Reggaeton Antiguo",
+        "artists": [
+          {
+            "name": "Reggaeton Latino",
+            "id": "UCpNZgwqKa7klZzE67eYP7iQ"
+          }
+        ],
+        "year": 2022,
+        "thumbnail": "https://yt3.googleusercontent.com/MaUVFETI2krZ3kS592KlRve9_kbXAmrQUzZ2JOzLa3XUbzsCibXZ1UQyIzV32ys36Jyd0IyAE6TkfK6-FQ=w544-h544-l90-rj",
+        "explicit": false
+      }
+    ],
+    "playlists": [
+      {
+        "id": "PLHtLg0o5cPgfYu1tumz5oXAMtZxNoRi9X",
+        "title": "MIX VERANO 2026 - REMIX FIESTEROS - CUMBIA, REGGAETON MIX - FER PALACIOS, DJ ALEX | ALTA PREVIA",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.googleusercontent.com/RRxqR5mdSrePGX-IjEZ1gZHtJUTMqe1fIyw-QwTkYHmuVgHR-a8oQtvVAF1mCunQWObKtVuwe1k=s1200",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PLrVYSxqQWO6Crr56sRvfrkH3KjF3j7x_z",
+        "title": "TOP 50 ARGENTINA 2026  - Lo Mas Escuchado  🇦🇷 Éxitos Musica",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.googleusercontent.com/hvRG_Htb5ym7XXfZKFdjux-HtJPRp8jvY8wi3ZQSBq7NZbdpcbX7eqC9o-Me-rL7zdIWh2QyETE=s1200",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PLUHbLRE96WqC_JYFE3GQ8IDFOSoc8uqGm",
+        "title": "Cumbias 2026 - Las Mejores Cumbias 2026 (Musica Cumbia Exitos 2026)",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.googleusercontent.com/amA5aiIl3aNkIlha86GdgBceNi2YurxiDDeKjMojlp-lYMcUmcdV7OwUn_yWPTfclQvmyV7fyNaB=s1200",
+        "playEndpointParams": ""
+      }
+    ],
+    "artists": [
+      {
+        "id": "UCj3DDzNvN6QYsaAcKuzsGhg",
+        "name": "Fer Palacio",
+        "thumbnail": "https://yt3.googleusercontent.com/nFJsClua4BhU7TGfrkaWsv41eNOQHDA6eNvxtNfH1DHqf7ijOXJwxjZLWx3NB1iDtLhlrA-NUXvct8hA=w120-h120-l90-rj"
+      },
+      {
+        "id": "UCJ0-R-v3CaJNYMqfp9tivqA",
+        "name": "Wisin & Yandel",
+        "thumbnail": "https://lh3.googleusercontent.com/Ok8VO843XU1D8CJMpEgmOwnKLfmp4omlR1DYr4GSc5riYBmaFwVx1R7xAIy8d2p3nZi5tYKltDlkKw=w120-h120-p-l90-rj"
+      },
+      {
+        "id": "UCptlL_RcC46JkGIcjkNspnA",
+        "name": "Plan B",
+        "thumbnail": "https://yt3.ggpht.com/ytc/AIdro_myzAQRt-j2IWZoukv6Z4B5LwxsLWgpWgzE4DR_KFf45qM=w120-h120-l90-rj"
+      },
+      {
+        "id": "UCwKXRgGxevUoIz4BP2rZWGA",
+        "name": "CHEKO DJ",
+        "thumbnail": "https://yt3.googleusercontent.com/G4y6KQmNSFBN4Wu_iYYsenAMi_pMw1-lTUWLacVxj2E8X_UoX9Hy7WIr8sisPq4S_drmP7PKig=w120-c-h120-k-c0x00ffffff-no-l90-rj"
+      }
+    ]
   },
   "Reggae": {
     "songs": [
@@ -2797,8 +3642,246 @@
     "artists": []
   },
   "Chill": {
-    "songs": [],
-    "albums": [],
+    "songs": [
+      {
+        "id": "kAw9xGI8vgk",
+        "title": "3 Hours of Chill Lofi Music for DEEP Sleep or Study Session",
+        "artists": [
+          {
+            "name": "Lumosound",
+            "id": "UCHyTDJszs60I7FwvJ-2OE4Q"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/Bx7K_CPa195NNoHTdC18w3oip9PPnt7TMChxTrWk3ZpDEqaQqqUyK-TWM1lmJrIjAL8ILp5-n9FrTc2Y=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "WGDJviUDYug",
+        "title": "R&B Soul Jazz _ Smooth & Relaxing Songs for a Cozy Mood",
+        "artists": [
+          {
+            "name": "Silent Waves M",
+            "id": "UCGnzX4pBn5J0117WJsEYmeQ"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/M8p75xfByffQHcCq7CpYL-KmqX_jUuW-Fy5XF9fB_BRJq25PcJp_3UY7wqLbGq_S33olefI9AoMLz2Q5yA=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "VUQfT3gNT3g",
+        "title": "𝙻𝚘𝚏𝚒 𝚁𝚘𝚘𝚖 / 𝙶𝚞𝚒𝚝𝚊𝚛 𝙻𝚘𝚏𝚒 / 𝙲𝚊𝚏𝚎 𝙼𝚞𝚜𝚒𝚌 / 𝙴𝚊𝚜𝚢 𝚕𝚒𝚜𝚝𝚎𝚗𝚒𝚗𝚐 / 𝙱𝙶𝙼 / 𝙻𝚘𝚏𝚒 𝙼𝚞𝚜𝚒𝚌 / 𝚅𝚎𝚛.𝟾",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/VUQfT3gNT3g/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3lD-AS272dzGslxHYuFYEzl592mWQ",
+        "explicit": false
+      },
+      {
+        "id": "Gtb5JXVujBI",
+        "title": "Study Lofi - Relaxing R&B/Neo Soul For Focus & Flow State",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/Gtb5JXVujBI/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3kNyycza_kBJmcIgay71x-aDcaC1g",
+        "explicit": false
+      },
+      {
+        "id": "ot5UsNymqgQ",
+        "title": "Sunrise High-Mountain Studio 🌅  | Neo Soul, R&B Lofi Upbeat Chill Mix",
+        "artists": [
+          {
+            "name": "CraftCozy Room",
+            "id": "UCGAL4Ky_yXwpWJFtWQDZHdg"
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/ot5UsNymqgQ/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3nozXWQcHCWE0qF6cRUCwfW-PqTVQ",
+        "explicit": false
+      },
+      {
+        "id": "SsJEXQ4tmRc",
+        "title": "Chill Aesthetic Music",
+        "artists": [
+          {
+            "name": "Ethereal Destiny",
+            "id": "UClAbSGC_-uIp-NWVmnEeChg"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/5qP6-8hvsaQHuSK1FCgu-VB4-zzgmKuu0KfHFUqAAKwCMFf-geyGiHTVafe0Vxm7hUvPBatMwwlcFx4k=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "KTe7B3TEa2E",
+        "title": "LoFi RnB Guitar",
+        "artists": [
+          {
+            "name": "Lofi Tokyo",
+            "id": "UCopT7eyRJpRW9nq1mhICy5A"
+          },
+          {
+            "name": "Lofi Sleep Chill & Study",
+            "id": "UC1itStv5HQODNJr1zyUmDyg"
+          },
+          {
+            "name": "ChillHop Music",
+            "id": "UCAa0VfyGGR5TyXESSG-lBug"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/UJBkJ1VdaO1lJxEXwuKIIlMZmELxSYUOOJdVjyljuYFx_oC3QiSlM3a5UHJQ0xsMrmgsMAOJukmpugmG=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "jTd67zdomjE",
+        "title": "Lo-Fi Fabric Sounds Beat",
+        "artists": [
+          {
+            "name": "Aesthetic Music",
+            "id": "UCyicc7Zy-lRMt-8G1IZisog"
+          },
+          {
+            "name": "Gaming Music",
+            "id": "UCgbMlgqwuQwD6JuziIxgEdA"
+          },
+          {
+            "name": "Lofi Chill",
+            "id": "UCeNfWcoE0K9Ig5l1xmjX1ag"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/vkzqQ87lX2aV1n5Pjd_fZJyMPLEMM92BKUecVHuuAivDH_1WdlS7KvWnm1rQ1dNjMpRZZl6VLWw3hlX3=w120-h120-l90-rj",
+        "explicit": false
+      }
+    ],
+    "albums": [
+      {
+        "browseId": "MPREb_NAqRfxXgsdt",
+        "playlistId": "OLAK5uy_NAqRfxXgsdt",
+        "title": "Lofi HipHop Beats 2021 Mix - Chill Beats To Study To",
+        "artists": [
+          {
+            "name": "ChillHop Music",
+            "id": "UCAa0VfyGGR5TyXESSG-lBug"
+          },
+          {
+            "name": "Lo Fi Hip Hop",
+            "id": "UCgqlp1PGvwLpIhcYFQFcqqA"
+          },
+          {
+            "name": "Lofi Sleep Chill & Study",
+            "id": "UC1itStv5HQODNJr1zyUmDyg"
+          }
+        ],
+        "year": 2021,
+        "thumbnail": "https://yt3.googleusercontent.com/lG9oUn_ogIGkZAWMlpWZ47cCHXpoD_9HpO_8P9vrXfSOx4eHg6em7Vp_1znVBg8A_KKXrETbJzp3gHAP=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_wH0dqeC8Vuv",
+        "playlistId": "OLAK5uy_wH0dqeC8Vuv",
+        "title": "Lofi Chill Beats To Relax and Study To",
+        "artists": [
+          {
+            "name": "ChillHop Music",
+            "id": "UCAa0VfyGGR5TyXESSG-lBug"
+          },
+          {
+            "name": "Lo Fi Hip Hop",
+            "id": "UCgqlp1PGvwLpIhcYFQFcqqA"
+          },
+          {
+            "name": "Lofi Sleep Chill & Study",
+            "id": "UC1itStv5HQODNJr1zyUmDyg"
+          }
+        ],
+        "year": 2021,
+        "thumbnail": "https://yt3.googleusercontent.com/h4Lf6wLdw0544W7m42H_nhUuK0UF4cMDtPCouYQ2ffo96q9-ql8rugeC9g0Sq1E_313D6Zm2lLj46BM=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_EcqLrFkEbrq",
+        "playlistId": "OLAK5uy_EcqLrFkEbrq",
+        "title": "Lofi Hip Hop (Lofi Hip Hop Beats)",
+        "artists": [
+          {
+            "name": "Lofi Hip Hop",
+            "id": "UCTKRgWNftEYcnXHugbX5bvA"
+          },
+          {
+            "name": "Lofi Hip-Hop Beats",
+            "id": "UCB1NYTB-0kZZVU9rK2C3xOg"
+          },
+          {
+            "name": "LO-FI BEATS",
+            "id": "UCkXd-JReGCj32ZjQVywYUqw"
+          }
+        ],
+        "year": 2023,
+        "thumbnail": "https://yt3.googleusercontent.com/FGPdu2OX7P05sYvgRfr3LIwYZMz_u5ZHmKDS-aT50rpQciLGMli3KsknCbxptcOvbtjOm6WvlJx8_3_I=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_ymhtxqCnVDN",
+        "playlistId": "OLAK5uy_ymhtxqCnVDN",
+        "title": "Chill LoFi: LoFi Chill Hip Hop and Relaxing Background Beats",
+        "artists": [
+          {
+            "name": "Lofi",
+            "id": "UCTKRgWNftEYcnXHugbX5bvA"
+          },
+          {
+            "name": "ChillHop",
+            "id": "UC6ma86XGGBKBNpvgWKxFIPA"
+          },
+          {
+            "name": "Chill Fruits Music",
+            "id": "UCFhmXoYVucO-1xV4Z8ru9dg"
+          }
+        ],
+        "year": 2023,
+        "thumbnail": "https://yt3.googleusercontent.com/ta2GKVk1tAO0cERwyeAmCQj7rB43spmsA9MFUmpvDBVjFmy0BB4mlLuWrLxn4AD9kAUvS-Sa4yHFb1h6=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_yHCr6lq7cJI",
+        "playlistId": "OLAK5uy_yHCr6lq7cJI",
+        "title": "Lofi Beats To Study and Relax To",
+        "artists": [
+          {
+            "name": "ChillHop Music",
+            "id": "UCAa0VfyGGR5TyXESSG-lBug"
+          },
+          {
+            "name": "Lo Fi Hip Hop",
+            "id": "UCgqlp1PGvwLpIhcYFQFcqqA"
+          },
+          {
+            "name": "Lofi Sleep Chill & Study",
+            "id": "UC1itStv5HQODNJr1zyUmDyg"
+          }
+        ],
+        "year": 2021,
+        "thumbnail": "https://yt3.googleusercontent.com/bpnRzO6WfBtKRF25GG4FAmGYUL7-cNGPOXJOF1htMfi7ENgyZUyo72pq0QvMOBm8FN24tWIneYx5mcGS=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_eWeONswM7W5",
+        "playlistId": "OLAK5uy_eWeONswM7W5",
+        "title": "LOFI CHILL 2025",
+        "artists": [
+          {
+            "name": "LOFI BEATS",
+            "id": "UC0CK5ZjP6DTajE0A30Ak9Nw"
+          }
+        ],
+        "year": 2025,
+        "thumbnail": "https://yt3.googleusercontent.com/xokHemmWPqm5LhbpWv-Q4rw-aQwNFpJaOJTH1IZzzpPZ9VWl3yqlzWEZGglxPJq0y1dvaE7vUJGVP60c=w544-h544-l90-rj",
+        "explicit": false
+      }
+    ],
     "playlists": [
       {
         "id": "RDCLAK5uy_kLwgLlrxA4-_EchctXgTyHR4rwRaRv1wk",
@@ -2819,7 +3902,28 @@
         "thumbnail": "https://yt3.googleusercontent.com/XWkZGmXPFb3BuqtuoaHQfcSgT8NNC_rUtLAhJM8jpu3MqOtbYSCH09numS2dkcRELEEpJlIyAcVk4qCN=w120-h120-l90-rj"
       }
     ],
-    "artists": []
+    "artists": [
+      {
+        "id": "UC0CK5ZjP6DTajE0A30Ak9Nw",
+        "name": "LoFi Beats",
+        "thumbnail": "https://yt3.googleusercontent.com/jHU1gA4LyjiWvtZeY-s8Vvzabz71-J6ueLe4HEvrSlK2Oei1icwtg-fuzL2gSe6SLfytV6ieXw=w120-h120-l90-rj"
+      },
+      {
+        "id": "UCwCrV4x3lLZQ4uSVNS2zs0Q",
+        "name": "DJ Music Vibes",
+        "thumbnail": "https://yt3.googleusercontent.com/_XiSCYJe_3JdVP1XD2bpvi_hiYTwQRGyYfRWAOerPhY5p1szvEQkWUs9c9obuREjeaS1Hb0X15U=w120-c-h120-k-c0x00ffffff-no-l90-rj"
+      },
+      {
+        "id": "UCTKRgWNftEYcnXHugbX5bvA",
+        "name": "Lofi Hip Hop",
+        "thumbnail": "https://yt3.googleusercontent.com/pGxReU2_jLjGExif8c6kaJDTjDCLfxkOOt8FxirInHTWZ6HwIu794AwIoLzy5eCsiUEjWWV7JspZMJ0=w120-h120-l90-rj"
+      },
+      {
+        "id": "UCVnOFhxd8AeUUQ-zW767tSw",
+        "name": "Lofi Chillhop",
+        "thumbnail": "https://yt3.googleusercontent.com/-gSSv4fEVH2Mk-ofp1KOCdc-dXsZJlm6iFQ-oN7lMi9U05_VABCvsqsR9tikCFe6OwVtbhTFv0ZSoAbG=w120-h120-l90-rj"
+      }
+    ]
   },
   "Electrónica": {
     "songs": [
@@ -3940,10 +5044,205 @@
     "artists": []
   },
   "Fitness": {
-    "songs": [],
-    "albums": [],
-    "playlists": [],
-    "artists": []
+    "songs": [
+      {
+        "id": "sOHVMObuR3Q",
+        "title": "Aggressive Phonk Supernova (Rave Drift Mix)",
+        "artists": [
+          {
+            "name": "NOMINAL",
+            "id": "UCSVRpn7jJlrakpgV-CmMm-A"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/y9oGVaSvE0nU6d_6YysWNhIqav0m3H55cBV166OkTGvUs3X1JXgV7Vq2K8bwmqvHgIFDNTrHEAd60p0=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "iZI6NbB6qzk",
+        "title": "Aggressive Phonk Supernova Rage Mode (GYM Mix)",
+        "artists": [
+          {
+            "name": "NOMINAL",
+            "id": "UCSVRpn7jJlrakpgV-CmMm-A"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/kUO1MCmlZlELpwJCytl5bnyPozO8UJKtrctO7rkltSVLmCfqwmuWWyakJPgKSEI8CLd_WR1eG40mW3IV=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "00ndSxFtctg",
+        "title": "BASS BOOSTED GYM MUSIC | Ultimate Phonk Training Mix | PHONK GYM MOTIVATION Hard Bass Workout Music",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/00ndSxFtctg/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3lgiaG58ZRZjbrfCQxGbOF0aW9DsA",
+        "explicit": false
+      },
+      {
+        "id": "VDCNyf5U7fM",
+        "title": "Gym Phonk Music",
+        "artists": [
+          {
+            "name": "Phonk Motivation",
+            "id": "UCjZzTVOHSo2DUgviOx1wAjw"
+          },
+          {
+            "name": "2024 Best Phonk Music",
+            "id": "UCXbXM1DRXWTbvN9-DyJk34A"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/9tiECNEP8oHRXGasPXYqVpzcn0ocIWBD8d7x1hu3IfBzj126nwFbcQW6ilu6tYLbxMAnVD68BuJrhHs=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "mg74FZwG8uo",
+        "title": "THE BEST GYM PHONK 2025 ※ TOP PHONK MUSIC PLAYLIST ※ GYM, AGGRESSIVE, DRIFT ※ Фонка 2025 #114",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/mg74FZwG8uo/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3mT8NXMnv_4jeaAxG9NIJWnMDiEog",
+        "explicit": false
+      },
+      {
+        "id": "3qGVgCmN8Pk",
+        "title": "THE MOST INSANE PHONK MUSIC 2024 ※ BEST GYM PHONK ※ GYM, AGGRESSIVE, DRIFT ※ Фонка 2024 #002",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/3qGVgCmN8Pk/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3kTf-IhjmWBlLBvcNrFHKFPR214lw",
+        "explicit": false
+      },
+      {
+        "id": "5oSyvkXw9dw",
+        "title": "Workout Motivation (con Workout Music y GYM Music)",
+        "artists": [
+          {
+            "name": "Funk Estranho",
+            "id": "UCxNaGIwWDYDlas2krP0SfGw"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/bs5WF0xhTn8fGYJmnWyndm5rxfMCxRgXrDFpVoibw-x9aPYcRg4Vs3dEnIYuvP6xrP8_kFOhI-mxFKdJFg=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "XwTS70v5-pg",
+        "title": "Gym Music Phonk (con Workout Music y GYM Music)",
+        "artists": [
+          {
+            "name": "Funk Estranho",
+            "id": "UCxNaGIwWDYDlas2krP0SfGw"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/j-BU-A0-_DKWnUYzsYto6EZm2pmZLWeZ1CZaW4VKoBxJVsEjXpjZ0tsc9iLY2ZyMT86jnW8QxZIsq6k=w120-h120-l90-rj",
+        "explicit": false
+      }
+    ],
+    "albums": [
+      {
+        "browseId": "MPREb_9Hg28kW64J0",
+        "playlistId": "OLAK5uy_9Hg28kW64J0",
+        "title": "Epic Phonk Songs Hard Heavy Bass Aggressive Sigma Phonk Beats",
+        "artists": [
+          {
+            "name": "Best Phonk Music",
+            "id": "UCtF33rp7MGelfoGLSpIdFDg"
+          },
+          {
+            "name": "Phonk Music 2023",
+            "id": "UC53SLi6_c7FJ1E68HC9Dl4A"
+          },
+          {
+            "name": "Phonk Christmas Music",
+            "id": "UCRguRDtVPv4eh0lExFWxhzg"
+          }
+        ],
+        "year": 2024,
+        "thumbnail": "https://yt3.googleusercontent.com/JXUD1gmRO0b8vJ_a332WBlST7-VNm2ANyjQPJkkaOnMBMxls7o4ysPePDGeTO-B6DoO0_42UqHOVzfU=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_v0easo6zjKC",
+        "playlistId": "OLAK5uy_v0easo6zjKC",
+        "title": "Workout Music 2026 (Workout Music Songs)",
+        "artists": [],
+        "year": 2026,
+        "thumbnail": "https://yt3.googleusercontent.com/uPhAp_35ndsks_oADkhCh4F07muyU3HkQOCU4VZplLT8N2y2vn0rMazi7UCxTb5cCEpBClSAfi7NC5dZ-Q=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_aIcexJk3p7h",
+        "playlistId": "OLAK5uy_aIcexJk3p7h",
+        "title": "Best Of Phonk",
+        "artists": [],
+        "year": 2023,
+        "thumbnail": "https://yt3.googleusercontent.com/oQ16YpJH5oR7-wwuvsfY1fjeAikqLBjJUctj9OL2bQidEo_QtT1GuupEZAmJXzRVaLtJYx3v17BHmuxa=w544-h544-l90-rj",
+        "explicit": false
+      }
+    ],
+    "playlists": [
+      {
+        "id": "RDCLAK5uy_mkE6r615BalCSEv66e0vFgWKbTe8nbq00",
+        "title": "Beast Mode Phonk",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.googleusercontent.com/byABjDlTWtwPXTXby1kwVUSlVfECACIOtKoKBn60xG8QIBDHbIzvdwMzZq2ayQuuGdSEiu3kNVlbRN0=w544-h544-l90-rj",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PLzIdfqqgOGxjFfiySCyhAvx0DQyoM2-br",
+        "title": "AGGRESSIVE GYM PHONK 2026 (Hard Workout Music)",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://i.ytimg.com/vi/Cgfnu3fdrfw/hq720.jpg?sqp=-oaymwEKCNUGEN8DIABIWg&rs=AMzJL3k0FjB2Z_7ajnFMkgBlZewpjaXnXQ",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PLHWBcdGskp-wzWJIN5Xs1UIPWx0460yUc",
+        "title": "PHONK WORKOUT MIX ⚡ | Ultimate Gym Motivation Music 2025",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://i.ytimg.com/vi/yF8_OzPPXe0/hq720.jpg?sqp=-oaymwEKCNUGEN8DIABIWg&rs=AMzJL3nXV16uMbHmZ-ei727SeE_Yxeehpg",
+        "playEndpointParams": ""
+      }
+    ],
+    "artists": [
+      {
+        "id": "UCVb7aBiV9Kce5U-mtsog3PA",
+        "name": "Gym Phonk 2024",
+        "thumbnail": "https://yt3.googleusercontent.com/OZ_x5yCN1Tcof4PsMW5zr3LhNWhJHxEtp-ZXttKs-uG9_wmQPdZcoqMlFwudnSxVhCz1on5oHcwgns-p=w120-h120-l90-rj"
+      },
+      {
+        "id": "UCtF33rp7MGelfoGLSpIdFDg",
+        "name": "Best Phonk Music",
+        "thumbnail": "https://yt3.googleusercontent.com/Qo8navCggojBfkUy8dtrs3ycSXTL9pVu4VJozJaoH4zz_6ZepHjXx64CrdRmDulqRdwyLymds-M=w120-h120-l90-rj"
+      },
+      {
+        "id": "UC6ZWs0a2x6CRxbmclMrcK-w",
+        "name": "Brazilian Phonk",
+        "thumbnail": "https://yt3.googleusercontent.com/x0Ge6f95sZfHNUSlAgKCaHlLVDasD_SDXoKjC0UgpFcA9okB0TSC7z2IVn29Ac3xAPo-eIEjcu5v4AM=w120-h120-l90-rj"
+      },
+      {
+        "id": "UCpUpDV8OwicHCrBm1veBGCg",
+        "name": "Bulokas",
+        "thumbnail": "https://yt3.googleusercontent.com/skorpfM6KNCqxb954mkFP9iZzCnUiJRG4lzZfmmmhxjAS-tzKjgJnhGx2sgVi6YRuwMKz9yf9Q=w120-c-h120-k-c0x00ffffff-no-l90-rj"
+      },
+      {
+        "id": "UCrlxuKo-m6CbEmu_-qTAj9w",
+        "name": "FIT_WITH_LUCKY",
+        "thumbnail": "https://yt3.googleusercontent.com/81Ca9b8Nopbml9n1Z5-FGQjQcUrN9OK-f6097ICcENItGD2Qpalz6gfbz9_0ZcRwpJMBLIu1Ew=w120-c-h120-k-c0x00ffffff-no-l90-rj"
+      },
+      {
+        "id": "UCbUdhJzPFW98uGMIZuzhPnw",
+        "name": "FranGonGue",
+        "thumbnail": "https://yt3.googleusercontent.com/wrR2GSfn33minShV6DsaUQkkq48gNLXPzLaxvRNfSDFoUsMB8Q5qzvrQqO8jLSJFxWNA0gP3nQE=w120-c-h120-k-c0x00ffffff-no-l90-rj"
+      }
+    ]
   },
   "Blues": {
     "songs": [
@@ -4930,10 +6229,190 @@
     ]
   },
   "Buena vibra": {
-    "songs": [],
-    "albums": [],
-    "playlists": [],
-    "artists": []
+    "songs": [
+      {
+        "id": "kkd94ezRLtI",
+        "title": "🌞 TODO FLUYE PARA TI | 1 Hora de Reggae Positivo para Confiar y Soltar   Melodías de Luz Interior",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/kkd94ezRLtI/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3klNcAloXu1Iee1V1k4zFnfOLhe9Q",
+        "explicit": false
+      },
+      {
+        "id": "_fDI3xdXRe0",
+        "title": "Tributo Ska",
+        "artists": [
+          {
+            "name": "Buena Vibra Reggae",
+            "id": "UCeqJgWhrWwYL302ewaJZAFg"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/XeTCh0pQdksFxnCaTZ0JXkHDUvi8iPLFPAoDRfYcf4qvGQH4ZQJqQTiGh2RNoxTbKeVTsLTs8EeQ3eYI=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "ThwCMpnX90Q",
+        "title": "Hawaiian Reggae Vibes – Melodies from a Tropical Paradise 🍹",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/ThwCMpnX90Q/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3nFCiUuzKP_98y2dV-zQ7CibCJIrg",
+        "explicit": false
+      },
+      {
+        "id": "GTNQ_aARDfc",
+        "title": "Terapia en Canción – VIBRACIONES POSITIVAS | Reggae Terapéutico para Relajarse, Bailar y Ser Feliz.",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/GTNQ_aARDfc/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3nllLry_VNEDQ9irt0dULHb0ZRM3A",
+        "explicit": false
+      },
+      {
+        "id": "qY0BWfTaYYM",
+        "title": "Buena Vibra (con Ale Puga, Hancer, Pedro Cuevas y Stephanie Zelaya)",
+        "artists": [
+          {
+            "name": "Ale Mendoza",
+            "id": "UCw8V9dKEsyk5hcQ98llYXFg"
+          },
+          {
+            "name": "Sartiboy",
+            "id": "UC_iGdrhbaLFFVEbsBM48-yA"
+          },
+          {
+            "name": "Tayl G",
+            "id": "UCEEAu0X8BDleYWcOv-a0RWQ"
+          },
+          {
+            "name": "Francisco Paez",
+            "id": "UCuG__g-LwEtUv1R7lSLAPiw"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/fSQaFXaVF3eWlN0ehXNr5ZV81Pg1dCDkw5SLJuL7zmuEAY7XSMAfD53gIR5RorlIaIJHtee8sTGJ8gk=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "DkT2wxLvxX4",
+        "title": "Vibra positiva",
+        "artists": [],
+        "thumbnail": "https://yt3.googleusercontent.com/n3E6hVIxwbDIT-_t1hBY_v1JyC3f57V5KU1owGQpQFoy-jwhTtVMN11vYjNg1qCcm0oPn5hWmH2HJNfk=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "Lnt4-8fwEHo",
+        "title": "Vibra positiva (Reggae instrumental)",
+        "artists": [
+          {
+            "name": "Melancolia Music",
+            "id": "UC20c-7hVq45amUND7O6N_Nw"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/ZG2WzDFY3p3V8ePpI77zwsaBZ1vERwjmjM_GdFF5akxlLAFCnMn_TpJuuR2bfff27fC0hJn3HXatSYCj=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "qWfD7MBSW8s",
+        "title": "BUENA VIBRA (MUSICA POSITIVA ALEGRE/Musica Cristiana para Hacer Ejercicio GYM/ Musica para trabajar activo y alegre /musica eletronica)",
+        "artists": [
+          {
+            "name": "ORLANDO RJ RD GLOBAL MUSIC",
+            "id": "UC18TPfLF1h8Q5nxxC7FFIOw"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/DsxRgDZay_fYXycmkqDw_STOYl1Bu0e4jjkNoUFygS_IVXuCP2QEyVwKQAhwlwPVaYygPftYapdIbJIE=w120-h120-l90-rj",
+        "explicit": false
+      }
+    ],
+    "albums": [
+      {
+        "browseId": "MPREb_2wiXIGcG988",
+        "playlistId": "OLAK5uy_2wiXIGcG988",
+        "title": "Música Alegre Para Subir el ánimo",
+        "artists": [],
+        "year": 2023,
+        "thumbnail": "https://yt3.googleusercontent.com/uKQ-I4djWvoxAlnTwZs3T-VFOju1Wt1Tq6DACMyPO5eTnevaq9Zl1NR3adVoQqfhYcVJtPVYExyW76WI=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_tYSXzXq6cQg",
+        "playlistId": "OLAK5uy_tYSXzXq6cQg",
+        "title": "Electrónica 2023 (La Mejor Música Electrónica Mix)",
+        "artists": [
+          {
+            "name": "La Mejor Música Electrónica",
+            "id": "UCwvrGloeY-wUI7PPY391Txw"
+          }
+        ],
+        "year": 2023,
+        "thumbnail": "https://yt3.googleusercontent.com/zO6rNPg2M7AU3FSRbtn1CkSiBt_vCZy76kSOJRgulwrhaECmaYkoPXfHVP1PygpmRJS5wf6qrjKxYWt1=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_js8DQ5yTw5o",
+        "playlistId": "OLAK5uy_js8DQ5yTw5o",
+        "title": "Bajos Extremos",
+        "artists": [
+          {
+            "name": "La Mejor Música Electrónica",
+            "id": "UCwvrGloeY-wUI7PPY391Txw"
+          }
+        ],
+        "year": 2020,
+        "thumbnail": "https://yt3.googleusercontent.com/Q4gpmlnAHIUiZtfSTfzpD2UbpWt0wKNi9nu9B9UCNiLRENy-YHH-yVey8aY_y_J05XHTCaB386Yg9Exd=w544-h544-l90-rj",
+        "explicit": false
+      }
+    ],
+    "playlists": [
+      {
+        "id": "PLPcHbRiHlo63AcHgREsJwoqZOaYr70mpF",
+        "title": "Lo mejor del reggae - Las mejores canciones del reggae de todos los tiempos (reggae viejo, roots, mix, cristiano, de los 90…)【Playlist】▷ Cinco Notici",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.ggpht.com/i1A7-0u45EPJbML42Jl1qT19ls7tG1vq4InC3_cl_YpiKo5NWt1LxiQUv4G0bkwzGp8WmXGxR24=s1200",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PLRvNHGkdTkNTwyppBk1J_o6KwRQSBzP7F",
+        "title": "MUSICA Para HOTELES y RESORTS En La PLAYA / Playlist Para Ambientes de Verano y Playa. Tropical, Summer, Verano.",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.googleusercontent.com/8JQmsYl_-KifZA4kOToHUXTkMLSmU9oIIxFl7b19Vv48Z3aorCB4DgzhzJGvAbkRxkGGA4jD9Ng=s1200",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PLnfcpZm6el8ghk6f-iJDkXOjhI1dkF8ei",
+        "title": "Reggaeton Cristiano 2026 Lo Mas Nuevo",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.googleusercontent.com/JlHCP4nHMyGf5aFnVnIXAV0bhSvi7SkUQVi6hvCtTjDqWrO4pZDdeZ8sWAhul6KQ1a6ePQhtnA=s1200",
+        "playEndpointParams": ""
+      }
+    ],
+    "artists": [
+      {
+        "id": "UC_X1gYPv9eOW1CYIVEAX2hw",
+        "name": "Dread Mar I",
+        "thumbnail": "https://yt3.googleusercontent.com/SUuc8CuFu61FqbJkSs-6SYhcAoR7ueJH3GlJYYg5uxePaS_zFfsYqz3SzfoPU-jcmTF6JG0P3vHlUQ=w120-h120-p-l90-rj"
+      },
+      {
+        "id": "UC4iZvtHEJ86jExG6blFaVpQ",
+        "name": "Los Pericos",
+        "thumbnail": "https://lh3.googleusercontent.com/2wRbr6og-vpx7i9Pn3bz_cG3PU9X53hKxV94DoqByTdAlwbmRXV19Be4-GqOMprKMUBUvJK-hZKDCQ=w120-h120-p-l90-rj"
+      },
+      {
+        "id": "UC7n3gWRN0vQzgiOKc51aZ4w",
+        "name": "KAROL G",
+        "thumbnail": "https://lh3.googleusercontent.com/Yzqsh_83kXz4dl0dvPlHTFeQjAkKbX3u-TV-9I7mo-bWm4sCKiHcCBTis2GculkVVNGG76Wwk3uQePeD=w120-h120-p-l90-rj"
+      }
+    ]
   },
   "Amapiano": {
     "songs": [
@@ -5402,9 +6881,147 @@
     ]
   },
   "DJ Mixes": {
-    "songs": [],
-    "albums": [],
-    "playlists": [],
+    "songs": [
+      {
+        "id": "Eq5EQxWbSjg",
+        "title": "Bzrp Session 54 (Tech Edit) (Remix)",
+        "artists": [
+          {
+            "name": "DJ JUANCHII",
+            "id": "UCxWgxi7ieMtCC5wHGp_PnfQ"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/W79uBokiq3p0iHLBXVLI9hLlFwMFl9TDLYFRMT2laXH5SQ7biYjzvSjVElPY7lUymE0ONZQSqDhfrQaQ=w120-h120-l90-rj",
+        "explicit": true
+      },
+      {
+        "id": "7wnVYIJipzU",
+        "title": "MIX BAD BUNNY 2026🐰 DtMF,EoO,KLOuFRENS,QUE PASARIA,A TU MERCED,VelDÁ,BAILE INOLVIDABLE - CONCIERTO",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/7wnVYIJipzU/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3nUd1vrrThd0CjrT4aSWP-wg4mmYA",
+        "explicit": false
+      },
+      {
+        "id": "IuJ5KS7vAvc",
+        "title": "Session 53 (Open Show 2023) (Remix)",
+        "artists": [
+          {
+            "name": "DJ Patamix",
+            "id": "UClYsAcbyFzOE4Lqii8JAuwg"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/fC2QCSFQgapiLIWhmo-BWeg3-OulGQa9OFciGuAYX78izJRSBe_8feC4Y_e9CHZHexAtXm0q9TF_LPgF=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "pYAxGxPofD4",
+        "title": "Bizarrap en Lollapalooza",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/pYAxGxPofD4/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3kWLTJ799GySXGvPljoGNPzD8LHXA",
+        "explicit": false
+      },
+      {
+        "id": "1X9ivl1B_VI",
+        "title": "Bzrp Music Sessions #48 (Remix)",
+        "artists": [
+          {
+            "name": "RODRI DÍAZ",
+            "id": "UCcA9z4L8It8ZRKM_47EDTew"
+          },
+          {
+            "name": "MAURI VIGNOLO DJ",
+            "id": "UC6fzeLKPjQ4HbBXXIr751yQ"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/q_lVd2vW0ZQko8a2e56h9MSYXwxtlqq7awBxcDv53TQ636cQpfIvFFDRe9zjx7npCvA18Rb-pW5-x9dv=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "tJ40A0Cbbm4",
+        "title": "Bzrp Music Session: Vol. 23",
+        "artists": [
+          {
+            "name": "tomy dj",
+            "id": "UCUhxUE9UM7zp9IeQst_na7w"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/hgajmDspweLVEj4Kp_E9QhsWhG1vabmn_idDrmTAi2H2sAZ1AL_p1MjB_bJ4Z-5LVkqGmdX21klhsklW=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "NPG-NlYQ7q4",
+        "title": "Bizarrapeame el Verano 2022 (En Vivo)",
+        "artists": [
+          {
+            "name": "DJ Patamix",
+            "id": "UClYsAcbyFzOE4Lqii8JAuwg"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/9prSwkJGsItgiXqgQaDncNBYNsHV5y9X_KYtRkcqgHE_0xiih5UUL25bUaW_Uv6AygsElHWYK6HHPqg=w120-h120-l90-rj",
+        "explicit": true
+      },
+      {
+        "id": "nJ7-vHekCqM",
+        "title": "MIX LO NUEVO 2025 | Enganchado | Fer Palacio Set En Vivo @ Cruzapolo",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/nJ7-vHekCqM/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3ky5f2kL0-3nb_anZEnuSAH-9wEBA",
+        "explicit": false
+      }
+    ],
+    "albums": [
+      {
+        "browseId": "MPREb_kaaHeI2xweS",
+        "playlistId": "OLAK5uy_kaaHeI2xweS",
+        "title": "QUE NOS FALTE TODO",
+        "artists": [
+          {
+            "name": "Luck Ra",
+            "id": "UC1Us4mzRzPi3isXnnt8RZAg"
+          }
+        ],
+        "year": 2024,
+        "thumbnail": "https://yt3.googleusercontent.com/6iUw2lAjCaugvesUgG87yXSWir1_m6fpELjuY0h7vA95En-N_ioar2LrOnF51FN_8hY3EpNmNZJ7fYs=w544-h544-l90-rj",
+        "explicit": false
+      }
+    ],
+    "playlists": [
+      {
+        "id": "PLhgO2i9SR2sO0QzR4xpnpf-OOx2wlKwsq",
+        "title": "La Mejor Música Electrónica 2026 🔥 TOMORROWLAND 2026 🔥 Lo Nuevo - Electronic Mix 2026",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://i.ytimg.com/vi/FekUwPHyaSU/hq720.jpg?sqp=-oaymwEKCNUGEN8DIABIWg&rs=AMzJL3kS_6NtVJmQH1VFJd-PzJr-ZsUbiQ",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PLHtLg0o5cPgfYu1tumz5oXAMtZxNoRi9X",
+        "title": "MIX VERANO 2026 - REMIX FIESTEROS - CUMBIA, REGGAETON MIX - FER PALACIOS, DJ ALEX | ALTA PREVIA",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.googleusercontent.com/RRxqR5mdSrePGX-IjEZ1gZHtJUTMqe1fIyw-QwTkYHmuVgHR-a8oQtvVAF1mCunQWObKtVuwe1k=s1200",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PLoMX4vnSdewBIZVWDCwJ-LeVbdisbjDxq",
+        "title": "Pa prender la fiesta",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://i.ytimg.com/vi/HbwqO6xFB14/hq720.jpg?sqp=-oaymwEKCNUGEN8DIABIWg&rs=AMzJL3njWLB-7FwFTukxQvh1mqgAo5Q5Uw",
+        "playEndpointParams": ""
+      }
+    ],
     "artists": []
   },
   "Músicas del mundo": {
@@ -5973,10 +7590,246 @@
     "artists": []
   },
   "Concentración": {
-    "songs": [],
-    "albums": [],
-    "playlists": [],
-    "artists": []
+    "songs": [
+      {
+        "id": "kO1gvHp52l0",
+        "title": "Hours Relaxing Guitar Music, Meditation Music, Instrumental Music, Calming Music, Soft Music",
+        "artists": [
+          {
+            "name": "Nature Sounds",
+            "id": "UCyfzggiXvfMdKlK7YdH_GIA"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/bZgWdInM3xKZx_emk54joskFOprxdCHBx6s-vqZoT29vR9aN8Mw4squpT0_1UMa0lPnbeuXkV9PCxycw=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "Xf3-4A-uEc8",
+        "title": "Deep Focus Lofi Mix 🍯 Study/Work Concentration [chill lo-fi hip hop beats]",
+        "artists": [
+          {
+            "name": "Episodio",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/Xf3-4A-uEc8/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3lwB9XSu7o-oL5Z1-rabg9TH0cSwQ",
+        "explicit": false
+      },
+      {
+        "id": "8JiPi_TUZug",
+        "title": "Background Music for Focus and Concentration, Study Music, Focus Music",
+        "artists": [
+          {
+            "name": "Greenred Productions",
+            "id": "UCm2QTmTeJXhyBGAgOLoWyAg"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/HcjWRCmpqvHnUUMRNPtQ7bMXAgfoPWc1WsHUxHZu0UfsEjVp45t_Z-iNE9TKMCjgVQ2PdqmHz14pQS_9rA=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "RUK1vFXY2Pw",
+        "title": "Focus Music for Work and Studying, Background Music for Better Concentration, Study Music",
+        "artists": [
+          {
+            "name": "Greenred Productions",
+            "id": "UCm2QTmTeJXhyBGAgOLoWyAg"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/_t77GciWFcyK6Jz9YYjZ67vEmRq3eGGGNqllKdFid2UFX2xsD3huMGsWPn7y59zxIzgXBaC_Yqxffsy_=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "6H-PLF2CR18",
+        "title": "Breathe 🍀 Lofi Deep Focus 🌳 Study/Calm/Heal [ Lofi Hip Hop - Lofi Chill ]",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/6H-PLF2CR18/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3nmbh2EqP-XuiS5YfT3su1KAC_uHw",
+        "explicit": false
+      },
+      {
+        "id": "kAw9xGI8vgk",
+        "title": "3 Hours of Chill Lofi Music for DEEP Sleep or Study Session",
+        "artists": [
+          {
+            "name": "Lumosound",
+            "id": "UCHyTDJszs60I7FwvJ-2OE4Q"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/Bx7K_CPa195NNoHTdC18w3oip9PPnt7TMChxTrWk3ZpDEqaQqqUyK-TWM1lmJrIjAL8ILp5-n9FrTc2Y=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "sAcj8me7wGI",
+        "title": "Relaxing Piano Music For Study and Focus",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/sAcj8me7wGI/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3nNv6-V_BynI-DOG45qXp2AoN53Nw",
+        "explicit": false
+      },
+      {
+        "id": "WYknXjml9Gw",
+        "title": "Study Music, Concentration Music for Studying, Focus Music for Productivity",
+        "artists": [
+          {
+            "name": "Greenred Productions",
+            "id": "UCm2QTmTeJXhyBGAgOLoWyAg"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/qyUkScK9MXx4wXDLVBt3rA-AsE8mkWA3eEfuQo5a4-o4OSkIs_G-gNKoKOzgFxT2mpS9VhmsQor1HaqL=w120-h120-l90-rj",
+        "explicit": false
+      }
+    ],
+    "albums": [
+      {
+        "browseId": "MPREb_1eWgv8HqKLO",
+        "playlistId": "OLAK5uy_1eWgv8HqKLO",
+        "title": "LoFi Piano Study – Music for Deep Focus, Concentration, Productivity & Exam Success",
+        "artists": [
+          {
+            "name": "LO-FI BEATS",
+            "id": "UCkXd-JReGCj32ZjQVywYUqw"
+          },
+          {
+            "name": "lofi.dealer",
+            "id": "UCk9MfEzr-pw0yXO3U28D8_g"
+          },
+          {
+            "name": "Lofi Astronaut",
+            "id": "UCfN4LwuaqIyN_NIifa5HhtQ"
+          }
+        ],
+        "year": 2025,
+        "thumbnail": "https://yt3.googleusercontent.com/hsnZX2beUwpiS9jFF5QvIsXLGYHxlCsbISZDoLnHaXduOqgbyJ7Xejecfxg7sShRcAX2VUIMgz8kN97O=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_T3eIRwbkiNL",
+        "playlistId": "OLAK5uy_T3eIRwbkiNL",
+        "title": "Study Music – Instrumental Focus Beats for Deep Work, Concentration, Productivity and Studying Without Distractions",
+        "artists": [],
+        "year": 2026,
+        "thumbnail": "https://yt3.googleusercontent.com/au-8l87qNFhPyFIHZj5B4PGOYcffT9VxV_ZG7yhn9KIGo_F554aRG6q-s-vIm0jTe-c7elExWFL-nBHd=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_yrsMZnhfSg3",
+        "playlistId": "OLAK5uy_yrsMZnhfSg3",
+        "title": "Mind Chillaxing: Peaceful Lofi Piano Music to Focus, Study, Relax",
+        "artists": [
+          {
+            "name": "Chillout Piano Session",
+            "id": "UCKr2Y93FDWJv9yvgiFQwRNA"
+          },
+          {
+            "name": "Easy Study Music Chillout",
+            "id": "UCeWu6JO2yCVRg_bwlTSyy9A"
+          },
+          {
+            "name": "Hip Hop Trap Instrumental Beats",
+            "id": "UC8BWVmmeGfe66rXTcQiEyUA"
+          }
+        ],
+        "year": 2024,
+        "thumbnail": "https://yt3.googleusercontent.com/Xx397MYW5ugitZtxm1WVtM8lA8CrLjCmLEzK7CiGhg46_wueRhJWM57sPoent8uCFGZ-j7VYysnjWz6Y=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_2v6oygbFt5Y",
+        "playlistId": "OLAK5uy_2v6oygbFt5Y",
+        "title": "Focus & Relaxing",
+        "artists": [
+          {
+            "name": "Focus Music",
+            "id": "UCvO6PVHyWykeA7BOT5t74xw"
+          },
+          {
+            "name": "Study Music for Deep Focus",
+            "id": "UCx3pke-jmLhcTU2hZs0q9iQ"
+          }
+        ],
+        "year": 2024,
+        "thumbnail": "https://yt3.googleusercontent.com/xspc2h-poOeMM1o9BT-soW2chFRSdGkz000pHc2k8UUAYVV9IT873Agor-JdNiNL66iEUVjlcvgzdtU=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_MrnEQImBUHG",
+        "playlistId": "OLAK5uy_MrnEQImBUHG",
+        "title": "Eternal Focus: Instrumental Lofi Beats for Intense Study & Mental Clarity",
+        "artists": [
+          {
+            "name": "Lofi Beat Study",
+            "id": "UCcCrJ8s6UZAFljDkLPOyv3w"
+          }
+        ],
+        "year": 2025,
+        "thumbnail": "https://yt3.googleusercontent.com/JZ7AZNYvjaeA2Rs9bD2Ii7yht0-pqCA9g9B9NmCSXyGbwyJkDckh5xkm3BUeIG18aWBDvPm__eYLN4AS=w544-h544-l90-rj",
+        "explicit": false
+      }
+    ],
+    "playlists": [
+      {
+        "id": "PLEzRLOkHOXBV0AcbguTZKMqIgpRenFAdI",
+        "title": "Chill Cafe Music (Jazz/Lofi/Piano/Instrumental)  for Relaxation, Quiet Study, Quiet Focus, Sleep",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://i.ytimg.com/vi/GXrmkB8CHis/hq720.jpg?sqp=-oaymwEKCNUGEN8DIABIWg&rs=AMzJL3maberaCke_yVC2YoAIdWsJds1UpA",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PLHHvYEXjuK0R6BLs84ZNVUAW_qiSBtvSS",
+        "title": "4K Relaxing Music Jazz Piano Instrumental Music Lofi Coffee☕~ Lofi Music♬ [Study Music 📖♬ ]",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://i.ytimg.com/vi/NYY9N3OLO9g/hq720.jpg?sqp=-oaymwEKCNUGEN8DIABIWg&rs=AMzJL3nM3Qw2E_pMPHC11b-_F1rlmeFzeA",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PLXL5IT3GbrOWl_vvH2roMfcrV-cUY5ifQ",
+        "title": "60/10 Pomodoro Timer 📚 Pomodoro Technique 🏆",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://i.ytimg.com/vi/rxV4CaOeiqk/hq720.jpg?sqp=-oaymwEKCNUGEN8DIABIWg&rs=AMzJL3k545UmCwFwz5l_QTrrsOHdz-smbQ",
+        "playEndpointParams": ""
+      }
+    ],
+    "artists": [
+      {
+        "id": "UCi5YpRRZmwegT235crEZ2YQ",
+        "name": "Lofi Girl",
+        "thumbnail": "https://yt3.googleusercontent.com/3Cs1MajDc1ZQPwSv5fVtShaPCRp6UIQToMy6zSuybMCHpijWuzyo9rQkN83oqMKVmDjiVuUpA3thGg=w120-h120-p-l90-rj"
+      },
+      {
+        "id": "UC0CK5ZjP6DTajE0A30Ak9Nw",
+        "name": "LoFi Beats",
+        "thumbnail": "https://yt3.googleusercontent.com/jHU1gA4LyjiWvtZeY-s8Vvzabz71-J6ueLe4HEvrSlK2Oei1icwtg-fuzL2gSe6SLfytV6ieXw=w120-h120-l90-rj"
+      },
+      {
+        "id": "UCN3WUalyMFvV4z2bSEPjF9Q",
+        "name": "Relaxing Music For Stress Relief",
+        "thumbnail": "https://yt3.googleusercontent.com/ltFdTyJoYHe08i6iu1KgTfMkjEnlDK0VJn8n8m8KR3NeEyPZYCn2R7jNWp8RUR3i1D8J_QCearYEc-Rr=w120-h120-l90-rj"
+      },
+      {
+        "id": "UCE-x1Xd9WBda-RNJ-1C81rw",
+        "name": "Cozy Fox Ambience",
+        "thumbnail": "https://yt3.googleusercontent.com/LzCX3_tA1OfGqlerpv0HfWwhZzC1Ba8p-a3863bbXrGaAMAfZ0-jqotJy5f7mPA8raFcsRHZpms=w120-c-h120-k-c0x00ffffff-no-l90-rj"
+      },
+      {
+        "id": "UChpQFwaPH9HhfChe1ZMbfUw",
+        "name": "𝐆𝐎𝐌's 𝐏𝐋𝐀𝐘𝐋𝐈𝐒𝐓",
+        "thumbnail": "https://yt3.googleusercontent.com/ZEUbPsogUNh66aBDJCxeqyy6hjg5Fh671Eiz1HIZH8IqTlRM2EyO_ocg9SAqlRxkQvZdHjs9mw=w120-c-h120-k-c0x00ffffff-no-l90-rj"
+      },
+      {
+        "id": "UC-PnKdUIqwQsBssQUzFZ-xg",
+        "name": "Groove & Wander",
+        "thumbnail": "https://yt3.googleusercontent.com/6NzZWApaXOKCF5AhO0xD8K4MrYIu5KA9s-OkFRrKOVKF5a0W-kPsfRrxZEbETw3WqBtiQRiLQ2g=w120-c-h120-k-c0x00ffffff-no-l90-rj"
+      }
+    ]
   },
   "Bienestar": {
     "songs": [],
@@ -6699,10 +8552,197 @@
     ]
   },
   "Décadas": {
-    "songs": [],
-    "albums": [],
-    "playlists": [],
-    "artists": []
+    "songs": [
+      {
+        "id": "PVaReIk7iTw",
+        "title": "👉 MIX ROCK en ESPAÑOL de los 80 y 90 🎵🎵🎵    CLÁSICOS DE LOS 80 & 90    Dj Suarez PUCALLPA",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/PVaReIk7iTw/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3mGC_GjQW16R5jrki6TA5gZyEPGLg",
+        "explicit": false
+      },
+      {
+        "id": "LjJQBZ3CA3E",
+        "title": "Bolicheros Clasicos, Dance Retro 80-90-2000 (Set Live) (Remix)",
+        "artists": [
+          {
+            "name": "Dj Maxi Seco",
+            "id": "UCU1O-XNahauM9ZqqXNTEhfg"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/tNy_qH3oIWzO0lDwmaDtZqFiajLt_tbB-VO7c7lslWJj9hk9d2hdGFM6ADXE-cIn8u3-FUpa8hs1JAVC=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "B8PgV9zNhJc",
+        "title": "MIX ROCK POP EN INGLÉS DE LOS 80 & 90 VOL. 1 - DJ ERICK",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/B8PgV9zNhJc/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3k_b1bsMK-23UG6xnzNU5bhzyFA1g",
+        "explicit": false
+      },
+      {
+        "id": "Vo9_PZ8maXc",
+        "title": "Rock 80'S & 90'S | Forever 80'S",
+        "artists": [
+          {
+            "name": "Dj Niico Montero",
+            "id": "UCX3IKrtGbJWFqpMT71n4QVQ"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/8rrlaa78VYfQ7gpvLnwL9pt9TupgbXfDbfIeekREbrhGighdl-LYM4aJqhyl-IvuMt8fNAQxrO9e-6K_7g=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "NS8DsXzU2Xg",
+        "title": "Best of classic Dance & Hause 80s, 90, 2000s",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/NS8DsXzU2Xg/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3mIjSqEFpE6lR9bIR_bpjJqmGduig",
+        "explicit": false
+      },
+      {
+        "id": "FXjyoArp3ZE",
+        "title": "Hysteria",
+        "artists": [
+          {
+            "name": "Def Leppard",
+            "id": "UChn30LXbAZKSIQqPJ2iezng"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/9yDjtR14r2guzQRSi25mWOiB5w7ZGtKXdPCM54mooy9D-1Lt3hE5IMIJEBmDITM8vwJpxz2plHSL8xHh=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "W2a8Ng1qM8Q",
+        "title": "Your Love",
+        "artists": [
+          {
+            "name": "The Outfield",
+            "id": "UC5TJtEuZGgv1Ci7cGF8gfCw"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/euTA9wAWmGMYUvQA-Nxczb2LmzSlvacRAFPppkkjAa7l-MiNclStrA8z327b9hYE2ZJV6uU60P1Etwt_=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "6XjlkJhJ51k",
+        "title": "Vuela, Vuela (Voyage, Voyage)",
+        "artists": [
+          {
+            "name": "Magneto",
+            "id": "UC3Hsp4DFVQAwTcsTmvbFfNQ"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/b5RQnxqvjKwGjXm-dtzniPZqrbaWaubWr6Bxm4m5wHLu5EBcTCVU62kGZU2JbhTEzodWUoD62cqCIyFWXA=w120-h120-l90-rj",
+        "explicit": false
+      }
+    ],
+    "albums": [
+      {
+        "browseId": "MPREb_Q6JTcvwfDih",
+        "playlistId": "OLAK5uy_Q6JTcvwfDih",
+        "title": "Rock Anthems 80s 90s Rock Music Hits. Best Rock Songs of All Time, 80s Love Songs & Classic Rock Ballads",
+        "artists": [],
+        "year": 2014,
+        "thumbnail": "https://yt3.googleusercontent.com/9_iZKb_Xxz5gON7VYITGQQ4zp7oKxQB82Tud8YXD0ZRwEL-nvSpro4-9i5RCqaf-CJDWkclExomWadNFPA=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_ZChELYpaiay",
+        "playlistId": "OLAK5uy_ZChELYpaiay",
+        "title": "70s 80s 90s Summer Roadtrip",
+        "artists": [],
+        "year": 2024,
+        "thumbnail": "https://yt3.googleusercontent.com/O7F0E0LRdi2kWxu_m0YVROAN--evap6SgiSZwgsT37bkTcuplhO6fYa5VClCaVsMRBcSapH4Q7BAOMVD=w544-h544-l90-rj",
+        "explicit": true
+      },
+      {
+        "browseId": "MPREb_MnFHu24zc8o",
+        "playlistId": "OLAK5uy_MnFHu24zc8o",
+        "title": "Clásicos de los 80 y 90 en Español: Las Mejores Canciones del Pop, Rock, Baladas y Música Romántica",
+        "artists": [],
+        "year": 2023,
+        "thumbnail": "https://yt3.googleusercontent.com/6LN1zdqwT5rRIpeKcho232mBwqyWiBJJgDPbRyMTB5ljDE_zBiecJi6oAAV_idzHM2JrIwWdPqzeW1do=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_1PiKrjlWbKb",
+        "playlistId": "OLAK5uy_1PiKrjlWbKb",
+        "title": "The 80's Greatest Hits: Pop Music (Classics)",
+        "artists": [
+          {
+            "name": "80's Greatest Hits",
+            "id": "UCopMe3p-Fgix5CqXfyBB3iQ"
+          }
+        ],
+        "year": 2019,
+        "thumbnail": "https://yt3.googleusercontent.com/SP7WfRPxwvY35fdGFyW-pGTn--Osy6w3fuZrFaLy0CPVM_q0hjtHAG9u2QpamkFgofMS0iroPZqVoSHUiA=w544-h544-l90-rj",
+        "explicit": false
+      }
+    ],
+    "playlists": [
+      {
+        "id": "PLOhV0FrFphUc5WwuClw8qfszIPIsj-s7X",
+        "title": "ROCK Mix 80s 90s 2000s",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.googleusercontent.com/THLMLJ6FXNgwIFbNZxbQGrjin88ZIGju6k7BsBEWtmMRPcAtEz8yqqHAL2LoYqRVoxLW6J8L7Q=s1200",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "RDCLAK5uy_lMzHW51iFg1Kx0d_2EHpzbOgCrwtu8cgI",
+        "title": "Los hits de los 80",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.googleusercontent.com/VGxWK75H8M5k3r2I89b7Tg9Mi1JPNkCtc9IOkAfpznmJu4N7toBj_PB2Fubc_sFHa8CZ1MqSb6AqVTE=w544-h544-l90-rj",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PLyUrByHiYET80j2mPuZqU9jTe5UqX52T3",
+        "title": "Rock En Español 80s 90s 2000s 🎸",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.googleusercontent.com/pBbG5ATJaXi3iHQqRG2XD_uUK77-IiMNxU649sBYeHh43mD1cG8uzSWn2JkIJqDh2IY21u5KBaQQ=s1200",
+        "playEndpointParams": ""
+      }
+    ],
+    "artists": [
+      {
+        "id": "UCtSeeqnGJM5ngqJWZ1vQygw",
+        "name": "Maná",
+        "thumbnail": "https://yt3.googleusercontent.com/KfS7bUmfaXPVuwaaLDrwQuOT-OuoL2T1hGCgU1GkNhpUYXw0BvfFhtMnx4AqfIoLN1sKPLVlqWOrEAGc=w120-h120-l90-rj"
+      },
+      {
+        "id": "UCSLbbBoUqpin6BE34whSOvA",
+        "name": "Guns N' Roses",
+        "thumbnail": "https://lh3.googleusercontent.com/vLoywVkkAeb-JQsJsURx1HCP4ihEnFtzI8RXxCkc5r3_q2Z-demzHSjzrOFB9T5_46Tm6kxXPfbJlAo=w120-h120-p-l90-rj"
+      },
+      {
+        "id": "UCIsM7Pkp18u1MIEUWhfe3HQ",
+        "name": "Hombres G",
+        "thumbnail": "https://lh3.googleusercontent.com/FdFuWjsRDN3pS62CrEnP8h8n96h2ojqzPO5QvR-b-SvEk4y95J1RwRDX8Xf3XlBsCFDmQCiW3AnQ5_A=w120-h120-p-l90-rj"
+      },
+      {
+        "id": "UC-_ueqXDH2jwZ6RJpEsEB7w",
+        "name": "DJ BLACKLIST 35",
+        "thumbnail": "https://yt3.googleusercontent.com/P8ZVqZR1zzeTF74Wo4oTkusEgtheyHf98WixDtRIpVm4Jam3PLw2XEap710oQqESS0rDg9cOhA=w120-c-h120-k-c0x00ffffff-no-l90-rj"
+      },
+      {
+        "id": "UCC57FdmxzApAE8pf3JSggdA",
+        "name": "Top 40 Éxitos Mundiales",
+        "thumbnail": "https://yt3.googleusercontent.com/ytc/AIdro_l-1nTiLoQw18byEk0c-UwDT8k7XM9A7ZVD3yWZ3Bv5vUY=w120-c-h120-k-c0x00ffffff-no-l90-rj"
+      }
+    ]
   },
   "Indie": {
     "songs": [
@@ -7612,6 +9652,1302 @@
         "id": "UCCnPBkdur_5DHdsLI2pQ1qw",
         "title": "Bryson Tiller",
         "thumbnail": "https://lh3.googleusercontent.com/pPP8sDzPgycwft0mqCWcorE4ahsmfZxMDO9-mO2V06iE24DRw3ktndBXlHw27FVv0xyhfwplXYjEv3qu=w120-h120-p-l90-rj"
+      }
+    ]
+  },
+  "Conciertos": {
+    "songs": [
+      {
+        "id": "jDIggUz4apU",
+        "title": "Daría (Versión Acústica) [Directo Madrid] (En Vivo)",
+        "artists": [
+          {
+            "name": "La 5a Estación",
+            "id": "UCYeqfUosyWQjWwfZ5bWd6Uw"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/pj-2TkJU43Vo9Gc7xMTVKQYduOb8NvhpsK7SazfSu7Qk5ATCTZkg8dCsIQ0FFA5yoZNsy7smlc5z7foQ=w120-h120-s-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "Yq-Kfc81h5s",
+        "title": "No Te Va Gustar - \"Otras Canciones 2019\" (Show Acústico Completo) (con Flor de Toloache)",
+        "artists": [
+          {
+            "name": "No Te Va Gustar",
+            "id": "UC-Ky5k2ppwzL8EWx8TWCSWw"
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/Yq-Kfc81h5s/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3lrhhMkMaS_VH6zQHtWaTS7BmTpgQ",
+        "explicit": false
+      },
+      {
+        "id": "9IaAAAcwlWQ",
+        "title": "Medley (Yo Que No Vivo Sin Ti / Culpable O No / Más Allá De Todo / Fría Como El Viento / Entrégate /Tengo Todo Excepto A Ti / La Incondicional) [En Vivo]",
+        "artists": [
+          {
+            "name": "Luis Miguel",
+            "id": "UC36w0dhy-17arWxTEn3rWMg"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/YRladwmJsY3NqFrEhUCHQKHP0rfJukfhkOcyUQU6ChLADDHfgRmgvTucDrRx-8a6ZS0HXIv52xkD7fBu=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "Ht6pZ3rYXCE",
+        "title": "Show Acústico Especial De Madres - Nicky Jam",
+        "artists": [
+          {
+            "name": "Nicky Jam",
+            "id": "UCMJ705HLB_EflTzWDAjcKSQ"
+          },
+          {
+            "name": "J. Balvin",
+            "id": "UCWw-Guyr5ul9B-d5kJlHMng"
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/Ht6pZ3rYXCE/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3nW_wOapmjVFYvsJTtZGvT5GhANIw",
+        "explicit": false
+      },
+      {
+        "id": "DDsYYZ1M7UE",
+        "title": "Perdición (Versión Acústica) [Directo Madrid] (En Vivo)",
+        "artists": [
+          {
+            "name": "La 5a Estación",
+            "id": "UCYeqfUosyWQjWwfZ5bWd6Uw"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/pj-2TkJU43Vo9Gc7xMTVKQYduOb8NvhpsK7SazfSu7Qk5ATCTZkg8dCsIQ0FFA5yoZNsy7smlc5z7foQ=w120-h120-s-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "t5A-lV8bU1k",
+        "title": "Enrique Bunbury - Concierto Básico 40 Opel Corsa",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/t5A-lV8bU1k/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3mLmc35pWQjBN3QsEb5TRPEsBU9NA",
+        "explicit": false
+      },
+      {
+        "id": "TlzpxLxKHP8",
+        "title": "Algo Más (Versión Acústica) [Directo Madrid] (En Vivo)",
+        "artists": [
+          {
+            "name": "La 5a Estación",
+            "id": "UCYeqfUosyWQjWwfZ5bWd6Uw"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/pj-2TkJU43Vo9Gc7xMTVKQYduOb8NvhpsK7SazfSu7Qk5ATCTZkg8dCsIQ0FFA5yoZNsy7smlc5z7foQ=w120-h120-s-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "VjBCvWVuBJY",
+        "title": "Moscas En La Casa (En Vivo)",
+        "artists": [
+          {
+            "name": "Shakira",
+            "id": "UCo6JijJGA3IvIiPsawDK3Ww"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/PjRoaJB75t7ok83UXtuucaW6xwe2Psq5ROnl9ijg2zPbNDYQSJ5UAIhbBFZ0U6yL7x3-rhuVRwofF6Uz=w120-h120-l90-rj",
+        "explicit": false
+      }
+    ],
+    "albums": [
+      {
+        "browseId": "MPREb_4XtwFwyVmLD",
+        "playlistId": "OLAK5uy_4XtwFwyVmLD",
+        "title": "HA-ASH Primera Fila - Hecho Realidad",
+        "artists": [
+          {
+            "name": "HA-ASH",
+            "id": "UCzW_pVWntsgzH2qeBblhFjg"
+          }
+        ],
+        "year": 2014,
+        "thumbnail": "https://yt3.googleusercontent.com/P4e4sNxdjkMnAWZssy-NzX8EnlmFMGx6f10n818TgN5sVLukv4k6PL9GqZLdSTr00FJnluAE-On9wog=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_QKFHYKwDzTe",
+        "playlistId": "OLAK5uy_QKFHYKwDzTe",
+        "title": "En Acústico (En directo)",
+        "artists": [
+          {
+            "name": "Pablo Alboran",
+            "id": "UCRF6Gg7Qi4eJyzXDjR9SLCw"
+          }
+        ],
+        "year": 2011,
+        "thumbnail": "https://yt3.googleusercontent.com/OysruO4JKJ27JK_Iewut9rHaw-uYTWbdwZKrsjOn3bGwV4gSdB9zyKhnwlEYCMTLElGIeXVaeDOiZUOL=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_e3amFhIiYCH",
+        "playlistId": "OLAK5uy_e3amFhIiYCH",
+        "title": "Esto Es Estopa (Directo Acústico)",
+        "artists": [
+          {
+            "name": "Estopa",
+            "id": "UCd25mqkTos06xFf1RP9qFJA"
+          }
+        ],
+        "year": 2014,
+        "thumbnail": "https://yt3.googleusercontent.com/Rb78WeDZ5161dmIUU0NgeH_lGWILNe1m0TLives7QOcwvEP3SBGM9KTwat8alfX2e_47f_H2uBXS8HLd=w544-h544-s-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_eB92QGHAcGX",
+        "playlistId": "OLAK5uy_eB92QGHAcGX",
+        "title": "Acústico Acústico Acústico (En Directo)",
+        "artists": [
+          {
+            "name": "Manolo Garcia",
+            "id": "UCYAR_6pHf7xtdcMav74cdzQ"
+          }
+        ],
+        "year": 2020,
+        "thumbnail": "https://yt3.googleusercontent.com/ihxgr_IzFpKb_vFCC2Kvmi3u7qvZ89u0jjGmuCD47ty0j88sJ0sBsWCr3qjM5OKU5sCv_rtTguWga4BIOg=w544-h544-l90-rj",
+        "explicit": false
+      }
+    ],
+    "playlists": [
+      {
+        "id": "PLvIAsskyU2OuzwWiIYhB0W2ZhIl2zXxll",
+        "title": "CRISTIAN CASTRO - PRIMERA FILA DIA 1 Y 2",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.googleusercontent.com/idd4iBEhe8H6uhz-78fhCJnB41BzaltS6_a8tO5WzH_Nj86onSaBVwriFM_P9uXc4gDiIgHZ-sY=s1200",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PL2_sHqDny-b6QiAwhJOy6Q_jCbvZ9hIH0",
+        "title": "Los Mejores MTV Unplugged Latinos y Conciertos ❤️😎🎼🎙️",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.ggpht.com/-B4lSspdlyESqf1YytGRonpnO0iajofkysbXHdsnrsrYH_7AMl7ga0HB6rpGXx15TW8LOCMmwD8=s1200",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PLYFEOM--IzrKIbij9-6U_9-xO_-z6BDJV",
+        "title": "Emmanuel MTV Unplugged",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.ggpht.com/cbhMPMl7YRrIve5jBhMeiUDkOgvYlPa9naXYQdf8EPqiMt6iE7YjNK8wrSqlsEzLnIucVmL0peA=s1200",
+        "playEndpointParams": ""
+      }
+    ],
+    "artists": [
+      {
+        "id": "UC-Ky5k2ppwzL8EWx8TWCSWw",
+        "name": "No Te Va Gustar",
+        "thumbnail": "https://lh3.googleusercontent.com/vPKWKCTr_LEEdDvOlm-qayvve11AZmGEjSAF70QYtKLmmruTK2yyU_e3t88Tq4yktS9Wxl0erf35eSSG=w120-h120-p-l90-rj"
+      },
+      {
+        "id": "UCGe3279ZI3YLoCWCd7wB0pg",
+        "name": "Alejandro Sanz",
+        "thumbnail": "https://yt3.googleusercontent.com/WcV_hJVkOGR5_QoLdbaGyaTXsRkBj6xEYv_HGe4WQVQpm2eyjZsmTbDV3nDQOwA--2VLbOODg4g=w120-h120-l90-rj"
+      },
+      {
+        "id": "UCBDXpukZYpWw54QCbEGdsZw",
+        "name": "TINI",
+        "thumbnail": "https://lh3.googleusercontent.com/mTLnauOynfdP89oZTwfPASbav2xfj6j2VrY3Aw7anNHAkvTKHsHsei5iMo0PIDOeGMuAQ-Vt9fNp1BU=w120-h120-p-l90-rj"
+      },
+      {
+        "id": "UC3uDcgdDEmqW7W-pzUwEprg",
+        "name": "Just Live Music",
+        "thumbnail": "https://yt3.googleusercontent.com/ytc/AIdro_mZTaHB_dUrjdxVPzWHPSBBiQ8yLcuryhd4EkW86K1c1ICS_z_qpEkyUfbcf4p_XGWlCw=w120-c-h120-k-c0x00ffffff-no-l90-rj"
+      }
+    ]
+  },
+  "Charts": {
+    "songs": [
+      {
+        "id": "WBy8ETk_Fqs",
+        "title": "Spotify Pop Hits 2026 ♫ Lady Gaga, Bruno Mars, Ed Sheeran, Billie Eilish, Miley Cyrus, Tate McRae#13",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/WBy8ETk_Fqs/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3moJ9lfSY2ms2Oj7p3huXR3_CJJ6A",
+        "explicit": false
+      },
+      {
+        "id": "SxocPtpZzSI",
+        "title": "MIX VERANO 2026 LO QUE SUENA ENGANCHADO",
+        "artists": [
+          {
+            "name": "Previa & Fiesta",
+            "id": "UCLfmRUhjCYKK1Od2K5HNnrA"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/sq-mV8jeErWIHjJqDyR_Z7MODFPNrKIxIyDs6Xn1eiZznLAL6C20Nxa2mcb-uM-hFLv__b6JJi7TR6c=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "vxb3kN32x_M",
+        "title": "Pop Hits 2026 Playlist Hyperparty vibes",
+        "artists": [
+          {
+            "name": "Hidden Tunes",
+            "id": "UCRG-ksOc8Xk3e5QtQLqbLOA"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/e_ybk8ghZfiu72lz0004FfFNtrGl9nwl-SfKu3eYpWrKEZy46fM2INKMEr3gEuS5Mj0mVOoEr5XYNwg=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "J2lsyozU9mM",
+        "title": "Billboard Argentina Hot 100 - Semana de 27 de Junio de 2026",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/J2lsyozU9mM/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3njLYJ362ejcqWXCT-uqsnhcVkmxA",
+        "explicit": false
+      },
+      {
+        "id": "5Ti0YTES5uM",
+        "title": "Billboard 2026 🍀 Top Hits 2026 🍁 The Weeknd, Maroon 5, Ed Sheeran, Justin Bieber, Dua Lipa, Adele",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/5Ti0YTES5uM/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3m3qwsjXciqjj53Jv8JKEsHTZqVDg",
+        "explicit": false
+      },
+      {
+        "id": "Ar1AmtlSRIA",
+        "title": "Top Chart",
+        "artists": [],
+        "thumbnail": "https://yt3.googleusercontent.com/binO7pRU_i9b3pUONMT58RXCV7eCpNvqrFp1y-G3167YhlrFQUKt_rP1ACpdfq8Ix94Wr1eXX3LH5O8=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "jbXusAbU-AM",
+        "title": "Mix Cachengue y Perreo LO NUEVO 2026",
+        "artists": [
+          {
+            "name": "Previa & Fiesta",
+            "id": "UCLfmRUhjCYKK1Od2K5HNnrA"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/5V4I6jmg9oP1zbu4cHrmYGAFvsfh9RdxwjlGtPLwC5BJol7_ehS57O8I6ytscLPcOh5uBWm0ENUalUJ4=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "xBsanXX1VIk",
+        "title": "QUÉ GANAS DE COMERTE",
+        "artists": [
+          {
+            "name": "Maria Becerra",
+            "id": "UCyE23CF-5Be1FgN-VcFGg8A"
+          },
+          {
+            "name": "Jere Klein",
+            "id": "UC_MAEhBzOKDyKLhFsVbnAqQ"
+          },
+          {
+            "name": "Lucky Brown",
+            "id": "UC0TgzdIEoGaWtdr8TBV9CGA"
+          },
+          {
+            "name": "XROSS",
+            "id": "UCh-0cSx5s05D659OLvAxrqg"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/yLOUNOHxd0iY3z2eHEj66DQDErwe6zsLNqGOTUxRKoY4MoCwwz6QzBZIdzlFjwf4lSv8dfohKny631uv=w120-h120-l90-rj",
+        "explicit": true
+      }
+    ],
+    "albums": [
+      {
+        "browseId": "MPREb_BIhJpLj7x8J",
+        "playlistId": "OLAK5uy_BIhJpLj7x8J",
+        "title": "Éxitos de baile 2026: Los mejores éxitos dance y pop para sentirte bien de Hoop Records",
+        "artists": [],
+        "year": 2024,
+        "thumbnail": "https://yt3.googleusercontent.com/1ISoMTtqlzvapSyaT5luCDAlUTGMFLIaRWV2do3yaqlkyPgFnOC3sXmszeJoA3qYSituMyH99gz4CNPr=w544-h544-l90-rj",
+        "explicit": true
+      },
+      {
+        "browseId": "MPREb_Tm74NyycY9p",
+        "playlistId": "OLAK5uy_Tm74NyycY9p",
+        "title": "Música Tiktok 2026: La mejor música Tiktok - Tiktok Hit - Música social - Éxito viral de Hoop Records",
+        "artists": [],
+        "year": 2024,
+        "thumbnail": "https://yt3.googleusercontent.com/7dR3zBk2iDJdNO1M2QI4SdBxUF-fLyjy_Ah7uRD33Zkr6cZvXc2dIM3Ti-USyUsO7uhJVoEEiJJvhh2y=w544-h544-l90-rj",
+        "explicit": true
+      },
+      {
+        "browseId": "MPREb_bIVufuxn8ji",
+        "playlistId": "OLAK5uy_bIVufuxn8ji",
+        "title": "Música de gimnasio 2026: Mejor música de gimnasio - Mezcla de motivación - Ritmos de entrenamiento - Música deportiva - Música de Crossfit - Música para correr - Música de entrenamiento de Hoop Records",
+        "artists": [],
+        "year": 2024,
+        "thumbnail": "https://yt3.googleusercontent.com/HnDmrjvtFikgN4_QHjxAuM3Xl2rpnthKdrNbkaeMFKRCeC7m2-Po8nZJ2iIATlbtT7m8QYUaRGDCT33x=w544-h544-l90-rj",
+        "explicit": false
+      }
+    ],
+    "playlists": [
+      {
+        "id": "PL4fGSI1pDJn403fWAsjzCMsLEgBTOa25K",
+        "title": "Los 100 vídeos musicales más populares en Argentina",
+        "author": "Lista",
+        "thumbnail": "https://yt3.googleusercontent.com/DbdfOGzUncuELzVRl6AznI0siYllqUcfiF8sMSCX1XeAugfCPrfIqtA9HzpwLJURfKgeieKU5nJP=s1200",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PLrVYSxqQWO6Crr56sRvfrkH3KjF3j7x_z",
+        "title": "TOP 50 ARGENTINA 2026  - Lo Mas Escuchado  🇦🇷 Éxitos Musica",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.googleusercontent.com/hvRG_Htb5ym7XXfZKFdjux-HtJPRp8jvY8wi3ZQSBq7NZbdpcbX7eqC9o-Me-rL7zdIWh2QyETE=s1200",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PLAXmquqAJW9w0ROVZi8LL9fkpZJIZ7tpu",
+        "title": "Argentina Music 2026 ★ Best Argentina Songs Playlist",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.googleusercontent.com/2Lej3wggfGASYjHknZra_-ZZa75Ijj3aAdxEqyXkFqoJFqQa3vW8ytZrnRV7cIDotB59_y6Z65LW=s1200",
+        "playEndpointParams": ""
+      }
+    ],
+    "artists": [
+      {
+        "id": "UCzVb0SIXp9q9PeKCcFjsBtA",
+        "name": "Dua Lipa",
+        "thumbnail": "https://lh3.googleusercontent.com/aFx8s1fTuelgxONGbezmTG0EKR8r82uB5H-Q6ZJtssyCWLJWF8GfZNr4tHo84sXdFCPBKrA4R6zXOss=w120-h120-p-l90-rj"
+      },
+      {
+        "id": "UC9S-Qn24Q-SQT3Epy79ec7g",
+        "name": "Tan Bionica",
+        "thumbnail": "https://yt3.googleusercontent.com/nSSzrMBDUh02EEFefEWvTsHA6__lydGSJRC711oB_pnFHth2Ylhl_12lCZE9sbaQG3pZp4XHBmSSvfo=w120-h120-l90-rj"
+      },
+      {
+        "id": "UCZn4r7heNOPY-C43YIywnVA",
+        "name": "Bruno Mars",
+        "thumbnail": "https://lh3.googleusercontent.com/hnefGBrazRhn4Z92bdSZBUENl40ONjRiVDsmZKZh-WZ2iCKE-2c7KKR7SNcZfzLHoRyB3E6as8L87YA=w120-h120-p-l90-rj"
+      },
+      {
+        "id": "UCo6JijJGA3IvIiPsawDK3Ww",
+        "name": "Shakira",
+        "thumbnail": "https://yt3.googleusercontent.com/7NhzXEoaIgr-0tYoab-gNZfF8zA8IbpTPt_buovH2Y78pc1L7IfKTq7tGU6zSk9EBJX0yKq7wp3jts8=w120-h120-p-l90-rj"
+      }
+    ]
+  },
+  "Hip-hop-rap": {
+    "songs": [
+      {
+        "id": "2t5kBd62D18",
+        "title": "MIX TRAP ARGENTINO | DJ FABRI | Duki, YSY A, Trueno, Paulo Londra | LO MEJOR DEL TRAP",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/2t5kBd62D18/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3mWTsWuyMtKCXeM_dhhNfaSzASPeA",
+        "explicit": false
+      },
+      {
+        "id": "TY7OvnGV43s",
+        "title": "Vida De Rock",
+        "artists": [
+          {
+            "name": "DUKI",
+            "id": "UCtLchRAZex11gn-ah1_1Pgw"
+          },
+          {
+            "name": "Milo j",
+            "id": "UCLabAHLHMy2MdTWaZATUmQQ"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/QbD27NLoS7Wa2g8sz5PEJpTkRVGMiGqP4-q4J0SQXcCrbymjQ1CzMnvsgVbVhOkON17UVIGFJw8YA1w=w120-h120-l90-rj",
+        "explicit": true
+      },
+      {
+        "id": "D5SJbQYQoWI",
+        "title": "Nueva Era",
+        "artists": [
+          {
+            "name": "DUKI",
+            "id": "UCtLchRAZex11gn-ah1_1Pgw"
+          },
+          {
+            "name": "Myke Towers",
+            "id": "UCYPsIfSIEwWcoynHBP5k1dg"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/QbD27NLoS7Wa2g8sz5PEJpTkRVGMiGqP4-q4J0SQXcCrbymjQ1CzMnvsgVbVhOkON17UVIGFJw8YA1w=w120-h120-l90-rj",
+        "explicit": true
+      },
+      {
+        "id": "_6XzJPyAJDI",
+        "title": "Milo J: Bzrp Music Sessions, Vol. 57/66",
+        "artists": [
+          {
+            "name": "Milo j",
+            "id": "UCLabAHLHMy2MdTWaZATUmQQ"
+          },
+          {
+            "name": "Bizarrap",
+            "id": "UCONiUl5u7y2bMaVZJcuRDEQ"
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/_6XzJPyAJDI/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3nnnq-1BVRROXhMGbZJnA2SX52aoA",
+        "explicit": false
+      },
+      {
+        "id": "ieHt8PG84Y8",
+        "title": "MILO J x DUKI x DILLOM x C.R.O  - DRIPPING  (MUSIC VIDEO)",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/ieHt8PG84Y8/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3k462aqrmrE8xL3Y6p9ATaSSfEKyA",
+        "explicit": false
+      },
+      {
+        "id": "QUu_0QXykwc",
+        "title": "OLIMPO",
+        "artists": [
+          {
+            "name": "Milo j",
+            "id": "UCLabAHLHMy2MdTWaZATUmQQ"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/-iTCCZAXm-1R0-x3lTgWKgMIL1cHSxtH1uD7Q26UFgw8aYUR8Z-eDOoqRjGQ2Bajo7zqHSG_1t9QW7c6=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "jGhYpX0xjNw",
+        "title": "Tumbando el Club (Remix) (con C.R.O., Obiewanshot, YSY A y Cazzu)",
+        "artists": [
+          {
+            "name": "Neo Pistea",
+            "id": "UCtHVFWQtBzPt8m0J9e59TSQ"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/f8W4IQaf7mV7_Xy8aOGOI7VlwN2SFJC1hXfFgovi2U_WBkTEKvYvE7uRGh78Z4YZd5MktPL3az-KsWI=w120-h120-l90-rj",
+        "explicit": true
+      },
+      {
+        "id": "SnfvwT668a8",
+        "title": "Carta de Despedida",
+        "artists": [
+          {
+            "name": "LIT killah",
+            "id": "UC1qoOeueDduCF1S6xnXYmqA"
+          },
+          {
+            "name": "Milo j",
+            "id": "UCLabAHLHMy2MdTWaZATUmQQ"
+          },
+          {
+            "name": "Ronny J",
+            "id": "UCdx5_jMH6Ozt3vZx-BsSu6Q"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/LyE3sJm3e_giRbpWGiJMbbtng0dtX0t3T3u0cdY94hCLrynMIzImkhAQkTFhjL4J5eHH0A6zEgNecDo=w120-h120-l90-rj",
+        "explicit": false
+      }
+    ],
+    "albums": [
+      {
+        "browseId": "MPREb_1WV6VtV4iI9",
+        "playlistId": "OLAK5uy_1WV6VtV4iI9",
+        "title": "Súper Sangre Joven",
+        "artists": [
+          {
+            "name": "Duki",
+            "id": "UCtLchRAZex11gn-ah1_1Pgw"
+          }
+        ],
+        "year": 2019,
+        "thumbnail": "https://yt3.googleusercontent.com/LdyKrtmQmEkG3OCbgrNpzoCKmcIzI1a_Qq8hr4xeqPv46OhRn6fEzV9ToXE4RjZI-6vUeYfZ0pdJHC5-=w544-h544-l90-rj",
+        "explicit": true
+      },
+      {
+        "browseId": "MPREb_118Eb723GXX",
+        "playlistId": "OLAK5uy_118Eb723GXX",
+        "title": "Homerun",
+        "artists": [
+          {
+            "name": "Paulo Londra",
+            "id": "UCpH92jOmlMe71mRYEkp7riQ"
+          }
+        ],
+        "year": 2019,
+        "thumbnail": "https://yt3.googleusercontent.com/Yk0l-WXLhQ0GWWlG71EpHtM0aSAP8B5o_b-gShKdgod5imN3sIg3IxRWq6qJcWeByNdQbHpnBxSK_-yU1w=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_F3N7nYO3Ej5",
+        "playlistId": "OLAK5uy_F3N7nYO3Ej5",
+        "title": "EL ÚLTIMO BAILE",
+        "artists": [
+          {
+            "name": "Trueno",
+            "id": "UCEPYn7xbzvQwL9C21evFGDg"
+          }
+        ],
+        "year": 2024,
+        "thumbnail": "https://yt3.googleusercontent.com/twAXE6jD3EyVYC61E5doJ0lkFWUsWgm2IcGF-wX80NEOak_KiEnouMdbSIQBFYShL7USeBDKCLWqgG_r=w544-h544-l90-rj",
+        "explicit": true
+      },
+      {
+        "browseId": "MPREb_aIXRKuMnAZ3",
+        "playlistId": "OLAK5uy_aIXRKuMnAZ3",
+        "title": "La Vida Era Más Corta",
+        "artists": [
+          {
+            "name": "Milo J",
+            "id": "UCLabAHLHMy2MdTWaZATUmQQ"
+          }
+        ],
+        "year": 2025,
+        "thumbnail": "https://yt3.googleusercontent.com/YG6PIB_MQEkpOaMelp-zxGSlK296yQAvftF9dOgBKwFasUb8ddEl6e4QI4b4ZzMztj8xbwsLGG4XlCI=w544-h544-l90-rj",
+        "explicit": false
+      }
+    ],
+    "playlists": [
+      {
+        "id": "PLxA687tYuMWhieuj9Ki2AW63P09M88cnf",
+        "title": "Lo Mejor de Milo j - Milo j Grandes Exitos",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.googleusercontent.com/3q5N_L2E6ux7KvGvbYlwIDRJY2yJ3-zMsq7IG80OxwfLIcuJ7OyWEzhKDQ3YY6KjJPpTTC6Hguw=s1200",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PLZFQUnIM-ZEKdkTx61_NlkpCuGQhVjmbm",
+        "title": "MIX MEJORES CANCIONES TRAP ARGENTINA. YSY A, DUKI, MILO J, MARIA BECERRA, BHAVI Y Mas🎶",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.googleusercontent.com/SpoIoX3FL_pjeHtcUFsZGk6USvToJY38jdo0f0u5d2qn1KmYbfKXmlc4m4--2W2IJOl1hIOZZg=s1200",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PLAg3nOPRH10mwxa9JxHXJsRTbkaBbAacB",
+        "title": "Milo J, Paulo, Londra, Lit Killat, Duki, Tiago PZR.",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.googleusercontent.com/lmdE-1fY4uO0t61WL0kqLqUNTNsHMExhGBR9y07atg99wG7Vyudw3x9SMQO7u__bGDpGb4FP9Q=s1200",
+        "playEndpointParams": ""
+      }
+    ],
+    "artists": [
+      {
+        "id": "UCtLchRAZex11gn-ah1_1Pgw",
+        "name": "Duki",
+        "thumbnail": "https://yt3.googleusercontent.com/loGjIWmztwU9fzZdioDYEhL09NQTViep2wDgJ_ICSOS3fYCtg3cqcsNTiig5p-kuuXQXfQC-TmyMsvY=w120-h120-p-l90-rj"
+      },
+      {
+        "id": "UCONiUl5u7y2bMaVZJcuRDEQ",
+        "name": "Bizarrap",
+        "thumbnail": "https://yt3.googleusercontent.com/vEkJjs-EZmAYP3ukHzky6kLxLaA1dGuGGUDvJcNQXHBaAXp4xajwptJlT20BXl-qsx18EcQLqJWiUCQ=w120-h120-p-l90-rj"
+      },
+      {
+        "id": "UC1qoOeueDduCF1S6xnXYmqA",
+        "name": "LIT killah",
+        "thumbnail": "https://yt3.googleusercontent.com/VDwIXofSNWSV5z73kQ4uYX0alKXPguQ6UCq6Bd2bFKxfvZ572YuYW0lDjR4ZjTjr7gNxmESCsrqtCpA=w120-h120-p-l90-rj"
+      },
+      {
+        "id": "UC6qrHl6KyJByujpoY2jfRdQ",
+        "name": "C.R.O",
+        "thumbnail": "https://lh3.googleusercontent.com/uHM1tG0YilOaNph6CkvoEd6ivuC52HUKcC0-HGsKDTAmxFKXFG5trkngv_R2mgbF1j-SbvNEFb3mnwk=w120-h120-p-l90-rj"
+      },
+      {
+        "id": "UCtHVFWQtBzPt8m0J9e59TSQ",
+        "name": "Neo Pistea",
+        "thumbnail": "https://lh3.googleusercontent.com/qUBQR8ByBCASok-yLrrl_aLtj-ePY4_ctvMRrQL-vlm0mEaGJtiwwG5uxNUwwu-MCQepjyd7_04FIw=w120-h120-p-l90-rj"
+      },
+      {
+        "id": "UCEPYn7xbzvQwL9C21evFGDg",
+        "name": "Trueno",
+        "thumbnail": "https://yt3.googleusercontent.com/HupoNCBrq4WWflprOMqHDPxE9VSf8cGeSNmS8DZPlJQxGtj1Jju8rZf_HGPLk2d2_w1SZK-JwmTwew=w120-h120-p-l90-rj"
+      }
+    ]
+  },
+  "Videos musicales": {
+    "songs": [
+      {
+        "id": "n4RjJKxsamQ",
+        "title": "Wind of Change",
+        "artists": [
+          {
+            "name": "Scorpions",
+            "id": "UCL_jrFsNj-2iC9Obf5M8_uw"
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/n4RjJKxsamQ/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3lfEtkESQMJBKyqiqkUIToSAD1ksQ",
+        "explicit": false
+      },
+      {
+        "id": "-tmSSWl-ZoA",
+        "title": "WAP (con Megan Thee Stallion)",
+        "artists": [
+          {
+            "name": "Cardi B",
+            "id": "UCoIp9Cj1l7k63B90hFg38Zw"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/pbUmfcVZ-TuHaBVI2KcNJ1Qf30Fo1vmfu38ZGXMMbhGi1mABOzXYaDp9jRMofVEhgKIDrbXxMo7cFqbv=w120-h120-l90-rj",
+        "explicit": true
+      },
+      {
+        "id": "zSmOvYzSeaQ",
+        "title": "Amazing (Official Music Video)",
+        "artists": [
+          {
+            "name": "Aerosmith",
+            "id": "UCYuinPfuhK_rSlrJXvZQrng"
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/zSmOvYzSeaQ/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3lXNN-CdMYWZqda_VbZI0CIwSZFvQ",
+        "explicit": false
+      },
+      {
+        "id": "oofSnsGkops",
+        "title": "You're Beautiful",
+        "artists": [
+          {
+            "name": "James Blunt",
+            "id": "UCCEzq-Gv6gU-bdM82rtZN4g"
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/oofSnsGkops/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3l2LNI27idSLKNDv-psdRx06AtXCA",
+        "explicit": false
+      },
+      {
+        "id": "3oKC-XZN7L4",
+        "title": "Say Say Say",
+        "artists": [
+          {
+            "name": "Paul McCartney",
+            "id": "UC0guXwTSf4hAOvCSgmViojw"
+          },
+          {
+            "name": "Michael Jackson",
+            "id": "UCoIOOL7QKuBhQHVKL8y7BEQ"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/yB9ilwpY3KM2gSwEhyvyfQ7fX4VIeS8xPNZmApRXbx2Fo-MV_qfzB5mBwljf9Pnx7-i_2VYILaJJhIjU=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "xUNqsfFUwhY",
+        "title": "Here Comes The Sun (Remastered 2009)",
+        "artists": [
+          {
+            "name": "The Beatles",
+            "id": "UC2XdaAVUannpujzv32jcouQ"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/bmG1q9eu3ub2CtYcgArvzpiehqUpZGuLsOa_B0Bxkwxdfsk9r7nRzAQy1P5dTjqerODLxq3LycWGWW5m=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "timZoOs9ozo",
+        "title": "Samba Pa Ti",
+        "artists": [
+          {
+            "name": "Santana",
+            "id": "UCX0rR7x8-nLew2t8UH-n2aw"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/7eIAsDA6QDZiMurfWc8M2lW6wuxhaZwzvUeswHp1ovzEk3D3pCJaKowRv2xp5rbvlaudmBL-E-VBKy80=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "QDYfEBY9NM4",
+        "title": "Let It Be (Remastered 2009)",
+        "artists": [
+          {
+            "name": "The Beatles",
+            "id": "UC2XdaAVUannpujzv32jcouQ"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/octdAIhLRBSYd5JKOeTsF5zNhQ4C0L3JtOnjUYPvHLtJaxXr68NVW8gUfsE05aarfaDmZe_ibrVMxo-y4g=w120-h120-l90-rj",
+        "explicit": false
+      }
+    ],
+    "albums": [
+      {
+        "browseId": "MPREb_p6RTQjF9E1s",
+        "playlistId": "OLAK5uy_p6RTQjF9E1s",
+        "title": "Best 80s Songs",
+        "artists": [],
+        "year": 2019,
+        "thumbnail": "https://yt3.googleusercontent.com/dQl6sAjGTDjHmFw3p4gY5PytvOB1pjOLseFtS_mC_XmedVA0Fzge1pFCnAkNNne10wUdk1OR86hIhv6D=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_4cA19NOauSH",
+        "playlistId": "OLAK5uy_4cA19NOauSH",
+        "title": "Music Video Hits, Vol. 2",
+        "artists": [
+          {
+            "name": "BYU Vocal Point",
+            "id": "UCfuYrz0O8FE_NnxRNqP5X3g"
+          }
+        ],
+        "year": 2018,
+        "thumbnail": "https://yt3.googleusercontent.com/FB2xXCzdvsS6cg8TwT5iosQTsyaiuL9qkRMnZb4mZxb-__bgugYnhdNV_mR2BAIm93hbD22XMIbJQoDDig=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_aIcexJk3p7h",
+        "playlistId": "OLAK5uy_aIcexJk3p7h",
+        "title": "Best Of Phonk",
+        "artists": [],
+        "year": 2023,
+        "thumbnail": "https://yt3.googleusercontent.com/oQ16YpJH5oR7-wwuvsfY1fjeAikqLBjJUctj9OL2bQidEo_QtT1GuupEZAmJXzRVaLtJYx3v17BHmuxa=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_CHYRYJMCRdM",
+        "playlistId": "OLAK5uy_CHYRYJMCRdM",
+        "title": "Greatest Hits",
+        "artists": [
+          {
+            "name": "Westlife",
+            "id": "UCONC7E8-0YszPsER3azgcrA"
+          }
+        ],
+        "year": 2011,
+        "thumbnail": "https://yt3.googleusercontent.com/CCUr709gOBIkXoDAT0Js_z_AKCO9alPdEfL0dncznyXyPVE_d5ocYKzYY6jobGxfr6b7xfUhYc26bq8=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_0Tq3HY45yLL",
+        "playlistId": "OLAK5uy_0Tq3HY45yLL",
+        "title": "Official FIFA World Cup 2026™ Album (Bonus Edition)",
+        "artists": [
+          {
+            "name": "FIFA Sound",
+            "id": "UC65xtqPjYFI3VS21ULLaJOg"
+          }
+        ],
+        "year": 2026,
+        "thumbnail": "https://yt3.googleusercontent.com/bTFMdv2TfRfHRgWEubjAcpRHGg6-22fcawiSi_DCuFbj0TqOg0chP22ZX9I4v80IR0Qnk5Az1JBkO9EKPQ=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_9hHD965Z9xx",
+        "playlistId": "OLAK5uy_9hHD965Z9xx",
+        "title": "Greatest Hits",
+        "artists": [
+          {
+            "name": "Queen",
+            "id": "UCEPMVbUzImPl4p8k4LkGevA"
+          }
+        ],
+        "year": 1981,
+        "thumbnail": "https://yt3.googleusercontent.com/rd7gi88NIFYLUXHy2XQSwrFPL4K245XlFPyZaaYjdIRKRTAj_b0Wr0WgA5l6P_x1vxdtoVUiSNzQPjY=w544-h544-l90-rj",
+        "explicit": false
+      }
+    ],
+    "playlists": [
+      {
+        "id": "PLP32wGpgzmIlDFQuxl1qeH33hJJSq8wfe",
+        "title": "Music Videos 2026 - Top Music Videos & Best Music Videos - MTV Hits 2026",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.googleusercontent.com/bifEy_bndaw191XlHFA6dc1GhyyBNWUBbQgOWBx5j5VPkPzzCW9hJlmJ9cumIESJUvgkIwun-OQ=s1200",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PLiy0XOfUv4hFH2HbflPOARBXA6qN90mHt",
+        "title": "VH1's Top 100 Songs of ALL TIME - Top 50 Music Videos",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.googleusercontent.com/KMBMoCgnL5GFs0mR7yyUDi3LzvFmLqIVJ6qDOrw2OAxGuh4lHrw8qpcAP525WQ98rTvB7YHbmqU=s1200",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PLDIoUOhQQPlWt8OpaGG43OjNYuJ2q9jEN",
+        "title": "Music Videos 2026 - Best Music Videos - Vevo 2026 & Vevo Songs",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.googleusercontent.com/mkBOxEdtW1QKVWkmqQR2PyxZqmj2NLY1HbmNYJpvJWUKfPLA_aqtSFqavBB5f-Fhm67vqyLQHQ=s1200",
+        "playEndpointParams": ""
+      }
+    ],
+    "artists": [
+      {
+        "id": "UCoPQ_TWm8JZ5nJv4a5BzSWA",
+        "name": "Beyoncé",
+        "thumbnail": "https://lh3.googleusercontent.com/GAR8Y4xuTIBIrOr0GPSPdhPc-aRvUCOXwiC0O75cKSP7uRoHFvb20K2ZwpaZwxp2IcSoXGBiAgjit-BC=w120-h120-p-l90-rj"
+      },
+      {
+        "id": "UCMXDyVR2tclKWhbqNforSyA",
+        "name": "Chris Brown",
+        "thumbnail": "https://lh3.googleusercontent.com/fRbXwVATZrku0rKqQGa9UGYIfl-XCfQuK2u2M9tNjKcWx8BXS8HRCHB5h5zyDizQSiKKnnQXTLyfLiQ=w120-h120-p-l90-rj"
+      },
+      {
+        "id": "UCsW-l-_nUhuy_J3zpkixG6w",
+        "name": "premchhatri7",
+        "thumbnail": "https://yt3.googleusercontent.com/8DmldKcG_bYzRLOmYbOWTa8rcMYUlEPzCwHz8D9IUTL_mtgSR6JSwM-rdB2okjcSMlyI5BLW=w120-c-h120-k-c0x00ffffff-no-l90-rj"
+      },
+      {
+        "id": "UCByaqsseswH30judRRyzhHA",
+        "name": "SialgeetMP4",
+        "thumbnail": "https://yt3.googleusercontent.com/FTOfjo3M67l7r1hJZvwyv-wu2G0uDjlTlU1fZ66-K_oLHiB8en_ncH7yfwkJH2JhKqXHF97A5w=w120-c-h120-k-c0x00ffffff-no-l90-rj"
+      },
+      {
+        "id": "UC7JrcnEPWSf0mvidTTTVwpg",
+        "name": "KhmerWoman ",
+        "thumbnail": "https://yt3.googleusercontent.com/Pk0Fb3IzS4UDQcQQskYo83_EV8xm_PfodMb1ozIiUhAW1LWMgdqbLBqOynq5SNlowsQuOMTh-vw=w120-c-h120-k-c0x00ffffff-no-l90-rj"
+      }
+    ]
+  },
+  "Detrás de la música": {
+    "songs": [
+      {
+        "id": "Yq-Kfc81h5s",
+        "title": "No Te Va Gustar - \"Otras Canciones 2019\" (Show Acústico Completo) (con Flor de Toloache)",
+        "artists": [
+          {
+            "name": "No Te Va Gustar",
+            "id": "UC-Ky5k2ppwzL8EWx8TWCSWw"
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/Yq-Kfc81h5s/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3lrhhMkMaS_VH6zQHtWaTS7BmTpgQ",
+        "explicit": false
+      },
+      {
+        "id": "d_LY5LeMRQU",
+        "title": "Beto Cuevas  - Acústico (Show Completo)",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/d_LY5LeMRQU/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3mtyUIQdNV6YexyyM_4ac8x3q9cZQ",
+        "explicit": false
+      },
+      {
+        "id": "bIZi3SC6MXQ",
+        "title": "Popurrí: Hasta Que Te Conocí/La Negra Tomasa/Danzando Lambada/Caballo Viejo/Bamboleo/Hasta Que Te Conocí/Adoro/ Te Dedico Esta Canción (Mi Canción) (En el Palacio de Bellas Artes)",
+        "artists": [
+          {
+            "name": "Juan Gabriel",
+            "id": "UCIuBy_fguC8hB45AJjAKV_A"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/qwTG0e5Ja6dLuJUDImtjZnNuT5LYRrPK7AQV3E1vultY8S7C8lkSgrS3szLZZysO2BhcFY3Rzfd46DhzqQ=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "-ufbjCSvnqg",
+        "title": "Dino - Acoustic Sessions | O melhor do Rock e Flashback Acústico - Novo DVD (JÁ NO SPOTIFY)",
+        "artists": [
+          {
+            "name": "Dino Fonseca",
+            "id": "UCkobYQ06HAg2kMK_FC9z4EQ"
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/-ufbjCSvnqg/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3mAe7W1jY5xm-FBpRjLP0YjkzYzEg",
+        "explicit": false
+      },
+      {
+        "id": "tzMLWqoFI9I",
+        "title": "Popurrí de éxitos (Poco a poco / Tan solo / Me acordaré de ti / Siempre / Que nada nos separe) [En vivo]",
+        "artists": [
+          {
+            "name": "Mijares",
+            "id": "UC3jCHhl2Mqlbpx8Qf4laa5Q"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/vc7tO-HGw8qusPrH6OuXaFHcOAu9nWHZT3SLpdcWKIN3bBdPVV7bjhGHSsjB6hgMwzbINtnLAaEJLuJq=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "ODId3BKZ96Y",
+        "title": "Mis mejores deseos (EN VIVO)",
+        "artists": [
+          {
+            "name": "Adri Makarra",
+            "id": "UCoyV5Aesow8-7nK5FuHYfjQ"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/1IJ2TnF5jnMp_-0p0TwF3OP2PRkW7AnSPVxBVBNlH4TmMEwN2sftBXAbCtLmHdcqRBExRfALrfl6JJM-Rg=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "EOs0qeiJyIg",
+        "title": "Layla (Acoustic Live)",
+        "artists": [
+          {
+            "name": "Eric Clapton",
+            "id": "UCXmEE051j5RhUENn7saUF3g"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/m-GVgg1j8hD6MgWfzVNbDSlz17nffJb3OjDGS2zB9LMN_zNcMOGtfID23IuH1BjSer2cG7EBbWbflOI=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "NmvA4OErCeA",
+        "title": "Enganchados Romanticos #4 (En Vivo)",
+        "artists": [
+          {
+            "name": "ELITE Djs",
+            "id": "UCSVNCnEc38F6xp16W8lCHnA"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/6iB8cOzM9tdMtLNC7LAq7n-T6auyI7WMEtaPDFCWeeSWHX6oG55oZNdwyWZuAT6xwXy0DixjQn2uGQRt=w120-h120-l90-rj",
+        "explicit": false
+      }
+    ],
+    "albums": [
+      {
+        "browseId": "MPREb_Q9lne0mvnU5",
+        "playlistId": "OLAK5uy_Q9lne0mvnU5",
+        "title": "Grandes Exitos",
+        "artists": [
+          {
+            "name": "Los Secretos",
+            "id": "UCYOK57zPuyd_mxTXq_B2FPg"
+          }
+        ],
+        "year": 1996,
+        "thumbnail": "https://yt3.googleusercontent.com/pL8H16ZdgsAGzmvh3-nY79mOoZsx8rxlO0undZGrlyMoaJCSD7tBYmSS4YClQ9Mf0FMDaca8JkL3swI2=w544-h544-s-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_bE6h22IxOVo",
+        "playlistId": "OLAK5uy_bE6h22IxOVo",
+        "title": "20 Grandes Exitos",
+        "artists": [
+          {
+            "name": "Leo Mattioli",
+            "id": "UCav7iYcCwxw7g4GRsfQ9n_A"
+          }
+        ],
+        "year": 2007,
+        "thumbnail": "https://yt3.googleusercontent.com/JxpCVX0u68VYWgwYNMlAs9fbcDEI8JZ0a71aoRdIMPRJTN7rJfDKtjY6sdnNHEluS3Qf8KMHyGL7uF3X=w544-h544-s-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_mt5uorhN0oj",
+        "playlistId": "OLAK5uy_mt5uorhN0oj",
+        "title": "Vivo Grandes Exitos en Buenos Aires (En Vivo)",
+        "artists": [
+          {
+            "name": "Vilma Palma E Vampiros",
+            "id": "UCMxrE6EcRx_T56GJ9-naIRw"
+          }
+        ],
+        "year": 2014,
+        "thumbnail": "https://yt3.googleusercontent.com/8mhxiJ57ZQfW258AMmAb_5ZO5t3ZfBeSYHRbG7kFp0LJA8E0KyBiR6Hp53XjusTefS_3bV9kqiHdtoGvkg=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_igFf5sAY7Ag",
+        "playlistId": "OLAK5uy_igFf5sAY7Ag",
+        "title": "Grandes Exitos En Vivo",
+        "artists": [
+          {
+            "name": "Jorge Celedon",
+            "id": "UC4gRbN0n9A9XyWnaFxzPIoQ"
+          },
+          {
+            "name": "Jimmy Zambrano",
+            "id": "UCfI9povF7xSn8CCp7KCndcw"
+          }
+        ],
+        "year": 2006,
+        "thumbnail": "https://yt3.googleusercontent.com/1R-mHj0c3Kl6M-Rom9SeSAYCMrTHaUfvj3N2QVYBd4Y9EO2qFweIhEV7qe53eOd8lNMXmfQi8A5uSxFr=w544-h544-s-l90-rj",
+        "explicit": false
+      }
+    ],
+    "playlists": [
+      {
+        "id": "PLSL9DB9AUS4MyaHKql5xTYGI7D-HrG_m-",
+        "title": "Adele - Exitos (En Vivo) (Acustico) HD",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.ggpht.com/RZsx9aTCvmgtgnUOCUVx31drCfKqHUtmGon2KejVU8UP4Y1PELyF6KtQj12s8Ck7kYs6Antj4Q=s1200",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PLhnSpZ9Wd-pRxtMBDMuBulTCG_YWYBUkn",
+        "title": "Mtv unplugged latino. Lo mejor.",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.googleusercontent.com/dqExMJc6ZRny_EAE2Wz453xROGTvbuGQrmSPurvrzDIWQGg4Il-033BaFfExYhPqzr_k1BU41A=s1200",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PL0F66E62D54197917",
+        "title": "kalimba - homenaje a las grandes canciones",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.ggpht.com/yJKsspq6Q0Jkw2WpceCyvPJnMYQ94KBul5_HEHgAitJle1P6Qh0TVKPGmfdnEdpuZWeVIm90RA=s1200",
+        "playEndpointParams": ""
+      }
+    ],
+    "artists": [
+      {
+        "id": "UCav7iYcCwxw7g4GRsfQ9n_A",
+        "name": "Leo Mattioli",
+        "thumbnail": "https://yt3.googleusercontent.com/dyEa4mT7Md_8GHFW3yfhqL5k8n4iy4Vme-Kwh2Y8veCemedza3yEP54FFO0rPDBxKGRZi3Me=w120-h120-l90-rj"
+      },
+      {
+        "id": "UCtSeeqnGJM5ngqJWZ1vQygw",
+        "name": "Maná",
+        "thumbnail": "https://yt3.googleusercontent.com/KfS7bUmfaXPVuwaaLDrwQuOT-OuoL2T1hGCgU1GkNhpUYXw0BvfFhtMnx4AqfIoLN1sKPLVlqWOrEAGc=w120-h120-l90-rj"
+      },
+      {
+        "id": "UC-Ky5k2ppwzL8EWx8TWCSWw",
+        "name": "No Te Va Gustar",
+        "thumbnail": "https://lh3.googleusercontent.com/vPKWKCTr_LEEdDvOlm-qayvve11AZmGEjSAF70QYtKLmmruTK2yyU_e3t88Tq4yktS9Wxl0erf35eSSG=w120-h120-p-l90-rj"
+      },
+      {
+        "id": "UCSuVYzc_e551ItcC6ebddAw",
+        "name": "DJ TAIROMIX FERNÁNDEZ 2",
+        "thumbnail": "https://yt3.googleusercontent.com/rnVo8I587OCrukc_rVi7pBsNpeJ_4suHqoLHkl30JWt_vKKM13EiWVyp51wkvxL5QMl6JpALqA4=w120-c-h120-k-c0x00ffffff-no-l90-rj"
+      }
+    ]
+  },
+  "J-hip-hop": {
+    "songs": [
+      {
+        "id": "GMuLmqvONho",
+        "title": "Japanese Chill Rap & Neo-Soul Mix 🎧 |Late Summer Vibes|TOKYO Chill HIPHOP【邦楽Playlist】",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/GMuLmqvONho/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3mF0t5JxkvtvbDzyZq5eHILwx-zQw",
+        "explicit": false
+      },
+      {
+        "id": "leg3dJ4Xl_Q",
+        "title": "Popular Anime Openings But It's Lofi Remix ~ Best Anime Lofi Hip Hop Mix",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/leg3dJ4Xl_Q/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3nURuMAehsnQy5lB6tin7j09Jpfnw",
+        "explicit": false
+      },
+      {
+        "id": "gkCdV-VYiac",
+        "title": "Night Paws | Urban Jazz Hip-Hop Shamisen Mix | Street Cat Sessions | Focus & Chill | 60 min",
+        "artists": [
+          {
+            "name": "Vídeo",
+            "id": ""
+          }
+        ],
+        "thumbnail": "https://i.ytimg.com/vi/gkCdV-VYiac/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3nFHDNJqNyZcbik0hFuj6LQNnJ4zg",
+        "explicit": false
+      },
+      {
+        "id": "EskWCtDxTmo",
+        "title": "No Return",
+        "artists": [
+          {
+            "name": "Tokyo HipHop Girl",
+            "id": "UCsqezV4Yuy92h5t1URRAtBg"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/dGr37CH5TAkvjC4VQI5vVUaNaAiFNVvAwLQbCbB6Ny7wm1mTMuBkF0gvkMK8F2oLgHoTwKvRjszjv0fmAw=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "YWeQgf4lvDM",
+        "title": "アニョハセヨ - Annyeonghaseyo",
+        "artists": [
+          {
+            "name": "Yuki Chiba",
+            "id": "UCnPf2oZPzg_pxf6RzjUoCgw"
+          },
+          {
+            "name": "Lil Moshpit",
+            "id": "UCPYTqmJE50FCt2NQWZYdYjQ"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/yS5rvtDohieeosgpmEUeTAlWO-YLTPze6zKgY99UzfktANtCjxNd2QOFxM32HEOa71hZ_DYkn1JxCOc=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "4FhYT8oroBk",
+        "title": "Still On Today",
+        "artists": [
+          {
+            "name": "Tokyo HipHop Girl",
+            "id": "UCsqezV4Yuy92h5t1URRAtBg"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/sryJQq2dcGQ8U5Pd-9ex4oCyS_yixQnMcl4UTV6L8NNXiRd4VYLYhKIs8LS0waGjbeqttdguzzI69dtYNg=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "qYcoJpqCha4",
+        "title": "aruarian dance",
+        "artists": [
+          {
+            "name": "Nujabes",
+            "id": "UCxQQET-tQsC4cwzLow9ZsuQ"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/dRSmWmXBokcabAm-1EtHCdaHbU2uwKrI79_7eelhDxCTArIB9-XZn7rawvDEnqbKC5hSR1KZDlhpqsQ=w120-h120-l90-rj",
+        "explicit": false
+      },
+      {
+        "id": "BptDI0UBv5k",
+        "title": "Shamisen Hunter",
+        "artists": [
+          {
+            "name": "Yakuza Yaroku",
+            "id": "UC4dCNbhX0Vi6hjPTc0VH93Q"
+          },
+          {
+            "name": "Satxri",
+            "id": "UC98FZuzb805dDIw7FHlg2Sg"
+          }
+        ],
+        "thumbnail": "https://yt3.googleusercontent.com/UB-qndgVBXpD1ARK11rP8Y_lSjzRQoYNymLQZrONEbDbXQfqcWIftr_Cj-JCtXGv860yKQOAcF_S03M=w120-h120-l90-rj",
+        "explicit": false
+      }
+    ],
+    "albums": [
+      {
+        "browseId": "MPREb_9tEJw4AuALn",
+        "playlistId": "OLAK5uy_9tEJw4AuALn",
+        "title": "BEST JAPANESE HIP HOP-NEVER GIVE UP-",
+        "artists": [],
+        "year": 2016,
+        "thumbnail": "https://yt3.googleusercontent.com/2qBYkNzGrUNEC56F6UbndUN2pZSzvg7epsD3aJ13TzkXEb9ggvdc9u5H4vIVGCn-4r5PkYrJTVp8Z31PBQ=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_TmzdAMT6Nvz",
+        "playlistId": "OLAK5uy_TmzdAMT6Nvz",
+        "title": "SAMURAI V2 | Japanese PHONK | Japanese Samurai Music | Japanese Trap & Bass | Trap Mix | Anime Music | Japanese HipHop",
+        "artists": [
+          {
+            "name": "Sound Flayer",
+            "id": "UCV45MVqlt9RbyzlA-koUpaQ"
+          }
+        ],
+        "year": 2024,
+        "thumbnail": "https://yt3.googleusercontent.com/R6p-Z3sxN-IfrCqdf-K0ifZPrBlCJaOtU887kruXCLocQ-if_2yrLJb-EdVM4YhZV30BNJ1YHBChS6iI=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_ZebYXrlg3D2",
+        "playlistId": "OLAK5uy_ZebYXrlg3D2",
+        "title": "Japanese Lofi Hip Hop Beats",
+        "artists": [
+          {
+            "name": "LoFi Hip Hop",
+            "id": "UCTKRgWNftEYcnXHugbX5bvA"
+          }
+        ],
+        "year": 2020,
+        "thumbnail": "https://yt3.googleusercontent.com/7mv7CBoDv9se7T8Mif5M5KcLIworiYtcD50BLLLXq4FDxuH_zeeWIujWji_XGxOUVSJALQTsLaGdfleTIA=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_RGCCNJWZ6t5",
+        "playlistId": "OLAK5uy_RGCCNJWZ6t5",
+        "title": "Tokyo Hip Hop",
+        "artists": [
+          {
+            "name": "Japanese Lofi",
+            "id": "UCpAbuX2AIWNvGkM87LxUwZA"
+          }
+        ],
+        "year": 2026,
+        "thumbnail": "https://yt3.googleusercontent.com/FZ0bE4sDxKWCs_KkWDwHWXobKrA3XZ7b98__rrjGcBkB8SSfKTtjV3BvKPHMuqDmngl5hQM_yhSg5u1I=w544-h544-l90-rj",
+        "explicit": false
+      },
+      {
+        "browseId": "MPREb_BUoH4fROHS9",
+        "playlistId": "OLAK5uy_BUoH4fROHS9",
+        "title": "Lo Fi Japan Chill Lofi HopHop Music Beats To Stream Study Game 2025",
+        "artists": [
+          {
+            "name": "Lo Fi Hip Hop",
+            "id": "UCgqlp1PGvwLpIhcYFQFcqqA"
+          },
+          {
+            "name": "Depressing Songs",
+            "id": "UCyay0v_9j7NB0gBB38zkl2A"
+          },
+          {
+            "name": "Sad Music",
+            "id": "UC9snFmgnSARriqBNhk4D_cw"
+          }
+        ],
+        "year": 2025,
+        "thumbnail": "https://yt3.googleusercontent.com/5LK9dyvvv1TMTZB-9QJKPcsgJHf3-j3doaMHXCi-c498qAK0TaTd41yQZux60_t2CVnbe3da_XV5K6RT=w544-h544-l90-rj",
+        "explicit": false
+      }
+    ],
+    "playlists": [
+      {
+        "id": "PL2UJD0VuNB6wiRuwWZlrxDvkuIkBCWwsB",
+        "title": "Japanese Hip-Hop",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.googleusercontent.com/kgPV2EOBfiF7C7e6KJphGOJ7Du1M9QMSJNPPigHUAb9WKbY8xde-atj64nNdy5yxAoo4B9kq0BEG=s1200",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PLOsEhtGykFhT-rliTQ4djR4_hWpOq1psg",
+        "title": "Game/ Anime samples",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://yt3.googleusercontent.com/I8wBSwz7bgTEfLIu6QhcGuwTblvvEW3imPluuu7-SQeR0gFEs_qjB7SrLeekLjUTuKXHX_FUReA=s1200",
+        "playEndpointParams": ""
+      },
+      {
+        "id": "PL_n_2CYn1C070G37AGbnFiiD9zx-IceKZ",
+        "title": "Nujabes | Nujabes japanese",
+        "author": "Lista de reproducción",
+        "thumbnail": "https://i.ytimg.com/vi/RbWwDyjjt8k/hq720.jpg?sqp=-oaymwEKCNUGEN8DIABIWg&rs=AMzJL3mLSSk27iXHajZ9arZU4AryJV57rw",
+        "playEndpointParams": ""
+      }
+    ],
+    "artists": [
+      {
+        "id": "UC7z9phtXAFRixEvdlRhv-hg",
+        "name": "Creepy Nuts",
+        "thumbnail": "https://lh3.googleusercontent.com/lg8mvzBsVgeTWBu7D9oJ_75-k8mWAOZ_SFx1DU7ywuHegwL8LdsOkxzy-BHPNHUcF0zom5g4VTbk9w=w120-h120-p-l90-rj"
+      },
+      {
+        "id": "UCxzaqe5mt04dziOpsZ76aNQ",
+        "name": "LoFi Tokyo",
+        "thumbnail": "https://yt3.googleusercontent.com/yY-j3EBBMoGHiIBlzfiyLj2ODerWeLVzDUOoWp4h7j8K5wFNnlq7GllqiwyDC-AFqLq8U5AMzLBJ9Wg=w120-h120-p-l90-rj"
+      },
+      {
+        "id": "UCaTNyEYhcKPSZ0ok4z71y7Q",
+        "name": "Rustage",
+        "thumbnail": "https://yt3.googleusercontent.com/C-j9bu3IBkesca6XnPDSMDqYDKQJloPW9PPaTfXpBe2Rb-NKhoENjv9WW-QL9nLJQdN3M7LqaHI=w120-h120-l90-rj"
+      },
+      {
+        "id": "UCdNUumUn14nHIn2xi6F0WeA",
+        "name": "Japanese Hip Hop【KOUZUKE】",
+        "thumbnail": "https://yt3.googleusercontent.com/99S4bC932EkaZZ7RCxdxm5rYZKECRMbFihFg4W0NZyJ1I2JFHBgFdsQqpk0mg8RxapX0kc5fYTI=w120-c-h120-k-c0x00ffffff-no-l90-rj"
+      },
+      {
+        "id": "UCTKhncm2ppbtscyhT2iIXwQ",
+        "name": "Hass J-hiphop解説",
+        "thumbnail": "https://yt3.googleusercontent.com/VqerGMWaht5CdM3E9jAYmAQuFdEAQAaXLQAAt5e5Xxnn9V7cNcYOmWG6MV0For0de9aKApOvTQ=w120-c-h120-k-c0x00ffffff-no-l90-rj"
+      },
+      {
+        "id": "UCn4XFpkWoYeIcY7zHcbvevA",
+        "name": "ODD GROOVE TOKYO",
+        "thumbnail": "https://yt3.googleusercontent.com/h81PeZ5E_WZ0ocFr1ebLT6oQ2BXkNk53VZaXusxZGrhi-VPkNtpv5xoxUxO91B_GBjQ0QZKwaQ=w120-c-h120-k-c0x00ffffff-no-l90-rj"
       }
     ]
   }

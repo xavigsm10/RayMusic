@@ -308,6 +308,7 @@ fun GlassBoxScope.AppleMusicSongMenu(
                                             artist = song.artist,
                                             artUrl = song.thumbnail,
                                             videoId = song.id,
+                                            queue = emptyList(),
                                             isExclusiveQueue = false,
                                             album = song.album
                                         )
@@ -2339,6 +2340,7 @@ fun GlassBoxScope.PlayerOptionsMenu(
                                     artist = playerState.artist,
                                     artUrl = playerState.artUrl,
                                     videoId = playerState.videoId,
+                                    queue = emptyList(),
                                     isExclusiveQueue = false,
                                     album = playerState.album
                                 )

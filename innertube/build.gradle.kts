@@ -22,8 +22,7 @@ dependencies {
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
     implementation("io.ktor:ktor-client-encoding:$ktorVersion")
     implementation("org.brotli:dec:0.1.2")
-    implementation("com.github.mostafaalagamy:MetrolistExtractor:8773f0d") {
-        exclude(group = "com.google.protobuf", module = "protobuf-java")
-    }
+    implementation(libs.newpipeextractor)
+    implementation(libs.rhino)
     testImplementation("junit:junit:4.13.2")
 }

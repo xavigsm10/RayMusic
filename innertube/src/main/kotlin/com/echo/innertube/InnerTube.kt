@@ -20,8 +20,10 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.util.encodeBase64
+import kotlinx.coroutines.delay
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
+import java.io.IOException
 import java.net.Proxy
 import java.util.*
 
@@ -32,26 +34,17 @@ import java.util.*
 class InnerTube {
     private var httpClient = createClient()
 
-    var locale = run {
-        val defaultLocale = Locale.getDefault()
-        var country = defaultLocale.country
-        if (country.isNullOrBlank() || country.length != 2) {
-            val lang = defaultLocale.language
-            country = if (lang.length == 2) lang.uppercase() else "US"
-        } else {
-            country = country.uppercase()
+    var locale: YouTubeLocale = YouTubeLocale.fromSystem()
+        set(value) {
+            field = YouTubeLocale.sanitize(value.gl, value.hl)
         }
-        var language = defaultLocale.language
-        if (language.isNullOrBlank() || language.length !in 2..3) {
-            language = "en"
-        }
-        YouTubeLocale(
-            gl = country,
-            hl = language
-        )
-    }
+
     var visitorData: String? = null
     var dataSyncId: String? = null
+        set(value) {
+            field = value?.takeIf { it.isNotBlank() && it != "null" }?.substringBefore("||")
+        }
+
     var cookie: String? = null
         set(value) {
             field = value
@@ -89,10 +82,19 @@ class InnerTube {
 
         engine {
             config {
+                connectionPool(
+                    okhttp3.ConnectionPool(
+                        10,
+                        5,
+                        java.util.concurrent.TimeUnit.MINUTES
+                    )
+                )
                 fastFallback(true)
-                connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
-                readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
-                writeTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+                retryOnConnectionFailure(true)
+                protocols(listOf(okhttp3.Protocol.HTTP_2, okhttp3.Protocol.HTTP_1_1))
+                connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+                writeTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
             }
             proxy?.let {
                 proxy = this@InnerTube.proxy
@@ -104,9 +106,11 @@ class InnerTube {
                                 .build()
                         }
                         fastFallback(true)
-                        connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
-                        readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
-                        writeTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+                        retryOnConnectionFailure(true)
+                        protocols(listOf(okhttp3.Protocol.HTTP_2, okhttp3.Protocol.HTTP_1_1))
+                        connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                        readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+                        writeTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
                     }
                 }
             }
@@ -129,7 +133,6 @@ class InnerTube {
                 }
             }
         }
-
 
         contentType(ContentType.Application.Json)
         headers {
@@ -161,26 +164,58 @@ class InnerTube {
         parameter("prettyPrint", false)
     }
 
+    /**
+     * Retry wrapper for transient IO errors and 429/5xx status codes with exponential backoff.
+     */
+    private suspend fun <T> withRetry(
+        maxAttempts: Int = 3,
+        initialDelay: Long = 500L,
+        factor: Double = 2.0,
+        block: suspend () -> T,
+    ): T {
+        var currentDelay = initialDelay
+        var attempt = 0
+        while (true) {
+            try {
+                return block()
+            } catch (e: IOException) {
+                attempt++
+                if (attempt >= maxAttempts) throw e
+                delay(currentDelay)
+                currentDelay = (currentDelay * factor).toLong()
+            } catch (e: io.ktor.client.plugins.ResponseException) {
+                val status = e.response.status.value
+                attempt++
+                if ((status != 429 && status !in 500..599) || attempt >= maxAttempts) throw e
+                val retryAfterMs = e.response.headers[HttpHeaders.RetryAfter]?.toLongOrNull()?.times(1000L)
+                delay(retryAfterMs ?: currentDelay)
+                currentDelay = (currentDelay * factor).toLong()
+            }
+        }
+    }
+
     suspend fun search(
         client: YouTubeClient,
         query: String? = null,
         params: String? = null,
         continuation: String? = null,
-    ) = httpClient.post("search") {
-        ytClient(client, setLogin = useLoginForBrowse)
-        setBody(
-            SearchBody(
-                context = client.toContext(
-                    locale,
-                    visitorData,
-                    if (useLoginForBrowse) dataSyncId else null
-                ),
-                query = query,
-                params = params
+    ) = withRetry {
+        httpClient.post("search") {
+            ytClient(client, setLogin = useLoginForBrowse)
+            setBody(
+                SearchBody(
+                    context = client.toContext(
+                        locale,
+                        visitorData,
+                        if (useLoginForBrowse) dataSyncId else null
+                    ),
+                    query = query,
+                    params = params
+                )
             )
-        )
-        parameter("continuation", continuation)
-        parameter("ctoken", continuation)
+            parameter("continuation", continuation)
+            parameter("ctoken", continuation)
+        }
     }
 
     suspend fun player(
@@ -189,33 +224,35 @@ class InnerTube {
         playlistId: String?,
         signatureTimestamp: Int?,
         poToken: String? = null,
-    ) = httpClient.post("player") {
-        ytClient(client, setLogin = true)
-        setBody(
-            PlayerBody(
-                context = client.toContext(locale, visitorData, dataSyncId).let {
-                    if (client.isEmbedded) {
-                        it.copy(
-                            thirdParty = Context.ThirdParty(
-                                embedUrl = "https://www.youtube.com/watch?v=${videoId}"
+    ) = withRetry {
+        httpClient.post("player") {
+            ytClient(client, setLogin = true)
+            setBody(
+                PlayerBody(
+                    context = client.toContext(locale, visitorData, dataSyncId).let {
+                        if (client.isEmbedded) {
+                            it.copy(
+                                thirdParty = Context.ThirdParty(
+                                    embedUrl = "https://www.youtube.com/watch?v=${videoId}"
+                                )
+                            )
+                        } else it
+                    },
+                    videoId = videoId,
+                    playlistId = playlistId,
+                    playbackContext = if (client.useSignatureTimestamp && signatureTimestamp != null) {
+                        PlayerBody.PlaybackContext(
+                            PlayerBody.PlaybackContext.ContentPlaybackContext(
+                                signatureTimestamp
                             )
                         )
-                    } else it
-                },
-                videoId = videoId,
-                playlistId = playlistId,
-                playbackContext = if (client.useSignatureTimestamp && signatureTimestamp != null) {
-                    PlayerBody.PlaybackContext(
-                        PlayerBody.PlaybackContext.ContentPlaybackContext(
-                            signatureTimestamp
-                        )
-                    )
-                } else null,
-                serviceIntegrityDimensions = if (client.useWebPoTokens && poToken != null) {
-                    PlayerBody.ServiceIntegrityDimensions(poToken)
-                } else null,
+                    } else null,
+                    serviceIntegrityDimensions = if (client.useWebPoTokens && poToken != null) {
+                        PlayerBody.ServiceIntegrityDimensions(poToken)
+                    } else null,
+                )
             )
-        )
+        }
     }
 
     suspend fun registerPlayback(
@@ -223,15 +260,17 @@ class InnerTube {
         cpn: String,
         playlistId: String?,
         client: YouTubeClient = YouTubeClient.WEB_REMIX,
-    ) = httpClient.get(url) {
-        ytClient(client, true)
-        parameter("ver", "2")
-        parameter("c", client.clientName)
-        parameter("cpn", cpn)
+    ) = withRetry {
+        httpClient.get(url) {
+            ytClient(client, true)
+            parameter("ver", "2")
+            parameter("c", client.clientName)
+            parameter("cpn", cpn)
 
-        if (playlistId != null) {
-            parameter("list", playlistId)
-            parameter("referrer", "https://music.youtube.com/playlist?list=$playlistId")
+            if (playlistId != null) {
+                parameter("list", playlistId)
+                parameter("referrer", "https://music.youtube.com/playlist?list=$playlistId")
+            }
         }
     }
 
@@ -241,20 +280,22 @@ class InnerTube {
         params: String? = null,
         continuation: String? = null,
         setLogin: Boolean = false,
-    ) = httpClient.post("browse") {
-        ytClient(client, setLogin = setLogin || useLoginForBrowse)
-        setBody(
-            BrowseBody(
-                context = client.toContext(
-                    locale,
-                    visitorData,
-                    if (setLogin || useLoginForBrowse) dataSyncId else null
-                ),
-                browseId = browseId,
-                params = params,
-                continuation = continuation
+    ) = withRetry {
+        httpClient.post("browse") {
+            ytClient(client, setLogin = setLogin || useLoginForBrowse)
+            setBody(
+                BrowseBody(
+                    context = client.toContext(
+                        locale,
+                        visitorData,
+                        if (setLogin || useLoginForBrowse) dataSyncId else null
+                    ),
+                    browseId = browseId,
+                    params = params,
+                    continuation = continuation
+                )
             )
-        )
+        }
     }
 
     suspend fun next(
@@ -265,83 +306,95 @@ class InnerTube {
         index: Int?,
         params: String?,
         continuation: String? = null,
-    ) = httpClient.post("next") {
-        ytClient(client, setLogin = true)
-        setBody(
-            NextBody(
-                context = client.toContext(locale, visitorData, dataSyncId),
-                videoId = videoId,
-                playlistId = playlistId,
-                playlistSetVideoId = playlistSetVideoId,
-                index = index,
-                params = params,
-                continuation = continuation
+    ) = withRetry {
+        httpClient.post("next") {
+            ytClient(client, setLogin = true)
+            setBody(
+                NextBody(
+                    context = client.toContext(locale, visitorData, dataSyncId),
+                    videoId = videoId,
+                    playlistId = playlistId,
+                    playlistSetVideoId = playlistSetVideoId,
+                    index = index,
+                    params = params,
+                    continuation = continuation
+                )
             )
-        )
+        }
     }
 
     suspend fun feedback(
         client: YouTubeClient,
         tokens: List<String>
-    ) = httpClient.post("feedback") {
-        ytClient(client, setLogin = true)
-        setBody(
-            FeedbackBody(
-                context = client.toContext(locale, visitorData, dataSyncId),
-                feedbackTokens = tokens
+    ) = withRetry {
+        httpClient.post("feedback") {
+            ytClient(client, setLogin = true)
+            setBody(
+                FeedbackBody(
+                    context = client.toContext(locale, visitorData, dataSyncId),
+                    feedbackTokens = tokens
+                )
             )
-        )
+        }
     }
 
     suspend fun getSearchSuggestions(
         client: YouTubeClient,
         input: String,
-    ) = httpClient.post("music/get_search_suggestions") {
-        ytClient(client)
-        setBody(
-            GetSearchSuggestionsBody(
-                context = client.toContext(locale, visitorData, null),
-                input = input
+    ) = withRetry {
+        httpClient.post("music/get_search_suggestions") {
+            ytClient(client)
+            setBody(
+                GetSearchSuggestionsBody(
+                    context = client.toContext(locale, visitorData, null),
+                    input = input
+                )
             )
-        )
+        }
     }
 
     suspend fun getQueue(
         client: YouTubeClient,
         videoIds: List<String>?,
         playlistId: String?,
-    ) = httpClient.post("music/get_queue") {
-        ytClient(client)
-        setBody(
-            GetQueueBody(
-                context = client.toContext(locale, visitorData, null),
-                videoIds = videoIds,
-                playlistId = playlistId
+    ) = withRetry {
+        httpClient.post("music/get_queue") {
+            ytClient(client)
+            setBody(
+                GetQueueBody(
+                    context = client.toContext(locale, visitorData, null),
+                    videoIds = videoIds,
+                    playlistId = playlistId
+                )
             )
-        )
+        }
     }
 
     suspend fun getTranscript(
         client: YouTubeClient,
         videoId: String,
-    ) = httpClient.post("https://music.youtube.com/youtubei/v1/get_transcript") {
-        parameter("key", "AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX3")
-        headers {
-            append("Content-Type", "application/json")
-        }
-        setBody(
-            GetTranscriptBody(
-                context = client.toContext(locale, null, null),
-                params = "\n${11.toChar()}$videoId".encodeBase64()
+    ) = withRetry {
+        httpClient.post("https://music.youtube.com/youtubei/v1/get_transcript") {
+            parameter("key", "AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX3")
+            headers {
+                append("Content-Type", "application/json")
+            }
+            setBody(
+                GetTranscriptBody(
+                    context = client.toContext(locale, null, null),
+                    params = "\n${11.toChar()}$videoId".encodeBase64()
+                )
             )
-        )
+        }
     }
 
-    suspend fun getSwJsData() = httpClient.get("https://music.youtube.com/sw.js_data")
+    suspend fun getSwJsData() = withRetry { httpClient.get("https://music.youtube.com/sw.js_data") }
 
-    suspend fun accountMenu(client: YouTubeClient) = httpClient.post("account/account_menu") {
-        ytClient(client, setLogin = true)
-        setBody(AccountMenuBody(client.toContext(locale, visitorData, dataSyncId)))
+    suspend fun accountMenu(client: YouTubeClient) = withRetry {
+        httpClient.post("account/account_menu") {
+            ytClient(client, setLogin = true)
+            setBody(AccountMenuBody(client.toContext(locale, visitorData, dataSyncId)))
+        }
     }
 
     suspend fun likeVideo(
@@ -360,66 +413,76 @@ class InnerTube {
     suspend fun unlikeVideo(
         client: YouTubeClient,
         videoId: String,
-    ) = httpClient.post("like/removelike") {
-        ytClient(client, setLogin = true)
-        setBody(
-            LikeBody(
-                context = client.toContext(locale, visitorData, dataSyncId),
-                target = LikeBody.Target.VideoTarget(videoId)
+    ) = withRetry {
+        httpClient.post("like/removelike") {
+            ytClient(client, setLogin = true)
+            setBody(
+                LikeBody(
+                    context = client.toContext(locale, visitorData, dataSyncId),
+                    target = LikeBody.Target.VideoTarget(videoId)
+                )
             )
-        )
+        }
     }
 
     suspend fun subscribeChannel(
         client: YouTubeClient,
         channelId: String,
-    ) = httpClient.post("subscription/subscribe") {
-        ytClient(client, setLogin = true)
-        setBody(
-            SubscribeBody(
-                context = client.toContext(locale, visitorData, dataSyncId),
-                channelIds = listOf(channelId)
+    ) = withRetry {
+        httpClient.post("subscription/subscribe") {
+            ytClient(client, setLogin = true)
+            setBody(
+                SubscribeBody(
+                    context = client.toContext(locale, visitorData, dataSyncId),
+                    channelIds = listOf(channelId)
+                )
             )
-        )
+        }
     }
 
     suspend fun unsubscribeChannel(
         client: YouTubeClient,
         channelId: String,
-    ) = httpClient.post("subscription/unsubscribe") {
-        ytClient(client, setLogin = true)
-        setBody(
-            SubscribeBody(
-                context = client.toContext(locale, visitorData, dataSyncId),
-                channelIds = listOf(channelId)
+    ) = withRetry {
+        httpClient.post("subscription/unsubscribe") {
+            ytClient(client, setLogin = true)
+            setBody(
+                SubscribeBody(
+                    context = client.toContext(locale, visitorData, dataSyncId),
+                    channelIds = listOf(channelId)
+                )
             )
-        )
+        }
     }
 
     suspend fun likePlaylist(
         client: YouTubeClient,
         playlistId: String,
-    ) = httpClient.post("like/like") {
-        ytClient(client, setLogin = true)
-        setBody(
-            LikeBody(
-                context = client.toContext(locale, visitorData, dataSyncId),
-                target = LikeBody.Target.PlaylistTarget(playlistId)
+    ) = withRetry {
+        httpClient.post("like/like") {
+            ytClient(client, setLogin = true)
+            setBody(
+                LikeBody(
+                    context = client.toContext(locale, visitorData, dataSyncId),
+                    target = LikeBody.Target.PlaylistTarget(playlistId)
+                )
             )
-        )
+        }
     }
 
     suspend fun unlikePlaylist(
         client: YouTubeClient,
         playlistId: String,
-    ) = httpClient.post("like/removelike") {
-        ytClient(client, setLogin = true)
-        setBody(
-            LikeBody(
-                context = client.toContext(locale, visitorData, dataSyncId),
-                target = LikeBody.Target.PlaylistTarget(playlistId)
+    ) = withRetry {
+        httpClient.post("like/removelike") {
+            ytClient(client, setLogin = true)
+            setBody(
+                LikeBody(
+                    context = client.toContext(locale, visitorData, dataSyncId),
+                    target = LikeBody.Target.PlaylistTarget(playlistId)
+                )
             )
-        )
+        }
     }
 
     suspend fun addToPlaylist(
@@ -443,17 +506,19 @@ class InnerTube {
         client: YouTubeClient,
         playlistId: String,
         addPlaylistId: String,
-    ) = httpClient.post("browse/edit_playlist") {
-        ytClient(client, setLogin = true)
-        setBody(
-            EditPlaylistBody(
-                context = client.toContext(locale, visitorData, dataSyncId),
-                playlistId = playlistId.removePrefix("VL"),
-                actions = listOf(
-                    Action.AddPlaylistAction(addedFullListId = addPlaylistId)
+    ) = withRetry {
+        httpClient.post("browse/edit_playlist") {
+            ytClient(client, setLogin = true)
+            setBody(
+                EditPlaylistBody(
+                    context = client.toContext(locale, visitorData, dataSyncId),
+                    playlistId = playlistId.removePrefix("VL"),
+                    actions = listOf(
+                        Action.AddPlaylistAction(addedFullListId = addPlaylistId)
+                    )
                 )
             )
-        )
+        }
     }
 
     suspend fun removeFromPlaylist(
@@ -461,20 +526,22 @@ class InnerTube {
         playlistId: String,
         videoId: String,
         setVideoId: String,
-    ) = httpClient.post("browse/edit_playlist") {
-        ytClient(client, setLogin = true)
-        setBody(
-            EditPlaylistBody(
-                context = client.toContext(locale, visitorData, dataSyncId),
-                playlistId = playlistId.removePrefix("VL"),
-                actions = listOf(
-                    Action.RemoveVideoAction(
-                        removedVideoId = videoId,
-                        setVideoId = setVideoId,
+    ) = withRetry {
+        httpClient.post("browse/edit_playlist") {
+            ytClient(client, setLogin = true)
+            setBody(
+                EditPlaylistBody(
+                    context = client.toContext(locale, visitorData, dataSyncId),
+                    playlistId = playlistId.removePrefix("VL"),
+                    actions = listOf(
+                        Action.RemoveVideoAction(
+                            removedVideoId = videoId,
+                            setVideoId = setVideoId,
+                        )
                     )
                 )
             )
-        )
+        }
     }
 
     suspend fun moveSongPlaylist(
@@ -482,21 +549,22 @@ class InnerTube {
         playlistId: String,
         setVideoId: String,
         successorSetVideoId: String?,
-    ) = httpClient.post("browse/edit_playlist") {
-        ytClient(client, setLogin = true)
-        setBody(
-            EditPlaylistBody(
-                context = client.toContext(locale, visitorData, dataSyncId),
-                playlistId = playlistId,
-                actions = listOf(
-                    Action.MoveVideoAction(
-                        movedSetVideoIdSuccessor = successorSetVideoId,
-                        setVideoId = setVideoId,
+    ) = withRetry {
+        httpClient.post("browse/edit_playlist") {
+            ytClient(client, setLogin = true)
+            setBody(
+                EditPlaylistBody(
+                    context = client.toContext(locale, visitorData, dataSyncId),
+                    playlistId = playlistId,
+                    actions = listOf(
+                        Action.MoveVideoAction(
+                            movedSetVideoIdSuccessor = successorSetVideoId,
+                            setVideoId = setVideoId,
+                        )
                     )
                 )
-
             )
-        )
+        }
     }
 
     suspend fun createPlaylist(
@@ -534,12 +602,14 @@ class InnerTube {
     suspend fun getUploadCustomThumbnailLink(
         client: YouTubeClient,
         contentLength: Int
-    ) = httpClient.post("https://music.youtube.com/playlist_image_upload/playlist_custom_thumbnail") {
-        ytClient(client, setLogin = true)
-        headers {
-            append("X-Goog-Upload-Command", "start")
-            append("X-Goog-Upload-Protocol", "resumable")
-            append("X-Goog-Upload-Header-Content-Length", contentLength.toString())
+    ) = withRetry {
+        httpClient.post("https://music.youtube.com/playlist_image_upload/playlist_custom_thumbnail") {
+            ytClient(client, setLogin = true)
+            headers {
+                append("X-Goog-Upload-Command", "start")
+                append("X-Goog-Upload-Protocol", "resumable")
+                append("X-Goog-Upload-Header-Content-Length", contentLength.toString())
+            }
         }
     }
 
@@ -547,52 +617,58 @@ class InnerTube {
         client: YouTubeClient,
         uploadId: String,
         image: ByteArray,
-    ) = httpClient.post("https://music.youtube.com/playlist_image_upload/playlist_custom_thumbnail") {
-        ytClient(client, setLogin = true)
-        parameter("upload_id", uploadId)
-        parameter("upload_protocol", "resumable")
-        headers {
-            append("X-Goog-Upload-Command", "upload, finalize")
-            append("X-Goog-Upload-Offset", "0")
+    ) = withRetry {
+        httpClient.post("https://music.youtube.com/playlist_image_upload/playlist_custom_thumbnail") {
+            ytClient(client, setLogin = true)
+            parameter("upload_id", uploadId)
+            parameter("upload_protocol", "resumable")
+            headers {
+                append("X-Goog-Upload-Command", "upload, finalize")
+                append("X-Goog-Upload-Offset", "0")
+            }
+            setBody(image)
         }
-        setBody(image)
     }
 
     suspend fun setThumbnailPlaylist(
         client: YouTubeClient,
         playlistId: String,
         blobId: String,
-    ) = httpClient.post("browse/edit_playlist") {
-        ytClient(client, setLogin = true)
-        setBody(
-            EditPlaylistBody(
-                context = client.toContext(locale, visitorData, dataSyncId),
-                playlistId = playlistId,
-                actions = listOf(
-                    Action.SetCustomThumbnailAction(
-                        addedCustomThumbnail = Action.SetCustomThumbnailAction.AddedCustomThumbnail(
-                            playlistScottyEncryptedBlobId = blobId
+    ) = withRetry {
+        httpClient.post("browse/edit_playlist") {
+            ytClient(client, setLogin = true)
+            setBody(
+                EditPlaylistBody(
+                    context = client.toContext(locale, visitorData, dataSyncId),
+                    playlistId = playlistId,
+                    actions = listOf(
+                        Action.SetCustomThumbnailAction(
+                            addedCustomThumbnail = Action.SetCustomThumbnailAction.AddedCustomThumbnail(
+                                playlistScottyEncryptedBlobId = blobId
+                            )
                         )
                     )
                 )
             )
-        )
+        }
     }
 
     suspend fun removeThumbnailPlaylist(
         client: YouTubeClient,
         playlistId: String
-    ) = httpClient.post("browse/edit_playlist") {
-        ytClient(client, setLogin = true)
-        setBody(
-            EditPlaylistBody(
-                context = client.toContext(locale, visitorData, dataSyncId),
-                playlistId = playlistId,
-                actions = listOf(
-                    Action.RemoveCustomThumbnailAction()
+    ) = withRetry {
+        httpClient.post("browse/edit_playlist") {
+            ytClient(client, setLogin = true)
+            setBody(
+                EditPlaylistBody(
+                    context = client.toContext(locale, visitorData, dataSyncId),
+                    playlistId = playlistId,
+                    actions = listOf(
+                        Action.RemoveCustomThumbnailAction()
+                    )
                 )
             )
-        )
+        }
     }
 
     suspend fun deletePlaylist(
@@ -609,11 +685,11 @@ class InnerTube {
         )
     }
 
-    private suspend fun returnYouTubeDislike(videoId: String) =
+    private suspend fun returnYouTubeDislike(videoId: String) = withRetry {
         httpClient.get("https://returnyoutubedislikeapi.com/Votes?videoId=$videoId") {
             contentType(ContentType.Application.Json)
         }
-
+    }
 
     suspend fun getMediaInfo(videoId: String): Result<MediaInfo> =
         runCatching {
@@ -683,8 +759,5 @@ class InnerTube {
                 like = returnYouTubeDislikeResponse.likes,
                 dislike = returnYouTubeDislikeResponse.dislikes,
             )
-
         }
-
-
 }
