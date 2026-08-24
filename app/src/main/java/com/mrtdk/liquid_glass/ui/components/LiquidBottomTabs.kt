@@ -29,6 +29,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -252,7 +253,7 @@ fun LiquidBottomTabs(
                     translationX =
                         if (isLtr) dampedDragAnimation.value * tabWidth + panelOffset
                         else size.width - (dampedDragAnimation.value + 1f) * tabWidth + panelOffset
-                    alpha = 1f - searchProgress
+                    alpha = (1f - searchProgress) * (1f - collapseProgress)
                     clip = false
                 }
                 .then(interactiveHighlight.gestureModifier)
@@ -266,7 +267,7 @@ fun LiquidBottomTabs(
                             lens(
                                 10f.dp.toPx() * progress,
                                 14f.dp.toPx() * progress,
-                                chromaticAberration = true
+                                chromaticAberration = !isAnimating && progress > 0.05f
                             )
                         }
                     },

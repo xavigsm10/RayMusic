@@ -98,75 +98,21 @@ class MusicService : MediaSessionService() {
             com.echo.innertube.YouTubeExtractor.ensureInitialized()
         }
 
-        val okHttpDataSourceFactory = androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(
-            OkHttpClient.Builder()
-                .proxy(YouTube.proxy)
-                .proxyAuthenticator { _, response ->
-                    YouTube.proxyAuth?.let { auth ->
-                        response.request.newBuilder()
-                            .header("Proxy-Authorization", auth)
-                            .build()
-                    } ?: response.request
-                }
-                .fastFallback(true)
-                .connectTimeout(15, TimeUnit.SECONDS)
-                .readTimeout(15, TimeUnit.SECONDS)
-                .build()
-        ).setUserAgent(com.echo.innertube.models.YouTubeClient.IOS.userAgent)
-
-        val downloadUtil = com.mrtdk.liquid_glass.playback.DownloadUtil.getInstance(this)
-        val downloadCache = downloadUtil.downloadCache
-        val playerCache = downloadUtil.playerCache
-
-        val cacheDataSourceFactory = androidx.media3.datasource.cache.CacheDataSource.Factory()
-            .setCache(downloadCache)
-            .setUpstreamDataSourceFactory(
-                androidx.media3.datasource.cache.CacheDataSource.Factory()
-                    .setCache(playerCache)
-                    .setUpstreamDataSourceFactory(okHttpDataSourceFactory)
-            )
-            .setCacheWriteDataSinkFactory(null)
-            .setFlags(androidx.media3.datasource.cache.CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
-
-        val resolvingDataSourceFactory = androidx.media3.datasource.ResolvingDataSource.Factory(cacheDataSourceFactory) { dataSpec ->
-            if (dataSpec.uri.scheme == "yt") {
-                val videoId = dataSpec.uri.host ?: dataSpec.uri.toString().removePrefix("yt://")
-                
-                // If it is in the download cache, play it instantly without resolving (supports offline play)
-                val isCached = downloadCache.isCached(
-                    videoId,
-                    dataSpec.position,
-                    if (dataSpec.length >= 0) dataSpec.length else 1
-                )
-                if (isCached) {
-                    return@Factory dataSpec
-                }
-
-                activeResolutions.incrementAndGet()
-                acquireLocks()
-
-                val streamUrl = try {
-                    kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
-                        com.mrtdk.liquid_glass.playback.MusicPlayer.resolveUrl(videoId)
-                    }
-                } catch (e: Exception) {
-                    null
-                } finally {
-                    activeResolutions.decrementAndGet()
-                    mainHandler.post { updateWakeLocks() }
-                }
-
-                if (!streamUrl.isNullOrBlank()) {
-                    dataSpec.withUri(android.net.Uri.parse(streamUrl))
-                } else {
-                    throw java.io.IOException("No se pudo obtener el flujo de reproducción para $videoId")
-                }
-            } else {
-                dataSpec
+        val okHttpClient = OkHttpClient.Builder()
+            .proxy(YouTube.proxy)
+            .proxyAuthenticator { _, response ->
+                YouTube.proxyAuth?.let { auth ->
+                    response.request.newBuilder()
+                        .header("Proxy-Authorization", auth)
+                        .build()
+                } ?: response.request
             }
-        }
+            .fastFallback(true)
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .build()
 
-        val defaultDataSourceFactory = androidx.media3.datasource.DefaultDataSource.Factory(this, resolvingDataSourceFactory)
+        val dataSourceFactory = createDataSourceFactory(okHttpClient)
 
         val extractorsFactory = androidx.media3.extractor.ExtractorsFactory {
             arrayOf(
@@ -176,7 +122,7 @@ class MusicService : MediaSessionService() {
             )
         }
 
-        val mediaSourceFactory = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(defaultDataSourceFactory, extractorsFactory)
+        val mediaSourceFactory = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(dataSourceFactory, extractorsFactory)
 
         val renderersFactory = object : androidx.media3.exoplayer.DefaultRenderersFactory(this) {
             override fun buildAudioSink(
@@ -192,8 +138,19 @@ class MusicService : MediaSessionService() {
             }
         }
 
+        val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
+            .setBufferDurationsMs(
+                15_000,
+                45_000,
+                500,
+                1_000
+            )
+            .setPrioritizeTimeOverSizeThresholds(true)
+            .build()
+
         player = ExoPlayer.Builder(this, renderersFactory)
             .setMediaSourceFactory(mediaSourceFactory)
+            .setLoadControl(loadControl)
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(C.USAGE_MEDIA)
@@ -210,7 +167,7 @@ class MusicService : MediaSessionService() {
             private val songRetryCounts = java.util.concurrent.ConcurrentHashMap<String, Int>()
 
             private fun getHttpResponseCode(error: androidx.media3.common.PlaybackException): Int {
-                var cause: Throwable? = error
+                var cause: Throwable? = error.cause ?: error
                 while (cause != null) {
                     if (cause is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException) {
                         return cause.responseCode
@@ -219,23 +176,34 @@ class MusicService : MediaSessionService() {
                     if (msg.contains("Response code: 403") || msg.contains("403")) {
                         return 403
                     }
+                    if (msg.contains("Response code: 416") || msg.contains("416")) {
+                        return 416
+                    }
                     cause = cause.cause
                 }
                 return -1
             }
 
+            private fun isExpiredUrlError(error: androidx.media3.common.PlaybackException): Boolean {
+                val code = getHttpResponseCode(error)
+                return code == 403 || error.message?.contains("403") == true
+            }
+
+            private fun isRangeNotSatisfiableError(error: androidx.media3.common.PlaybackException): Boolean {
+                val code = getHttpResponseCode(error)
+                return code == 416 || error.message?.contains("416") == true
+            }
+
+            private fun isPageReloadError(error: androidx.media3.common.PlaybackException): Boolean {
+                val msg = (error.message.orEmpty() + " " + error.cause?.message.orEmpty()).lowercase()
+                return msg.contains("page needs to be reloaded") || msg.contains("reload")
+            }
+
             private fun handlePlaybackRecovery(error: androidx.media3.common.PlaybackException, mediaId: String) {
                 val httpCode = getHttpResponseCode(error)
-                val is403 = httpCode == 403
-                val isNetworkError = is403 ||
-                        error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ||
-                        error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
-                        error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ||
-                        error.errorCode == androidx.media3.common.PlaybackException.ERROR_CODE_IO_UNSPECIFIED ||
-                        error.cause is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException ||
-                        error.cause is java.io.IOException
-
-                if (!isNetworkError) return
+                val is403 = isExpiredUrlError(error)
+                val is416 = isRangeNotSatisfiableError(error)
+                val isReload = isPageReloadError(error)
 
                 val currentRetries = songRetryCounts.getOrDefault(mediaId, 0)
                 if (currentRetries >= 3) {
@@ -244,13 +212,16 @@ class MusicService : MediaSessionService() {
                 }
 
                 songRetryCounts[mediaId] = currentRetries + 1
-                android.util.Log.w("MusicService", "Recovering from error (http=$httpCode, code=${error.errorCode}) for $mediaId, retry #${currentRetries + 1}/3")
+                android.util.Log.w("MusicService", "Recovering from error (http=$httpCode, is403=$is403, code=${error.errorCode}) for $mediaId, retry #${currentRetries + 1}/3")
 
                 com.mrtdk.liquid_glass.playback.MusicPlayer.clearCache(mediaId)
                 com.echo.innertube.YouTubeExtractor.clearCache()
 
-                val currentPos = player.currentPosition
+                val currentPos = if (is416) 0L else player.currentPosition
                 val currentIndex = player.currentMediaItemIndex
+
+                val downloadUtil = com.mrtdk.liquid_glass.playback.DownloadUtil.getInstance(this@MusicService)
+                val playerCache = downloadUtil.playerCache
 
                 recoveryJob?.cancel()
                 recoveryJob = serviceScope.launch(Dispatchers.IO) {
@@ -638,8 +609,76 @@ class MusicService : MediaSessionService() {
         }
     }
 
+    private fun createCacheDataSource(okHttpClient: OkHttpClient): androidx.media3.datasource.cache.CacheDataSource.Factory {
+        val downloadUtil = com.mrtdk.liquid_glass.playback.DownloadUtil.getInstance(this)
+        val downloadCache = downloadUtil.downloadCache
+        val playerCache = downloadUtil.playerCache
+
+        return androidx.media3.datasource.cache.CacheDataSource.Factory()
+            .setCache(downloadCache)
+            .setUpstreamDataSourceFactory(
+                androidx.media3.datasource.cache.CacheDataSource.Factory()
+                    .setCache(playerCache)
+                    .setUpstreamDataSourceFactory(
+                        androidx.media3.datasource.DefaultDataSource.Factory(
+                            this,
+                            androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(okHttpClient)
+                        )
+                    )
+            )
+            .setCacheWriteDataSinkFactory(null)
+            .setFlags(androidx.media3.datasource.cache.CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+    }
+
+    private fun createDataSourceFactory(okHttpClient: OkHttpClient): androidx.media3.datasource.DataSource.Factory {
+        val downloadUtil = com.mrtdk.liquid_glass.playback.DownloadUtil.getInstance(this)
+        val downloadCache = downloadUtil.downloadCache
+        val playerCache = downloadUtil.playerCache
+
+        return androidx.media3.datasource.ResolvingDataSource.Factory(createCacheDataSource(okHttpClient)) { dataSpec ->
+            val mediaId = dataSpec.key ?: dataSpec.uri.host ?: dataSpec.uri.toString().removePrefix("yt://")
+
+            // 1. If cached in downloadCache or playerCache, play immediately without network
+            if (downloadCache.isCached(
+                    mediaId,
+                    dataSpec.position,
+                    if (dataSpec.length >= 0) dataSpec.length else 1
+                ) ||
+                playerCache.isCached(mediaId, dataSpec.position, CHUNK_LENGTH)
+            ) {
+                return@Factory dataSpec
+            }
+
+            // 2. If valid stream URL is cached in memory, use it with 512KB chunking
+            com.mrtdk.liquid_glass.playback.MusicPlayer.getCachedUrl(mediaId)?.let { streamUrl ->
+                return@Factory dataSpec.withUri(android.net.Uri.parse(streamUrl)).subrange(dataSpec.uriPositionOffset, CHUNK_LENGTH)
+            }
+
+            activeResolutions.incrementAndGet()
+            acquireLocks()
+
+            val streamUrl = try {
+                kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
+                    com.mrtdk.liquid_glass.playback.MusicPlayer.resolveUrl(mediaId)
+                }
+            } catch (e: Exception) {
+                null
+            } finally {
+                activeResolutions.decrementAndGet()
+                mainHandler.post { updateWakeLocks() }
+            }
+
+            if (!streamUrl.isNullOrBlank()) {
+                dataSpec.withUri(android.net.Uri.parse(streamUrl)).subrange(dataSpec.uriPositionOffset, CHUNK_LENGTH)
+            } else {
+                throw java.io.IOException("No se pudo obtener el flujo de reproducción para $mediaId")
+            }
+        }
+    }
+
     companion object {
         const val CHANNEL_ID = "music_channel_01"
         const val NOTIFICATION_ID = 888
+        const val CHUNK_LENGTH = 512 * 1024L
     }
 }

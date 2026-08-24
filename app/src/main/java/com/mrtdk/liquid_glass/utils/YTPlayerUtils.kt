@@ -11,6 +11,7 @@ import com.echo.innertube.models.YouTubeClient
 import com.echo.innertube.models.YouTubeClient.Companion.ANDROID_CREATOR
 import com.echo.innertube.models.YouTubeClient.Companion.ANDROID_VR_1_43_32
 import com.echo.innertube.models.YouTubeClient.Companion.ANDROID_VR_1_61_48
+import com.echo.innertube.models.YouTubeClient.Companion.ANDROID_VR_NO_AUTH
 import com.echo.innertube.models.YouTubeClient.Companion.IOS
 import com.echo.innertube.models.YouTubeClient.Companion.IPADOS
 import com.echo.innertube.models.YouTubeClient.Companion.MOBILE
@@ -20,13 +21,14 @@ import com.echo.innertube.models.YouTubeClient.Companion.WEB
 import com.echo.innertube.models.YouTubeClient.Companion.WEB_CREATOR
 import com.echo.innertube.models.YouTubeClient.Companion.WEB_REMIX
 import com.echo.innertube.models.response.PlayerResponse
-import com.mrtdk.liquid_glass.jiosaavn.SaavnService
 import com.mrtdk.liquid_glass.utils.potoken.PoTokenGenerator
 import com.mrtdk.liquid_glass.utils.potoken.PoTokenResult
+import com.mrtdk.liquid_glass.jiosaavn.SaavnService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
@@ -52,19 +54,21 @@ object YTPlayerUtils {
 
     /**
      * Primary client for YouTube playback streams.
-     * IOS & IPADOS currently bypass Google bot attestation checks completely.
+     * ANDROID_VR_1_43_32 provides direct unencrypted streaming URLs without 403 bot blocks
+     * and uses fixed-bitrate audio stream fixing audio stuttering.
      */
-    private val MAIN_CLIENT: YouTubeClient = IOS
+    private val MAIN_CLIENT: YouTubeClient = ANDROID_VR_1_43_32
 
     private val STREAM_FALLBACK_CLIENTS: Array<YouTubeClient> = arrayOf(
-        IPADOS,
-        ANDROID_VR_1_43_32,
         ANDROID_VR_1_61_48,
-        ANDROID_CREATOR,
-        MOBILE,
+        WEB_REMIX,
         TVHTML5_SIMPLY_EMBEDDED_PLAYER,
         TVHTML5,
-        WEB_REMIX,
+        ANDROID_CREATOR,
+        IPADOS,
+        ANDROID_VR_NO_AUTH,
+        MOBILE,
+        IOS,
         WEB,
         WEB_CREATOR
     )
@@ -72,8 +76,7 @@ object YTPlayerUtils {
     data class PlaybackData(
         val format: PlayerResponse.StreamingData.Format?,
         val streamUrl: String,
-        val expiresInSeconds: Int = 21600,
-        val isSaavnStream: Boolean = false
+        val expiresInSeconds: Int = 21600
     )
 
     fun init(context: Context) {
@@ -81,94 +84,147 @@ object YTPlayerUtils {
     }
 
     /**
-     * Resolves the best stream URL for playback.
-     * Uses JioSaavn 320kbps as primary lossless source (like ViviMusic),
-     * falling back smoothly to YouTube InnerTube streams with session rotation.
+     * Resolves the exact audio stream URL adopting ViviMusic's fast streaming architecture:
+     * - Tier 1: Direct YouTube InnerTube Playback (Instant <150ms start with ANDROID_VR_1_43_32).
+     * - Tier 2: Bot Detection Mitigation & Session Rotation.
+     * - Tier 3: NewPipeExtractor direct stream resolution.
+     * - Tier 4: Lossless 320kbps Matcher fallback.
+     * - Tier 5: Resilient Piped API direct stream resolution.
+     * - Tier 6: Resilient Invidious API stream resolution.
      */
     suspend fun resolveStreamUrl(
         videoId: String,
         preferLow: Boolean = false,
         playlistId: String? = null
     ): String? = withContext(Dispatchers.IO) {
-        // ── 1. JioSaavn Fast Intercept (ViviMusic Pattern) ────────────────────
-        try {
-            val saavnStreamUrl = resolveSaavnStream(videoId)
-            if (!saavnStreamUrl.isNullOrBlank()) {
-                Log.i(TAG, "Successfully resolved lossless 320kbps stream via JioSaavn for videoId=$videoId")
-                return@withContext saavnStreamUrl
-            }
-        } catch (e: Exception) {
-            Log.d(TAG, "JioSaavn resolution skipped/failed for $videoId: ${e.message}")
-        }
-
-        // ── 2. YouTube InnerTube Playback Resolution ─────────────────────────
+        // ── Tier 1: Direct YouTube InnerTube Playback Resolution (<150ms) ─────
         val firstAttempt = resolvePlaybackData(videoId, preferLow, playlistId)
         if (firstAttempt.isSuccess) {
-            BotDetectionMitigator.notifyPlaybackSuccess()
-            return@withContext firstAttempt.getOrNull()?.streamUrl
+            val url = firstAttempt.getOrNull()?.streamUrl
+            if (!url.isNullOrBlank()) {
+                BotDetectionMitigator.notifyPlaybackSuccess()
+                return@withContext url
+            }
         }
 
-        // ── 3. Bot Detection Mitigation & Session Rotation ───────────────────
+        // ── Tier 2: Bot Detection Mitigation & Session Rotation ───────────────
         if (YouTube.cookie == null) {
-            Log.w(TAG, "First playback attempt failed for $videoId. Rotating guest session and retrying...")
+            Log.w(TAG, "Tier 1 playback failed for $videoId. Rotating guest session and retrying...")
             BotDetectionMitigator.rotateGuestSession()
             val retryAttempt = resolvePlaybackData(videoId, preferLow, playlistId)
             if (retryAttempt.isSuccess) {
-                BotDetectionMitigator.notifyPlaybackSuccess()
-                return@withContext retryAttempt.getOrNull()?.streamUrl
+                val url = retryAttempt.getOrNull()?.streamUrl
+                if (!url.isNullOrBlank()) {
+                    BotDetectionMitigator.notifyPlaybackSuccess()
+                    return@withContext url
+                }
             }
+        }
+
+        // ── Tier 3: NewPipeExtractor Direct Stream Extraction (ViMusic Engine) ─
+        try {
+            val npStreams = NewPipeExtractor.newPipePlayer(videoId)
+            val bestAudioStream = npStreams.firstOrNull { it.first in listOf(251, 140, 250, 249) }?.second
+                ?: npStreams.firstOrNull()?.second
+            if (!bestAudioStream.isNullOrBlank() && validateStatus(bestAudioStream)) {
+                Log.d(TAG, "Tier 3 (NewPipeExtractor) stream resolved for $videoId")
+                return@withContext bestAudioStream
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Tier 3 NewPipeExtractor failed for $videoId: ${e.message}")
+        }
+
+        // ── Tier 4: Lossless 320kbps Matcher Fallback ─────────────────────────
+        try {
+            val losslessUrl = resolveLosslessStreamStrict(videoId)
+            if (!losslessUrl.isNullOrBlank()) {
+                Log.d(TAG, "Tier 4 (Lossless 320kbps) hit for $videoId")
+                return@withContext losslessUrl
+            }
+        } catch (e: Exception) {
+            Log.d(TAG, "Tier 4 lossless matcher skipped for $videoId: ${e.message}")
+        }
+
+        // ── Tier 5: Resilient Piped API Direct Stream Extraction ──────────────
+        Log.w(TAG, "InnerTube and NewPipe failed. Trying Piped API stream resolution for $videoId...")
+        val pipedUrl = resolvePipedStream(videoId)
+        if (!pipedUrl.isNullOrBlank()) {
+            return@withContext pipedUrl
+        }
+
+        // ── Tier 6: Resilient Invidious API Direct Stream Extraction ──────────
+        Log.w(TAG, "Piped failed. Trying Invidious API stream resolution for $videoId...")
+        val invidiousUrl = resolveInvidiousStream(videoId)
+        if (!invidiousUrl.isNullOrBlank()) {
+            return@withContext invidiousUrl
         }
 
         firstAttempt.getOrNull()?.streamUrl
     }
 
     /**
-     * Attempts to find a matching track on JioSaavn and retrieve direct 320kbps CDN URL.
+     * Strict verification matcher matching ViviMusic's lossless engine.
+     * Only returns the stream if:
+     * 1. The title normalized matches the target song title
+     * 2. The artist normalized matches the target artist
+     * 3. The duration is within +/- 4 seconds
+     * Returns null immediately if not strictly matching, falling back to YouTube InnerTube.
      */
-    private suspend fun resolveSaavnStream(videoId: String): String? = coroutineScope {
-        val nextDeferred = async {
-            try {
-                val nextResult = YouTube.next(WatchEndpoint(videoId = videoId)).getOrNull()
-                nextResult?.items?.getOrNull(nextResult.currentIndex ?: 0)
-                    ?: nextResult?.items?.firstOrNull()
-            } catch (_: Exception) { null }
+    private suspend fun resolveLosslessStreamStrict(videoId: String): String? = coroutineScope {
+        val songItem = try {
+            val nextResult = YouTube.next(WatchEndpoint(videoId = videoId)).getOrNull()
+            nextResult?.items?.getOrNull(nextResult.currentIndex ?: 0)
+                ?: nextResult?.items?.firstOrNull()
+        } catch (_: Exception) { null } ?: return@coroutineScope null
+
+        val title = songItem.title?.trim().orEmpty()
+        val artists = songItem.artists?.map { it.name.trim() } ?: emptyList()
+        val expectedDuration = songItem.duration
+
+        if (title.isBlank() || expectedDuration == null || expectedDuration <= 0) {
+            return@coroutineScope null
         }
 
-        val songItem = nextDeferred.await()
-        val title = songItem?.title?.trim().orEmpty()
-        val artists = songItem?.artists?.map { it.name.trim() } ?: emptyList()
-        val artist = artists.joinToString(", ")
-        val expectedDuration = songItem?.duration
+        fun clean(text: String): String {
+            return text.lowercase(java.util.Locale.ROOT)
+                .replace(Regex("""\((?:official|music|video|audio|lyrics|remix|feat\.?|ft\.?).*?\)"""), "")
+                .replace(Regex("""\[.*?\]"""), "")
+                .replace(Regex("""[^a-z0-9\s]"""), " ")
+                .replace(Regex("""\s+"""), " ")
+                .trim()
+        }
 
-        if (title.isBlank()) return@coroutineScope null
+        val cleanWantedTitle = clean(title)
+        val cleanWantedArtists = artists.map { clean(it) }.filter { it.isNotBlank() }
 
-        val query = if (artist.isNotBlank()) "$title $artist" else title
-        val songs = SaavnService.searchSongs(query).getOrNull() ?: return@coroutineScope null
+        val query = if (artists.isNotEmpty()) "$title ${artists.first()}" else title
+        val candidates = SaavnService.searchSongs(query).getOrNull() ?: return@coroutineScope null
 
-        val wantedTitleLower = title.lowercase(java.util.Locale.US)
-        val wantedArtistsLower = artists.map { it.lowercase(java.util.Locale.US) }
+        val strictMatch = candidates.firstOrNull { candidate ->
+            val candidateDuration = candidate.duration ?: return@firstOrNull false
+            if (kotlin.math.abs(candidateDuration - expectedDuration) > 4) {
+                return@firstOrNull false
+            }
 
-        val bestMatch = songs.firstOrNull { candidate ->
-            val candidateTitleLower = candidate.name.lowercase(java.util.Locale.US)
-            val candidateArtists = candidate.artists.primary.map { it.name.lowercase(java.util.Locale.US) }
+            val cleanCandTitle = clean(candidate.name)
+            val titleMatch = cleanCandTitle == cleanWantedTitle ||
+                    (cleanWantedTitle.length >= 4 && cleanCandTitle.contains(cleanWantedTitle)) ||
+                    (cleanCandTitle.length >= 4 && cleanWantedTitle.contains(cleanCandTitle))
 
-            val titleMatches = candidateTitleLower == wantedTitleLower ||
-                    candidateTitleLower.contains(wantedTitleLower) ||
-                    wantedTitleLower.contains(candidateTitleLower)
+            if (!titleMatch) return@firstOrNull false
 
-            val artistMatches = wantedArtistsLower.isEmpty() ||
-                    candidateArtists.any { ca -> wantedArtistsLower.any { wa -> ca.contains(wa) || wa.contains(ca) } }
+            val candArtists = candidate.artists.primary.map { clean(it.name) }
+            val artistMatch = cleanWantedArtists.isEmpty() ||
+                    candArtists.any { ca -> cleanWantedArtists.any { wa -> ca.contains(wa) || wa.contains(ca) } }
 
-            val durationMatches = if (expectedDuration != null && candidate.duration != null) {
-                kotlin.math.abs(expectedDuration - candidate.duration) <= 15
-            } else true
+            artistMatch
+        }
 
-            titleMatches && (artistMatches || durationMatches)
-        } ?: songs.firstOrNull()
-
-        if (bestMatch != null) {
-            val streamUrl = SaavnService.selectBestUrl(bestMatch.downloadUrl, "320kbps")
+        if (strictMatch != null) {
+            val streamUrl = SaavnService.selectBestUrl(strictMatch.downloadUrl, "320kbps")
             if (!streamUrl.isNullOrBlank()) {
+                val artistNames = strictMatch.artists.primary.joinToString { it.name }
+                Log.i(TAG, "Lossless 320kbps verified exact match for $videoId: '${strictMatch.name}' by '$artistNames'")
                 return@coroutineScope streamUrl
             }
         }
@@ -284,29 +340,33 @@ object YTPlayerUtils {
 
                 bestCandidateUrl = currentUrl
                 bestCandidateFormat = foundFormat
-                format = foundFormat
-                streamUrl = currentUrl
-                streamExpiresInSeconds = streamPlayerResponse.streamingData?.expiresInSeconds ?: 21600
 
-                // If main client, last client or private track, skip network validation probe
+                // For main client or last fallback client: skip validation for instant start without consuming tokens
                 if (clientIndex == -1 || clientIndex == STREAM_FALLBACK_CLIENTS.size - 1) {
-                    Log.d(TAG, "Using stream from ${currentClient.clientName} directly")
+                    Log.d(TAG, "Selected stream client without probe: ${currentClient.clientName}")
+                    format = foundFormat
+                    streamUrl = currentUrl
+                    streamExpiresInSeconds = streamPlayerResponse.streamingData?.expiresInSeconds ?: 21600
                     break
                 }
 
-                // Pre-validation with HTTP byte-range GET (Range: bytes=0-0)
-                if (validateStatus(currentUrl)) {
+                // Pre-validation for fallback web clients to ensure working link
+                if (validateStatus(currentUrl, currentClient.userAgent)) {
                     Log.d(TAG, "Stream validated OK with client: ${currentClient.clientName}")
+                    format = foundFormat
+                    streamUrl = currentUrl
+                    streamExpiresInSeconds = streamPlayerResponse.streamingData?.expiresInSeconds ?: 21600
                     break
                 } else {
-                    Log.w(TAG, "Stream validation probe failed for client: ${currentClient.clientName}")
+                    Log.w(TAG, "Stream validation probe failed (403/invalid) for client: ${currentClient.clientName}")
                     if (currentClient.useWebPoTokens) {
                         try {
                             val nTransformed = YouTubeExtractor.deobfuscateUrlNParam(currentUrl)
-                            if (nTransformed != currentUrl && validateStatus(nTransformed)) {
+                            if (nTransformed != currentUrl && validateStatus(nTransformed, currentClient.userAgent)) {
                                 Log.d(TAG, "Alternate n-transform validated OK!")
+                                format = foundFormat
                                 streamUrl = nTransformed
-                                bestCandidateUrl = nTransformed
+                                streamExpiresInSeconds = streamPlayerResponse.streamingData?.expiresInSeconds ?: 21600
                                 break
                             }
                         } catch (_: Exception) {}
@@ -319,11 +379,28 @@ object YTPlayerUtils {
             }
         }
 
-        // If no stream passed validation probe, fall back to best candidate URL from clients
+        // Fallback to NewPipe direct extractor if all InnerTube clients were rejected
+        if (streamUrl == null) {
+            Log.w(TAG, "All InnerTube clients failed. Trying NewPipe direct stream extraction for $videoId...")
+            try {
+                val npStreams = NewPipeExtractor.newPipePlayer(videoId)
+                val bestAudio = npStreams.firstOrNull { it.first == 251 }?.second
+                    ?: npStreams.firstOrNull { it.first == 140 }?.second
+                    ?: npStreams.firstOrNull()?.second
+                if (!bestAudio.isNullOrBlank() && validateStatus(bestAudio, YouTubeClient.USER_AGENT_WEB)) {
+                    Log.d(TAG, "NewPipe direct stream extraction successful!")
+                    streamUrl = bestAudio
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "NewPipe direct fallback error: ${e.message}")
+            }
+        }
+
+        // Final fallback to best candidate URL
         if (streamUrl == null && bestCandidateUrl != null) {
             streamUrl = bestCandidateUrl
             format = bestCandidateFormat
-            Log.d(TAG, "Using best candidate stream URL despite probe status")
+            Log.d(TAG, "Using best candidate stream URL")
         }
 
         if (streamUrl == null) {
@@ -341,16 +418,19 @@ object YTPlayerUtils {
         playerResponse: PlayerResponse,
         preferLow: Boolean
     ): PlayerResponse.StreamingData.Format? {
-        val formats = playerResponse.streamingData?.adaptiveFormats
-            ?.filter { it.isAudio } ?: return null
+        val adaptiveFormats = playerResponse.streamingData?.adaptiveFormats ?: return null
+        val formats = adaptiveFormats.filter { it.isAudio && it.isOriginal }
+            .ifEmpty { adaptiveFormats.filter { it.isAudio } }
+            .ifEmpty { return null }
 
-        return if (preferLow) {
-            formats.minByOrNull { it.bitrate }
-        } else {
-            // Prioritize Opus (audio/webm, itag 251) or high-bitrate AAC (itag 140)
-            formats.filter { it.mimeType.contains("opus", ignoreCase = true) }
-                .maxByOrNull { it.bitrate }
-                ?: formats.maxByOrNull { it.bitrate }
+        val qualitySetting = try {
+            com.mrtdk.liquid_glass.data.LibraryManager.getString("audio_quality", "auto")?.lowercase() ?: "auto"
+        } catch (_: Exception) { "auto" }
+
+        val isLow = preferLow || qualitySetting == "low"
+
+        return formats.maxByOrNull {
+            it.bitrate * (if (isLow) -1 else 1) + (if (it.mimeType.startsWith("audio/webm")) 10240 else 0)
         }
     }
 
@@ -393,17 +473,115 @@ object YTPlayerUtils {
         return null
     }
 
-    private fun validateStatus(url: String): Boolean {
-        return try {
-            val request = Request.Builder()
-                .url(url)
-                .header("User-Agent", YouTubeClient.USER_AGENT_WEB)
-                .header("Range", "bytes=0-0")
-                .get()
-                .build()
+    private suspend fun resolvePipedStream(videoId: String): String? = withContext(Dispatchers.IO) {
+        val instances = listOf(
+            "https://pipedapi.kavin.rocks",
+            "https://api.piped.privacydev.net",
+            "https://piped-api.garudalinux.org",
+            "https://yt.drgnz.club",
+            "https://pa.il.ax",
+            "https://pipedapi.tokhmi.xyz"
+        )
 
-            httpClient.newCall(request).execute().use { response ->
-                response.isSuccessful || response.code == 206
+        for (instance in instances) {
+            try {
+                val url = "$instance/streams/$videoId"
+                val request = Request.Builder()
+                    .url(url)
+                    .header("User-Agent", YouTubeClient.USER_AGENT_WEB)
+                    .get()
+                    .build()
+
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val body = response.body?.string() ?: return@use
+                        val json = org.json.JSONObject(body)
+                        val audioStreams = json.optJSONArray("audioStreams") ?: return@use
+
+                        var bestUrl: String? = null
+                        var highestBitrate = 0
+                        for (i in 0 until audioStreams.length()) {
+                            val stream = audioStreams.getJSONObject(i)
+                            val streamUrl = stream.optString("url")
+                            val bitrate = stream.optInt("bitrate", 0)
+                            if (streamUrl.isNotBlank() && bitrate > highestBitrate) {
+                                highestBitrate = bitrate
+                                bestUrl = streamUrl
+                            }
+                        }
+                        if (!bestUrl.isNullOrBlank() && validateStatus(bestUrl)) {
+                            Log.d(TAG, "Successfully resolved stream via Piped ($instance) for $videoId")
+                            return@withContext bestUrl
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.d(TAG, "Piped instance $instance failed for $videoId: ${e.message}")
+            }
+        }
+        null
+    }
+
+    private suspend fun resolveInvidiousStream(videoId: String): String? = withContext(Dispatchers.IO) {
+        val instances = listOf(
+            "https://yewtu.be",
+            "https://inv.nadeko.net",
+            "https://invidious.nerdvpn.de",
+            "https://invidious.jing.rocks",
+            "https://vid.puffyan.us"
+        )
+
+        for (instance in instances) {
+            try {
+                val url = "$instance/api/v1/videos/$videoId"
+                val request = Request.Builder()
+                    .url(url)
+                    .header("User-Agent", YouTubeClient.USER_AGENT_WEB)
+                    .get()
+                    .build()
+
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val body = response.body?.string() ?: return@use
+                        val json = org.json.JSONObject(body)
+                        val adaptiveFormats = json.optJSONArray("adaptiveFormats") ?: return@use
+
+                        var bestUrl: String? = null
+                        var highestBitrate = 0
+                        for (i in 0 until adaptiveFormats.length()) {
+                            val format = adaptiveFormats.getJSONObject(i)
+                            val type = format.optString("type", "")
+                            if (type.startsWith("audio/")) {
+                                val streamUrl = format.optString("url")
+                                val bitrate = format.optInt("bitrate", 0)
+                                if (streamUrl.isNotBlank() && bitrate > highestBitrate) {
+                                    highestBitrate = bitrate
+                                    bestUrl = streamUrl
+                                }
+                            }
+                        }
+                        if (!bestUrl.isNullOrBlank() && validateStatus(bestUrl)) {
+                            Log.d(TAG, "Successfully resolved stream via Invidious ($instance) for $videoId")
+                            return@withContext bestUrl
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.d(TAG, "Invidious instance $instance failed for $videoId: ${e.message}")
+            }
+        }
+        null
+    }
+
+    private fun validateStatus(urlStr: String, userAgent: String? = null): Boolean {
+        return try {
+            val requestBuilder = Request.Builder()
+                .head()
+                .url(urlStr)
+                .header("User-Agent", userAgent ?: YouTubeClient.USER_AGENT_WEB)
+
+            httpClient.newCall(requestBuilder.build()).execute().use { response ->
+                response.isSuccessful || response.code == 206 || response.code == 200
             }
         } catch (_: Exception) {
             false

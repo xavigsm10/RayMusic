@@ -2514,7 +2514,8 @@ fun AddMusicContent(
             if (selectedTab == 0) {
                 // Resultados principales: search songs, artists, albums in parallel
                 YouTube.search(query, YouTube.SearchFilter.FILTER_SONG).onSuccess { result ->
-                    val songs = result.items.filterIsInstance<SongItem>().take(10)
+                    val allS = result.items.filterIsInstance<SongItem>()
+                    val songs = (allS.filterNot { it.isVideoSong }.ifEmpty { allS }).take(10)
                     val artists = try { YouTube.search(query, YouTube.SearchFilter.FILTER_ARTIST).getOrNull()?.items?.filterIsInstance<ArtistItem>()?.take(3) ?: emptyList() } catch (_: Exception) { emptyList() }
                     val albums = try { YouTube.search(query, YouTube.SearchFilter.FILTER_ALBUM).getOrNull()?.items?.filterIsInstance<AlbumItem>()?.take(3) ?: emptyList() } catch (_: Exception) { emptyList() }
                     searchResults = artists + albums + songs
@@ -2532,7 +2533,10 @@ fun AddMusicContent(
                     searchResults = when (selectedTab) {
                         1 -> result.items.filterIsInstance<ArtistItem>().take(20)
                         2 -> result.items.filterIsInstance<AlbumItem>().take(20)
-                        else -> result.items.filterIsInstance<SongItem>().take(20)
+                        else -> {
+                            val allS = result.items.filterIsInstance<SongItem>()
+                            (allS.filterNot { it.isVideoSong }.ifEmpty { allS }).take(20)
+                        }
                     }
                 }.onFailure {
                     searchResults = emptyList()
@@ -2549,14 +2553,14 @@ fun AddMusicContent(
                 val isAlbum = activeAlbumId!!.startsWith("MPREb") || activeAlbumId!!.startsWith("FEmusic")
                 if (isAlbum) {
                     YouTube.album(activeAlbumId!!).onSuccess { album ->
-                        nestedSongs = album.songs
+                        nestedSongs = album.songs.filterNot { it.isVideoSong }.ifEmpty { album.songs }
                     }.onFailure {
                         nestedSongs = emptyList()
                     }
                 } else {
                     val pId = activeAlbumId!!.removePrefix("VL")
                     YouTube.playlist(pId).onSuccess { playlist ->
-                        nestedSongs = playlist.songs
+                        nestedSongs = playlist.songs.filterNot { it.isVideoSong }.ifEmpty { playlist.songs }
                     }.onFailure {
                         nestedSongs = emptyList()
                     }
@@ -2572,7 +2576,8 @@ fun AddMusicContent(
             withContext(Dispatchers.IO) {
                 YouTube.artist(activeArtistId!!).onSuccess { page ->
                     val songsSection = page.sections.find { it.title.contains("song", true) || it.title.contains("cancion", true) }
-                    nestedSongs = songsSection?.items?.filterIsInstance<SongItem>() ?: emptyList()
+                    val sList = songsSection?.items?.filterIsInstance<SongItem>() ?: emptyList()
+                    nestedSongs = sList.filterNot { it.isVideoSong }.ifEmpty { sList }
                 }.onFailure {
                     nestedSongs = emptyList()
                 }

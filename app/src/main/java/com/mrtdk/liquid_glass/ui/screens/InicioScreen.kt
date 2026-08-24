@@ -192,7 +192,8 @@ fun InicioScreen(
                         playlistList.addAll(section.items.filterIsInstance<PlaylistItem>())
                         when {
                             title.contains("vuelve a escuchar") || title.contains("listen again") || title.contains("vuelve a") -> {
-                                quickPicksTemp = section.items.filterIsInstance<SongItem>()
+                                val songs = section.items.filterIsInstance<SongItem>()
+                                quickPicksTemp = songs.filterNot { it.isVideoSong }.ifEmpty { songs }
                             }
                             title.contains("similar a") || title.contains("similar to") -> {
                                 val artistMatch = Regex("similar a (.*)", RegexOption.IGNORE_CASE).find(section.title)
@@ -202,7 +203,8 @@ fun InicioScreen(
                             }
                             title.contains("selecciones para ti") || title.contains("picks for you") || title.contains("mixes para ti") -> {
                                 if (seleccionesListTemp.isEmpty()) {
-                                    seleccionesListTemp = section.items.filterIsInstance<SongItem>()
+                                    val songs = section.items.filterIsInstance<SongItem>()
+                                    seleccionesListTemp = songs.filterNot { it.isVideoSong }.ifEmpty { songs }
                                     seleccionesTitleTemp = section.title
                                 }
                             }
@@ -213,13 +215,15 @@ fun InicioScreen(
                     }
 
                     if (quickPicksTemp.isEmpty() && sects.isNotEmpty()) {
-                        quickPicksTemp = sects.flatMap { it.items.filterIsInstance<SongItem>() }.take(12)
+                        val songs = sects.flatMap { it.items.filterIsInstance<SongItem>() }
+                        quickPicksTemp = (songs.filterNot { it.isVideoSong }.ifEmpty { songs }).take(12)
                     }
                     if (suggestionsList.isEmpty() && sects.isNotEmpty()) {
                         suggestionsList.addAll(sects.flatMap { it.items }.take(15))
                     }
                     if (seleccionesListTemp.isEmpty() && sects.isNotEmpty()) {
-                        seleccionesListTemp = sects.flatMap { it.items.filterIsInstance<SongItem>() }.drop(12).take(15)
+                        val songs = sects.flatMap { it.items.filterIsInstance<SongItem>() }
+                        seleccionesListTemp = (songs.filterNot { it.isVideoSong }.ifEmpty { songs }).drop(12).take(15)
                     }
 
                     withContext(Dispatchers.Main) {
@@ -292,7 +296,8 @@ fun InicioScreen(
                     
                     if (vid.length != 11) {
                         val searchResult = YouTube.search(query = "${song.subtitle} ${song.title}", filter = com.echo.innertube.YouTube.SearchFilter.FILTER_SONG).getOrNull()
-                        val match = searchResult?.items?.filterIsInstance<SongItem>()?.firstOrNull()
+                        val songItems = searchResult?.items?.filterIsInstance<SongItem>().orEmpty()
+                        val match = songItems.firstOrNull { !it.isVideoSong } ?: songItems.firstOrNull()
                         if (match != null) {
                             vid = match.id
                         }
@@ -305,14 +310,16 @@ fun InicioScreen(
                     if (vid.length == 11) {
                         val nextResult = YouTube.next(WatchEndpoint(videoId = vid)).getOrNull()
                         if (nextResult != null) {
-                            fetchedSongs.addAll(nextResult.items)
+                            val nonVideo = nextResult.items.filterNot { it.isVideoSong }
+                            fetchedSongs.addAll(nonVideo.ifEmpty { nextResult.items })
                         }
 
                         val relatedEndpoint = nextResult?.relatedEndpoint
                         if (relatedEndpoint != null) {
                             val relatedPage = YouTube.related(relatedEndpoint).getOrNull()
                             if (relatedPage != null) {
-                                fetchedSongs.addAll(relatedPage.songs)
+                                val nonVideo = relatedPage.songs.filterNot { it.isVideoSong }
+                                fetchedSongs.addAll(nonVideo.ifEmpty { relatedPage.songs })
                                 fetchedArtists.addAll(relatedPage.artists)
                                 fetchedPlaylists.addAll(relatedPage.playlists)
                             }
@@ -323,7 +330,9 @@ fun InicioScreen(
                     if (fetchedSongs.size < 6 && artist.isNotBlank() && artist != "Artistas") {
                         val artistSongSearch = YouTube.search(query = artist, filter = com.echo.innertube.YouTube.SearchFilter.FILTER_SONG).getOrNull()
                         if (artistSongSearch != null) {
-                            fetchedSongs.addAll(artistSongSearch.items.filterIsInstance<SongItem>())
+                            val songItems = artistSongSearch.items.filterIsInstance<SongItem>()
+                            val nonVideo = songItems.filterNot { it.isVideoSong }
+                            fetchedSongs.addAll(nonVideo.ifEmpty { songItems })
                         }
                     }
 

@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.PlayArrow
@@ -135,7 +136,11 @@ fun AlbumScreen(
     val isVerticalAlbum = isAfterHoursAlbum || isAroundTheFurAlbum
 
     val animatedImageLoader = remember(context) {
+        val global = coil.Coil.imageLoader(context)
         coil.ImageLoader.Builder(context)
+            .memoryCache(global.memoryCache)
+            .diskCache(global.diskCache)
+            .allowHardware(true)
             .components {
                 add(com.mrtdk.liquid_glass.utils.CoilUtils.HdThumbnailInterceptor())
                 if (android.os.Build.VERSION.SDK_INT >= 28) {
@@ -890,7 +895,7 @@ fun AlbumScreen(
                         artistId = song.artists.firstOrNull()?.id
                     )
                 }) {
-                    Icon(Icons.Default.MoreVert, null, tint = contentColor.copy(alpha = 0.6f))
+                    Icon(Icons.Default.MoreHoriz, null, tint = contentColor.copy(alpha = 0.6f))
                 }
             }
             // Divider

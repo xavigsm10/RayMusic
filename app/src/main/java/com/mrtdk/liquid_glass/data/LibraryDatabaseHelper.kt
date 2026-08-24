@@ -153,6 +153,19 @@ class LibraryDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABA
         }
     }
 
+    override fun onOpen(db: SQLiteDatabase) {
+        super.onOpen(db)
+        try {
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_saved_items_timestamp ON $TABLE_SAVED_ITEMS ($KEY_TIMESTAMP DESC)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_recently_played_timestamp ON $TABLE_RECENTLY_PLAYED ($KEY_TIMESTAMP DESC)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_playback_history_timestamp ON playback_history (timestamp DESC)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_playlist_items_playlist_id ON $TABLE_PLAYLIST_ITEMS ($KEY_PLAYLIST_ID)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_playlist_items_song_id ON $TABLE_PLAYLIST_ITEMS ($KEY_SONG_ID)")
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     // --- Settings CRUD ---
 
     fun getSetting(key: String, defaultValue: String? = null): String? {

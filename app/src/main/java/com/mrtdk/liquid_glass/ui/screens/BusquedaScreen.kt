@@ -152,7 +152,8 @@ fun BusquedaScreen(
                     val songRes = YouTube.search(query, YouTube.SearchFilter.FILTER_SONG)
                     if (songRes.isSuccess) {
                         val result = songRes.getOrNull()
-                        val songs = result?.items?.filterIsInstance<SongItem>()?.take(30) ?: emptyList()
+                        val allSongs = result?.items?.filterIsInstance<SongItem>().orEmpty()
+                        val songs = (allSongs.filter { !it.isVideoSong } + allSongs.filter { it.isVideoSong }).take(30)
                         val artists = try { YouTube.search(query, YouTube.SearchFilter.FILTER_ARTIST).getOrNull()?.items?.filterIsInstance<ArtistItem>()?.take(3) ?: emptyList() } catch (_: Exception) { emptyList() }
                         val albums = try { YouTube.search(query, YouTube.SearchFilter.FILTER_ALBUM).getOrNull()?.items?.filterIsInstance<AlbumItem>()?.take(3) ?: emptyList() } catch (_: Exception) { emptyList() }
                         state.displayResults = artists + albums + songs
@@ -180,7 +181,10 @@ fun BusquedaScreen(
                         state.displayResults = when (state.selectedTab) {
                             1 -> result?.items?.filterIsInstance<ArtistItem>()?.take(30) ?: emptyList()
                             2 -> result?.items?.filterIsInstance<AlbumItem>()?.take(30) ?: emptyList()
-                            else -> result?.items?.filterIsInstance<SongItem>()?.take(30) ?: emptyList()
+                            else -> {
+                                val allSongs = result?.items?.filterIsInstance<SongItem>().orEmpty()
+                                (allSongs.filter { !it.isVideoSong } + allSongs.filter { it.isVideoSong }).take(30)
+                            }
                         }
                     } else {
                         state.displayResults = emptyList()

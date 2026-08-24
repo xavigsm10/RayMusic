@@ -217,7 +217,7 @@ fun NovedadesScreen(
                         val hasRealArtist = s.artists.any { it.id != null }
                         val duration = s.duration
                         val isNormalDuration = duration == null || duration < 600 // max 10 mins
-                        !isMix && !isGenericArtist && hasRealArtist && isNormalDuration
+                        !s.isVideoSong && !isMix && !isGenericArtist && hasRealArtist && isNormalDuration
                     }
 
                     // Fetch charts for trending/top songs from known artists

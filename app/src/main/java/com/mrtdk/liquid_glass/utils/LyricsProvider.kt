@@ -8,6 +8,7 @@ import com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeLine
 import com.mocharealm.accompanist.lyrics.core.model.synced.SyncedLine
 import com.mocharealm.accompanist.lyrics.core.parser.AutoParser
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import org.json.JSONObject
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
@@ -28,7 +29,7 @@ object LyricsProvider {
     fun cleanSearchTerm(term: String): String {
         var cleaned = term
         cleaned = cleaned.replace(Regex("(?i)\\b(feat\\.?|ft\\.?|with)\\b.*"), "")
-        cleaned = cleaned.replace(Regex("(?i)\\b(official\\s*video|official\\s*audio|video\\s*oficial|audio\\s*oficial|visualizer|lyric\\s*video|remastered|remaster|deluxe|live)\\b.*"), "")
+        cleaned = cleaned.replace(Regex("(?i)\\b(official\\s*video|official\\s*audio|video\\s*oficial|audio\\s*oficial|visualizer|lyric\\s*video|remastered|remaster|deluxe|live|hd|4k|audio|video)\\b.*"), "")
         cleaned = cleaned.replace(Regex("\\([^\\)]*\\)"), "")
         cleaned = cleaned.replace(Regex("\\[[^\\]]*\\]"), "")
         cleaned = cleaned.replace(Regex("[-–—:_\\s]+$"), "")
@@ -67,38 +68,59 @@ object LyricsProvider {
         return if (hasTiming) "line" else "plain"
     }
 
-    // 1. Better Lyrics (bLyrics / TTML RichSync)
-    suspend fun fetchBetterLyrics(title: String, artist: String, duration: Int = -1): LyricsFetchResult? = withContext(Dispatchers.IO) {
-        try {
-            val cleanTitle = cleanSearchTerm(title)
-            val cleanArtist = cleanSearchTerm(artist)
-            val encodedTitle = URLEncoder.encode(cleanTitle, "UTF-8")
-            val encodedArtist = URLEncoder.encode(cleanArtist, "UTF-8")
-            var urlString = "https://lyrics-api.boidu.dev/getLyrics?s=$encodedTitle&a=$encodedArtist"
-            if (duration > 0) urlString += "&d=$duration"
-            val url = URL(urlString)
-            val connection = (url.openConnection() as HttpURLConnection).apply {
-                requestMethod = "GET"
-                connectTimeout = 2500
-                readTimeout = 2500
-                setRequestProperty("User-Agent", "BetterLyrics/2.1.0 RayMusic/1.0")
-            }
+    // 1. Better Lyrics (bLyrics / TTML RichSync - Word by Word / Syllable)
+    suspend fun fetchBetterLyrics(title: String, artist: String, duration: Int = -1, album: String? = null): LyricsFetchResult? = withContext(Dispatchers.IO) {
+        val cleanTitle = cleanSearchTerm(title)
+        val cleanArtist = cleanSearchTerm(artist)
+        
+        val queries = listOf(
+            Pair(cleanTitle, cleanArtist),
+            Pair(title.trim(), artist.trim())
+        ).distinct()
 
-            if (connection.responseCode == 200) {
-                val response = InputStreamReader(connection.inputStream).readText()
-                val json = JSONObject(response)
-                val ttml = json.optString("ttml", "")
-                if (ttml.isNotEmpty()) {
-                    val parsed = AutoParser().parse(ttml)
-                    if (parsed != null && parsed.lines.isNotEmpty()) {
-                        val res = LyricsFetchResult(parsed, "Better Lyrics", detectSyncType(parsed))
-                        putCachedLyrics(artist, title, res)
-                        return@withContext res
-                    }
+        for ((t, a) in queries) {
+            try {
+                val encodedTitle = URLEncoder.encode(t, "UTF-8")
+                val encodedArtist = URLEncoder.encode(a, "UTF-8")
+                
+                // Try first with duration if available, then fallback without duration
+                val urlVariants = mutableListOf("https://lyrics-api.boidu.dev/getLyrics?s=$encodedTitle&a=$encodedArtist")
+                if (duration > 0) {
+                    urlVariants.add(0, "https://lyrics-api.boidu.dev/getLyrics?s=$encodedTitle&a=$encodedArtist&d=$duration")
                 }
+                if (!album.isNullOrBlank()) {
+                    val encodedAlbum = URLEncoder.encode(cleanSearchTerm(album), "UTF-8")
+                    urlVariants.add(0, "https://lyrics-api.boidu.dev/getLyrics?s=$encodedTitle&a=$encodedArtist&al=$encodedAlbum")
+                }
+
+                for (urlString in urlVariants) {
+                    try {
+                        val url = URL(urlString)
+                        val connection = (url.openConnection() as HttpURLConnection).apply {
+                            requestMethod = "GET"
+                            connectTimeout = 3000
+                            readTimeout = 3000
+                            setRequestProperty("User-Agent", "BetterLyrics/2.1.0 RayMusic/1.0")
+                        }
+
+                        if (connection.responseCode == 200) {
+                            val response = InputStreamReader(connection.inputStream).readText()
+                            val json = JSONObject(response)
+                            val ttml = json.optString("ttml", "")
+                            if (ttml.isNotEmpty()) {
+                                val parsed = AutoParser().parse(ttml)
+                                if (parsed != null && parsed.lines.isNotEmpty()) {
+                                    val res = LyricsFetchResult(parsed, "Better Lyrics", detectSyncType(parsed))
+                                    putCachedLyrics(artist, title, res)
+                                    return@withContext res
+                                }
+                            }
+                        }
+                    } catch (e: Exception) { }
+                }
+            } catch (e: Exception) {
+                Log.w("LyricsProvider", "Error fetching BetterLyrics: ${e.message}")
             }
-        } catch (e: Exception) {
-            Log.w("LyricsProvider", "Error fetching BetterLyrics: ${e.message}")
         }
         null
     }
@@ -117,8 +139,8 @@ object LyricsProvider {
             val url = URL(urlString)
             val connection = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
-                connectTimeout = 2500
-                readTimeout = 2500
+                connectTimeout = 3000
+                readTimeout = 3000
                 setRequestProperty("User-Agent", "BetterLyrics/2.1.0 RayMusic/1.0")
             }
 
@@ -150,7 +172,7 @@ object LyricsProvider {
         null
     }
 
-    // 3. BiniLyrics / LyricsPlus
+    // 3. BiniLyrics / LyricsPlus / Musixmatch
     suspend fun fetchBiniLyrics(title: String, artist: String, duration: Int = -1): LyricsFetchResult? = withContext(Dispatchers.IO) {
         val baseUrls = listOf(
             "https://lyricsplus.binimum.org",
@@ -169,8 +191,8 @@ object LyricsProvider {
                 val url = URL(urlString)
                 val connection = (url.openConnection() as HttpURLConnection).apply {
                     requestMethod = "GET"
-                    connectTimeout = 2000
-                    readTimeout = 2000
+                    connectTimeout = 2500
+                    readTimeout = 2500
                     setRequestProperty("User-Agent", "BetterLyrics/2.1.0 RayMusic/1.0")
                 }
 
@@ -192,20 +214,18 @@ object LyricsProvider {
                         }
                         if (lines.isNotEmpty()) {
                             val parsed = SyncedLyrics(lines = lines)
-                            val res = LyricsFetchResult(parsed, "BiniLyrics", "line")
+                            val res = LyricsFetchResult(parsed, "Musixmatch", "line")
                             putCachedLyrics(artist, title, res)
                             return@withContext res
                         }
                     }
                 }
-            } catch (e: Exception) {
-                // Continue to next mirror
-            }
+            } catch (e: Exception) { }
         }
         null
     }
 
-    // 4. LRCLib (Synced + Plain)
+    // 4. LRCLib (Synced + Plain with search fallback)
     suspend fun fetchLRCLib(title: String, artist: String, duration: Int = -1): LyricsFetchResult? = withContext(Dispatchers.IO) {
         try {
             val cleanTitle = cleanSearchTerm(title)
@@ -218,8 +238,8 @@ object LyricsProvider {
             val url = URL(urlString)
             val connection = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
-                connectTimeout = 2000
-                readTimeout = 2000
+                connectTimeout = 2500
+                readTimeout = 2500
                 setRequestProperty("User-Agent", "BetterLyrics/2.1.0 RayMusic/1.0")
             }
 
@@ -244,6 +264,33 @@ object LyricsProvider {
                         return@withContext res
                     }
                 }
+            } else {
+                // Search fallback on LRCLib
+                val searchUrl = URL("https://lrclib.net/api/search?q=${URLEncoder.encode("$cleanTitle $cleanArtist", "UTF-8")}")
+                val searchConn = (searchUrl.openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 2500
+                    readTimeout = 2500
+                    setRequestProperty("User-Agent", "BetterLyrics/2.1.0 RayMusic/1.0")
+                }
+                if (searchConn.responseCode == 200) {
+                    val response = InputStreamReader(searchConn.inputStream).readText()
+                    val jsonArray = org.json.JSONArray(response)
+                    if (jsonArray.length() > 0) {
+                        for (i in 0 until jsonArray.length()) {
+                            val item = jsonArray.getJSONObject(i)
+                            val synced = item.optString("syncedLyrics", "")
+                            if (synced.isNotEmpty()) {
+                                val parsed = AutoParser().parse(synced)
+                                if (parsed != null && parsed.lines.isNotEmpty()) {
+                                    val res = LyricsFetchResult(parsed, "LRCLIB", "line")
+                                    putCachedLyrics(artist, title, res)
+                                    return@withContext res
+                                }
+                            }
+                        }
+                    }
+                }
             }
         } catch (e: Exception) {
             Log.w("LyricsProvider", "Error fetching LRCLIB: ${e.message}")
@@ -259,8 +306,8 @@ object LyricsProvider {
             val searchUrl = URL("https://lyrics.kugou.com/search?ver=1&man=yes&client=pc&keyword=$encodedKeyword")
             val searchConn = (searchUrl.openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
-                connectTimeout = 2000
-                readTimeout = 2000
+                connectTimeout = 2500
+                readTimeout = 2500
             }
 
             if (searchConn.responseCode == 200) {
@@ -275,8 +322,8 @@ object LyricsProvider {
                     val downloadUrl = URL("https://lyrics.kugou.com/download?fmt=lrc&charset=utf8&client=pc&ver=1&id=$id&accesskey=$accessKey")
                     val downloadConn = (downloadUrl.openConnection() as HttpURLConnection).apply {
                         requestMethod = "GET"
-                        connectTimeout = 2000
-                        readTimeout = 2000
+                        connectTimeout = 2500
+                        readTimeout = 2500
                     }
 
                     if (downloadConn.responseCode == 200) {
@@ -309,8 +356,7 @@ object LyricsProvider {
             if (!lyricsStr.isNullOrEmpty()) {
                 val parsed = AutoParser().parse(lyricsStr)
                 if (parsed != null && parsed.lines.isNotEmpty()) {
-                    val res = LyricsFetchResult(parsed, "YouTube Captions", "line")
-                    return@withContext res
+                    return@withContext LyricsFetchResult(parsed, "YouTube Captions", "line")
                 }
             }
         } catch (e: Exception) {
@@ -329,8 +375,7 @@ object LyricsProvider {
                 if (!lyricsStr.isNullOrEmpty()) {
                     val parsed = AutoParser().parse(lyricsStr)
                     if (parsed != null && parsed.lines.isNotEmpty()) {
-                        val res = LyricsFetchResult(parsed, "YouTube Music", "plain")
-                        return@withContext res
+                        return@withContext LyricsFetchResult(parsed, "YouTube Music", "plain")
                     }
                 }
             }
@@ -347,8 +392,8 @@ object LyricsProvider {
             val searchUrl = URL("https://api-lyrics.simpmusic.org/search?q=$query&limit=1")
             val searchConn = (searchUrl.openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
-                connectTimeout = 2000
-                readTimeout = 2000
+                connectTimeout = 2500
+                readTimeout = 2500
             }
 
             if (searchConn.responseCode == 200) {
@@ -361,8 +406,8 @@ object LyricsProvider {
                         val lyricsUrl = URL("https://api-lyrics.simpmusic.org/lyrics?id=$videoId")
                         val lyricsConn = (lyricsUrl.openConnection() as HttpURLConnection).apply {
                             requestMethod = "GET"
-                            connectTimeout = 2000
-                            readTimeout = 2000
+                            connectTimeout = 2500
+                            readTimeout = 2500
                         }
                         if (lyricsConn.responseCode == 200) {
                             val lyricsResponse = InputStreamReader(lyricsConn.inputStream).readText()
@@ -391,21 +436,53 @@ object LyricsProvider {
         null
     }
 
-    // Unified Automatic Fetch: Parallel High-Speed Resolution (Glassy/BetterLyrics standard)
-    suspend fun fetchAutoLyrics(videoId: String, title: String, artist: String, duration: Int = -1, album: String? = null): LyricsFetchResult? = withContext(Dispatchers.IO) {
+    // Unified Automatic Fetch: Race-to-first parallel resolution with instant display callback
+    suspend fun fetchAutoLyrics(
+        videoId: String,
+        title: String,
+        artist: String,
+        duration: Int = -1,
+        album: String? = null,
+        onFirstResult: (suspend (LyricsFetchResult) -> Unit)? = null
+    ): LyricsFetchResult? = withContext(Dispatchers.IO) {
         // 0. Cache Check (0ms instantaneous)
-        getCachedLyrics(artist, title)?.let { return@withContext it }
-
-        val available = fetchAllAvailableProviders(videoId, title, artist, duration, album)
-        val best = available.firstOrNull { it.syncType == "syllable" }
-            ?: available.firstOrNull { it.syncType == "word" }
-            ?: available.firstOrNull { it.syncType == "line" }
-            ?: available.firstOrNull()
-
-        if (best != null) {
-            putCachedLyrics(artist, title, best)
+        getCachedLyrics(artist, title)?.let {
+            onFirstResult?.invoke(it)
+            return@withContext it
         }
-        best
+
+        val resultChannel = Channel<LyricsFetchResult>(Channel.UNLIMITED)
+        val job = launch {
+            val jobs = listOf(
+                async { fetchBetterLyrics(title, artist, duration, album)?.let { resultChannel.trySend(it) } },
+                async { fetchUnisonLyrics(videoId, title, artist, duration, album)?.let { resultChannel.trySend(it) } },
+                async { fetchBiniLyrics(title, artist, duration)?.let { resultChannel.trySend(it) } },
+                async { fetchLRCLib(title, artist, duration)?.let { resultChannel.trySend(it) } },
+                async { fetchKuGouLyrics(title, artist)?.let { resultChannel.trySend(it) } },
+                async { if (videoId.isNotBlank()) fetchYouTubeCaptions(videoId)?.let { resultChannel.trySend(it) } },
+                async { fetchSimpMusicLyrics(title, artist)?.let { resultChannel.trySend(it) } },
+                async { if (videoId.isNotBlank()) fetchYouTubeLyrics(videoId)?.let { resultChannel.trySend(it) } }
+            )
+            jobs.forEach { it.join() }
+            resultChannel.close()
+        }
+
+        var bestResult: LyricsFetchResult? = null
+        for (res in resultChannel) {
+            if (bestResult == null) {
+                bestResult = res
+                putCachedLyrics(artist, title, res)
+                onFirstResult?.invoke(res)
+                if (res.syncType == "syllable") break
+            } else if (bestResult.syncType == "plain" && (res.syncType == "line" || res.syncType == "syllable")) {
+                bestResult = res
+                putCachedLyrics(artist, title, res)
+                onFirstResult?.invoke(res)
+                if (res.syncType == "syllable") break
+            }
+        }
+        job.cancel()
+        bestResult
     }
 
     // Unified Automatic Fetch: Returns all available distributors for the floating dock (up to 8 distributors)
@@ -413,17 +490,17 @@ object LyricsProvider {
         val results = mutableListOf<LyricsFetchResult>()
 
         coroutineScope {
-            val blDeferred = async { fetchBetterLyrics(title, artist, duration) }
+            val blDeferred = async { fetchBetterLyrics(title, artist, duration, album) }
             val unisonDeferred = async { fetchUnisonLyrics(videoId, title, artist, duration, album) }
             val biniDeferred = async { fetchBiniLyrics(title, artist, duration) }
             val lrcDeferred = async { fetchLRCLib(title, artist, duration) }
             val kugouDeferred = async { fetchKuGouLyrics(title, artist) }
             val ytCaptionsDeferred = async { if (videoId.isNotBlank()) fetchYouTubeCaptions(videoId) else null }
+            val simpDeferred = async { fetchSimpMusicLyrics(title, artist) }
             val ytMusicDeferred = async { if (videoId.isNotBlank()) fetchYouTubeLyrics(videoId) else null }
 
             blDeferred.await()?.let { 
                 results.add(it)
-                // Add Portato variant if syllable sync is available
                 if (it.syncType == "syllable") {
                     results.add(LyricsFetchResult(it.lyrics, "Better Lyrics Portato", "word"))
                     results.add(LyricsFetchResult(it.lyrics, "Better Lyrics Legato", "line"))
@@ -431,22 +508,18 @@ object LyricsProvider {
             }
             biniDeferred.await()?.let { 
                 results.add(it)
-                results.add(LyricsFetchResult(it.lyrics, "Musixmatch", "line"))
             }
             unisonDeferred.await()?.let { results.add(it) }
             lrcDeferred.await()?.let { 
                 results.add(it)
                 if (it.syncType != "plain") {
-                    results.add(LyricsFetchResult(it.lyrics, "LRCLib", "plain"))
+                    results.add(LyricsFetchResult(it.lyrics, "LRCLib (Texto)", "plain"))
                 }
             }
             kugouDeferred.await()?.let { results.add(it) }
             ytCaptionsDeferred.await()?.let { results.add(it) }
+            simpDeferred.await()?.let { results.add(it) }
             ytMusicDeferred.await()?.let { results.add(LyricsFetchResult(it.lyrics, "YouTube", "plain")) }
-        }
-
-        if (results.isEmpty()) {
-            fetchAutoLyrics(videoId, title, artist, duration, album)?.let { results.add(it) }
         }
 
         results.distinctBy { "${it.providerName}:::${it.syncType}" }

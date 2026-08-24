@@ -27,6 +27,9 @@ import com.mrtdk.liquid_glass.ui.components.LiquidButton
 import com.mrtdk.glass.GlassContainer
 import com.mrtdk.glass.GlassBox
 import com.mrtdk.liquid_glass.ui.components.AppleMusicArtistMenu
+import android.os.Build
+import androidx.compose.ui.graphics.BlurEffect
+import androidx.compose.ui.graphics.TileMode
 import com.skydoves.cloudy.cloudy
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.graphicsLayer
@@ -254,7 +257,8 @@ fun ArtistScreen(
                     val songsResult = YouTube.search(firstArtistName, YouTube.SearchFilter.FILTER_SONG)
                     val albumsResult = YouTube.search(firstArtistName, YouTube.SearchFilter.FILTER_ALBUM)
                     
-                    val songs = songsResult.getOrNull()?.items?.filterIsInstance<SongItem>()?.take(10) ?: emptyList()
+                    val songItems = songsResult.getOrNull()?.items?.filterIsInstance<SongItem>().orEmpty()
+                    val songs = (songItems.filterNot { it.isVideoSong }.ifEmpty { songItems }).take(10)
                     val albums = albumsResult.getOrNull()?.items?.filterIsInstance<AlbumItem>() ?: emptyList()
                     
                     if (songsResult.isFailure) {
@@ -535,7 +539,15 @@ fun ArtistScreen(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
-                                .cloudy(radius = 120)
+                                .then(
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                        Modifier.graphicsLayer {
+                                            renderEffect = BlurEffect(90f, 90f, TileMode.Clamp)
+                                        }
+                                    } else {
+                                        Modifier.cloudy(radius = 35)
+                                    }
+                                )
                                 .drawWithContent {
                                     drawContent()
                                     drawRect(
@@ -656,11 +668,12 @@ fun ArtistScreen(
                                 )
                             }
 
-                            // Play Button (large white solid circle, black play icon)
-                            topSongsSection?.items?.filterIsInstance<SongItem>()?.firstOrNull()?.let { firstSong ->
+                            val allTopSongs = topSongsSection?.items?.filterIsInstance<SongItem>().orEmpty()
+                            val cleanTopSongs = allTopSongs.filterNot { it.isVideoSong }.ifEmpty { allTopSongs }
+                            cleanTopSongs.firstOrNull()?.let { firstSong ->
                                 IconButton(
                                     onClick = {
-                                        val remainingSongs = topSongsSection.items.filterIsInstance<SongItem>().drop(1)
+                                        val remainingSongs = cleanTopSongs.drop(1)
                                         val artistQueue = remainingSongs.map { t ->
                                             QueueItem(
                                                 title = t.title,
@@ -849,7 +862,8 @@ fun ArtistScreen(
 
             // ── TOP SONGS ──────────────────────────────────
             if (topSongsSection != null) {
-                val songs = topSongsSection.items.filterIsInstance<SongItem>().take(4)
+                val allTop = topSongsSection.items.filterIsInstance<SongItem>()
+                val songs = (allTop.filterNot { it.isVideoSong }.ifEmpty { allTop }).take(4)
                 item {
                     val coroutineScope = rememberCoroutineScope()
                     Row(
@@ -1435,7 +1449,15 @@ fun ArtistScreen(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
-                                    .cloudy(radius = 120)
+                                    .then(
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                            Modifier.graphicsLayer {
+                                                renderEffect = BlurEffect(90f, 90f, TileMode.Clamp)
+                                            }
+                                        } else {
+                                            Modifier.cloudy(radius = 35)
+                                        }
+                                    )
                                     .drawWithContent {
                                         drawContent()
                                         drawRect(
@@ -1876,7 +1898,7 @@ fun ArtistScreen(
                 dominantColor = dominantColor,
                 onDismiss = { showArtistMenu = false },
                 onSongSelected = onSongSelected,
-                topSongs = topSongsSection?.items?.filterIsInstance<SongItem>() ?: emptyList()
+                topSongs = topSongsSection?.items?.filterIsInstance<SongItem>()?.let { l -> l.filterNot { it.isVideoSong }.ifEmpty { l } } ?: emptyList()
             )
         }
 

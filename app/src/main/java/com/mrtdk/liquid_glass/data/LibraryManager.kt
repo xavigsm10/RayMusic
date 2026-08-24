@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.Color
 
 enum class ItemType { ALBUM, ARTIST, SONG }
 
+@androidx.compose.runtime.Immutable
 data class LibraryItem(
     val id: String,
     val title: String,
@@ -20,6 +21,7 @@ data class LibraryItem(
     val album: String? = null
 )
 
+@androidx.compose.runtime.Immutable
 data class Playlist(
     val id: String,
     val name: String,
