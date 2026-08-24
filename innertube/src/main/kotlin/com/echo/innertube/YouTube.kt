@@ -251,11 +251,11 @@ object YouTube {
                 explicit = false
             )
 
-            var songs = if (withSongs) AlbumPage.getSongs(response, albumItem) else emptyList()
-
-            if (withSongs && songs.isEmpty()) {
-                songs = albumSongs(playlistId, albumItem).getOrElse { emptyList() }
-            }
+            var songs = if (withSongs) {
+                albumSongs(playlistId, albumItem).getOrNull()
+                    ?.ifEmpty { null }
+                    ?: AlbumPage.getSongs(response, albumItem)
+            } else emptyList()
 
             val otherVersions = (response.contents?.twoColumnBrowseResultsRenderer?.secondaryContents?.sectionListRenderer?.contents?.getOrNull(1)
                 ?: response.contents?.singleColumnBrowseResultsRenderer?.tabs?.firstOrNull()?.tabRenderer?.content?.sectionListRenderer?.contents?.getOrNull(1))

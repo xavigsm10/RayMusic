@@ -148,6 +148,8 @@ class MainActivity : ComponentActivity() {
                     .maxSizePercent(0.05)
                     .build()
             }
+            .allowHardware(true)
+            .crossfade(true)
             .components {
                 add(com.mrtdk.liquid_glass.utils.CoilUtils.HdThumbnailInterceptor())
             }
@@ -540,8 +542,9 @@ class MainActivity : ComponentActivity() {
                                     if (result != null) {
                                         val ep = result.endpoint
                                         val cont = result.continuation
-                                        val items = result.items
-                                        val nextItems = if (items.isNotEmpty() && items.first().id == vid) items.drop(1) else items
+                                        val nonVideoItems = result.items.filterNot { it.isVideoSong }
+                                        val finalItems = nonVideoItems.ifEmpty { result.items }
+                                        val nextItems = if (finalItems.isNotEmpty() && finalItems.first().id == vid) finalItems.drop(1) else finalItems
 
                                         withContext(kotlinx.coroutines.Dispatchers.Main) {
                                             queueEndpoint = ep
@@ -572,7 +575,9 @@ class MainActivity : ComponentActivity() {
                                                 val newEp = nextResult.endpoint
                                                 val newCont = nextResult.continuation
                                                 val existingIds = upNextSongs.map { it.id }.toSet()
-                                                val newSongs = nextResult.items.filter { it.id !in existingIds }
+                                                val nonVideoNew = nextResult.items.filterNot { it.isVideoSong }
+                                                val finalNew = nonVideoNew.ifEmpty { nextResult.items }
+                                                val newSongs = finalNew.filter { it.id !in existingIds }
                                                 if (newSongs.isNotEmpty()) {
                                                     withContext(kotlinx.coroutines.Dispatchers.Main) {
                                                         queueEndpoint = newEp
@@ -838,10 +843,6 @@ class MainActivity : ComponentActivity() {
                                             val bottomPad = if (isKeyboardOpen) 2.dp else 16.dp
                                             val navBarHeightWithPadding = 72.dp + bottomPad
 
-                                            val mpPadStart by androidx.compose.animation.core.animateDpAsState(if (isCollapsed) 80.dp else 16.dp, springSpec, label = "mpPadStart")
-                                            val mpPadEnd by androidx.compose.animation.core.animateDpAsState(if (isCollapsed) 80.dp else 16.dp, springSpec, label = "mpPadEnd")
-                                            val mpPadBottom by androidx.compose.animation.core.animateDpAsState(if (isCollapsed) bottomPad + 14.dp else navBarHeightWithPadding + 12.dp, springSpec, label = "mpPadBottom")
-
                                             val collapseProgress by androidx.compose.animation.core.animateFloatAsState(
                                                 targetValue = if (isCollapsed) 1f else 0f,
                                                 animationSpec = floatSpringSpec,
@@ -903,9 +904,12 @@ class MainActivity : ComponentActivity() {
                                                         .fillMaxWidth()
                                                         .align(Alignment.BottomCenter)
                                                         .layout { measurable, constraints ->
-                                                            val startPx = mpPadStart.roundToPx()
-                                                            val endPx = mpPadEnd.roundToPx()
-                                                            val bottomPx = mpPadBottom.roundToPx()
+                                                            val startDp = androidx.compose.ui.unit.lerp(16.dp, 80.dp, collapseProgress)
+                                                            val endDp = androidx.compose.ui.unit.lerp(16.dp, 80.dp, collapseProgress)
+                                                            val bottomDp = androidx.compose.ui.unit.lerp(navBarHeightWithPadding + 12.dp, bottomPad + 14.dp, collapseProgress)
+                                                            val startPx = startDp.roundToPx()
+                                                            val endPx = endDp.roundToPx()
+                                                            val bottomPx = bottomDp.roundToPx()
                                                             val targetWidth = (constraints.maxWidth - startPx - endPx).coerceAtLeast(0)
                                                             val placeable = measurable.measure(
                                                                 androidx.compose.ui.unit.Constraints.fixedWidth(targetWidth)

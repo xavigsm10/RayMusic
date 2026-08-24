@@ -225,7 +225,10 @@ data class SearchSummaryPage(
             return when {
                 renderer.isSong -> {
                     SongItem(
-                        id = renderer.playlistItemData?.videoId ?: return null,
+                        id = renderer.playlistItemData?.videoId
+                            ?: renderer.navigationEndpoint?.watchEndpoint?.videoId
+                            ?: renderer.overlay?.musicItemThumbnailOverlayRenderer?.content?.musicPlayButtonRenderer?.playNavigationEndpoint?.watchEndpoint?.videoId
+                            ?: return null,
                         title =
                             renderer.flexColumns
                                 .firstOrNull()

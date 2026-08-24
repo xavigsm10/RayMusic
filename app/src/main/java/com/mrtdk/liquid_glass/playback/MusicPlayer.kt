@@ -10,6 +10,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.echo.innertube.YouTube
+import com.echo.innertube.models.SongItem
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import kotlinx.coroutines.CoroutineScope
@@ -330,6 +331,10 @@ class MusicPlayer(private val context: Context) {
         private val spotifyToYtCache = java.util.concurrent.ConcurrentHashMap<String, String>()
         val songMetadataCache = java.util.concurrent.ConcurrentHashMap<String, Pair<String, String>>()
 
+        fun getCachedUrl(videoId: String): String? {
+            return songUrlCache[videoId]?.takeIf { it.second > System.currentTimeMillis() }?.first
+        }
+
         fun clearCache(videoId: String) {
             songUrlCache.remove(videoId)
             spotifyToYtCache.remove(videoId)
@@ -341,8 +346,8 @@ class MusicPlayer(private val context: Context) {
         }
 
         suspend fun resolveUrl(videoId: String): String? = withContext(Dispatchers.IO) {
-            val quality = com.mrtdk.liquid_glass.data.LibraryManager.getString("audio_quality", "high") ?: "high"
-            val preferLow = quality == "low"
+            val quality = com.mrtdk.liquid_glass.data.LibraryManager.getString("audio_quality", "auto") ?: "auto"
+            val preferLow = quality.equals("low", ignoreCase = true)
 
             // Check cache for this exact videoId (Spotify or YT)
             songUrlCache[videoId]?.takeIf { it.second > System.currentTimeMillis() }?.let {
@@ -376,7 +381,10 @@ class MusicPlayer(private val context: Context) {
                         val foundYtId = try {
                             val searchResult = YouTube.search(query, YouTube.SearchFilter.FILTER_SONG).getOrNull()
                                 ?: YouTube.search(query, YouTube.SearchFilter.FILTER_VIDEO).getOrNull()
-                            searchResult?.items?.firstOrNull()?.id
+                            val songItems = searchResult?.items?.filterIsInstance<SongItem>().orEmpty()
+                            songItems.firstOrNull { !it.isVideoSong }?.id
+                                ?: songItems.firstOrNull()?.id
+                                ?: searchResult?.items?.firstOrNull()?.id
                         } catch (e: Exception) {
                             android.util.Log.e("MusicPlayer", "Failed YouTube search for Spotify track $query", e)
                             null
@@ -416,7 +424,10 @@ class MusicPlayer(private val context: Context) {
                         val fallbackYtId = try {
                             val searchResult = YouTube.search(fallbackQuery, YouTube.SearchFilter.FILTER_SONG).getOrNull()
                                 ?: YouTube.search(fallbackQuery, YouTube.SearchFilter.FILTER_VIDEO).getOrNull()
-                            searchResult?.items?.firstOrNull()?.id
+                            val songItems = searchResult?.items?.filterIsInstance<SongItem>().orEmpty()
+                            songItems.firstOrNull { !it.isVideoSong }?.id
+                                ?: songItems.firstOrNull()?.id
+                                ?: searchResult?.items?.firstOrNull()?.id
                         } catch (_: Exception) { null }
 
                         if (fallbackYtId != null && isYouTubeId(fallbackYtId) && fallbackYtId != targetVideoId) {

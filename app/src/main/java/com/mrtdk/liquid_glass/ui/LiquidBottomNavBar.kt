@@ -146,6 +146,8 @@ fun LiquidBottomNavBar(
             val homeTabCenterX = 4.dp + tabWidthDp / 2
             val targetCenterX = 28.dp
 
+            val pillBorderColor = if (isDarkMode) Color.White.copy(alpha = 0.18f) else Color.Black.copy(alpha = 0.10f)
+
             // Main Navigation Pill (shrinks smoothly to become circular Home button)
             Box(
                 modifier = Modifier
@@ -166,7 +168,11 @@ fun LiquidBottomNavBar(
                         }
                     }
                     .let {
-                        if (searchProgressState.value > 0.001f || collapseProgressState.value > 0.001f) it.clip(Capsule()) else it
+                        val progress = if (searchProgressState.value > collapseProgressState.value) searchProgressState.value else collapseProgressState.value
+                        if (progress > 0.001f) {
+                            val borderColor = if (isDarkMode) Color.White.copy(alpha = 0.18f * progress) else Color.Black.copy(alpha = 0.10f * progress)
+                            it.clip(Capsule()).border(1.dp, borderColor, Capsule())
+                        } else it
                     },
                 contentAlignment = Alignment.Center
             ) {
@@ -228,6 +234,7 @@ fun LiquidBottomNavBar(
                         },
                         onDrawSurface = { drawRect(actualTintColor) }
                     )
+                    .border(1.dp, pillBorderColor, Capsule())
             ) {
                 val isSearchEnabled by remember {
                     derivedStateOf {
@@ -370,6 +377,7 @@ fun LiquidBottomNavBar(
                             onDrawSurface = { drawRect(actualTintColor) }
                         )
                         .clip(Capsule())
+                        .border(1.dp, pillBorderColor, Capsule())
                         .clickable { 
                             if (searchQuery.isNotEmpty()) {
                                 onSearchQueryChange("")
@@ -446,7 +454,7 @@ fun MainTabs(
                     modifier = Modifier
                         .size(iconSize)
                         .graphicsLayer {
-                            translationY = androidx.compose.ui.unit.lerp(3.dp, 5.dp, combineProgress()).toPx()
+                            translationY = androidx.compose.ui.unit.lerp(5.dp, 10.dp, combineProgress()).toPx()
                             alpha = if (index == 0) 1f else (1f - combineProgress())
                             val color = if (index == 0) {
                                 androidx.compose.ui.graphics.lerp(
@@ -471,6 +479,7 @@ fun MainTabs(
                     modifier = Modifier
                         .padding(top = 1.dp)
                         .graphicsLayer {
+                            translationY = androidx.compose.ui.unit.lerp(3.dp, 3.dp, combineProgress()).toPx()
                             alpha = 1f - combineProgress()
                         }
                 )

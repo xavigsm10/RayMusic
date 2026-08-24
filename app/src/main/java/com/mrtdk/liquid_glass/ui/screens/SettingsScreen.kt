@@ -709,7 +709,7 @@ fun PlayerSettingsScreen(
     onOpenEqualizer: () -> Unit
 ) {
     val scrollState = rememberScrollState()
-    var audioQuality by remember { mutableStateOf(LibraryManager.getString("audio_quality", "high") ?: "high") }
+    var audioQuality by remember { mutableStateOf(LibraryManager.getString("audio_quality", "auto") ?: "auto") }
     var autoplaySimilar by remember { mutableStateOf(LibraryManager.getString("autoplay_similar", "true") == "true") }
     var autoDownloadOnLike by remember { mutableStateOf(LibraryManager.getString("auto_download_on_like", "false") == "true") }
     var persistentQueue by remember { mutableStateOf(LibraryManager.getString("persistent_queue", "true") == "true") }
@@ -759,8 +759,9 @@ fun PlayerSettingsScreen(
                         description = {
                             Text(
                                 when (audioQuality) {
-                                    "low" -> stringResource(R.string.player_quality_low_desc)
-                                    else -> stringResource(R.string.player_quality_high_desc)
+                                    "low" -> "Baja (48 kbps AAC / 50 kbps Opus)"
+                                    "high" -> "Alta (160 kbps Opus / 128 kbps AAC)"
+                                    else -> "Automático (160 kbps Opus)"
                                 }
                             )
                         },
@@ -851,8 +852,9 @@ fun PlayerSettingsScreen(
         SingleChoiceDialog(
             title = stringResource(R.string.player_quality_title),
             options = listOf(
-                "low" to stringResource(R.string.player_quality_low),
-                "high" to stringResource(R.string.player_quality_high)
+                "auto" to "Automático (Recomendado - 160 kbps)",
+                "high" to "Alta (160 kbps Opus / 128 kbps AAC)",
+                "low" to "Baja (48 kbps AAC / 50 kbps Opus)"
             ),
             selectedValue = audioQuality,
             onDismiss = { showQualityDialog = false },

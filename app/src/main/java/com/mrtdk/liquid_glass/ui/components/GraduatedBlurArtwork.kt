@@ -69,10 +69,10 @@ fun GraduatedBlurArtwork(
 
         val transformModifier = Modifier.graphicsLayer {
             scaleX = horizontalScale
-            scaleY = if (isMirrored) -absVerticalScale else absVerticalScale
+            scaleY = verticalScale
             transformOrigin = androidx.compose.ui.graphics.TransformOrigin(
                 0.5f,
-                if (isMirrored) 0f else pivotY
+                pivotY
             )
 
             // Tras la inversión vertical, alinea el borde superior del reflejo
@@ -94,7 +94,7 @@ fun GraduatedBlurArtwork(
                 )
             }
         } else {
-            Modifier.cloudy(radius = 90)
+            Modifier.cloudy(radius = 35)
         }
 
         if (imageUrl is ImageBitmap) {
@@ -124,18 +124,6 @@ fun GraduatedBlurArtwork(
                     .fillMaxSize()
                     .then(transformModifier)
                     .then(deepBlurModifier)
-            )
-        }
-
-        if (!videoUrl.isNullOrBlank()) {
-            AnimatedArtworkPlayer(
-                videoUrl = videoUrl,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .then(transformModifier)
-                    .then(deepBlurModifier),
-                enableFrameCapture = false,
-                isPaused = false
             )
         }
 
@@ -174,7 +162,7 @@ fun GraduatedBlurArtwork(
                 )
             }
         } else {
-            Modifier.cloudy(radius = 25)
+            Modifier.cloudy(radius = 20)
         }
 
         val progressiveFadeModifier = Modifier
@@ -229,18 +217,6 @@ fun GraduatedBlurArtwork(
                         .fillMaxSize()
                         .then(transformModifier)
                         .then(frostedBlurModifier)
-                )
-            }
-
-            if (!videoUrl.isNullOrBlank()) {
-                AnimatedArtworkPlayer(
-                    videoUrl = videoUrl,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .then(transformModifier)
-                        .then(frostedBlurModifier),
-                    enableFrameCapture = false,
-                    isPaused = false
                 )
             }
         }
