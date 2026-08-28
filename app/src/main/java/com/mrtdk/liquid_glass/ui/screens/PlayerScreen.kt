@@ -1971,10 +1971,62 @@ fun PlayerScreen(
 
 
 
+        val isOverlayActive = showLyrics || showQueue
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val screenHeightPx = remember(context) { context.resources.displayMetrics.heightPixels.toFloat() }
+        val dragProgressFraction = if (screenHeightPx > 0f) (dragOffsetY.value / screenHeightPx).coerceIn(0f, 1f) else 0f
+        val sheetCornerRadius = if (!isOverlayActive) {
+            androidx.compose.ui.unit.lerp(0.dp, 36.dp, (dragProgressFraction * 4f).coerceIn(0f, 1f))
+        } else 0.dp
+
         GlassContainer(
-
-            modifier = Modifier.fillMaxSize(),
-
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    translationY = dragOffsetY.value
+                    shape = RoundedCornerShape(
+                        topStart = sheetCornerRadius.toPx(),
+                        topEnd = sheetCornerRadius.toPx(),
+                        bottomStart = 0f,
+                        bottomEnd = 0f
+                    )
+                    clip = true
+                    shadowElevation = if (dragProgressFraction > 0f) with(density) { 28.dp.toPx() } else 0f
+                }
+                .pointerInput(showLyrics, showQueue) {
+                    if (!showLyrics && !showQueue) {
+                        detectVerticalDragGestures(
+                            onDragEnd = {
+                                val currentOffsetY = dragOffsetY.value
+                                val thresholdPx = with(density) { 120.dp.toPx() }
+                                if (currentOffsetY > thresholdPx) {
+                                    scope.launch {
+                                        dragOffsetY.animateTo(
+                                            targetValue = screenHeightPx,
+                                            animationSpec = tween(280, easing = FastOutSlowInEasing)
+                                        )
+                                        onClose()
+                                    }
+                                } else {
+                                    scope.launch {
+                                        dragOffsetY.animateTo(
+                                            0f,
+                                            spring(
+                                                dampingRatio = Spring.DampingRatioLowBouncy,
+                                                stiffness = Spring.StiffnessMediumLow
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        ) { change, dragAmount ->
+                            if (dragAmount > 0f || dragOffsetY.value > 0f) {
+                                val newOffset = (dragOffsetY.value + dragAmount).coerceAtLeast(0f)
+                                scope.launch { dragOffsetY.snapTo(newOffset) }
+                            }
+                        }
+                    }
+                },
             useShader = true,
 
             content = {
@@ -2208,39 +2260,28 @@ fun PlayerScreen(
 
             val p = dragProgress.coerceIn(0f, 1f)
 
-            val imgOffsetYTarget = androidx.compose.ui.unit.lerp(startOffsetY, targetOffsetY, p)
-
-            val threshold = 0.85f
             val imgWidthTarget: androidx.compose.ui.unit.Dp
             val imgHeightTarget: androidx.compose.ui.unit.Dp
             val imgOffsetXTarget: androidx.compose.ui.unit.Dp
+            val imgOffsetYTarget: androidx.compose.ui.unit.Dp
             val imageCornerTarget: androidx.compose.ui.unit.Dp
 
             if (isOverlayActive) {
                 imgWidthTarget = androidx.compose.ui.unit.lerp(startWidth, 40.dp, p)
                 imgHeightTarget = androidx.compose.ui.unit.lerp(startHeight, 40.dp, p)
                 imgOffsetXTarget = androidx.compose.ui.unit.lerp(startOffsetX, targetOffsetX, p)
+                imgOffsetYTarget = androidx.compose.ui.unit.lerp(startOffsetY, targetOffsetY, p)
                 imageCornerTarget = androidx.compose.ui.unit.lerp(startCorner, 20.dp, p)
             } else {
-                if (p <= threshold) {
-                    imgWidthTarget = startWidth
-                    imgHeightTarget = startHeight
-                    imgOffsetXTarget = startOffsetX
-                    imageCornerTarget = startCorner
-                } else {
-                    val p2 = if (threshold < 1f) (p - threshold) / (1f - threshold) else 1f
-                    val p2Smooth = p2 * p2
-                    imgWidthTarget = androidx.compose.ui.unit.lerp(startWidth, 40.dp, p2Smooth)
-                    imgHeightTarget = androidx.compose.ui.unit.lerp(startHeight, 40.dp, p2Smooth)
-                    imgOffsetXTarget = androidx.compose.ui.unit.lerp(startOffsetX, targetOffsetX, p2Smooth)
-                    imageCornerTarget = androidx.compose.ui.unit.lerp(startCorner, 20.dp, p2Smooth)
-                }
+                imgWidthTarget = startWidth
+                imgHeightTarget = startHeight
+                imgOffsetXTarget = startOffsetX
+                imgOffsetYTarget = startOffsetY
+                imageCornerTarget = startCorner
             }
 
-            val contentAlpha = (1f - p * 2.2f).coerceIn(0f, 1f)
+            val contentAlpha = if (isOverlayActive) (1f - p * 2.2f).coerceIn(0f, 1f) else 1f
             val overlayAlpha = (1f - p * 2.2f).coerceIn(0f, 1f)
-
-
 
             val animatedImgWidth by androidx.compose.animation.core.animateDpAsState(imgWidthTarget)
             val animatedImgHeight by androidx.compose.animation.core.animateDpAsState(imgHeightTarget)
@@ -2254,9 +2295,7 @@ fun PlayerScreen(
             val imgOffsetY = if (dragProgress > 0f) imgOffsetYTarget else animatedImgOffsetY
             val imgCorner = if (dragProgress > 0f) imageCornerTarget else animatedImgCorner
 
-
-
-            val detailsOffsetYTarget = if (isOverlayActive) 64.dp else (imgOffsetYTarget + imgHeightTarget - 8.dp)
+            val detailsOffsetYTarget = if (isOverlayActive) 64.dp else (expandedHeight - 8.dp)
 
             val detailsOffsetY by androidx.compose.animation.core.animateDpAsState(detailsOffsetYTarget)
 
@@ -2411,9 +2450,6 @@ fun PlayerScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .graphicsLayer {
-                        alpha = bgAlpha
-                    }
                     .background(
                         brush = Brush.verticalGradient(
                             colors = listOf(
@@ -2423,33 +2459,6 @@ fun PlayerScreen(
                             )
                         )
                     )
-                    .pointerInput(showLyrics, showQueue) {
-                        if (!showLyrics && !showQueue) {
-                            detectVerticalDragGestures(
-                                onDragEnd = {
-                                    val currentOffsetY = dragOffsetY.value
-                                    if (currentOffsetY > with(density) { 150.dp.toPx() }) {
-                                        scope.launch {
-                                            dragOffsetY.animateTo(
-                                                targetValue = maxDragDistance,
-                                                animationSpec = tween(300, easing = FastOutSlowInEasing)
-                                            )
-                                            onClose()
-                                        }
-                                    } else {
-                                        scope.launch {
-                                            dragOffsetY.animateTo(0f, spring())
-                                        }
-                                    }
-                                }
-                            ) { change, dragAmount ->
-                                if (dragAmount > 0f || dragOffsetY.value > 0f) {
-                                    val newOffset = (dragOffsetY.value + dragAmount).coerceAtLeast(0f)
-                                    scope.launch { dragOffsetY.snapTo(newOffset) }
-                                }
-                            }
-                        }
-                    }
             ) {
             // Capa 4: Reflejo invertido estilo Apple Music (perfectamente unido a la carátula)
             val mirrorArtModel = hdArtUrl ?: playerState?.artUrl
@@ -2474,7 +2483,7 @@ fun PlayerScreen(
                         .clipToBounds()
                         .graphicsLayer {
                             compositingStrategy = CompositingStrategy.Offscreen
-                            alpha = (1f - dragProgress).coerceIn(0f, 1f)
+                            alpha = 1f
                         }
                 ) {
                     val currentBitmap = coverBitmap
@@ -3847,10 +3856,7 @@ fun PlayerScreen(
                   modifier = Modifier
                       .offset(x = detailsOffsetX, y = detailsOffsetY)
                       .width(detailsWidth)
-                      .heightIn(min = 48.dp)
-                      .graphicsLayer {
-                          alpha = contentAlpha
-                      },
+                      .heightIn(min = 48.dp),
                   verticalAlignment = Alignment.CenterVertically
               ) {
 
@@ -3961,15 +3967,15 @@ fun PlayerScreen(
                                          }
                                      }
                              )
+                          }
+                      }
+                  }
 
-                         }
-
-                     }
-
-                 }
-
-                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-
+                  Row(
+                      modifier = Modifier.graphicsLayer { alpha = contentAlpha },
+                      horizontalArrangement = Arrangement.spacedBy(16.dp),
+                      verticalAlignment = Alignment.CenterVertically
+                  ) {
                       Box(
                           modifier = Modifier
                               .size(36.dp)
