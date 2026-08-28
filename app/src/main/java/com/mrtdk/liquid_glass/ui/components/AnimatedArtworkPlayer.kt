@@ -64,6 +64,8 @@ fun AnimatedArtworkPlayer(
     modifier: Modifier = Modifier,
     enableFrameCapture: Boolean = true,
     isPaused: Boolean = false,
+    syncWithPlayer: ExoPlayer? = null,
+    onPlayerCreated: (ExoPlayer) -> Unit = {},
     onPlaybackStarted: () -> Unit = {},
     onFrameCaptured: (android.graphics.Bitmap) -> Unit = {}
 ) {
@@ -89,6 +91,48 @@ fun AnimatedArtworkPlayer(
             }
     }
 
+    LaunchedEffect(exoPlayer) {
+        onPlayerCreated(exoPlayer)
+    }
+
+    // Handle synchronization if syncWithPlayer is provided
+    LaunchedEffect(syncWithPlayer, exoPlayer) {
+        val master = syncWithPlayer ?: return@LaunchedEffect
+        val syncListener = object : Player.Listener {
+            override fun onPositionDiscontinuity(
+                oldPosition: Player.PositionInfo,
+                newPosition: Player.PositionInfo,
+                reason: Int
+            ) {
+                exoPlayer.seekTo(newPosition.positionMs)
+            }
+
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                exoPlayer.playWhenReady = isPlaying
+                val drift = kotlin.math.abs(exoPlayer.currentPosition - master.currentPosition)
+                if (drift > 30) {
+                    exoPlayer.seekTo(master.currentPosition)
+                }
+            }
+        }
+        master.addListener(syncListener)
+
+        // Continuous fine-grained synchronization
+        try {
+            while (true) {
+                if (master.isPlaying) {
+                    val drift = kotlin.math.abs(exoPlayer.currentPosition - master.currentPosition)
+                    if (drift > 30) {
+                        exoPlayer.seekTo(master.currentPosition)
+                    }
+                }
+                kotlinx.coroutines.delay(30)
+            }
+        } finally {
+            master.removeListener(syncListener)
+        }
+    }
+
     // Handle ExoPlayer lifecycle
     DisposableEffect(exoPlayer) {
         val listener = object : Player.Listener {
@@ -107,6 +151,9 @@ fun AnimatedArtworkPlayer(
     LaunchedEffect(videoUrl) {
         exoPlayer.setMediaItem(MediaItem.fromUri(videoUrl))
         exoPlayer.prepare()
+        if (syncWithPlayer != null) {
+            exoPlayer.seekTo(syncWithPlayer.currentPosition)
+        }
     }
 
     LaunchedEffect(isPaused) {

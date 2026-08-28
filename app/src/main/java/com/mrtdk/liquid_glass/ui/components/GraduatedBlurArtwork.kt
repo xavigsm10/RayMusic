@@ -1,6 +1,7 @@
 package com.mrtdk.liquid_glass.ui.components
 
 import android.os.Build
+import androidx.annotation.OptIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,30 +26,36 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
 import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.skydoves.cloudy.cloudy
 
 /**
- * Reflejo de artwork estilo Apple Music:
- * - Capa 1 (Fondo): Difusión líquida profunda (blurRadius = 90dp) con desvanecimiento de luces en la barra,
- *   sumergiendo la zona inferior de los controles en los tonos oscuros profundos del artwork sin columnas claras.
- * - Capa 2 (Superior): Reflejo con difuminado idéntico al de la carátula superior (25dp) que nace al 100%
- *   en la base y se desvanece suavemente de forma progresiva hasta la barra de progreso.
+ * Reflejo de artwork invertido estilo Apple Music:
+ * - Capa 1 (Fondo): Difuminado extremo horizontal de colores (debajo de la barra de progreso).
+ * - Capa 2 (Media): Difuminado horizontal notable (56dp X, 14dp Y) activo hasta la barra de progreso.
+ * - Capa 3 (Costura superior): Empalme suave isotrópico (12dp) en la unión exacta para evitar cualquier línea divisoria.
+ * - Soporte para sincronización frame-perfect a 60 FPS con el reproductor principal.
  */
+@OptIn(UnstableApi::class)
 @Composable
 fun GraduatedBlurArtwork(
     imageUrl: Any?,
     videoUrl: String? = null,
     modifier: Modifier = Modifier,
-    blurRadiusX: Dp = 150.dp,
-    blurRadiusY: Dp = 75.dp,
-    frostedRadius: Dp = 25.dp,
-    verticalScale: Float = -3.80f,
+    blurRadiusX: Dp = 140.dp,
+    blurRadiusY: Dp = 30.dp,
+    horizontalDiffuseRadiusX: Dp = 36.dp,
+    horizontalDiffuseRadiusY: Dp = 14.dp,
+    frostedRadius: Dp = 12.dp,
+    verticalScale: Float = -9.0f,
     pivotY: Float = 0f,
     horizontalScale: Float = 1.0f,
     blurTransitionEndFraction: Float = 0.28f,
+    syncWithPlayer: ExoPlayer? = null,
     imageLoader: ImageLoader? = null
 ) {
     val isMirrored = verticalScale < 0f
@@ -60,6 +67,8 @@ fun GraduatedBlurArtwork(
     val density = LocalDensity.current
     val blurRadiusXPx = with(density) { blurRadiusX.toPx() }
     val blurRadiusYPx = with(density) { blurRadiusY.toPx() }
+    val horizontalDiffuseXPx = with(density) { horizontalDiffuseRadiusX.toPx() }
+    val horizontalDiffuseYPx = with(density) { horizontalDiffuseRadiusY.toPx() }
     val frostedRadiusPx = with(density) { frostedRadius.toPx() }
 
     Box(
@@ -83,9 +92,9 @@ fun GraduatedBlurArtwork(
         }
 
         // =========================================================================
-        // CAPA 1 (Fondo): Difusión líquida profunda con preservación de tonos oscuros
+        // CAPA 1 (Fondo): Difuminado extremo horizontal de colores (debajo del slider)
         // =========================================================================
-        val deepBlurModifier = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val extremeBlurModifier = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             Modifier.graphicsLayer {
                 renderEffect = BlurEffect(
                     blurRadiusXPx,
@@ -97,7 +106,18 @@ fun GraduatedBlurArtwork(
             Modifier.cloudy(radius = 35)
         }
 
-        if (imageUrl is ImageBitmap) {
+        if (!videoUrl.isNullOrBlank()) {
+            AnimatedArtworkPlayer(
+                videoUrl = videoUrl,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(transformModifier)
+                    .then(extremeBlurModifier),
+                enableFrameCapture = false,
+                isPaused = false,
+                syncWithPlayer = syncWithPlayer
+            )
+        } else if (imageUrl is ImageBitmap) {
             Image(
                 bitmap = imageUrl,
                 contentDescription = null,
@@ -107,7 +127,7 @@ fun GraduatedBlurArtwork(
                 modifier = Modifier
                     .fillMaxSize()
                     .then(transformModifier)
-                    .then(deepBlurModifier)
+                    .then(extremeBlurModifier)
             )
         } else if (imageUrl != null) {
             AsyncImage(
@@ -123,49 +143,26 @@ fun GraduatedBlurArtwork(
                 modifier = Modifier
                     .fillMaxSize()
                     .then(transformModifier)
-                    .then(deepBlurModifier)
+                    .then(extremeBlurModifier)
             )
         }
 
         // =========================================================================
-        // CAPA AMBIENTAL: Profundización de tonos oscuros debajo de la barra de progreso
-        // Elimina cualquier proyección de luces/columnas claras sobre los controles
+        // CAPA 2 (Media): Difuminado horizontal notable hasta el slider
         // =========================================================================
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .drawWithContent {
-                    val endF = blurTransitionEndFraction.coerceIn(0.05f, 1f)
-                    drawRect(
-                        brush = Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0.0f to Color.Transparent,
-                                endF * 0.90f to Color.Transparent,
-                                endF + 0.12f to Color.Black.copy(alpha = 0.28f),
-                                0.70f to Color.Black.copy(alpha = 0.55f),
-                                1.0f to Color.Black.copy(alpha = 0.75f)
-                            )
-                        )
-                    )
-                }
-        )
-
-        // =========================================================================
-        // CAPA 2 (Superior): Reflejo con difuminado idéntico a la carátula (25dp) progresivo
-        // =========================================================================
-        val frostedBlurModifier = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val horizontalBlurModifier = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             Modifier.graphicsLayer {
                 renderEffect = BlurEffect(
-                    frostedRadiusPx,
-                    frostedRadiusPx,
+                    horizontalDiffuseXPx,
+                    horizontalDiffuseYPx,
                     TileMode.Clamp
                 )
             }
         } else {
-            Modifier.cloudy(radius = 20)
+            Modifier.cloudy(radius = 24)
         }
 
-        val progressiveFadeModifier = Modifier
+        val horizontalFadeModifier = Modifier
             .fillMaxSize()
             .graphicsLayer {
                 compositingStrategy = CompositingStrategy.Offscreen
@@ -177,9 +174,8 @@ fun GraduatedBlurArtwork(
                     brush = Brush.verticalGradient(
                         colorStops = arrayOf(
                             0.0f to Color.Black,
-                            endF * 0.40f to Color.Black.copy(alpha = 0.80f),
-                            endF * 0.75f to Color.Black.copy(alpha = 0.35f),
-                            endF to Color.Transparent,
+                            (endF - 0.04f).coerceAtLeast(0f) to Color.Black,
+                            (endF + 0.06f).coerceAtMost(1f) to Color.Transparent,
                             1.0f to Color.Transparent
                         )
                     ),
@@ -190,9 +186,20 @@ fun GraduatedBlurArtwork(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .then(progressiveFadeModifier)
+                .then(horizontalFadeModifier)
         ) {
-            if (imageUrl is ImageBitmap) {
+            if (!videoUrl.isNullOrBlank()) {
+                AnimatedArtworkPlayer(
+                    videoUrl = videoUrl,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(transformModifier)
+                        .then(horizontalBlurModifier),
+                    enableFrameCapture = false,
+                    isPaused = false,
+                    syncWithPlayer = syncWithPlayer
+                )
+            } else if (imageUrl is ImageBitmap) {
                 Image(
                     bitmap = imageUrl,
                     contentDescription = null,
@@ -201,7 +208,7 @@ fun GraduatedBlurArtwork(
                     modifier = Modifier
                         .fillMaxSize()
                         .then(transformModifier)
-                        .then(frostedBlurModifier)
+                        .then(horizontalBlurModifier)
                 )
             } else if (imageUrl != null) {
                 AsyncImage(
@@ -216,7 +223,91 @@ fun GraduatedBlurArtwork(
                     modifier = Modifier
                         .fillMaxSize()
                         .then(transformModifier)
-                        .then(frostedBlurModifier)
+                        .then(horizontalBlurModifier)
+                )
+            }
+        }
+
+        // =========================================================================
+        // CAPA 3 (Superior): Empalme isotrópico suave (12dp) en la costura exacta
+        // Se desvanece suavemente en los primeros ~25dp hacia la difusión horizontal
+        // =========================================================================
+        val seamBlurModifier = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            Modifier.graphicsLayer {
+                renderEffect = BlurEffect(
+                    frostedRadiusPx,
+                    frostedRadiusPx,
+                    TileMode.Clamp
+                )
+            }
+        } else {
+            Modifier.cloudy(radius = 12)
+        }
+
+        val seamFadeModifier = Modifier
+            .fillMaxSize()
+            .graphicsLayer {
+                compositingStrategy = CompositingStrategy.Offscreen
+            }
+            .drawWithContent {
+                drawContent()
+                val seamHeightPx = with(density) { 24.dp.toPx() }
+                val h = size.height
+                val seamFraction = if (h > 0) (seamHeightPx / h).coerceIn(0.02f, 0.12f) else 0.05f
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        colorStops = arrayOf(
+                            0.0f to Color.Black,
+                            seamFraction * 0.4f to Color.Black.copy(alpha = 0.8f),
+                            seamFraction to Color.Transparent,
+                            1.0f to Color.Transparent
+                        )
+                    ),
+                    blendMode = BlendMode.DstIn
+                )
+            }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(seamFadeModifier)
+        ) {
+            if (!videoUrl.isNullOrBlank()) {
+                AnimatedArtworkPlayer(
+                    videoUrl = videoUrl,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(transformModifier)
+                        .then(seamBlurModifier),
+                    enableFrameCapture = false,
+                    isPaused = false,
+                    syncWithPlayer = syncWithPlayer
+                )
+            } else if (imageUrl is ImageBitmap) {
+                Image(
+                    bitmap = imageUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    alignment = Alignment.TopCenter,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(transformModifier)
+                        .then(seamBlurModifier)
+                )
+            } else if (imageUrl != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(imageUrl)
+                        .crossfade(false)
+                        .build(),
+                    imageLoader = imageLoader ?: coil.compose.LocalImageLoader.current,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    alignment = Alignment.TopCenter,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(transformModifier)
+                        .then(seamBlurModifier)
                 )
             }
         }

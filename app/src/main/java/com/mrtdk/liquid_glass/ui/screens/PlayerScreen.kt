@@ -1844,6 +1844,7 @@ fun PlayerScreen(
 
         var coverBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
         var reflectionSkew by remember { mutableStateOf(0.12f) }
+        var masterAnimatedPlayer by remember { mutableStateOf<androidx.media3.exoplayer.ExoPlayer?>(null) }
 
         LaunchedEffect(hdArtUrl) {
             coverBitmap = null
@@ -2255,7 +2256,7 @@ fun PlayerScreen(
 
 
 
-            val detailsOffsetYTarget = if (isOverlayActive) 64.dp else (imgOffsetYTarget + imgHeightTarget + 12.dp)
+            val detailsOffsetYTarget = if (isOverlayActive) 64.dp else (imgOffsetYTarget + imgHeightTarget - 8.dp)
 
             val detailsOffsetY by androidx.compose.animation.core.animateDpAsState(detailsOffsetYTarget)
 
@@ -2408,11 +2409,8 @@ fun PlayerScreen(
 
 
             Box(
-
                 modifier = Modifier
-
                     .fillMaxSize()
-
                     .graphicsLayer {
                         alpha = bgAlpha
                     }
@@ -2426,76 +2424,47 @@ fun PlayerScreen(
                         )
                     )
                     .pointerInput(showLyrics, showQueue) {
-
                         if (!showLyrics && !showQueue) {
-
                             detectVerticalDragGestures(
-
                                 onDragEnd = {
-
                                     val currentOffsetY = dragOffsetY.value
-
                                     if (currentOffsetY > with(density) { 150.dp.toPx() }) {
-
                                         scope.launch {
-
                                             dragOffsetY.animateTo(
-
                                                 targetValue = maxDragDistance,
-
                                                 animationSpec = tween(300, easing = FastOutSlowInEasing)
-
                                             )
-
                                             onClose()
-
                                         }
-
                                     } else {
-
                                         scope.launch {
-
                                             dragOffsetY.animateTo(0f, spring())
-
                                         }
-
                                     }
-
                                 }
-
                             ) { change, dragAmount ->
-
                                 if (dragAmount > 0f || dragOffsetY.value > 0f) {
                                     val newOffset = (dragOffsetY.value + dragAmount).coerceAtLeast(0f)
                                     scope.launch { dragOffsetY.snapTo(newOffset) }
                                 }
-
                             }
-
                         }
-
                     }
             ) {
-
-            // Capa 4: Reflejo invertido estilo Apple Music (solo en vista principal)
+            // Capa 4: Reflejo invertido estilo Apple Music (perfectamente unido a la carátula)
             val mirrorArtModel = hdArtUrl ?: playerState?.artUrl
             if ((coverBitmap != null || mirrorArtModel != null) && dragProgress < 1f && !showLyrics && !showQueue) {
                 val reflectionWidth = maxWidth
                 val reflectionX = 0.dp
                 val childWidth = expandedWidth
                 val childOffsetX = expandedX
-                val overlapY = 0.dp
                 val baseReflectionY = expandedY + expandedHeight
                 val reflectionY = baseReflectionY
                 val reflectionHeight = (maxHeight - baseReflectionY).coerceAtLeast(expandedHeight)
-                val mirrorImageHeight = reflectionHeight
                 
-                val stretchY = 3.80f
+                val stretchY = 9.0f
                 val verticalScale = -stretchY
                 val pivotY = 0f
-
-                val blurRadiusPx = with(density) { 15.dp.toPx() }
-                val maskBitmapCache = remember { arrayOfNulls<androidx.compose.ui.graphics.ImageBitmap>(1) }
 
                 Box(
                     modifier = Modifier
@@ -2515,27 +2484,25 @@ fun PlayerScreen(
                         modifier = Modifier
                             .offset(x = childOffsetX, y = 0.dp)
                             .width(childWidth)
-                            .height(mirrorImageHeight)
+                            .height(expandedHeight)
                     ) {
-                        if (currentBitmap != null || mirrorModel != null) {
+                        if (currentBitmap != null || mirrorModel != null || !animatedArtworkUrl.isNullOrBlank()) {
                             val sliderFraction = if (reflectionHeight > 0.dp && stableSliderYDp > baseReflectionY) {
-                                ((stableSliderYDp - baseReflectionY) / reflectionHeight).coerceIn(0.15f, 0.45f)
+                                ((stableSliderYDp - baseReflectionY) / reflectionHeight).coerceIn(0.15f, 0.60f)
                             } else {
                                 0.28f
                             }
 
-                            // Reflejo con difuminado estilo Apple Music (difusión horizontal expandida de tonos de fondo)
+                            // Reflejo invertido con unión suave
                             com.mrtdk.liquid_glass.ui.components.GraduatedBlurArtwork(
                                 imageUrl = currentBitmap ?: mirrorModel,
-                                videoUrl = null,
+                                videoUrl = animatedArtworkUrl,
                                 modifier = Modifier.fillMaxSize(),
-                                blurRadiusX = 150.dp,
-                                blurRadiusY = 75.dp,
-                                frostedRadius = 25.dp,
                                 verticalScale = verticalScale,
                                 pivotY = 0f,
                                 horizontalScale = 1.0f,
                                 blurTransitionEndFraction = sliderFraction,
+                                syncWithPlayer = masterAnimatedPlayer,
                                 imageLoader = animatedImageLoader
                             )
                         }
@@ -2567,7 +2534,7 @@ fun PlayerScreen(
                  ) {
 
                      // Full-screen rich blurred background image of album cover for lyrics/queue view
-                     val overlayArtSource = hdArtUrl ?: mirrorArtModel
+                     val overlayArtSource = hdArtUrl ?: playerState?.artUrl
 
                      if (overlayArtSource != null) {
                          AsyncImage(
@@ -3557,72 +3524,37 @@ fun PlayerScreen(
 
 
 
-             // THE MAIN IMAGE (Capa 3: Portada Principal)
-
             Box(
-
                 modifier = Modifier
-
                     .offset(x = imgOffsetX, y = imgOffsetY)
-
                     .size(width = imgWidth, height = imgHeight)
-
                     .then(
-
                         if (showLyrics) {
-
                             Modifier.clickable(
-
                                 interactionSource = remember { MutableInteractionSource() },
-
                                 indication = null
-
                             ) {
-
                                 showLyrics = false
-
                             }
-
                         } else Modifier
-
                     )
-
                     .graphicsLayer {
-
                         shape = if (!isOverlayActive && dragProgress == 0f) {
-
                             RoundedCornerShape(
-
                                 topStart = imgCorner.toPx(),
-
                                 topEnd = imgCorner.toPx(),
-
                                 bottomStart = 0f,
-
                                 bottomEnd = 0f
-
                             )
-
                         } else {
-
                             RoundedCornerShape(imgCorner.toPx())
-
                         }
-
                         clip = true
-
-                        // Apply offscreen strategy only when player is not fully collapsed
-
                         compositingStrategy = if (dragProgress < 1f) {
-
                             CompositingStrategy.Offscreen
-
                         } else {
-
                             CompositingStrategy.Auto
-
                         }
-
                     }
             ) {
 
@@ -3651,6 +3583,7 @@ fun PlayerScreen(
                         modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (isVideoPlaying) 1f else 0f },
                         isPaused = false,
                         enableFrameCapture = (dragProgress == 0f && !isOverlayActive),
+                        onPlayerCreated = { masterAnimatedPlayer = it },
                         onPlaybackStarted = { isVideoPlaying = true },
                         onFrameCaptured = { frameBitmap ->
                             coverBitmap = frameBitmap.asImageBitmap()
@@ -3678,9 +3611,9 @@ fun PlayerScreen(
                     )
                 }
 
-                // Capa de desenfoque blur recortada exclusivamente en la sección bajo la curva elevada (1:1 en ancho y escala con difuminado suave en el borde curvo)
+                // Capa de desenfoque soft blur en la curva de la parte inferior de la carátula
                 if (dragProgress < 1f && !isOverlayActive) {
-                    val blurRadiusPx = with(density) { 15.dp.toPx() }
+                    val blurRadiusPx = with(density) { 18.dp.toPx() }
                     val maskBitmapCache = remember { arrayOfNulls<androidx.compose.ui.graphics.ImageBitmap>(1) }
                     Box(
                         modifier = Modifier
@@ -3710,15 +3643,15 @@ fun PlayerScreen(
                                         }
 
                                         val path = android.graphics.Path().apply {
-                                            val lY = height - with(density) { 95.dp.toPx() }
-                                            val rY = height - with(density) { 115.dp.toPx() }
-                                            val mY = height - with(density) { 6.dp.toPx() }
+                                            val lY = height - with(density) { 125.dp.toPx() }
+                                            val rY = height - with(density) { 105.dp.toPx() }
+                                            val mY = height - with(density) { 38.dp.toPx() }
                                             val ext = blurRadiusPx
 
                                             moveTo(-ext, lY)
                                             lineTo(0f, lY)
                                             cubicTo(
-                                                width * 0.28f, mY + with(density) { 4.dp.toPx() },
+                                                width * 0.28f, mY + with(density) { 6.dp.toPx() },
                                                 width * 0.65f, mY + with(density) { 8.dp.toPx() },
                                                 width.toFloat(), rY
                                             )
@@ -3749,7 +3682,7 @@ fun PlayerScreen(
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .blur(25.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
+                                    .blur(12.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
                             )
                         } else {
                             AsyncImage(
@@ -3762,7 +3695,7 @@ fun PlayerScreen(
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .blur(25.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
+                                    .blur(12.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
                             )
                         }
                     }
