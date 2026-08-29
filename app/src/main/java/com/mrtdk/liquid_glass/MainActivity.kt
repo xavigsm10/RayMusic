@@ -411,36 +411,23 @@ class MainActivity : ComponentActivity() {
                     val shuffleModeEnabled by musicPlayer!!.shuffleModeEnabled.collectAsState()
                     val repeatMode by musicPlayer!!.repeatMode.collectAsState()
 
-                    var isBottomBarCollapsed by remember { mutableStateOf(false) }
-                    val density = androidx.compose.ui.platform.LocalDensity.current
-                    val scrollThresholdPx = remember(density) { with(density) { 50.dp.toPx() } }
-                    var accumulatedScroll by remember { mutableStateOf(0f) }
+                    val floatingNavBarScrollConnection = com.mrtdk.liquid_glass.ui.components.floatingtabbar.rememberFloatingTabBarScrollConnection()
+                    val pagerState = androidx.compose.foundation.pager.rememberPagerState(initialPage = 0) { 4 }
+                    val mainCoroutineScope = rememberCoroutineScope()
 
-                    val nestedScrollConnection = remember(scrollThresholdPx) {
-                        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
-                            override fun onPreScroll(
-                                available: androidx.compose.ui.geometry.Offset,
-                                source: androidx.compose.ui.input.nestedscroll.NestedScrollSource
-                            ): androidx.compose.ui.geometry.Offset {
-                                val scrollDelta = available.y
-
-                                // Reset accumulated scroll if changing direction
-                                if ((accumulatedScroll > 0 && scrollDelta < 0) || (accumulatedScroll < 0 && scrollDelta > 0)) {
-                                    accumulatedScroll = 0f
-                                }
-
-                                accumulatedScroll += scrollDelta
-
-                                if (accumulatedScroll <= -scrollThresholdPx && !isBottomBarCollapsed) {
-                                    isBottomBarCollapsed = true
-                                    accumulatedScroll = 0f
-                                } else if (accumulatedScroll >= scrollThresholdPx && isBottomBarCollapsed) {
-                                    isBottomBarCollapsed = false
-                                    accumulatedScroll = 0f
-                                }
-
-                                return androidx.compose.ui.geometry.Offset.Zero
+                    val tabPositionProvider = remember(pagerState) {
+                        {
+                            if (pagerState.isScrollInProgress) {
+                                pagerState.currentPage + pagerState.currentPageOffsetFraction
+                            } else {
+                                null
                             }
+                        }
+                    }
+
+                    LaunchedEffect(pagerState.currentPage) {
+                        if (selectedIndex != 4 && selectedIndex != pagerState.currentPage) {
+                            selectedIndex = pagerState.currentPage
                         }
                     }
 
@@ -628,29 +615,21 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxSize(),
                             containerColor = Color.Black
                         ) { innerPadding ->
-                            Box(modifier = Modifier.fillMaxSize().background(Color.Black).nestedScroll(nestedScrollConnection)) {
+                            Box(modifier = Modifier.fillMaxSize().background(Color.Black).nestedScroll(floatingNavBarScrollConnection)) {
                                 val mainBackdrop = rememberLayerBackdrop()
                                 GlassContainer(
                                     modifier = Modifier.fillMaxSize().background(Color.Black),
-                                    useShader = (videoDetail == null),
+                                    useShader = false,
                                     content = {
-                                    // Only tab index is tracked in AnimatedContent
-                                    // Album, playlist, artist, category, video are overlays using SharedElementTransitionContainer or direct overlays
+                                    // Pager for main tabs (0: Inicio, 1: Novedades, 2: Radio, 3: Biblioteca)
+                                    // Search (4) is rendered as an overlay on top
                                     Box(modifier = Modifier.fillMaxSize().layerBackdrop(mainBackdrop)) {
-                                        androidx.compose.animation.AnimatedContent(
-                                            targetState = selectedIndex,
+                                        androidx.compose.foundation.pager.HorizontalPager(
+                                            state = pagerState,
                                             modifier = Modifier.fillMaxSize().background(Color.Black),
-                                            transitionSpec = {
-                                                // Fast crossfade for tab switches
-                                                androidx.compose.animation.fadeIn(
-                                                    animationSpec = androidx.compose.animation.core.tween(150)
-                                                ) togetherWith androidx.compose.animation.fadeOut(
-                                                    animationSpec = androidx.compose.animation.core.tween(150)
-                                                )
-                                            },
-                                            label = "ios_page_transition"
-                                        ) { tabIndex ->
-                                            when (tabIndex) {
+                                            userScrollEnabled = true,
+                                        ) { page ->
+                                            when (page) {
                                                 0 -> InicioScreen(
                                                     innerPadding = innerPadding,
                                                     playerState = playerState,
@@ -675,6 +654,17 @@ class MainActivity : ComponentActivity() {
                                                         videoDetail = videoId
                                                     }
                                                 )
+                                                2 -> com.mrtdk.liquid_glass.ui.screens.RadioScreen(
+                                                    innerPadding = innerPadding,
+                                                    onSongRecognized = { recognizedPlayerState ->
+                                                        playSong(recognizedPlayerState)
+                                                    },
+                                                    onSearchResult = { recognizedText ->
+                                                        searchQuery = recognizedText
+                                                        isSearchSubmitted = true
+                                                        selectedIndex = 4
+                                                    }
+                                                )
                                                 3 -> BibliotecaScreen(
                                                     innerPadding = innerPadding, 
                                                     onSongSelected = playSong,
@@ -694,33 +684,30 @@ class MainActivity : ComponentActivity() {
                                                         }
                                                     }
                                                 )
-                                                4 -> BusquedaScreen(
-                                                    innerPadding = innerPadding,
-                                                    query = searchQuery,
-                                                    isSubmitted = isSearchSubmitted,
-                                                    state = busquedaState,
-                                                    onSongSelected = playSong,
-                                                    onArtistSelected = { artist -> artistDetail = artist },
-                                                    onAlbumSelected = { album -> albumDetail = album },
-                                                    onVideoSelected = { videoId ->
-                                                        musicPlayer?.pause()
-                                                        videoDetail = videoId
-                                                    },
-                                                    onCategorySelected = { category -> categoryDetail = category }
-                                                )
-                                                2 -> com.mrtdk.liquid_glass.ui.screens.RadioScreen(
-                                                    innerPadding = innerPadding,
-                                                    onSongRecognized = { playerState ->
-                                                        playSong(playerState)
-                                                    },
-                                                    onSearchResult = { recognizedText ->
-                                                        searchQuery = recognizedText
-                                                        isSearchSubmitted = true
-                                                        selectedIndex = 4
-                                                    }
-                                                )
-                                                else -> DemoBackground(innerPadding)
                                             }
+                                        }
+
+                                        // Search overlay (Page 4)
+                                        androidx.compose.animation.AnimatedVisibility(
+                                            visible = selectedIndex == 4,
+                                            enter = androidx.compose.animation.fadeIn(com.mrtdk.liquid_glass.ui.utils.Motion.appear()),
+                                            exit = androidx.compose.animation.fadeOut(com.mrtdk.liquid_glass.ui.utils.Motion.appear()),
+                                            modifier = Modifier.fillMaxSize()
+                                        ) {
+                                            BusquedaScreen(
+                                                innerPadding = innerPadding,
+                                                query = searchQuery,
+                                                isSubmitted = isSearchSubmitted,
+                                                state = busquedaState,
+                                                onSongSelected = playSong,
+                                                onArtistSelected = { artist -> artistDetail = artist },
+                                                onAlbumSelected = { album -> albumDetail = album },
+                                                onVideoSelected = { videoId ->
+                                                    musicPlayer?.pause()
+                                                    videoDetail = videoId
+                                                },
+                                                onCategorySelected = { category -> categoryDetail = category }
+                                            )
                                         }
 
                                          if (showReplay) {
@@ -824,129 +811,83 @@ class MainActivity : ComponentActivity() {
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxSize()
-                                                .padding(innerPadding)
-                                                .consumeWindowInsets(innerPadding)
+                                                .navigationBarsPadding()
                                                 .imePadding(),
                                             contentAlignment = Alignment.BottomCenter
                                         ) {
-                                            val isCollapsed = isBottomBarCollapsed && playerState != null
-                                            
-                                            val springSpec = androidx.compose.animation.core.spring<androidx.compose.ui.unit.Dp>(
-                                                dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
-                                                stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
-                                            )
-                                            val floatSpringSpec = androidx.compose.animation.core.spring<Float>(
-                                                dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
-                                                stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
-                                            )
-
-                                            val bottomPad = if (isKeyboardOpen) 2.dp else 16.dp
-                                            val navBarHeightWithPadding = 72.dp + bottomPad
-
-                                            val collapseProgress by androidx.compose.animation.core.animateFloatAsState(
-                                                targetValue = if (isCollapsed) 1f else 0f,
-                                                animationSpec = floatSpringSpec,
-                                                label = "collapseProgress"
-                                            )
+                                            val bottomPad = if (isKeyboardOpen) 2.dp else 8.dp
 
                                             Box(
-                                                modifier = Modifier.fillMaxWidth().height(200.dp).align(Alignment.BottomCenter)
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .widthIn(max = 500.dp)
+                                                    .align(Alignment.BottomCenter)
+                                                    .padding(horizontal = 16.dp)
+                                                    .padding(bottom = bottomPad)
                                             ) {
-                                                // LiquidBottomNavBar (Morphic transition)
-                                                Box(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .align(Alignment.BottomCenter)
-                                                        .padding(bottom = bottomPad)
-                                                ) {
-                                                    LiquidBottomNavBar(
-                                                        selectedIndex = selectedIndex,
-                                                        tintColor = globalDominantColor.copy(alpha = 0.35f),
-                                                        contentColor = contentTintColor,
-                                                        collapseProgress = collapseProgress,
-                                                        onTabSelected = { newIndex ->
-                                                            isBottomBarCollapsed = false
-                                                            artistDetail = null
-                                                            albumDetail = null
-                                                            playlistDetail = null
-                                                            categoryDetail = null
-                                                            videoDetail = null
-                                                            selectedIndex = newIndex
-                                                            if (newIndex != 4) {
-                                                                searchQuery = ""
-                                                                isSearchSubmitted = false
-                                                            }
-                                                        },
-                                                        searchQuery = searchQuery,
-                                                        onSearchQueryChange = { 
-                                                            searchQuery = it 
-                                                            isSearchSubmitted = false
-                                                            artistDetail = null
-                                                            albumDetail = null
-                                                            playlistDetail = null
-                                                            categoryDetail = null
-                                                            videoDetail = null
-                                                        },
-                                                        onSearchSubmit = { 
-                                                            isSearchSubmitted = true
-                                                            artistDetail = null
-                                                            albumDetail = null
-                                                            playlistDetail = null
-                                                            categoryDetail = null
-                                                            videoDetail = null
-                                                        }
-                                                    )
-                                                }
-
-                                                // MiniPlayer (Shared)
-                                                Box(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .align(Alignment.BottomCenter)
-                                                        .layout { measurable, constraints ->
-                                                            val startDp = androidx.compose.ui.unit.lerp(16.dp, 80.dp, collapseProgress)
-                                                            val endDp = androidx.compose.ui.unit.lerp(16.dp, 80.dp, collapseProgress)
-                                                            val bottomDp = androidx.compose.ui.unit.lerp(navBarHeightWithPadding + 12.dp, bottomPad + 14.dp, collapseProgress)
-                                                            val startPx = startDp.roundToPx()
-                                                            val endPx = endDp.roundToPx()
-                                                            val bottomPx = bottomDp.roundToPx()
-                                                            val targetWidth = (constraints.maxWidth - startPx - endPx).coerceAtLeast(0)
-                                                            val placeable = measurable.measure(
-                                                                androidx.compose.ui.unit.Constraints.fixedWidth(targetWidth)
-                                                            )
-                                                            layout(constraints.maxWidth, placeable.height + bottomPx) {
-                                                                placeable.placeRelative(startPx, 0)
-                                                            }
-                                                        }
-                                                ) {
-                                                    MiniPlayer(
-                                                        playerState = playerState,
-                                                        isPlaying = isPlaying,
-                                                        onTogglePlayPause = { 
-                                                            if (listenTogetherManager.isInRoom && !listenTogetherManager.isHost) {
-                                                                android.widget.Toast.makeText(context, "Solo el anfitrion puede controlar la reproduccion.", android.widget.Toast.LENGTH_SHORT).show()
+                                                LiquidBottomNavBar(
+                                                    selectedIndex = selectedIndex,
+                                                    tintColor = globalDominantColor.copy(alpha = 0.35f),
+                                                    contentColor = contentTintColor,
+                                                    scrollConnection = floatingNavBarScrollConnection,
+                                                    tabPosition = null,
+                                                    playerState = playerState,
+                                                    isPlaying = isPlaying,
+                                                    playbackProgress = { if (duration > 0) (currentPosition.toFloat() / duration).coerceIn(0f, 1f) else 0f },
+                                                    onSeek = { frac -> if (duration > 0) musicPlayer?.seekTo((frac * duration).toLong()) },
+                                                    onTogglePlayPause = { 
+                                                        if (listenTogetherManager.isInRoom && !listenTogetherManager.isHost) {
+                                                            android.widget.Toast.makeText(context, "Solo el anfitrion puede controlar la reproduccion.", android.widget.Toast.LENGTH_SHORT).show()
+                                                        } else {
+                                                            if (duration <= 0L && playerState != null) {
+                                                                val state = playerState!!
+                                                                if (state.contentUri != null) musicPlayer?.playLocalSong(state.contentUri, state.title, state.artist, state.artUrl?.toString())
+                                                                else if (state.videoId != null) musicPlayer?.playOnlineSong(state.videoId, state.title, state.artist, state.artUrl?.toString())
                                                             } else {
-                                                                if (duration <= 0L && playerState != null) {
-                                                                    val state = playerState!!
-                                                                    if (state.contentUri != null) musicPlayer?.playLocalSong(state.contentUri, state.title, state.artist, state.artUrl?.toString())
-                                                                    else if (state.videoId != null) musicPlayer?.playOnlineSong(state.videoId, state.title, state.artist, state.artUrl?.toString())
-                                                                } else {
-                                                                    musicPlayer?.togglePlayPause() 
-                                                                }
-                                                                if (listenTogetherManager.isInRoom && listenTogetherManager.isHost) {
-                                                                    listenTogetherManager.broadcastPlayPause(!isPlaying)
-                                                                }
+                                                                musicPlayer?.togglePlayPause() 
                                                             }
-                                                        },
-                                                        onClick = { if (playerState != null) showPlayer = true },
-                                                        onNext = skipNextFun,
-                                                        onPrevious = skipPreviousFun,
-                                                        modifier = Modifier.fillMaxWidth(),
-                                                        hideImage = showPlayer,
-                                                        tintColor = globalDominantColor.copy(alpha = 0.45f),
-                                                        contentColor = contentTintColor
-                                                    )
-                                                }
+                                                            if (listenTogetherManager.isInRoom && listenTogetherManager.isHost) {
+                                                                listenTogetherManager.broadcastPlayPause(!isPlaying)
+                                                            }
+                                                        }
+                                                    },
+                                                    onMiniPlayerClick = { if (playerState != null) showPlayer = true },
+                                                    onNext = skipNextFun,
+                                                    onPrevious = skipPreviousFun,
+                                                    onTabSelected = { newIndex ->
+                                                        artistDetail = null
+                                                        albumDetail = null
+                                                        playlistDetail = null
+                                                        categoryDetail = null
+                                                        videoDetail = null
+                                                        selectedIndex = newIndex
+                                                        if (newIndex in 0..3) {
+                                                            mainCoroutineScope.launch { pagerState.slideToPage(newIndex) }
+                                                        }
+                                                        if (newIndex != 4) {
+                                                            searchQuery = ""
+                                                            isSearchSubmitted = false
+                                                        }
+                                                    },
+                                                    searchQuery = searchQuery,
+                                                    onSearchQueryChange = { 
+                                                        searchQuery = it 
+                                                        isSearchSubmitted = false
+                                                        artistDetail = null
+                                                        albumDetail = null
+                                                        playlistDetail = null
+                                                        categoryDetail = null
+                                                        videoDetail = null
+                                                    },
+                                                    onSearchSubmit = { 
+                                                        isSearchSubmitted = true
+                                                        artistDetail = null
+                                                        albumDetail = null
+                                                        playlistDetail = null
+                                                        categoryDetail = null
+                                                        videoDetail = null
+                                                    }
+                                                )
                                             }
                                             if (updateReleaseInfo != null) {
                                                 scope.UpdateDialog(
@@ -979,7 +920,7 @@ class MainActivity : ComponentActivity() {
                                 isPlaying = isPlaying,
                                 currentPosition = currentPosition,
                                 duration = duration,
-                                isBottomBarCollapsed = isBottomBarCollapsed,
+                                isBottomBarCollapsed = floatingNavBarScrollConnection.isInline,
                                 upNextSongs = upNextSongs,
                                 onUpNextSongsChange = { 
                                     upNextSongs = it 
@@ -1095,4 +1036,12 @@ fun DemoBackground(innerPadding: PaddingValues) {
             }
         }
     }
+}
+
+suspend fun androidx.compose.foundation.pager.PagerState.slideToPage(page: Int) {
+    val from = currentPage
+    if (page - from > 1 || from - page > 1) {
+        scrollToPage(page + if (page > from) -1 else 1)
+    }
+    animateScrollToPage(page)
 }
