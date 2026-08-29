@@ -1,62 +1,118 @@
 package com.mrtdk.liquid_glass.ui
 
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.spring
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
-import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.layout.layout
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
-import com.kyant.shapes.Capsule
+import com.kyant.backdrop.highlight.Highlight
+import com.kyant.backdrop.shadow.Shadow
 import com.mrtdk.liquid_glass.R
-import com.mrtdk.liquid_glass.ui.components.LiquidBottomTab
-import com.mrtdk.liquid_glass.ui.components.LiquidBottomTabs
+import com.mrtdk.liquid_glass.ui.components.FloatingMiniPlayer
 import com.mrtdk.liquid_glass.ui.components.LocalBackdrop
+import com.mrtdk.liquid_glass.ui.components.NavSearchState
+import com.mrtdk.liquid_glass.ui.components.floatingtabbar.FloatingTabBar
+import com.mrtdk.liquid_glass.ui.components.floatingtabbar.FloatingTabBarDefaults
+import com.mrtdk.liquid_glass.ui.components.floatingtabbar.FloatingTabBarScrollConnection
+import com.mrtdk.liquid_glass.ui.components.floatingtabbar.LocalTabBarBackdropFrozen
+import com.mrtdk.liquid_glass.ui.components.floatingtabbar.rememberFloatingTabBarScrollConnection
+import com.mrtdk.liquid_glass.ui.components.shapes.ContinuousRoundedRectangle
+import com.mrtdk.liquid_glass.ui.screens.PlayerState
+import com.mrtdk.liquid_glass.ui.utils.Motion
+import com.mrtdk.liquid_glass.ui.utils.bounceClick
+import com.mrtdk.liquid_glass.utils.InteractiveHighlight
+import kotlinx.coroutines.delay
 
-val tabs = listOf(
-    R.string.nav_inicio to R.drawable.nav_inicio,
-    R.string.nav_novedades to R.drawable.nav_novedades,
-    R.string.nav_radio to R.drawable.nav_radio,
-    R.string.nav_biblioteca to R.drawable.nav_biblioteca
+private val NavBarShape = ContinuousRoundedRectangle(percent = 50)
+private val NavBarSearchBarHeight = 48.dp
+private val NavBarStandaloneReserve = 80.dp
+private val NavBarMinTabWidth = 56.dp
+private const val KeyboardOpenDelayMs = 260L
+
+data class NavTabItem(
+    val index: Int,
+    val titleRes: Int,
+    val iconRes: Int
 )
 
+val MainNavTabs = listOf(
+    NavTabItem(0, R.string.nav_inicio, R.drawable.nav_inicio),
+    NavTabItem(1, R.string.nav_novedades, R.drawable.nav_novedades),
+    NavTabItem(2, R.string.nav_radio, R.drawable.nav_radio),
+    NavTabItem(3, R.string.nav_biblioteca, R.drawable.nav_biblioteca)
+)
+
+/**
+ * The floating navigation bar inspired by Convx/iOS:
+ * - Fluid draggable spring puck (`DampedDragAnimation`) with glass refraction & glow (`InteractiveHighlight`)
+ * - Superellipse continuous capsule (`ContinuousRoundedRectangle`)
+ * - Gooey liquid morph during inline collapse/expansion
+ * - Dynamic search morph expanding circular search button into search input bar docked to keyboard
+ * - Integrated dockable MiniPlayer accessory (56.dp above tabs, 48.dp inline in center when collapsed)
+ */
 @Composable
 fun LiquidBottomNavBar(
     selectedIndex: Int,
@@ -64,424 +120,534 @@ fun LiquidBottomNavBar(
     searchQuery: String = "",
     onSearchQueryChange: (String) -> Unit = {},
     onSearchSubmit: (String) -> Unit = {},
+    playerState: PlayerState? = null,
+    isPlaying: Boolean = false,
+    onTogglePlayPause: () -> Unit = {},
+    onMiniPlayerClick: () -> Unit = {},
+    onNext: () -> Unit = {},
+    onPrevious: () -> Unit = {},
+    playbackProgress: () -> Float = { 0f },
+    onSeek: (Float) -> Unit = {},
     modifier: Modifier = Modifier,
     tintColor: Color = Color.Unspecified,
     contentColor: Color = Color.Unspecified,
-    collapseProgress: Float = 0f
+    collapseProgress: Float = 0f,
+    scrollConnection: FloatingTabBarScrollConnection = rememberFloatingTabBarScrollConnection(),
+    pureBlack: Boolean = false,
+    tabPosition: (() -> Float?)? = null
 ) {
     val isDarkMode by com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState()
-    val actualTintColor = if (tintColor != Color.Unspecified) tintColor
-                          else if (!isDarkMode) Color.Black.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.15f)
-    val actualContentColor = if (contentColor != Color.Unspecified) contentColor
-                             else if (!isDarkMode) Color.Black else Color.White
-    val imeBottom = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current)
-    val isKeyboardOpen = imeBottom > 0
+    val isSearchActive = selectedIndex == 4
+    val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
 
-    val isCollapsing = collapseProgress > 0.001f && collapseProgress < 0.999f
-    val isSearchActive = selectedIndex == 4
-    
-    val navSpringSpec = spring<Float>(
-        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
-        stiffness = 300f
-    )
-    val navDpSpringSpec = spring<androidx.compose.ui.unit.Dp>(
-        dampingRatio = androidx.compose.animation.core.Spring.DampingRatioNoBouncy,
-        stiffness = 300f
-    )
-
-    val searchProgressState = animateFloatAsState(
-        targetValue = if (isSearchActive) 1f else 0f,
-        animationSpec = navSpringSpec
-    )
-    
-    val xWidthState = animateDpAsState(
-        targetValue = if (isSearchActive && isKeyboardOpen) 64.dp else 0.dp,
-        animationSpec = navDpSpringSpec
-    )
-    
-    val spacingSearchXState = animateDpAsState(
-        targetValue = if (isSearchActive && isKeyboardOpen) 12.dp else 0.dp,
-        animationSpec = navDpSpringSpec
-    )
-
-    val collapseProgressState = rememberUpdatedState(collapseProgress)
-    val collapseProgressProvider = remember { { collapseProgressState.value } }
-    val searchProgressProvider = remember { { searchProgressState.value } }
-
-    val isAnimatingState = remember(isSearchActive) {
-        derivedStateOf {
-            val progress = searchProgressState.value
-            val transitioning = progress > 0.001f && progress < 0.999f
-            val collapsing = collapseProgressState.value > 0.001f && collapseProgressState.value < 0.999f
-            transitioning || collapsing
-        }
-    }
-
-    val focusRequester = remember { FocusRequester() }
+    var keyboardActive by remember { mutableStateOf(false) }
 
     LaunchedEffect(isSearchActive) {
-        if (isSearchActive) {
-            focusRequester.requestFocus()
+        if (!isSearchActive) {
+            keyboardActive = false
         }
     }
 
-    val backdrop = LocalBackdrop.current
-    val navBarHeight = 84.dp
+    var textFieldValue by remember(searchQuery) {
+        mutableStateOf(
+            TextFieldValue(
+                text = searchQuery,
+                selection = TextRange(searchQuery.length)
+            )
+        )
+    }
 
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .height(navBarHeight)
+    var lastSelectedTabIndex by remember { mutableStateOf(0) }
+    if (selectedIndex != 4) {
+        lastSelectedTabIndex = selectedIndex
+    }
+
+    val navSearchState = remember(
+        isSearchActive,
+        keyboardActive,
+        textFieldValue,
+        lastSelectedTabIndex
     ) {
-        val parentWidth = maxWidth
-        val mainTabsMaxWidth = parentWidth - 56.dp - 12.dp
+        NavSearchState(
+            visualActive = isSearchActive,
+            keyboardActive = keyboardActive,
+            query = textFieldValue,
+            onQueryChange = { newTfv ->
+                textFieldValue = newTfv
+                onSearchQueryChange(newTfv.text)
+            },
+            onSubmit = { queryText ->
+                onSearchSubmit(queryText)
+                focusManager.clearFocus()
+                keyboardActive = false
+            },
+            onTapSearchIcon = {
+                onTabSelected(4)
+                keyboardActive = false
+            },
+            onTapBar = {
+                keyboardActive = true
+            },
+            onExit = {
+                keyboardActive = false
+                focusManager.clearFocus()
+                onTabSelected(lastSelectedTabIndex)
+            },
+            onCloseKeyboard = {
+                keyboardActive = false
+                focusManager.clearFocus()
+            },
+            focusRequester = focusRequester
+        )
+    }
 
-        Row(
-            modifier = Modifier.fillMaxSize(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val tabWidthDp = (mainTabsMaxWidth - 8.dp) / 4
-            val homeTabCenterX = 4.dp + tabWidthDp / 2
-            val targetCenterX = 28.dp
+    val actualTintColor = if (tintColor != Color.Unspecified) tintColor
+    else if (!isDarkMode) Color.Black.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.15f)
 
-            val pillBorderColor = if (isDarkMode) Color.White.copy(alpha = 0.18f) else Color.Black.copy(alpha = 0.10f)
+    val actualContentColor = if (contentColor != Color.Unspecified) contentColor
+    else if (!isDarkMode) Color.Black else Color.White
 
-            // Main Navigation Pill (shrinks smoothly to become circular Home button)
-            Box(
-                modifier = Modifier
-                    .layout { measurable, constraints ->
-                        val progress = if (searchProgressState.value > collapseProgressState.value) searchProgressState.value else collapseProgressState.value
-                        val currentAvailableWidth = parentWidth - xWidthState.value - spacingSearchXState.value - 12.dp
-                        val widthDp = currentAvailableWidth - 56.dp - (currentAvailableWidth - 112.dp) * progress
-                        val widthPx = widthDp.roundToPx()
-                        val heightPx = (84.dp - 28.dp * progress).roundToPx()
-                        val placeable = measurable.measure(
-                            constraints.copy(
-                                minWidth = widthPx, maxWidth = widthPx,
-                                minHeight = heightPx, maxHeight = heightPx
-                            )
-                        )
-                        layout(widthPx, heightPx) {
-                            placeable.place(0, 0)
-                        }
-                    }
-                    .let {
-                        val progress = if (searchProgressState.value > collapseProgressState.value) searchProgressState.value else collapseProgressState.value
-                        if (progress > 0.001f) {
-                            val borderColor = if (isDarkMode) Color.White.copy(alpha = 0.18f * progress) else Color.Black.copy(alpha = 0.10f * progress)
-                            it.clip(Capsule()).border(1.dp, borderColor, Capsule())
-                        } else it
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .requiredWidth(mainTabsMaxWidth)
-                        .graphicsLayer {
-                            clip = false
-                            val progress = if (searchProgressState.value > collapseProgressState.value) searchProgressState.value else collapseProgressState.value
-                            val currentAvailableWidth = parentWidth - xWidthState.value - spacingSearchXState.value - 12.dp
-                            val widthDp = currentAvailableWidth - 56.dp - (currentAvailableWidth - 112.dp) * progress
-                            val offsetDp = (targetCenterX - homeTabCenterX) * progress - (widthDp - mainTabsMaxWidth) / 2
-                            translationX = offsetDp.toPx()
-                        }
-                ) {
-                    MainTabs(
-                        selectedIndex = selectedIndex,
-                        onTabSelected = onTabSelected,
-                        contentColor = actualContentColor,
-                        tintColor = actualTintColor,
-                        searchProgress = searchProgressProvider,
-                        collapseProgress = collapseProgressProvider
+    AnimatedContent(
+        targetState = navSearchState.keyboardActive,
+        modifier = modifier,
+        transitionSpec = {
+            if (targetState) {
+                (slideInVertically(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMedium
                     )
-                }
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Search Pill (expands smoothly to become the search bar)
-            Box(
-                modifier = Modifier
-                    .layout { measurable, constraints ->
-                        val progress = searchProgressState.value
-                        val currentAvailableWidth = parentWidth - xWidthState.value - spacingSearchXState.value - 12.dp
-                        val widthDp = 56.dp + (currentAvailableWidth - 112.dp) * progress * (1f - collapseProgressState.value)
-                        val widthPx = widthDp.roundToPx()
-                        val heightPx = (56.dp + 8.dp * progress * (1f - collapseProgressState.value)).roundToPx()
-                        val placeable = measurable.measure(
-                            constraints.copy(
-                                minWidth = widthPx, maxWidth = widthPx,
-                                minHeight = heightPx, maxHeight = heightPx
-                            )
+                ) { it / 2 } + fadeIn()) togetherWith
+                    (slideOutVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMedium
                         )
-                        layout(widthPx, heightPx) {
-                            placeable.place(0, 0)
-                        }
-                    }
-                    .clip(Capsule())
-                    .clipToBounds()
-                    .drawBackdrop(
-                        backdrop = backdrop,
-                        shape = { Capsule() },
-                        effects = {
-                            vibrancy()
-                            blur(8f.dp.toPx())
-                            if (!isAnimatingState.value) {
-                                lens(24f.dp.toPx(), 24f.dp.toPx())
-                            }
-                        },
-                        onDrawSurface = { drawRect(actualTintColor) }
+                    ) { it } + fadeOut())
+            } else {
+                (slideInVertically(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMedium
                     )
-                    .border(1.dp, pillBorderColor, Capsule())
-            ) {
-                val isSearchEnabled by remember {
-                    derivedStateOf {
-                        val progress = searchProgressState.value * (1f - collapseProgressState.value)
-                        progress > 0.5f
-                    }
-                }
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            val progress = searchProgressState.value * (1f - collapseProgressState.value)
-                            val offsetDp = -4.dp * (1f - progress)
-                            translationX = offsetDp.toPx()
-                        }
-                        .clickable { 
-                            if (collapseProgressState.value > 0.5f || !isSearchActive) {
-                                onTabSelected(4)
-                            }
-                        },
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = stringResource(R.string.search_action),
-                        tint = actualContentColor,
-                        modifier = Modifier
-                            .padding(start = 20.dp, end = 12.dp)
-                            .size(24.dp)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) { 
-                                if (collapseProgressState.value > 0.5f || !isSearchActive) {
-                                    onTabSelected(4)
-                                }
-                            }
-                    )
-                    
-                    Row(
-                        modifier = Modifier
-                            .weight(1f)
-                            .graphicsLayer { 
-                                val progress = searchProgressState.value * (1f - collapseProgressState.value)
-                                val textAlpha = progress.coerceIn(0f, 1f)
-                                alpha = textAlpha
-                                translationX = if (textAlpha < 0.01f) 10000f else 0f
-                            },
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        BasicTextField(
-                            value = searchQuery,
-                            onValueChange = onSearchQueryChange,
-                            modifier = Modifier
-                                .weight(1f)
-                                .focusRequester(focusRequester)
-                                .padding(end = 8.dp),
-                            textStyle = TextStyle(color = actualContentColor, fontSize = 16.sp),
-                            cursorBrush = SolidColor(actualContentColor),
-                            singleLine = true,
-                            enabled = isSearchEnabled,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                            keyboardActions = KeyboardActions(onSearch = { onSearchSubmit(searchQuery) }),
-                            decorationBox = { innerTextField ->
-                                if (searchQuery.isEmpty()) {
-                                    Text(stringResource(R.string.search_placeholder), color = actualContentColor.copy(alpha = 0.5f), fontSize = 16.sp)
-                                }
-                                innerTextField()
-                            }
+                ) { it } + fadeIn()) togetherWith
+                    (slideOutVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMedium
                         )
-                        if (searchQuery.isNotEmpty()) {
-                            Box(
-                                modifier = Modifier
-                                    .padding(end = 12.dp)
-                                    .size(22.dp)
-                                    .background(Color.White.copy(alpha = 0.2f), CircleShape)
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null
-                                    ) {
-                                        onSearchQueryChange("")
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Clear search",
-                                    tint = contentColor.copy(alpha = 0.8f),
-                                    modifier = Modifier.size(12.dp)
-                                )
-                            }
-                        }
-                    }
-                }
+                    ) { it / 2 } + fadeOut())
             }
-
-            // Close Pill (X)
-            val showClosePill by remember {
-                derivedStateOf {
-                    xWidthState.value > 0.5.dp
-                }
-            }
-            if (showClosePill) {
-                Spacer(
-                    modifier = Modifier
-                        .layout { measurable, constraints ->
-                            val widthPx = spacingSearchXState.value.roundToPx()
-                            val placeable = measurable.measure(constraints.copy(minWidth = widthPx, maxWidth = widthPx))
-                            layout(widthPx, placeable.height) {
-                                placeable.place(0, 0)
-                            }
-                        }
-                )
-                Box(
-                    modifier = Modifier
-                        .layout { measurable, constraints ->
-                            val progress = searchProgressState.value
-                            val widthPx = xWidthState.value.roundToPx()
-                            val heightPx = (56.dp + 8.dp * progress * (1f - collapseProgressState.value)).roundToPx()
-                            val placeable = measurable.measure(
-                                constraints.copy(
-                                    minWidth = widthPx, maxWidth = widthPx,
-                                    minHeight = heightPx, maxHeight = heightPx
-                                )
-                            )
-                            layout(widthPx, heightPx) {
-                                placeable.place(0, 0)
-                            }
-                        }
-                        .drawBackdrop(
-                            backdrop = backdrop,
-                            shape = { Capsule() },
-                            effects = {
-                                vibrancy()
-                                blur(8f.dp.toPx())
-                                if (!isAnimatingState.value) {
-                                    lens(24f.dp.toPx(), 24f.dp.toPx())
-                                }
-                            },
-                            onDrawSurface = { drawRect(actualTintColor) }
-                        )
-                        .clip(Capsule())
-                        .border(1.dp, pillBorderColor, Capsule())
-                        .clickable { 
-                            if (searchQuery.isNotEmpty()) {
-                                onSearchQueryChange("")
-                            } else {
-                                focusManager.clearFocus()
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = stringResource(R.string.close_action),
-                        tint = actualContentColor,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
+        },
+        label = "navBarKeyboardActive",
+    ) { isKeyboardActive ->
+        if (isKeyboardActive) {
+            NavBarSearchInputBar(
+                state = navSearchState,
+                pureBlack = pureBlack,
+                tintColor = actualTintColor,
+                contentColor = actualContentColor,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        } else {
+            AppFloatingNavBarChrome(
+                selectedIndex = selectedIndex,
+                lastSelectedTabIndex = lastSelectedTabIndex,
+                onTabSelected = onTabSelected,
+                playerState = playerState,
+                isPlaying = isPlaying,
+                onTogglePlayPause = onTogglePlayPause,
+                onMiniPlayerClick = onMiniPlayerClick,
+                onNext = onNext,
+                onPrevious = onPrevious,
+                playbackProgress = playbackProgress,
+                onSeek = onSeek,
+                scrollConnection = scrollConnection,
+                pureBlack = pureBlack,
+                tintColor = actualTintColor,
+                contentColor = actualContentColor,
+                searchModeActive = isSearchActive,
+                navSearch = navSearchState,
+                tabPosition = tabPosition,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun MainTabs(
+private fun AppFloatingNavBarChrome(
     selectedIndex: Int,
+    lastSelectedTabIndex: Int,
     onTabSelected: (Int) -> Unit,
-    contentColor: Color = Color.White,
-    tintColor: Color = Color.White.copy(alpha = 0.15f),
-    searchProgress: () -> Float = { 0f },
-    collapseProgress: () -> Float = { 0f }
+    playerState: PlayerState?,
+    isPlaying: Boolean,
+    onTogglePlayPause: () -> Unit,
+    onMiniPlayerClick: () -> Unit,
+    onNext: () -> Unit,
+    onPrevious: () -> Unit,
+    playbackProgress: () -> Float,
+    onSeek: (Float) -> Unit,
+    scrollConnection: FloatingTabBarScrollConnection,
+    pureBlack: Boolean,
+    tintColor: Color,
+    contentColor: Color,
+    searchModeActive: Boolean,
+    navSearch: NavSearchState,
+    tabPosition: (() -> Float?)?,
+    modifier: Modifier,
 ) {
-    val backdrop = LocalBackdrop.current
-    val tabsCount = tabs.size
+    BackHandler(enabled = searchModeActive, onBack = navSearch.onExit)
 
-    val combineProgress = remember {
-        {
-            val s = searchProgress()
-            val c = collapseProgress()
-            if (s > c) s else c
-        }
+    var expandedContentWidthPx by remember { mutableStateOf<Int?>(null) }
+    val isDarkMode by com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState()
+    val backdrop = LocalBackdrop.current
+
+    val backgroundColor = when {
+        pureBlack -> Color.Black
+        else -> Color.Transparent
     }
 
-    LiquidBottomTabs(
-        selectedTabIndex = { selectedIndex },
-        onTabSelected = onTabSelected,
-        backdrop = backdrop,
-        tabsCount = tabsCount,
-        containerColor = tintColor,
-        accentColor = Color(0xFFFA243C),
-        searchProgress = combineProgress(),
-        collapseProgress = collapseProgress(),
-        modifier = Modifier.fillMaxSize()
-    ) {
-        tabs.forEachIndexed { index, pair ->
-            val tabText = stringResource(id = pair.first)
-            
-            val isDarkMode by com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState()
-            val isSelected = selectedIndex == index
-            val baseColor = if (isDarkMode) {
-                if (isSelected) Color.White else Color.White.copy(alpha = 0.6f)
-            } else {
-                if (isSelected) Color(0xFFFA243C) else Color.Black.copy(alpha = 0.6f)
-            }
-            val iconSize = 24.dp
-            val tabWeight = 1f
+    val tabTextColor = if (isDarkMode) Color.White else Color.Black
+    val activeAccentColor = Color(0xFFFA243C)
+    val selectedContentColor = activeAccentColor
+    val unselectedContentColor = tabTextColor.copy(alpha = 0.6f)
+    val miniPlayerContentColor = tabTextColor
 
-            LiquidBottomTab(
-                onClick = { onTabSelected(index) },
-                weight = tabWeight
+    val selectedTabKey = if (selectedIndex == 4) lastSelectedTabIndex else selectedIndex
+
+    val surfaceTintColor = if (isDarkMode) Color(0xFF1A1A1A).copy(alpha = 0.35f) else Color(0xFFFAFAFA).copy(alpha = 0.45f)
+
+    val tabBarContentModifier = Modifier
+        .drawBackdrop(
+            backdrop = backdrop,
+            shape = { NavBarShape },
+            effects = {
+                vibrancy()
+                blur(3f.dp.toPx())
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    lens(
+                        refractionHeight = 19f.dp.toPx(),
+                        refractionAmount = 28f.dp.toPx(),
+                        depthEffect = true,
+                        chromaticAberration = true
+                    )
+                }
+            },
+            highlight = { Highlight.Default.copy(alpha = 0.35f) },
+            shadow = { Shadow.Default },
+            onDrawSurface = { 
+                drawRect(if (tintColor != Color.Unspecified) tintColor.copy(alpha = 0.35f) else surfaceTintColor) 
+            }
+        )
+
+    val inlineAccessory: (@Composable SharedTransitionScope.(Modifier, AnimatedVisibilityScope) -> Unit)? =
+        if (playerState != null) {
+            { accessoryModifier, _ ->
+                FloatingMiniPlayer(
+                    isInline = true,
+                    playerState = playerState,
+                    isPlaying = isPlaying,
+                    onTogglePlayPause = onTogglePlayPause,
+                    onClick = onMiniPlayerClick,
+                    onNext = onNext,
+                    onPrevious = onPrevious,
+                    contentColor = miniPlayerContentColor,
+                    playbackProgress = playbackProgress,
+                    onSeek = onSeek,
+                    modifier = accessoryModifier.then(tabBarContentModifier),
+                )
+            }
+        } else {
+            null
+        }
+
+    val expandedAccessory: (@Composable SharedTransitionScope.(Modifier, AnimatedVisibilityScope) -> Unit)? =
+        if (playerState != null) {
+            { accessoryModifier, _ ->
+                FloatingMiniPlayer(
+                    isInline = false,
+                    playerState = playerState,
+                    isPlaying = isPlaying,
+                    onTogglePlayPause = onTogglePlayPause,
+                    onClick = onMiniPlayerClick,
+                    onNext = onNext,
+                    onPrevious = onPrevious,
+                    contentColor = miniPlayerContentColor,
+                    playbackProgress = playbackProgress,
+                    onSeek = onSeek,
+                    modifier = accessoryModifier.fillMaxWidth().then(tabBarContentModifier),
+                )
+            }
+        } else {
+            null
+        }
+
+    BoxWithConstraints(modifier) {
+        val tabWidth = ((maxWidth - NavBarStandaloneReserve) / MainNavTabs.size)
+            .coerceIn(NavBarMinTabWidth, FloatingTabBarDefaults.TabWidth)
+
+        FloatingTabBar(
+            selectedTabKey = selectedTabKey,
+            tabPosition = tabPosition,
+            scrollConnection = scrollConnection,
+            modifier = Modifier.fillMaxWidth(),
+            tabBarContentModifier = tabBarContentModifier,
+            inlineAccessory = inlineAccessory,
+            expandedAccessory = expandedAccessory,
+            colors = FloatingTabBarDefaults.colors(
+                backgroundColor = backgroundColor,
+                accessoryBackgroundColor = backgroundColor,
+            ),
+            sizes = FloatingTabBarDefaults.sizes(
+                tabBarContentPadding = PaddingValues(vertical = 4.dp, horizontal = 4.dp),
+                tabExpandedContentPadding = PaddingValues(vertical = 4.dp, horizontal = 6.dp),
+                tabInlineContentPadding = PaddingValues(8.dp),
+                tabWidth = tabWidth,
+            ),
+            backdrop = backdrop,
+            accentColor = activeAccentColor,
+            searchMode = searchModeActive,
+            searchBarContent = if (searchModeActive) {
+                { contentModifier ->
+                    SearchBarPlaceholder(
+                        state = navSearch,
+                        contentColor = if (isDarkMode) Color.White.copy(alpha = 0.75f) else Color.Black.copy(alpha = 0.75f),
+                        modifier = contentModifier,
+                    )
+                }
+            } else {
+                null
+            },
+            expandedContentWidthPx = expandedContentWidthPx,
+            onExpandedWidthChanged = { expandedContentWidthPx = it },
+        ) {
+            MainNavTabs.forEach { tabItem ->
+                val isSelected = tabItem.index == selectedIndex
+                tab(
+                    key = tabItem.index,
+                    title = {
+                        Text(
+                            text = stringResource(tabItem.titleRes),
+                            color = if (isSelected) selectedContentColor else unselectedContentColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            fontSize = 10.sp,
+                        )
+                    },
+                    icon = {
+                        Icon(
+                            painter = painterResource(tabItem.iconRes),
+                            contentDescription = stringResource(tabItem.titleRes),
+                            tint = if (isSelected) selectedContentColor else unselectedContentColor,
+                            modifier = Modifier.size(28.dp),
+                        )
+                    },
+                    onClick = {
+                        if (searchModeActive) {
+                            navSearch.onExit()
+                        } else {
+                            onTabSelected(tabItem.index)
+                        }
+                    },
+                )
+            }
+
+            standaloneTab(
+                key = 4,
+                title = {
+                    Text(
+                        text = stringResource(R.string.search_action),
+                        color = if (selectedIndex == 4) selectedContentColor else unselectedContentColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        fontSize = 10.sp,
+                    )
+                },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = stringResource(R.string.search_action),
+                        tint = if (selectedIndex == 4) selectedContentColor else unselectedContentColor,
+                        modifier = Modifier.size(26.dp),
+                    )
+                },
+                onClick = {
+                    if (searchModeActive) {
+                        navSearch.onTapBar()
+                    } else {
+                        navSearch.onTapSearchIcon()
+                    }
+                },
+            )
+        }
+    }
+}
+
+/**
+ * Pre-keyboard search placeholder row inside [SearchExpandedBar].
+ */
+@Composable
+private fun SearchBarPlaceholder(
+    state: NavSearchState,
+    contentColor: Color,
+    modifier: Modifier,
+) {
+    val glowScope = rememberCoroutineScope()
+    val glow = remember(glowScope) { InteractiveHighlight(animationScope = glowScope) }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .then(glow.gestureModifier)
+            .then(glow.modifier)
+            .bounceClick(onClick = state.onTapBar)
+            .padding(start = 4.dp, end = 8.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .bounceClick { state.onExit() }
+                .padding(8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = stringResource(R.string.close_action),
+                tint = contentColor,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+        Box(Modifier.weight(1f)) {
+            Text(
+                text = if (state.query.text.isEmpty()) stringResource(R.string.search_placeholder) else state.query.text,
+                style = TextStyle(color = contentColor.copy(alpha = if (state.query.text.isEmpty()) 0.6f else 1f), fontSize = 15.sp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+/**
+ * Search input bar docked above the IME keyboard with spring elevation.
+ */
+@Composable
+fun NavBarSearchInputBar(
+    state: NavSearchState,
+    pureBlack: Boolean,
+    tintColor: Color,
+    contentColor: Color,
+    modifier: Modifier,
+) {
+    val onTint = contentColor
+    val pillShape = ContinuousRoundedRectangle(percent = 50)
+    val coroutineScope = rememberCoroutineScope()
+    val pillGlow = remember(coroutineScope) { InteractiveHighlight(animationScope = coroutineScope) }
+    val backdrop = LocalBackdrop.current
+
+    BackHandler(onBack = state.onCloseKeyboard)
+
+    LaunchedEffect(Unit) {
+        delay(KeyboardOpenDelayMs)
+        state.focusRequester.requestFocus()
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .imePadding()
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp)
+            .padding(top = 6.dp, bottom = 2.dp)
+            .height(NavBarSearchBarHeight)
+            .clip(pillShape)
+            .drawBackdrop(
+                backdrop = backdrop,
+                shape = { pillShape },
+                effects = {
+                    vibrancy()
+                    blur(3f.dp.toPx())
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                        lens(
+                            refractionHeight = 19f.dp.toPx(),
+                            refractionAmount = 28f.dp.toPx(),
+                            depthEffect = true,
+                            chromaticAberration = true
+                        )
+                    }
+                },
+                highlight = { Highlight.Default.copy(alpha = 0.35f) },
+                shadow = { Shadow.Default },
+                onDrawSurface = { drawRect(if (tintColor != Color.Unspecified) tintColor.copy(alpha = 0.35f) else Color(0xFF1A1A1A).copy(alpha = 0.35f)) }
+            )
+            .then(pillGlow.gestureModifier)
+            .then(pillGlow.modifier)
+            .padding(horizontal = 4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .bounceClick { state.onExit() }
+                .padding(10.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = stringResource(R.string.close_action),
+                tint = onTint,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+        Box(modifier = Modifier.weight(1f)) {
+            if (state.query.text.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.search_placeholder),
+                    style = TextStyle(color = onTint.copy(alpha = 0.6f), fontSize = 15.sp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            BasicTextField(
+                value = state.query,
+                onValueChange = state.onQueryChange,
+                singleLine = true,
+                textStyle = TextStyle(color = onTint, fontSize = 15.sp),
+                cursorBrush = SolidColor(onTint),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(
+                    onSearch = { state.onSubmit(state.query.text) },
+                    onDone = { state.onSubmit(state.query.text) },
+                    onGo = { state.onSubmit(state.query.text) },
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(state.focusRequester)
+                    .onKeyEvent {
+                        if (it.key == Key.Enter) {
+                            state.onSubmit(state.query.text)
+                            true
+                        } else {
+                            false
+                        }
+                    }
+            )
+        }
+        if (state.query.text.isNotEmpty()) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .bounceClick { state.onQueryChange(TextFieldValue("")) }
+                    .padding(10.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    painter = painterResource(id = pair.second),
-                    contentDescription = tabText,
-                    tint = baseColor,
-                    modifier = Modifier
-                        .size(iconSize)
-                        .graphicsLayer {
-                            translationY = androidx.compose.ui.unit.lerp(5.dp, 10.dp, combineProgress()).toPx()
-                            alpha = if (index == 0) 1f else (1f - combineProgress())
-                            val color = if (index == 0) {
-                                androidx.compose.ui.graphics.lerp(
-                                    baseColor,
-                                    Color(0xFFFA243C),
-                                    combineProgress()
-                                )
-                            } else {
-                                baseColor
-                            }
-                            colorFilter = ColorFilter.tint(color)
-                        }
-                )
-                Text(
-                    text = tabText,
-                    color = baseColor,
-                    fontSize = 10.5.sp,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
-                    maxLines = 1,
-                    softWrap = false,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                    modifier = Modifier
-                        .padding(top = 1.dp)
-                        .graphicsLayer {
-                            translationY = androidx.compose.ui.unit.lerp(3.dp, 3.dp, combineProgress()).toPx()
-                            alpha = 1f - combineProgress()
-                        }
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.close_action),
+                    tint = onTint,
+                    modifier = Modifier.fillMaxSize(),
                 )
             }
         }
