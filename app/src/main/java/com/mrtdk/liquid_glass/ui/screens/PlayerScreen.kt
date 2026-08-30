@@ -2238,7 +2238,7 @@ fun PlayerScreen(
 
             val expandedWidth = maxWidth
 
-            val expandedHeight = maxWidth * 1.15f
+            val expandedHeight = maxWidth * 1.35f
 
             val expandedX = 0.dp
 
@@ -2295,7 +2295,8 @@ fun PlayerScreen(
             val imgOffsetY = if (dragProgress > 0f) imgOffsetYTarget else animatedImgOffsetY
             val imgCorner = if (dragProgress > 0f) imageCornerTarget else animatedImgCorner
 
-            val detailsOffsetYTarget = if (isOverlayActive) 64.dp else (expandedHeight - 8.dp)
+            val controlsBaseY = if (isOverlayActive) (expandedY + expandedHeight) else (maxWidth * 1.23f)
+            val detailsOffsetYTarget = if (isOverlayActive) 64.dp else (controlsBaseY - 8.dp)
 
             val detailsOffsetY by androidx.compose.animation.core.animateDpAsState(detailsOffsetYTarget)
 
@@ -2460,19 +2461,19 @@ fun PlayerScreen(
                         )
                     )
             ) {
-            // Capa 4: Reflejo invertido estilo Apple Music (perfectamente unido a la carátula)
+            // Capa 4: Reflejo invertido estilo Apple Music
             val mirrorArtModel = hdArtUrl ?: playerState?.artUrl
             if ((coverBitmap != null || mirrorArtModel != null) && dragProgress < 1f && !showLyrics && !showQueue) {
                 val reflectionWidth = maxWidth
                 val reflectionX = 0.dp
                 val childWidth = expandedWidth
                 val childOffsetX = expandedX
-                val baseReflectionY = expandedY + expandedHeight
+                val reflectionOverlap = 32.dp
+                val baseReflectionY = (expandedY + expandedHeight) - reflectionOverlap
                 val reflectionY = baseReflectionY
                 val reflectionHeight = (maxHeight - baseReflectionY).coerceAtLeast(expandedHeight)
                 
-                val stretchY = 9.0f
-                val verticalScale = -stretchY
+                val verticalScale = -4.0f
                 val pivotY = 0f
 
                 Box(
@@ -2483,7 +2484,7 @@ fun PlayerScreen(
                         .clipToBounds()
                         .graphicsLayer {
                             compositingStrategy = CompositingStrategy.Offscreen
-                            alpha = 1f
+                            alpha = (1f - dragProgress * 2f).coerceIn(0f, 1f)
                         }
                 ) {
                     val currentBitmap = coverBitmap
@@ -2495,26 +2496,22 @@ fun PlayerScreen(
                             .width(childWidth)
                             .height(expandedHeight)
                     ) {
-                        if (currentBitmap != null || mirrorModel != null || !animatedArtworkUrl.isNullOrBlank()) {
-                            val sliderFraction = if (reflectionHeight > 0.dp && stableSliderYDp > baseReflectionY) {
-                                ((stableSliderYDp - baseReflectionY) / reflectionHeight).coerceIn(0.15f, 0.60f)
-                            } else {
-                                0.28f
-                            }
-
-                            // Reflejo invertido con unión suave
+                            // Reflejo invertido con difuminado horizontal progresivo
                             com.mrtdk.liquid_glass.ui.components.GraduatedBlurArtwork(
                                 imageUrl = currentBitmap ?: mirrorModel,
                                 videoUrl = animatedArtworkUrl,
                                 modifier = Modifier.fillMaxSize(),
+                                mildBlurRadiusX = 40.dp,
+                                mildBlurRadiusY = 14.dp,
+                                strongBlurRadiusX = 160.dp,
+                                strongBlurRadiusY = 16.dp,
+                                sliderThresholdDp = 50.dp,
                                 verticalScale = verticalScale,
                                 pivotY = 0f,
                                 horizontalScale = 1.0f,
-                                blurTransitionEndFraction = sliderFraction,
                                 syncWithPlayer = masterAnimatedPlayer,
                                 imageLoader = animatedImageLoader
                             )
-                        }
                     }
                 }
             }
@@ -3565,7 +3562,27 @@ fun PlayerScreen(
                             CompositingStrategy.Auto
                         }
                     }
+                    .drawWithContent {
+                        drawContent()
+                        if (!isOverlayActive && dragProgress == 0f) {
+                            val h = size.height
+                            val fadePx = with(density) { 32.dp.toPx() }
+                            if (h > fadePx) {
+                                val startFrac = (h - fadePx) / h
+                                drawRect(
+                                    brush = Brush.verticalGradient(
+                                        0.0f to Color.Black,
+                                        startFrac to Color.Black,
+                                        1.0f to Color.Transparent
+                                    ),
+                                    blendMode = BlendMode.DstIn
+                                )
+                            }
+                        }
+                    }
             ) {
+
+                val artworkBiasAlignment = Alignment.TopCenter
 
                 // Base sharp album cover (always drawn in background during drag or before playback starts)
                 AsyncImage(
@@ -3576,6 +3593,7 @@ fun PlayerScreen(
                     imageLoader = animatedImageLoader,
                     contentDescription = "Album Art",
                     contentScale = ContentScale.Crop,
+                    alignment = artworkBiasAlignment,
                     modifier = Modifier.fillMaxSize()
                 )
 
@@ -3589,7 +3607,11 @@ fun PlayerScreen(
                     }
                     com.mrtdk.liquid_glass.ui.components.AnimatedArtworkPlayer(
                         videoUrl = currentAnimatedUrl,
-                        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (isVideoPlaying) 1f else 0f },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                alpha = if (isVideoPlaying) 1f else 0f
+                            },
                         isPaused = false,
                         enableFrameCapture = (dragProgress == 0f && !isOverlayActive),
                         onPlayerCreated = { masterAnimatedPlayer = it },
@@ -3689,9 +3711,10 @@ fun PlayerScreen(
                                 bitmap = currentBitmap,
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
+                                alignment = artworkBiasAlignment,
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .blur(12.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
+                                    .blur(14.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
                             )
                         } else {
                             AsyncImage(
@@ -3702,9 +3725,10 @@ fun PlayerScreen(
                                 imageLoader = animatedImageLoader,
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
+                                alignment = artworkBiasAlignment,
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .blur(12.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
+                                    .blur(14.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
                             )
                         }
                     }
@@ -3744,14 +3768,6 @@ fun PlayerScreen(
                 )
             }
 
-
-
-
-
-
-
-
-
             // GLOBAL PLAYBACK CONTROLS (Unified bottom controls with fixed height relative to cover image)
 
              AnimatedVisibility(
@@ -3765,11 +3781,11 @@ fun PlayerScreen(
                  exit = fadeOut()
 
              ) {
-
+                 val currentControlsBaseY = if (isOverlayActive) (expandedY + expandedHeight) else (maxWidth * 1.23f)
                  Box(
                       modifier = Modifier
                           .fillMaxWidth()
-                          .height(maxHeight - (expandedY + expandedHeight))
+                          .height(maxHeight - currentControlsBaseY)
                           .graphicsLayer {
                               alpha = contentAlpha
                           }
@@ -3791,7 +3807,7 @@ fun PlayerScreen(
 
                      ) {
 
-                         Spacer(modifier = Modifier.height(72.dp)) 
+                         Spacer(modifier = Modifier.height(88.dp)) 
 
                           AppleMusicSlider(
                               value = progress, onValueChange = { onSeek((it * duration).toLong()) },
