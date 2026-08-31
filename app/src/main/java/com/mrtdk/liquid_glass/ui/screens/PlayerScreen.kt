@@ -2295,7 +2295,7 @@ fun PlayerScreen(
             val imgOffsetY = if (dragProgress > 0f) imgOffsetYTarget else animatedImgOffsetY
             val imgCorner = if (dragProgress > 0f) imageCornerTarget else animatedImgCorner
 
-            val controlsBaseY = if (isOverlayActive) (expandedY + expandedHeight) else (maxWidth * 1.23f)
+            val controlsBaseY = maxWidth * 1.23f
             val detailsOffsetYTarget = if (isOverlayActive) 64.dp else (controlsBaseY - 8.dp)
 
             val detailsOffsetY by androidx.compose.animation.core.animateDpAsState(detailsOffsetYTarget)
@@ -2484,7 +2484,7 @@ fun PlayerScreen(
                         .clipToBounds()
                         .graphicsLayer {
                             compositingStrategy = CompositingStrategy.Offscreen
-                            alpha = (1f - dragProgress * 2f).coerceIn(0f, 1f)
+                            alpha = 1f
                         }
                 ) {
                     val currentBitmap = coverBitmap
@@ -2582,13 +2582,9 @@ fun PlayerScreen(
                       // For lyrics immersive mode (controls hidden) animate up to full screen height
 
                       val overlayContentHeight by animateDpAsState(
-
-                          targetValue = if (showLyrics && !showLyricsControls) maxHeight else expandedY + expandedHeight + 72.dp,
-
+                          targetValue = if (showLyrics && !showLyricsControls) maxHeight else (controlsBaseY + 68.dp),
                           animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
-
                           label = "overlayContentHeight"
-
                       )
 
                        Column(
@@ -2654,7 +2650,7 @@ fun PlayerScreen(
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(painterResource(id = R.drawable.shuffle), "Shuffle", tint = shuffleIconColor, modifier = Modifier.size(20.dp))
+                                    Icon(painterResource(id = R.drawable.shuffle), "Shuffle", tint = shuffleIconColor, modifier = Modifier.size(36.dp))
                                 }
 
                                 Box(
@@ -2672,7 +2668,7 @@ fun PlayerScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     val repeatIcon = if (repeatMode == androidx.media3.common.Player.REPEAT_MODE_ONE) Icons.Default.RepeatOne else Icons.Default.Repeat
-                                    Icon(repeatIcon, "Repeat", tint = repeatIconColor, modifier = Modifier.size(20.dp))
+                                    Icon(repeatIcon, "Repeat", tint = repeatIconColor, modifier = Modifier.size(24.dp))
                                 }
 
                                 Box(
@@ -2691,7 +2687,7 @@ fun PlayerScreen(
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(Icons.Default.AllInclusive, "Autoplay", tint = autoplayIconColor, modifier = Modifier.size(20.dp))
+                                    Icon(Icons.Default.AllInclusive, "Autoplay", tint = autoplayIconColor, modifier = Modifier.size(24.dp))
                                 }
 
                                 Box(
@@ -2710,18 +2706,54 @@ fun PlayerScreen(
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(if (isRomajiActive) Icons.Default.ToggleOn else Icons.Default.ToggleOff, "Toggle", tint = romajiIconColor, modifier = Modifier.size(24.dp))
+                                    Canvas(modifier = Modifier.size(24.dp)) {
+                                        val strokeWidth = 1.6.dp.toPx()
+                                        val radius = size.height * 0.28f
+                                        val centerY = size.height / 2f
+                                        val leftCenterX = size.width * 0.38f
+                                        val rightCenterX = size.width * 0.62f
+
+                                        // Left circle: subtle thin outline
+                                        drawCircle(
+                                            color = romajiIconColor.copy(alpha = 0.45f),
+                                            radius = radius,
+                                            center = androidx.compose.ui.geometry.Offset(leftCenterX, centerY),
+                                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth)
+                                        )
+                                        // Right circle: bold ring with center fill
+                                        drawCircle(
+                                            color = romajiIconColor,
+                                            radius = radius,
+                                            center = androidx.compose.ui.geometry.Offset(rightCenterX, centerY),
+                                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth * 2.2f)
+                                        )
+                                        drawCircle(
+                                            color = romajiIconColor,
+                                            radius = radius * 0.45f,
+                                            center = androidx.compose.ui.geometry.Offset(rightCenterX, centerY)
+                                        )
+                                    }
                                 }
                             }
 
-                             if (playerState != null && playerState.queue.isNotEmpty()) {
-                               Text(text = stringResource(R.string.siguiente_en_album_playlist), color = contentColor, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp, start = 24.dp, end = 24.dp, bottom = 4.dp))
-                             } else if (playerState?.isExclusiveQueue != true) {
-                                  Column(modifier = Modifier.padding(top = 8.dp, start = 24.dp, end = 24.dp, bottom = 4.dp)) {
-                                      Text(text = stringResource(R.string.continue_playing), color = contentColor, fontSize = 17.sp, fontWeight = FontWeight.Bold)
-                                      Text(text = stringResource(R.string.autoplaying_similar_music), color = contentColor.copy(alpha = 0.7f), fontSize = 13.5.sp)
-                                  }
-                             }
+                            val albumSubtitle = playerState?.album?.takeIf { it.isNotBlank() }?.let { "De $it" }
+                                ?: (playerState?.artist?.takeIf { it.isNotBlank() }?.let { "De $it" } ?: stringResource(R.string.autoplaying_similar_music))
+
+                            Column(modifier = Modifier.padding(top = 10.dp, start = 24.dp, end = 24.dp, bottom = 4.dp)) {
+                                Text(
+                                    text = if (playerState != null && playerState.queue.isNotEmpty()) stringResource(R.string.siguiente_en_album_playlist) else stringResource(R.string.continue_playing),
+                                    color = contentColor,
+                                    fontSize = 17.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = albumSubtitle,
+                                    color = contentColor.copy(alpha = 0.65f),
+                                    fontSize = 13.sp,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+                            }
                           
                             // Fading edge Box: clips queue list before it reaches the player controls area
                              Box(
@@ -2732,48 +2764,9 @@ fun PlayerScreen(
                             LazyColumn(
                                 state = queueListState, 
                                 modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp), 
-                                contentPadding = PaddingValues(top = 2.dp, bottom = 16.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                contentPadding = PaddingValues(top = 2.dp, bottom = 20.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                               if (playerState != null) {
-                                   item {
-                                       Text(
-                                           text = stringResource(R.string.player_queue_now_playing),
-                                           color = contentColor,
-                                           fontSize = 17.sp,
-                                           fontWeight = FontWeight.Bold,
-                                           modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
-                                       )
-                                      Row(
-                                          verticalAlignment = Alignment.CenterVertically,
-                                          modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                                      ) {
-                                          val upgradedArt = playerState.artUrl?.let {
-                                              val itStr = it.toString()
-                                              if (itStr.startsWith("file:///android_asset/")) {
-                                                  it
-                                              } else {
-                                                  val upgraded = com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(itStr) ?: itStr
-                                                  if (it is android.net.Uri) android.net.Uri.parse(upgraded) else upgraded
-                                              }
-                                          } ?: playerState.artUrl
-
-                                          AsyncImage(
-                                              model = ImageRequest.Builder(context).data(upgradedArt).crossfade(false).build(),
-                                              contentDescription = null,
-                                              modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp))
-                                          )
-                                          Spacer(modifier = Modifier.width(12.dp))
-                                          Column(modifier = Modifier.weight(1f)) {
-                                              Text(playerState.title ?: "", color = contentColor, fontSize = 16.sp, maxLines = 1, fontWeight = FontWeight.Bold)
-                                              Text(playerState.artist ?: "", color = contentColor.copy(alpha=0.6f), fontSize = 14.sp, maxLines = 1)
-                                          }
-                                          PlayingEqualizer(color = contentColor, isPlaying = isPlaying, modifier = Modifier.size(24.dp))
-                                      }
-                                      androidx.compose.material3.HorizontalDivider(color = Color.DarkGray.copy(alpha = 0.5f))
-                                  }
-                              }
-
                               // 1. Manual Queue Section (Album/Playlist)
                               if (playerState != null && playerState.queue.isNotEmpty()) {
                                    val state = playerState
@@ -2805,7 +2798,9 @@ fun PlayerScreen(
                                                         if (it is android.net.Uri) android.net.Uri.parse(upgraded) else upgraded
                                                     }
                                                 } ?: qItem.artUrl
-                                                val remaining = state.queue.drop(index + 1)
+                                                val remaining = state.queue.toMutableList().apply {
+                                                    if (index in indices) removeAt(index)
+                                                }
                                                 onSongSelectedFromQueue(PlayerState(
                                                     title = qItem.title,
                                                     artist = qItem.artist,
@@ -2825,9 +2820,25 @@ fun PlayerScreen(
                                              isPlaying = if (isCurrent) isPlaying else false,
                                              isCurrentPlayingItem = isCurrent,
                                              context = context,
-                                             titleFontSize = 16.sp,
-                                             artistFontSize = 14.sp,
-                                             onClick = onRowClick
+                                             titleFontSize = 15.sp,
+                                             artistFontSize = 13.sp,
+                                             onClick = onRowClick,
+                                             onMoveUp = {
+                                                 if (index > 0 && index in state.queue.indices) {
+                                                     val mutable = state.queue.toMutableList()
+                                                     val item = mutable.removeAt(index)
+                                                     mutable.add(index - 1, item)
+                                                     onSongSelected(state.copy(queue = mutable))
+                                                 }
+                                             },
+                                             onMoveDown = {
+                                                 if (index < state.queue.size - 1 && index in state.queue.indices) {
+                                                     val mutable = state.queue.toMutableList()
+                                                     val item = mutable.removeAt(index)
+                                                     mutable.add(index + 1, item)
+                                                     onSongSelected(state.copy(queue = mutable))
+                                                 }
+                                             }
                                         )
                                     }
                                }
@@ -2855,7 +2866,10 @@ fun PlayerScreen(
                                                val upgradedArt = song.thumbnail?.let {
                                                    com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(it) ?: it
                                                } ?: song.thumbnail
-                                               onUpNextSongsChange(upNextSongs.drop(i + 1))
+                                               val remaining = upNextSongs.toMutableList().apply {
+                                                   if (i in indices) removeAt(i)
+                                               }
+                                               onUpNextSongsChange(remaining)
                                                onSongSelectedFromQueue(PlayerState(
                                                    title = song.title,
                                                    artist = song.artists.joinToString { it.name },
@@ -2874,12 +2888,28 @@ fun PlayerScreen(
                                            context = context,
                                            isPlaying = if (isCurrent) isPlaying else false,
                                            isCurrentPlayingItem = isCurrent,
-                                           titleFontSize = 16.sp,
-                                           artistFontSize = 14.sp,
-                                           onClick = onRowClick
+                                           titleFontSize = 15.sp,
+                                           artistFontSize = 13.sp,
+                                           onClick = onRowClick,
+                                           onMoveUp = {
+                                               if (i > 0 && i in upNextSongs.indices) {
+                                                   val mutable = upNextSongs.toMutableList()
+                                                   val item = mutable.removeAt(i)
+                                                   mutable.add(i - 1, item)
+                                                   onUpNextSongsChange(mutable)
+                                               }
+                                           },
+                                           onMoveDown = {
+                                               if (i < upNextSongs.size - 1 && i in upNextSongs.indices) {
+                                                   val mutable = upNextSongs.toMutableList()
+                                                   val item = mutable.removeAt(i)
+                                                   mutable.add(i + 1, item)
+                                                   onUpNextSongsChange(mutable)
+                                               }
+                                           }
                                        )
-                                   }
                                }
+                                }
 
                           }
 
@@ -3545,7 +3575,7 @@ fun PlayerScreen(
                         } else Modifier
                     )
                     .graphicsLayer {
-                        shape = if (!isOverlayActive && dragProgress == 0f) {
+                        shape = if (!isOverlayActive) {
                             RoundedCornerShape(
                                 topStart = imgCorner.toPx(),
                                 topEnd = imgCorner.toPx(),
@@ -3564,7 +3594,7 @@ fun PlayerScreen(
                     }
                     .drawWithContent {
                         drawContent()
-                        if (!isOverlayActive && dragProgress == 0f) {
+                        if (!isOverlayActive) {
                             val h = size.height
                             val fadePx = with(density) { 32.dp.toPx() }
                             if (h > fadePx) {
@@ -3643,7 +3673,7 @@ fun PlayerScreen(
                 }
 
                 // Capa de desenfoque soft blur en la curva de la parte inferior de la carátula
-                if (dragProgress < 1f && !isOverlayActive) {
+                if (!isOverlayActive) {
                     val blurRadiusPx = with(density) { 18.dp.toPx() }
                     val maskBitmapCache = remember { arrayOfNulls<androidx.compose.ui.graphics.ImageBitmap>(1) }
                     Box(
@@ -3781,7 +3811,7 @@ fun PlayerScreen(
                  exit = fadeOut()
 
              ) {
-                 val currentControlsBaseY = if (isOverlayActive) (expandedY + expandedHeight) else (maxWidth * 1.23f)
+                 val currentControlsBaseY = maxWidth * 1.23f
                  Box(
                       modifier = Modifier
                           .fillMaxWidth()
@@ -6881,7 +6911,23 @@ fun LandscapePlayerLayout(
 
                                              artistFontSize = 13.sp,
 
-                                             onClick = onRowClick
+                                            onClick = onRowClick,
+                                            onMoveUp = {
+                                                if (index > 0 && index in state.queue.indices) {
+                                                    val mutable = state.queue.toMutableList()
+                                                    val item = mutable.removeAt(index)
+                                                    mutable.add(index - 1, item)
+                                                    onSongSelected(state.copy(queue = mutable))
+                                                }
+                                            },
+                                            onMoveDown = {
+                                                if (index < state.queue.size - 1 && index in state.queue.indices) {
+                                                    val mutable = state.queue.toMutableList()
+                                                    val item = mutable.removeAt(index)
+                                                    mutable.add(index + 1, item)
+                                                    onSongSelected(state.copy(queue = mutable))
+                                                }
+                                            }
 
                                          )
 
@@ -6921,33 +6967,52 @@ fun LandscapePlayerLayout(
                                          }
 
                                          val onRowClick = remember(song, i, upNextSongs, state) {
-                                             {
-                                                 val upgradedArt = song.thumbnail?.let {
-                                                     com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(it) ?: it
-                                                 } ?: song.thumbnail
-                                                 onUpNextSongsChange(upNextSongs.drop(i + 1))
-                                                 onSongSelectedFromQueue(PlayerState(
-                                                     title = song.title,
-                                                     artist = song.artists.joinToString { it.name },
-                                                     artUrl = upgradedArt,
-                                                     videoId = song.id,
-                                                     isExclusiveQueue = state?.isExclusiveQueue ?: false,
-                                                     album = song.album?.name,
-                                                     albumId = song.album?.id
-                                                 ))
-                                             }
-                                         }
+                                            {
+                                                val upgradedArt = song.thumbnail?.let {
+                                                    com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(it) ?: it
+                                                } ?: song.thumbnail
+                                                val remaining = upNextSongs.toMutableList().apply {
+                                                    if (i in indices) removeAt(i)
+                                                }
+                                                onUpNextSongsChange(remaining)
+                                                onSongSelectedFromQueue(PlayerState(
+                                                    title = song.title,
+                                                    artist = song.artists.joinToString { it.name },
+                                                    artUrl = upgradedArt,
+                                                    videoId = song.id,
+                                                    isExclusiveQueue = state?.isExclusiveQueue ?: false,
+                                                    album = song.album?.name,
+                                                    albumId = song.album?.id
+                                                ))
+                                            }
+                                        }
 
-                                         UpNextSongRow(
-                                             rowData = rowData,
-                                             contentColor = contentColor,
-                                             context = context,
-                                             isPlaying = if (isCurrent) isPlaying else false,
-                                             isCurrentPlayingItem = isCurrent,
-                                             titleFontSize = 15.sp,
-                                             artistFontSize = 13.sp,
-                                             onClick = onRowClick
-                                         )
+                                        UpNextSongRow(
+                                            rowData = rowData,
+                                            contentColor = contentColor,
+                                            context = context,
+                                            isPlaying = if (isCurrent) isPlaying else false,
+                                            isCurrentPlayingItem = isCurrent,
+                                            titleFontSize = 15.sp,
+                                            artistFontSize = 13.sp,
+                                            onClick = onRowClick,
+                                            onMoveUp = {
+                                                if (i > 0 && i in upNextSongs.indices) {
+                                                    val mutable = upNextSongs.toMutableList()
+                                                    val item = mutable.removeAt(i)
+                                                    mutable.add(i - 1, item)
+                                                    onUpNextSongsChange(mutable)
+                                                }
+                                            },
+                                            onMoveDown = {
+                                                if (i < upNextSongs.size - 1 && i in upNextSongs.indices) {
+                                                    val mutable = upNextSongs.toMutableList()
+                                                    val item = mutable.removeAt(i)
+                                                    mutable.add(i + 1, item)
+                                                    onUpNextSongsChange(mutable)
+                                                }
+                                            }
+                                        )
                                      }
                                  }
                                  item { Spacer(modifier = Modifier.height(40.dp)) }
@@ -7442,9 +7507,11 @@ private fun QueueItemRow(
     isPlaying: Boolean,
     isCurrentPlayingItem: Boolean,
     context: android.content.Context,
-    titleFontSize: androidx.compose.ui.unit.TextUnit = 16.sp,
-    artistFontSize: androidx.compose.ui.unit.TextUnit = 14.sp,
-    onClick: () -> Unit
+    titleFontSize: androidx.compose.ui.unit.TextUnit = 15.sp,
+    artistFontSize: androidx.compose.ui.unit.TextUnit = 13.sp,
+    onClick: () -> Unit,
+    onMoveUp: () -> Unit = {},
+    onMoveDown: () -> Unit = {}
 ) {
     val upgradedArt = remember(rowData.artUrl) {
         rowData.artUrl?.let {
@@ -7461,11 +7528,15 @@ private fun QueueItemRow(
     val imageModel = remember(upgradedArt, context) {
         ImageRequest.Builder(context)
             .data(upgradedArt)
-            .size(120)
+            .size(140)
             .memoryCacheKey(upgradedArt?.toString())
             .crossfade(false)
             .build()
     }
+
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val rowHeightPx = with(density) { 56.dp.toPx() }
+    var dragAccumulator by remember { mutableFloatStateOf(0f) }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -7473,12 +7544,12 @@ private fun QueueItemRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
-            .padding(vertical = 4.dp, horizontal = 4.dp)
+            .padding(vertical = 5.dp, horizontal = 2.dp)
     ) {
         AsyncImage(
             model = imageModel,
             contentDescription = null,
-            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp))
+            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(6.dp))
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -7487,19 +7558,46 @@ private fun QueueItemRow(
                 color = contentColor,
                 fontSize = titleFontSize,
                 maxLines = 1,
-                fontWeight = FontWeight.Bold
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                fontWeight = FontWeight.SemiBold
             )
             Text(
                 text = rowData.artist,
-                color = contentColor.copy(alpha = 0.6f),
+                color = contentColor.copy(alpha = 0.65f),
                 fontSize = artistFontSize,
-                maxLines = 1
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
             )
         }
         if (isCurrentPlayingItem) {
-            PlayingEqualizer(color = contentColor, isPlaying = isPlaying, modifier = Modifier.size(24.dp))
+            PlayingEqualizer(color = contentColor, isPlaying = isPlaying, modifier = Modifier.size(22.dp))
         } else {
-            Icon(Icons.Default.Menu, contentDescription = null, tint = contentColor.copy(alpha = 0.6f))
+            Icon(
+                Icons.Default.Menu,
+                contentDescription = "Reorder",
+                tint = contentColor.copy(alpha = 0.45f),
+                modifier = Modifier
+                    .size(32.dp)
+                    .padding(4.dp)
+                    .pointerInput(onMoveUp, onMoveDown) {
+                        detectVerticalDragGestures(
+                            onDragStart = { dragAccumulator = 0f },
+                            onDragEnd = { dragAccumulator = 0f },
+                            onDragCancel = { dragAccumulator = 0f },
+                            onVerticalDrag = { change, dragAmount ->
+                                change.consume()
+                                dragAccumulator += dragAmount
+                                if (dragAccumulator > rowHeightPx * 0.45f) {
+                                    onMoveDown()
+                                    dragAccumulator = 0f
+                                } else if (dragAccumulator < -rowHeightPx * 0.45f) {
+                                    onMoveUp()
+                                    dragAccumulator = 0f
+                                }
+                            }
+                        )
+                    }
+            )
         }
     }
 }
@@ -7511,9 +7609,11 @@ private fun UpNextSongRow(
     context: android.content.Context,
     isPlaying: Boolean,
     isCurrentPlayingItem: Boolean,
-    titleFontSize: androidx.compose.ui.unit.TextUnit = 16.sp,
-    artistFontSize: androidx.compose.ui.unit.TextUnit = 14.sp,
-    onClick: () -> Unit
+    titleFontSize: androidx.compose.ui.unit.TextUnit = 15.sp,
+    artistFontSize: androidx.compose.ui.unit.TextUnit = 13.sp,
+    onClick: () -> Unit,
+    onMoveUp: () -> Unit = {},
+    onMoveDown: () -> Unit = {}
 ) {
     val hdThumb = remember(rowData.thumbnail) {
         rowData.thumbnail?.let {
@@ -7524,11 +7624,15 @@ private fun UpNextSongRow(
     val imageModel = remember(hdThumb, context) {
         ImageRequest.Builder(context)
             .data(hdThumb)
-            .size(120)
+            .size(140)
             .memoryCacheKey(hdThumb)
             .crossfade(false)
             .build()
     }
+
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val rowHeightPx = with(density) { 56.dp.toPx() }
+    var dragAccumulator by remember { mutableFloatStateOf(0f) }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -7536,12 +7640,12 @@ private fun UpNextSongRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
-            .padding(vertical = 4.dp, horizontal = 4.dp)
+            .padding(vertical = 5.dp, horizontal = 2.dp)
     ) {
         AsyncImage(
             model = imageModel,
             contentDescription = null,
-            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp))
+            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(6.dp))
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -7550,19 +7654,46 @@ private fun UpNextSongRow(
                 color = contentColor,
                 fontSize = titleFontSize,
                 maxLines = 1,
-                fontWeight = FontWeight.Bold
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                fontWeight = FontWeight.SemiBold
             )
             Text(
                 text = rowData.artist,
-                color = contentColor.copy(alpha = 0.6f),
+                color = contentColor.copy(alpha = 0.65f),
                 fontSize = artistFontSize,
-                maxLines = 1
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
             )
         }
         if (isCurrentPlayingItem) {
-            PlayingEqualizer(color = contentColor, isPlaying = isPlaying, modifier = Modifier.size(24.dp))
+            PlayingEqualizer(color = contentColor, isPlaying = isPlaying, modifier = Modifier.size(22.dp))
         } else {
-            Icon(Icons.Default.Menu, contentDescription = null, tint = contentColor.copy(alpha = 0.6f))
+            Icon(
+                Icons.Default.Menu,
+                contentDescription = "Reorder",
+                tint = contentColor.copy(alpha = 0.45f),
+                modifier = Modifier
+                    .size(32.dp)
+                    .padding(4.dp)
+                    .pointerInput(onMoveUp, onMoveDown) {
+                        detectVerticalDragGestures(
+                            onDragStart = { dragAccumulator = 0f },
+                            onDragEnd = { dragAccumulator = 0f },
+                            onDragCancel = { dragAccumulator = 0f },
+                            onVerticalDrag = { change, dragAmount ->
+                                change.consume()
+                                dragAccumulator += dragAmount
+                                if (dragAccumulator > rowHeightPx * 0.45f) {
+                                    onMoveDown()
+                                    dragAccumulator = 0f
+                                } else if (dragAccumulator < -rowHeightPx * 0.45f) {
+                                    onMoveUp()
+                                    dragAccumulator = 0f
+                                }
+                            }
+                        )
+                    }
+            )
         }
     }
 }
