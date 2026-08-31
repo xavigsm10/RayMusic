@@ -254,7 +254,11 @@ fun BibliotecaScreen(
                     } else {
                         savedItems.filter { it.type == selectedCategory }
                     }
-                    items(filteredItems.size) { i ->
+                    items(
+                        count = filteredItems.size,
+                        key = { i -> filteredItems[i].id },
+                        contentType = { "library_filtered_item" }
+                    ) { i ->
                         val item = filteredItems[i]
                         Column(
                             modifier = Modifier
@@ -387,7 +391,11 @@ fun BibliotecaScreen(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    items(pinnedPlaylists.size) { i ->
+                    items(
+                    count = pinnedPlaylists.size,
+                    key = { i -> pinnedPlaylists[i].id },
+                    contentType = { "pinned_playlist" }
+                ) { i ->
                         val pl = pinnedPlaylists[i]
                         Column(
                             modifier = Modifier
@@ -491,7 +499,11 @@ fun BibliotecaScreen(
         }
         
         if (savedItems.isNotEmpty()) {
-            items(savedItems.size) { i ->
+            items(
+                count = savedItems.size,
+                key = { i -> savedItems[i].id },
+                contentType = { "library_saved_item" }
+            ) { i ->
                 val item = savedItems[i]
                 Column(
                     modifier = Modifier
@@ -572,7 +584,11 @@ fun BibliotecaScreen(
                 }
             }
         } else {
-            items(songs.size) { index ->
+            items(
+                count = songs.size,
+                key = { index -> songs[index].id },
+                contentType = { "library_song_item" }
+            ) { index ->
                 SongGridItem(song = songs[index], fillMaxWidth = true)
             }
         }

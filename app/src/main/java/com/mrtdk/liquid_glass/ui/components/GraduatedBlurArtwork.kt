@@ -1,13 +1,10 @@
 package com.mrtdk.liquid_glass.ui.components
 
-import android.os.Build
 import androidx.annotation.OptIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
@@ -35,9 +32,10 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 
 /**
- * Reflejo de artwork invertido con difuminado progresivo horizontal:
- * - Capa base con difuminado horizontal moderado (no tan fuerte) desde el inicio hasta la barra de progreso.
- * - Capa superior con difuminado horizontal fuerte (sin ser extremo) en gradación suave hacia el final de la app.
+ * Reflejo de artwork invertido estilo Apple Music:
+ * - Capa estática base siempre visible de forma inmediata (sin pantallas negras).
+ * - Difuminado progresivo horizontal suave hacia el final de la pantalla (sliderThresholdDp).
+ * - Preserva 100% de los efectos, contraste y posición tanto en imágenes estáticas como con video en movimiento.
  */
 @OptIn(UnstableApi::class)
 @Composable
@@ -95,20 +93,18 @@ fun GraduatedBlurArtwork(
 
         val artworkAlignment = BiasAlignment(horizontalBias = horizontalBias, verticalBias = -1.0f)
 
-        // 1. Capa Base: Difuminado horizontal moderado (no tan fuerte) desde donde comienza el reflejo hasta la barra de progreso
-        ArtworkLayer(
+        // 1. Capa Base: Difuminado moderado (inmediato, 0 retardo)
+        StaticArtworkLayer(
             imageUrl = imageUrl,
-            videoUrl = videoUrl,
             artworkAlignment = artworkAlignment,
             transformModifier = transformModifier,
             internalZoomModifier = internalZoomModifier,
             blurRadiusX = mildBlurRadiusX,
             blurRadiusY = mildBlurRadiusY,
-            syncWithPlayer = syncWithPlayer,
             imageLoader = imageLoader
         )
 
-        // 2. Capa Superior: Difuminado fuerte (no extremo) en gradación suave hacia el final de la app
+        // 2. Capa Superior: Difuminado fuerte en gradación suave hacia los controles
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -137,32 +133,27 @@ fun GraduatedBlurArtwork(
                     }
                 }
         ) {
-            ArtworkLayer(
+            StaticArtworkLayer(
                 imageUrl = imageUrl,
-                videoUrl = videoUrl,
                 artworkAlignment = artworkAlignment,
                 transformModifier = transformModifier,
                 internalZoomModifier = internalZoomModifier,
                 blurRadiusX = strongBlurRadiusX,
                 blurRadiusY = strongBlurRadiusY,
-                syncWithPlayer = syncWithPlayer,
                 imageLoader = imageLoader
             )
         }
     }
 }
 
-@OptIn(UnstableApi::class)
 @Composable
-private fun ArtworkLayer(
+private fun StaticArtworkLayer(
     imageUrl: Any?,
-    videoUrl: String?,
     artworkAlignment: Alignment,
     transformModifier: Modifier,
     internalZoomModifier: Modifier,
     blurRadiusX: Dp = 0.dp,
     blurRadiusY: Dp = 0.dp,
-    syncWithPlayer: ExoPlayer? = null,
     imageLoader: ImageLoader? = null
 ) {
     val context = LocalContext.current
@@ -178,15 +169,7 @@ private fun ArtworkLayer(
             }
         }
 
-    if (!videoUrl.isNullOrBlank()) {
-        AnimatedArtworkPlayer(
-            videoUrl = videoUrl,
-            modifier = baseModifier,
-            enableFrameCapture = false,
-            isPaused = false,
-            syncWithPlayer = syncWithPlayer
-        )
-    } else if (imageUrl is ImageBitmap) {
+    if (imageUrl is ImageBitmap) {
         Image(
             bitmap = imageUrl,
             contentDescription = null,

@@ -364,7 +364,11 @@ fun CategoriaScreen(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 16.dp)
                     ) {
-                        items(featuredItems.size) { index ->
+                        items(
+                            count = featuredItems.size,
+                            key = { index -> featuredItems[index].id },
+                            contentType = { "hero_featured_song" }
+                        ) { index ->
                             val song = featuredItems[index]
                             val hdThumb = song.thumbnail.let {
                                 when {
@@ -462,7 +466,11 @@ fun CategoriaScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         modifier = Modifier.height(460.dp)
                     ) {
-                        items(state.playlists) { item ->
+                        items(
+                            items = state.playlists,
+                            key = { item -> item.id },
+                            contentType = { "category_playlist" }
+                        ) { item ->
                             var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
                             val pressScale = remember { Animatable(1f) }
                             val pressScopePlaylist = rememberCoroutineScope()
@@ -547,7 +555,11 @@ fun CategoriaScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         modifier = Modifier.height(280.dp)
                     ) {
-                        items(state.songs) { item ->
+                        items(
+                            items = state.songs,
+                            key = { item -> item.id },
+                            contentType = { "category_song" }
+                        ) { item ->
                             val hdThumb = item.thumbnail.let {
                                 when {
                                     it.contains("=w") -> it.substringBefore("=w") + "=w300-h300-l90-rj"
@@ -619,7 +631,11 @@ fun CategoriaScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         modifier = Modifier.height(460.dp)
                     ) {
-                        items(state.albums) { item ->
+                        items(
+                            items = state.albums,
+                            key = { item -> item.browseId },
+                            contentType = { "category_album" }
+                        ) { item ->
                             var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
                             val pressScale = remember { Animatable(1f) }
                             val pressScopeAlbum = rememberCoroutineScope()
@@ -702,7 +718,11 @@ fun CategoriaScreen(
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        items(state.artists) { item ->
+                        items(
+                            items = state.artists,
+                            key = { item -> item.id },
+                            contentType = { "category_artist" }
+                        ) { item ->
                             val pressScale = remember { Animatable(1f) }
                             val pressScopeArtist = rememberCoroutineScope()
                             Column(

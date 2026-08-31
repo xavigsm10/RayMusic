@@ -304,7 +304,11 @@ fun PlaylistsListScreen(
                         }
 
                         // Playlists Grid Items
-                        items(sortedPlaylists.size) { index ->
+                        items(
+                            count = sortedPlaylists.size,
+                            key = { index -> sortedPlaylists[index].id },
+                            contentType = { "playlist_grid_item" }
+                        ) { index ->
                             val pl = sortedPlaylists[index]
                             var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
                             Column(
@@ -474,7 +478,11 @@ fun PlaylistsListScreen(
                             androidx.compose.material3.Divider(modifier = Modifier.padding(start = 104.dp), color = Color.DarkGray.copy(alpha = 0.5f), thickness = 0.5.dp)
                         }
 
-                        items(sortedPlaylists) { pl ->
+                        items(
+                            items = sortedPlaylists,
+                            key = { pl -> pl.id },
+                            contentType = { "playlist_row" }
+                        ) { pl ->
                             var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
                             Row(
                                 modifier = Modifier
