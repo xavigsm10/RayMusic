@@ -17,6 +17,7 @@ import com.echo.innertube.models.YouTubeClient.Companion.IPADOS
 import com.echo.innertube.models.YouTubeClient.Companion.MOBILE
 import com.echo.innertube.models.YouTubeClient.Companion.TVHTML5
 import com.echo.innertube.models.YouTubeClient.Companion.TVHTML5_SIMPLY_EMBEDDED_PLAYER
+import com.echo.innertube.models.YouTubeClient.Companion.VISIONOS
 import com.echo.innertube.models.YouTubeClient.Companion.WEB
 import com.echo.innertube.models.YouTubeClient.Companion.WEB_CREATOR
 import com.echo.innertube.models.YouTubeClient.Companion.WEB_REMIX
@@ -60,16 +61,16 @@ object YTPlayerUtils {
     private val MAIN_CLIENT: YouTubeClient = ANDROID_VR_1_43_32
 
     private val STREAM_FALLBACK_CLIENTS: Array<YouTubeClient> = arrayOf(
+        VISIONOS,
         ANDROID_VR_1_61_48,
-        WEB_REMIX,
-        TVHTML5_SIMPLY_EMBEDDED_PLAYER,
+        ANDROID_VR_1_43_32,
         TVHTML5,
         ANDROID_CREATOR,
         IPADOS,
         ANDROID_VR_NO_AUTH,
         MOBILE,
         IOS,
-        WEB,
+        WEB_REMIX,
         WEB_CREATOR
     )
 

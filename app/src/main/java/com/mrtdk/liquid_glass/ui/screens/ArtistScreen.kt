@@ -30,7 +30,8 @@ import com.mrtdk.liquid_glass.ui.components.AppleMusicArtistMenu
 import android.os.Build
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.TileMode
-import com.skydoves.cloudy.cloudy
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.BlendMode
@@ -183,11 +184,21 @@ fun ArtistScreen(
 
     val currentArtistName = artistPage?.artist?.title ?: artistState.name
     var spotifyArtistThumb by remember(currentArtistName) { mutableStateOf<String?>(null) }
+    var artistMotionVideoUrl by remember(currentArtistName) { mutableStateOf<String?>(null) }
+
     LaunchedEffect(currentArtistName) {
         if (currentArtistName.isNotBlank()) {
             val spUrl = com.mrtdk.liquid_glass.spotify.SpotifyArtistProvider.getArtistImageUrl(currentArtistName)
             if (!spUrl.isNullOrBlank()) {
                 spotifyArtistThumb = spUrl
+            }
+            withContext(Dispatchers.IO) {
+                val motionUrl = com.mrtdk.liquid_glass.canvas.UnifiedCanvasProvider.getArtistMotionVideo(currentArtistName)
+                if (!motionUrl.isNullOrBlank()) {
+                    withContext(Dispatchers.Main) {
+                        artistMotionVideoUrl = motionUrl
+                    }
+                }
             }
         }
     }
@@ -510,82 +521,85 @@ fun ArtistScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(510.dp)
+                        .height(535.dp)
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(460.dp)
+                            .height(475.dp)
                             .align(Alignment.TopCenter)
                             .layerBackdrop(localBackdrop)
                     ) {
-                        // Sharp cover image - full size
+                        // 1. Sharp full-res cover image
                         AsyncImage(
                             model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
                             contentDescription = artistState.name,
                             contentScale = ContentScale.Crop,
+                            alignment = Alignment.TopCenter,
                             modifier = Modifier.fillMaxSize()
                         )
 
-                        // Blurred bottom portion of the image
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(hdThumb)
-                                .size(150)
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
+                        // 1b. Single Motion Video Player (60fps, 0-lag)
+                        if (!artistMotionVideoUrl.isNullOrBlank()) {
+                            com.mrtdk.liquid_glass.ui.components.AnimatedArtworkPlayer(
+                                videoUrl = artistMotionVideoUrl!!,
+                                modifier = Modifier.fillMaxSize(),
+                                enableFrameCapture = false,
+                                isPaused = false
+                            )
+                        }
+
+                        // 2. Soft bottom blur transition
+                        Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
-                                .then(
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                        Modifier.graphicsLayer {
-                                            renderEffect = BlurEffect(90f, 90f, TileMode.Clamp)
-                                        }
-                                    } else {
-                                        Modifier.cloudy(radius = 35)
-                                    }
-                                )
+                                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                                 .drawWithContent {
                                     drawContent()
                                     drawRect(
                                         brush = Brush.verticalGradient(
-                                            0f to Color.Transparent,
-                                            0.35f to Color.Transparent,
-                                            0.65f to Color.Black.copy(alpha = 0.7f),
-                                            1f to Color.Black
+                                            0.0f to Color.Transparent,
+                                            0.60f to Color.Transparent,
+                                            0.82f to Color.Black.copy(alpha = 0.75f),
+                                            1.0f to Color.Black
                                         ),
                                         blendMode = BlendMode.DstIn
                                     )
                                 }
-                        )
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                alignment = Alignment.TopCenter,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .blur(20.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
+                            )
+                        }
 
-                        // Gradient from transparent to finalBackgroundColor at the bottom
+                        // 3. Smooth uniform gradient fade into finalBackgroundColor at the bottom
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(260.dp)
-                                .align(Alignment.BottomCenter)
+                                .fillMaxSize()
                                 .background(
                                     Brush.verticalGradient(
-                                        0f to Color.Transparent,
-                                        0.25f to finalBackgroundColor.copy(alpha = 0.2f),
-                                        0.55f to finalBackgroundColor.copy(alpha = 0.6f),
-                                        0.8f to finalBackgroundColor.copy(alpha = 0.9f),
-                                        1f to finalBackgroundColor
+                                        0.0f to Color.Transparent,
+                                        0.55f to Color.Transparent,
+                                        0.75f to finalBackgroundColor.copy(alpha = 0.40f),
+                                        0.90f to finalBackgroundColor.copy(alpha = 0.85f),
+                                        1.0f to finalBackgroundColor
                                     )
                                 )
                         )
                     }
 
-                    // Artist Name + Buttons overlaid at the bottom of the image (over the gradient)
+                    // Artist Name + Buttons overlaid at the bottom of the image (sitting lower)
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .align(Alignment.BottomCenter)
-                            .padding(bottom = 12.dp),
+                            .padding(bottom = 6.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
@@ -897,7 +911,11 @@ fun ArtistScreen(
                     }
                 }
                 // Vertical song list (4 songs max)
-                items(songs.size) { index ->
+                items(
+                    count = songs.size,
+                    key = { index -> songs[index].id.ifEmpty { "$index" } },
+                    contentType = { "artist_song" }
+                ) { index ->
                     val song = songs[index]
                     Row(
                         modifier = Modifier
@@ -954,7 +972,11 @@ fun ArtistScreen(
                         )
                     }
 
-                    items(essentialsItems.size) { index ->
+                    items(
+                        count = essentialsItems.size,
+                        key = { index -> essentialsItems[index].id.ifEmpty { "$index" } },
+                        contentType = { "artist_essential" }
+                    ) { index ->
                         val album = essentialsItems[index]
                         val albumDescription = essentialsDescriptions[album.id] ?: getAlbumDescription(artistState.name, album.title)
                         Column(
@@ -1423,68 +1445,62 @@ fun ArtistScreen(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    // Full-width artist image with gradient (same as main page)
+                    // Full-width artist image with soft bottom blur & gradient (matching player technique)
                     item {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(420.dp)
+                                .height(430.dp)
                         ) {
+                            // 1. Sharp full-res cover image
                             AsyncImage(
                                 model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
                                 contentDescription = artistState.name,
                                 contentScale = ContentScale.Crop,
+                                alignment = Alignment.TopCenter,
                                 modifier = Modifier.fillMaxSize()
                             )
 
-                            // Blurred bottom portion of the image (matching the main artist page)
-                            AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(hdThumb)
-                                    .size(150)
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
+                            // 2. Soft bottom blur transition (player technique)
+                            Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
-                                    .then(
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                            Modifier.graphicsLayer {
-                                                renderEffect = BlurEffect(90f, 90f, TileMode.Clamp)
-                                            }
-                                        } else {
-                                            Modifier.cloudy(radius = 35)
-                                        }
-                                    )
+                                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                                     .drawWithContent {
                                         drawContent()
                                         drawRect(
                                             brush = Brush.verticalGradient(
-                                                0f to Color.Transparent,
-                                                0.35f to Color.Transparent,
-                                                0.65f to Color.Black.copy(alpha = 0.7f),
-                                                1f to Color.Black
+                                                0.0f to Color.Transparent,
+                                                0.68f to Color.Transparent,
+                                                0.86f to Color.Black.copy(alpha = 0.75f),
+                                                1.0f to Color.Black
                                             ),
                                             blendMode = BlendMode.DstIn
                                         )
                                     }
-                            )
+                            ) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    alignment = Alignment.TopCenter,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .blur(16.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
+                                )
+                            }
 
-                            // Gradient from transparent to finalBackgroundColor at the bottom
+                            // 3. Smooth uniform gradient fade into finalBackgroundColor at the bottom
                             Box(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(200.dp)
-                                    .align(Alignment.BottomCenter)
+                                    .fillMaxSize()
                                     .background(
                                         Brush.verticalGradient(
-                                            0f to Color.Transparent,
-                                            0.35f to finalBackgroundColor.copy(alpha = 0.2f),
-                                            0.65f to finalBackgroundColor.copy(alpha = 0.6f),
-                                            0.85f to finalBackgroundColor.copy(alpha = 0.9f),
-                                            1f to finalBackgroundColor
+                                            0.0f to Color.Transparent,
+                                            0.60f to Color.Transparent,
+                                            0.78f to finalBackgroundColor.copy(alpha = 0.40f),
+                                            0.92f to finalBackgroundColor.copy(alpha = 0.85f),
+                                            1.0f to finalBackgroundColor
                                         )
                                     )
                             )

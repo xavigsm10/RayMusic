@@ -77,6 +77,9 @@ import com.mrtdk.liquid_glass.ui.components.AppleMusicSongMenu
 import com.mrtdk.liquid_glass.ui.components.AppleMusicAlbumMenu
 import com.mrtdk.liquid_glass.ui.components.ContextMenuSong
 import com.mrtdk.liquid_glass.ui.components.ContextMenuAlbum
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import com.mrtdk.liquid_glass.playback.PlaybackQueue
 import com.mrtdk.liquid_glass.ui.screens.QueueItem
 import com.mrtdk.liquid_glass.ui.screens.PlayerState
@@ -97,6 +100,7 @@ fun AlbumScreen(
     onSongSelected: (PlayerState) -> Unit,
     onArtistSelected: (com.mrtdk.liquid_glass.ui.screens.ArtistState) -> Unit = {},
     onAlbumSelected: (com.mrtdk.liquid_glass.ui.screens.AlbumState) -> Unit = {},
+    onVideoSelected: ((String) -> Unit)? = null,
     onDominantColorChanged: (Color) -> Unit = {},
     isPaused: Boolean = false
 ) {
@@ -107,6 +111,8 @@ fun AlbumScreen(
     var tracks by remember { mutableStateOf<List<SongItem>>(emptyList()) }
     var dominantColor by remember { mutableStateOf(Color(0xFF1E1E1E)) }
     var albumError by remember { mutableStateOf<String?>(null) }
+    var artistPageData by remember(albumState.artist, albumState.id) { mutableStateOf<com.echo.innertube.pages.ArtistPage?>(null) }
+    var albumDescription by remember(albumState.id) { mutableStateOf<String?>(null) }
     val savedItems by LibraryManager.savedItems.collectAsState()
     val isSaved = savedItems.any { it.id == albumState.id }
 
@@ -139,20 +145,7 @@ fun AlbumScreen(
     val isVerticalAlbum = isAfterHoursAlbum || isAroundTheFurAlbum
 
     val animatedImageLoader = remember(context) {
-        val global = coil.Coil.imageLoader(context)
-        coil.ImageLoader.Builder(context)
-            .memoryCache(global.memoryCache)
-            .diskCache(global.diskCache)
-            .allowHardware(true)
-            .components {
-                add(com.mrtdk.liquid_glass.utils.CoilUtils.HdThumbnailInterceptor())
-                if (android.os.Build.VERSION.SDK_INT >= 28) {
-                    add(coil.decode.ImageDecoderDecoder.Factory())
-                } else {
-                    add(coil.decode.GifDecoder.Factory())
-                }
-            }
-            .build()
+        coil.Coil.imageLoader(context)
     }
 
     var animatedArtworkUrl by remember(albumState.artist, albumState.title) {
@@ -169,48 +162,62 @@ fun AlbumScreen(
         if (isAnimatedArtworkBlocked) return@LaunchedEffect
         if (animatedArtworkUrl != null) return@LaunchedEffect
         withContext(Dispatchers.IO) {
-            try {
-                val cleanArtist = com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.cleanTerm(artist)
-                val cleanAlbum = com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.cleanTerm(album)
-                val encodedArtist = java.net.URLEncoder.encode(cleanArtist, "UTF-8")
-                val encodedAlbum = java.net.URLEncoder.encode(cleanAlbum, "UTF-8")
-                val url = java.net.URL("https://artwork.m8tec.top/api/v1/artwork/search?artist=$encodedArtist&album=$encodedAlbum")
-                val conn = url.openConnection() as java.net.HttpURLConnection
-                conn.connectTimeout = 3000
-                conn.readTimeout = 3000
-                if (conn.responseCode == 200) {
-                    val text = conn.inputStream.bufferedReader().readText()
-                    val obj = org.json.JSONObject(text)
-                    val isVertical = album.contains("After Hours", ignoreCase = true) ||
-                            album.contains("Around the Fur", ignoreCase = true)
-                    val streamUrl = if (isVertical) {
-                        obj.optString("url_tall").takeIf { it.isNotBlank() } 
-                            ?: obj.optString("url").takeIf { it.isNotBlank() }
-                    } else {
-                        obj.optString("url").takeIf { it.isNotBlank() } 
-                            ?: obj.optString("url_tall").takeIf { it.isNotBlank() }
-                    }
-                    if (!streamUrl.isNullOrBlank()) {
-                        withContext(Dispatchers.Main) {
-                            animatedArtworkUrl = streamUrl
-                            com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.put(artist, album, streamUrl)
+            val cleanArtist = com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.cleanTerm(artist)
+            val cleanAlbum = com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.cleanTerm(album)
+
+            // 1. Unified Echo-Music Canvas Provider (EchoMusic, ArchiveTune, Tidal, AppleMusic)
+            var streamUrl = com.mrtdk.liquid_glass.canvas.UnifiedCanvasProvider.getSongOrAlbumCanvas(cleanAlbum, cleanArtist, cleanAlbum)
+
+            // 2. Fallback to m8tec
+            if (streamUrl == null) {
+                try {
+                    val encodedArtist = java.net.URLEncoder.encode(cleanArtist, "UTF-8")
+                    val encodedAlbum = java.net.URLEncoder.encode(cleanAlbum, "UTF-8")
+                    val url = java.net.URL("https://artwork.m8tec.top/api/v1/artwork/search?artist=$encodedArtist&album=$encodedAlbum")
+                    val conn = url.openConnection() as java.net.HttpURLConnection
+                    conn.connectTimeout = 3000
+                    conn.readTimeout = 3000
+                    if (conn.responseCode == 200) {
+                        val text = conn.inputStream.bufferedReader().readText()
+                        val obj = org.json.JSONObject(text)
+                        val isVertical = album.contains("After Hours", ignoreCase = true) ||
+                                album.contains("Around the Fur", ignoreCase = true)
+                        streamUrl = if (isVertical) {
+                            obj.optString("url_tall").takeIf { it.isNotBlank() } 
+                                ?: obj.optString("url").takeIf { it.isNotBlank() }
+                        } else {
+                            obj.optString("url").takeIf { it.isNotBlank() } 
+                                ?: obj.optString("url_tall").takeIf { it.isNotBlank() }
                         }
                     }
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
+            }
+
+            if (!streamUrl.isNullOrBlank()) {
+                withContext(Dispatchers.Main) {
+                    animatedArtworkUrl = streamUrl
+                    com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.put(artist, album, streamUrl)
+                }
             }
         }
     }
 
     // Extract dominant colour
-    LaunchedEffect(headerArt) {
+    LaunchedEffect(headerArt, isMichaelAlbum) {
+        if (isMichaelAlbum) {
+            val michaelColor = Color(0xFFC33826)
+            dominantColor = michaelColor
+            onDominantColorChanged(michaelColor)
+            return@LaunchedEffect
+        }
         if (!headerArt.isNullOrBlank()) {
             withContext(Dispatchers.Default) {
                 val request = ImageRequest.Builder(context)
                     .data(headerArt)
                     .allowHardware(false)
-                    .size(150)
+                    .size(180)
                     .memoryCachePolicy(coil.request.CachePolicy.READ_ONLY)
                     .build()
                 val result = coil.Coil.imageLoader(context).execute(request)
@@ -227,19 +234,13 @@ fun AlbumScreen(
                             drawable.draw(c)
                         }
                     try {
-                        var r = 0L; var g = 0L; var b = 0L
-                        val y = bmp.height - 1
-                        val w = bmp.width
-                        val step = maxOf(1, w / 16)
-                        var count = 0
-                        for (x in 0 until w step step) {
-                            val pixel = bmp.getPixel(x, y)
-                            r += android.graphics.Color.red(pixel)
-                            g += android.graphics.Color.green(pixel)
-                            b += android.graphics.Color.blue(pixel)
-                            count++
-                        }
-                        val sampledColor = Color((r / count).toInt(), (g / count).toInt(), (b / count).toInt())
+                        val palette = androidx.palette.graphics.Palette.from(bmp).maximumColorCount(24).generate()
+                        val swatch = palette.dominantSwatch 
+                            ?: palette.vibrantSwatch 
+                            ?: palette.darkVibrantSwatch 
+                            ?: palette.lightVibrantSwatch 
+                            ?: palette.mutedSwatch
+                        val sampledColor = swatch?.rgb?.let { Color(it) } ?: Color(0xFF1E1E1E)
                         withContext(Dispatchers.Main) {
                             dominantColor = sampledColor
                             onDominantColorChanged(sampledColor)
@@ -250,7 +251,7 @@ fun AlbumScreen(
         }
     }
 
-    // Load album/playlist tracks
+    // Load album/playlist tracks & artist info
     LaunchedEffect(albumState.id) {
         withContext(Dispatchers.IO) {
             if (albumState.id.startsWith("offline_album_")) {
@@ -294,7 +295,14 @@ fun AlbumScreen(
                 if (isAlbum) {
                     YouTube.album(albumState.id).onSuccess { albumPage ->
                         tracks = albumPage.songs
+                        albumDescription = albumPage.description
                         loaded = true
+                        val artistId = albumPage.album.artists?.firstOrNull()?.id
+                        if (!artistId.isNullOrBlank()) {
+                            YouTube.artist(artistId).onSuccess { artPage ->
+                                artistPageData = artPage
+                            }
+                        }
                     }.onFailure { err ->
                         errors.add("Album API error: ${err.localizedMessage ?: err.toString()}")
                         val pId = albumState.playlistId.ifEmpty { albumState.id }.removePrefix("VL")
@@ -314,7 +322,14 @@ fun AlbumScreen(
                         errors.add("Playlist API error: ${err.localizedMessage ?: err.toString()}")
                         YouTube.album(albumState.id).onSuccess { albumPage ->
                             tracks = albumPage.songs
+                            albumDescription = albumPage.description
                             loaded = true
+                            val artistId = albumPage.album.artists?.firstOrNull()?.id
+                            if (!artistId.isNullOrBlank()) {
+                                YouTube.artist(artistId).onSuccess { artPage ->
+                                    artistPageData = artPage
+                                }
+                            }
                         }.onFailure { err2 ->
                             errors.add("Album fallback error: ${err2.localizedMessage ?: err2.toString()}")
                         }
@@ -348,10 +363,37 @@ fun AlbumScreen(
         }
     }
 
+    // Artist Fallback Search if artistPageData is still empty
+    LaunchedEffect(albumState.artist) {
+        if (artistPageData == null && albumState.artist.isNotBlank()) {
+            withContext(Dispatchers.IO) {
+                try {
+                    val cleanArtistName = albumState.artist.split(",", "&", ";").firstOrNull()?.trim() ?: albumState.artist
+                    val searchRes = YouTube.search(cleanArtistName, YouTube.SearchFilter.FILTER_ARTIST)
+                    val foundArtist = searchRes.getOrNull()?.items?.filterIsInstance<com.echo.innertube.models.ArtistItem>()?.firstOrNull()
+                    if (foundArtist != null) {
+                        YouTube.artist(foundArtist.id).onSuccess { artPage ->
+                            artistPageData = artPage
+                        }
+                    }
+} catch (e: Exception) { }
+            }
+        }
+    }
+
     val localBackdrop = rememberLayerBackdrop()
 
-    val isLightBackground = dominantColor.luminance() > 0.5f
-    val contentColor = if (isLightBackground) Color(0xFF1E1E1E) else Color.White
+    val isLightBackground = dominantColor.luminance() > 0.52f
+    val primaryTextColor = if (isLightBackground) Color(0xFF151515) else Color.White
+    val secondaryTextColor = if (isLightBackground) Color(0xFF151515).copy(alpha = 0.72f) else Color.White.copy(alpha = 0.85f)
+    val tertiaryTextColor = if (isLightBackground) Color(0xFF151515).copy(alpha = 0.52f) else Color.White.copy(alpha = 0.60f)
+    val dividerColor = if (isLightBackground) Color.Black.copy(alpha = 0.10f) else Color.White.copy(alpha = 0.12f)
+    val trackNumberColor = if (isLightBackground) Color.Black.copy(alpha = 0.45f) else Color.White.copy(alpha = 0.50f)
+    val circularButtonBg = if (isLightBackground) Color.Black.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.22f)
+    val playButtonBg = if (isLightBackground) Color(0xFF151515) else Color.White
+    val playButtonTextColor = if (isLightBackground) Color.White else (if (dominantColor.luminance() > 0.65f) Color(0xFF151515) else dominantColor)
+    val glassButtonTint = if (isLightBackground) Color.White.copy(alpha = 0.65f) else dominantColor.copy(alpha = 0.35f)
+    val glassIconTint = if (isLightBackground) Color(0xFF151515) else Color.White
 
     SharedElementTransitionContainer(
         onBack = onBack,
@@ -424,17 +466,17 @@ fun AlbumScreen(
                     }
                     val blurRadiusDp by remember {
                         derivedStateOf {
-                            (scrollOffsetPx / 10f).coerceIn(0f, 32f).dp
+                            (scrollOffsetPx / 6f).coerceIn(0f, 32f).dp
                         }
                     }
                     val heroAlpha by remember {
                         derivedStateOf {
-                            (1f - (scrollOffsetPx / 1200f)).coerceIn(0.7f, 1f)
+                            (1f - (scrollOffsetPx / 850f)).coerceIn(0.55f, 1f)
                         }
                     }
                     val heroParallaxY by remember {
                         derivedStateOf {
-                            -(scrollOffsetPx * 0.22f).coerceAtLeast(0f)
+                            -(scrollOffsetPx * 0.42f)
                         }
                     }
 
@@ -482,15 +524,15 @@ fun AlbumScreen(
                                 )
                             }
 
-                            // Lower gradient overlay at the bottom edge of the image
+                            // Subtle gradient fade only at the very bottom edge of the image
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .background(
                                         Brush.verticalGradient(
                                             0.0f to Color.Transparent,
-                                            0.70f to Color.Transparent,
-                                            0.92f to dominantColor.copy(alpha = 0.85f),
+                                            0.78f to Color.Transparent,
+                                            0.94f to dominantColor.copy(alpha = 0.6f),
                                             1.0f to dominantColor.copy(alpha = contentAlpha)
                                         )
                                     )
@@ -500,7 +542,41 @@ fun AlbumScreen(
                         // ── SCROLLABLE ALBUM CONTENT ──
                         val screenWidthDp = LocalConfiguration.current.screenWidthDp.dp
                         val heroHeightDp = screenWidthDp * heroHeightRatio
-                        val spacerHeightDp = (heroHeightDp - 16.dp).coerceAtLeast(0.dp)
+                        val spacerHeightDp = (heroHeightDp - 22.dp).coerceAtLeast(0.dp)
+
+                        val videoSection = remember(artistPageData) {
+                            artistPageData?.sections?.firstOrNull { 
+                                it.title.contains("Video", ignoreCase = true) || it.title.contains("Vídeo", ignoreCase = true) 
+                            }
+                        }
+                        val otherAlbumsSection = remember(artistPageData, albumState.title) {
+                            val section = artistPageData?.sections?.firstOrNull { 
+                                it.title.contains("Álbum", ignoreCase = true) || it.title.contains("Album", ignoreCase = true) || it.title.contains("Discograf", ignoreCase = true)
+                            }
+                            section?.copy(items = section.items.filter { 
+                                it is com.echo.innertube.models.AlbumItem && !it.title.equals(albumState.title, ignoreCase = true) 
+                            })
+                        }
+                        val singlesSection = remember(artistPageData) {
+                            artistPageData?.sections?.firstOrNull { 
+                                it.title.contains("Sencillo", ignoreCase = true) || it.title.contains("Single", ignoreCase = true) || it.title.contains("EP", ignoreCase = true)
+                            }
+                        }
+                        val appearsOnSection = remember(artistPageData) {
+                            artistPageData?.sections?.firstOrNull { 
+                                it.title.contains("Aparece", ignoreCase = true) || it.title.contains("Featured", ignoreCase = true) || it.title.contains("Playlist", ignoreCase = true) || it.title.contains("Lista", ignoreCase = true) || it.title.contains("Destacado", ignoreCase = true)
+                            }
+                        }
+
+                        val editorialText = remember(albumDescription, albumState.artist, albumState.title, isMichaelAlbum) {
+                            if (!albumDescription.isNullOrBlank()) {
+                                albumDescription!!
+                            } else if (isMichaelAlbum) {
+                                "Su leyenda cobra nueva vida en una retrospectiva trepidante."
+                            } else {
+                                "Álbum completo en alta fidelidad y sonido envolvente."
+                            }
+                        }
 
                         LazyColumn(
                             state = listState,
@@ -511,18 +587,34 @@ fun AlbumScreen(
                                 Spacer(modifier = Modifier.height(spacerHeightDp))
                             }
 
-                            // ── ALBUM TITLE & METADATA (Scrolls upwards) ──
+                            // Smooth gradient transition coat into solid dominantColor
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(24.dp)
+                                        .background(
+                                            Brush.verticalGradient(
+                                                0.0f to Color.Transparent,
+                                                1.0f to dominantColor.copy(alpha = contentAlpha)
+                                            )
+                                        )
+                                )
+                            }
+
+                            // ── ALBUM TITLE & METADATA ──
                             item {
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .background(dominantColor.copy(alpha = contentAlpha))
                                         .padding(horizontal = 20.dp, vertical = 2.dp)
                                         .graphicsLayer { alpha = contentAlpha },
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
                                     Text(
                                         text = albumState.title,
-                                        color = Color.White,
+                                        color = primaryTextColor,
                                         fontSize = 20.sp,
                                         fontWeight = FontWeight.Bold,
                                         maxLines = 2,
@@ -530,7 +622,7 @@ fun AlbumScreen(
                                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                         lineHeight = 24.sp,
                                         style = TextStyle(
-                                            shadow = Shadow(
+                                            shadow = if (isLightBackground) null else Shadow(
                                                 color = Color.Black.copy(alpha = 0.6f),
                                                 offset = Offset(1f, 1f),
                                                 blurRadius = 3f
@@ -540,14 +632,14 @@ fun AlbumScreen(
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = albumState.artist,
-                                        color = Color.White.copy(alpha = 0.85f),
+                                        color = secondaryTextColor,
                                         fontSize = 15.sp,
                                         fontWeight = FontWeight.Medium,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                         style = TextStyle(
-                                            shadow = Shadow(
+                                            shadow = if (isLightBackground) null else Shadow(
                                                 color = Color.Black.copy(alpha = 0.6f),
                                                 offset = Offset(1f, 1f),
                                                 blurRadius = 3f
@@ -561,19 +653,19 @@ fun AlbumScreen(
                                     ) {
                                         Text(
                                             text = "Bandas sonoras • ${albumState.year ?: 2026} • ",
-                                            color = Color.White.copy(alpha = 0.6f),
+                                            color = tertiaryTextColor,
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Medium
                                         )
                                         Icon(
                                             painter = painterResource(id = R.drawable.apple_lossless_seeklogo),
                                             contentDescription = "Lossless",
-                                            tint = Color.White.copy(alpha = 0.6f),
+                                            tint = tertiaryTextColor,
                                             modifier = Modifier.height(8.dp).width(14.dp)
                                         )
                                         Text(
                                             text = " Lossless",
-                                            color = Color.White.copy(alpha = 0.6f),
+                                            color = tertiaryTextColor,
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Medium
                                         )
@@ -586,19 +678,18 @@ fun AlbumScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .background(dominantColor.copy(alpha = contentAlpha))
                                         .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 4.dp)
                                         .graphicsLayer { alpha = contentAlpha },
                                     horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    val lightTranslucent = Color.White.copy(alpha = 0.22f)
-
                                     // Shuffle button
                                     Box(
                                         modifier = Modifier
                                             .size(46.dp)
                                             .clip(CircleShape)
-                                            .background(lightTranslucent)
+                                            .background(circularButtonBg)
                                             .clickable {
                                                 if (tracks.isNotEmpty()) {
                                                     val shuffledTracks = tracks.shuffled()
@@ -632,19 +723,18 @@ fun AlbumScreen(
                                         Icon(
                                             painter = painterResource(id = R.drawable.shuffle),
                                             contentDescription = "Shuffle",
-                                            tint = Color.White,
+                                            tint = primaryTextColor,
                                             modifier = Modifier.size(34.dp)
                                         )
                                     }
 
                                     // ▶ Play button
-                                    val playTextColor = if (dominantColor.luminance() > 0.65f) Color(0xFF1E1E1E) else dominantColor
                                     Box(
                                         modifier = Modifier
                                             .width(155.dp)
                                             .height(46.dp)
                                             .clip(RoundedCornerShape(23.dp))
-                                            .background(Color.White)
+                                            .background(playButtonBg)
                                             .clickable {
                                                 tracks.firstOrNull()?.let { s ->
                                                     val albumQueue = tracks.drop(1).map { t ->
@@ -680,12 +770,12 @@ fun AlbumScreen(
                                             Icon(
                                                 imageVector = Icons.Default.PlayArrow,
                                                 contentDescription = "Play",
-                                                tint = playTextColor,
+                                                tint = playButtonTextColor,
                                                 modifier = Modifier.size(22.dp)
                                             )
                                             Text(
                                                 text = "Reproducir",
-                                                color = playTextColor,
+                                                color = playButtonTextColor,
                                                 fontSize = 16.sp,
                                                 fontWeight = FontWeight.SemiBold
                                             )
@@ -697,7 +787,7 @@ fun AlbumScreen(
                                         modifier = Modifier
                                             .size(46.dp)
                                             .clip(CircleShape)
-                                            .background(lightTranslucent)
+                                            .background(circularButtonBg)
                                             .clickable { 
                                                 if (isSaved) {
                                                     LibraryManager.removeItem(albumState.id)
@@ -716,7 +806,7 @@ fun AlbumScreen(
                                         Icon(
                                             imageVector = if (isSaved) Icons.Default.Check else Icons.Default.Add,
                                             contentDescription = "Add/Remove",
-                                            tint = Color.White,
+                                            tint = primaryTextColor,
                                             modifier = Modifier.size(22.dp)
                                         )
                                     }
@@ -728,16 +818,13 @@ fun AlbumScreen(
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .background(dominantColor.copy(alpha = contentAlpha))
                                         .padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 8.dp)
                                         .graphicsLayer { alpha = contentAlpha }
                                 ) {
                                     Text(
-                                        text = if (isMichaelAlbum) {
-                                            "Su leyenda cobra nueva vida en una retrospectiva trepidante."
-                                        } else {
-                                            "Álbum completo en alta fidelidad y sonido envolvente."
-                                        },
-                                        color = Color.White.copy(alpha = 0.85f),
+                                        text = editorialText,
+                                        color = secondaryTextColor,
                                         fontSize = 13.5.sp,
                                         lineHeight = 17.5.sp
                                     )
@@ -746,13 +833,17 @@ fun AlbumScreen(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .height(0.5.dp)
-                                            .background(Color.White.copy(alpha = 0.14f))
+                                            .background(dividerColor)
                                     )
                                 }
                             }
 
                             // ── TRACK LIST ──
-                            items(tracks.size) { i ->
+                            items(
+                                count = tracks.size,
+                                key = { i -> tracks[i].id.ifEmpty { "$i" } },
+                                contentType = { "album_track" }
+                            ) { i ->
                                 val song = tracks[i]
                                 Row(
                                     modifier = Modifier
@@ -788,7 +879,7 @@ fun AlbumScreen(
                                 ) {
                                     Text(
                                         text = "${i + 1}",
-                                        color = Color.White.copy(alpha = 0.5f),
+                                        color = trackNumberColor,
                                         fontSize = 13.5.sp,
                                         fontWeight = FontWeight.Medium,
                                         modifier = Modifier.width(24.dp)
@@ -796,7 +887,7 @@ fun AlbumScreen(
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             song.title,
-                                            color = Color.White,
+                                            color = primaryTextColor,
                                             fontSize = 15.sp,
                                             fontWeight = FontWeight.SemiBold,
                                             maxLines = 1,
@@ -805,7 +896,7 @@ fun AlbumScreen(
                                         if (song.artists.isNotEmpty()) {
                                             Text(
                                                 song.artists.joinToString { it.name },
-                                                color = Color.White.copy(alpha = 0.55f),
+                                                color = tertiaryTextColor,
                                                 fontSize = 12.5.sp,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
@@ -829,7 +920,7 @@ fun AlbumScreen(
                                         Icon(
                                             Icons.Default.MoreHoriz,
                                             null,
-                                            tint = Color.White.copy(alpha = 0.6f),
+                                            tint = tertiaryTextColor,
                                             modifier = Modifier.size(20.dp)
                                         )
                                     }
@@ -838,15 +929,358 @@ fun AlbumScreen(
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .background(dominantColor.copy(alpha = contentAlpha))
                                         .padding(start = 44.dp, end = 20.dp)
                                         .height(0.5.dp)
-                                        .background(Color.White.copy(alpha = 0.08f))
+                                        .background(dividerColor)
                                 )
+                            }
+
+                            // ── ALBUM FOOTER / RAY DIGITAL MASTER & CREDITS ──
+                            item {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(dominantColor.copy(alpha = contentAlpha))
+                                        .padding(horizontal = 20.dp, vertical = 16.dp)
+                                        .graphicsLayer { alpha = contentAlpha }
+                                ) {
+                                    // Ray Digital Master badge row
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.apple_lossless_seeklogo),
+                                            contentDescription = "Ray Digital Master",
+                                            tint = primaryTextColor.copy(alpha = 0.9f),
+                                            modifier = Modifier.height(13.dp).width(19.dp)
+                                        )
+                                        Text(
+                                            text = "Ray Digital Master",
+                                            color = primaryTextColor.copy(alpha = 0.9f),
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(12.dp))
+
+                                    // Release Date
+                                    val releaseYear = albumState.year ?: 2026
+                                    val releaseDateString = if (isMichaelAlbum) "24 de abril de 2026" else "$releaseYear"
+                                    Text(
+                                        text = releaseDateString,
+                                        color = secondaryTextColor,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+
+                                    Spacer(modifier = Modifier.height(2.dp))
+
+                                    // Song Count & Total Minutes
+                                    val totalSecs = tracks.sumOf { it.duration ?: 0 }
+                                    val totalMins = if (totalSecs > 0) totalSecs / 60 else (tracks.size * 4).coerceAtLeast(1)
+                                    Text(
+                                        text = "${tracks.size} canciones, $totalMins minutos",
+                                        color = secondaryTextColor.copy(alpha = 0.85f),
+                                        fontSize = 13.5.sp,
+                                        fontWeight = FontWeight.Normal
+                                    )
+
+                                    Spacer(modifier = Modifier.height(6.dp))
+
+                                    // Copyright line
+                                    val copyrightNotice = if (isMichaelAlbum || albumState.artist.contains("Michael Jackson", ignoreCase = true)) {
+                                        "℗ This compilation (P) $releaseYear MJJP Records, LLC / Distributed by Sony Music Entertainment"
+                                    } else {
+                                        "℗ $releaseYear ${albumState.artist} / Distributed by Ray Music Entertainment"
+                                    }
+                                    Text(
+                                        text = copyrightNotice,
+                                        color = tertiaryTextColor,
+                                        fontSize = 12.sp,
+                                        lineHeight = 16.sp
+                                    )
+                                }
+                            }
+
+                            // ── ARTIST SECTION 1: VIDEOS MUSICALES ──
+                            if (videoSection != null && videoSection.items.isNotEmpty()) {
+                                val videoItems = videoSection.items.filterIsInstance<SongItem>()
+                                if (videoItems.isNotEmpty()) {
+                                    item {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .background(dominantColor.copy(alpha = contentAlpha))
+                                                .graphicsLayer { alpha = contentAlpha }
+                                        ) {
+                                            Spacer(modifier = Modifier.height(20.dp))
+                                            Text(
+                                                text = "Vídeos musicales",
+                                                color = primaryTextColor,
+                                                fontSize = 21.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)
+                                            )
+                                            LazyRow(
+                                                contentPadding = PaddingValues(horizontal = 20.dp),
+                                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                            ) {
+                                                items(videoItems.size) { idx ->
+                                                    val v = videoItems[idx]
+                                                    val vThumb = v.thumbnail.replace("=w226-h226", "=w800-h800").replace("=w120-h120", "=w800-h800")
+                                                    Column(
+                                                        modifier = Modifier
+                                                            .width(310.dp)
+                                                            .clickable {
+                                                                if (onVideoSelected != null) {
+                                                                    onVideoSelected(v.id)
+                                                                } else {
+                                                                    onSongSelected(PlayerState(title = v.title, artist = v.artists.joinToString { it.name }, artUrl = vThumb, videoId = v.id))
+                                                                }
+                                                            }
+                                                    ) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .height(175.dp)
+                                                                .clip(RoundedCornerShape(10.dp))
+                                                                .background(Color.DarkGray)
+                                                        ) {
+                                                            AsyncImage(
+                                                                model = ImageRequest.Builder(context).data(vThumb).crossfade(true).build(),
+                                                                contentDescription = v.title,
+                                                                contentScale = ContentScale.Crop,
+                                                                modifier = Modifier.fillMaxSize()
+                                                            )
+                                                        }
+                                                        Spacer(modifier = Modifier.height(6.dp))
+                                                        Text(
+                                                            text = v.title,
+                                                            color = primaryTextColor,
+                                                            fontSize = 14.5.sp,
+                                                            fontWeight = FontWeight.SemiBold,
+                                                            maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis
+                                                        )
+                                                        Text(
+                                                            text = v.artists.joinToString { it.name },
+                                                            color = tertiaryTextColor,
+                                                            fontSize = 12.5.sp,
+                                                            maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // ── ARTIST SECTION 2: MÁS DE [ARTISTA] ──
+                            val albumsList = otherAlbumsSection?.items?.filterIsInstance<com.echo.innertube.models.AlbumItem>().orEmpty()
+                            if (albumsList.isNotEmpty()) {
+                                item {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(dominantColor.copy(alpha = contentAlpha))
+                                            .graphicsLayer { alpha = contentAlpha }
+                                    ) {
+                                        Spacer(modifier = Modifier.height(24.dp))
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 20.dp, vertical = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "Más de ${albumState.artist}",
+                                                color = primaryTextColor,
+                                                fontSize = 21.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Icon(
+                                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                                contentDescription = null,
+                                                tint = tertiaryTextColor,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                        LazyRow(
+                                            contentPadding = PaddingValues(horizontal = 20.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                        ) {
+                                            items(albumsList.size) { idx ->
+                                                val a = albumsList[idx]
+                                                val aThumb = a.thumbnail.replace("=w226-h226", "=w600-h600").replace("=w120-h120", "=w600-h600")
+                                                Column(
+                                                    modifier = Modifier
+                                                        .width(155.dp)
+                                                        .clickable {
+                                                            onAlbumSelected(
+                                                                AlbumState(
+                                                                    id = a.browseId,
+                                                                    playlistId = a.playlistId,
+                                                                    title = a.title,
+                                                                    artist = a.artists?.joinToString { it.name } ?: albumState.artist,
+                                                                    thumbnail = aThumb,
+                                                                    year = a.year
+                                                                )
+                                                            )
+                                                        }
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(155.dp)
+                                                            .clip(RoundedCornerShape(10.dp))
+                                                            .background(Color.DarkGray)
+                                                    ) {
+                                                        AsyncImage(
+                                                            model = ImageRequest.Builder(context).data(aThumb).crossfade(true).build(),
+                                                            contentDescription = a.title,
+                                                            contentScale = ContentScale.Crop,
+                                                            modifier = Modifier.fillMaxSize()
+                                                        )
+                                                    }
+                                                    Spacer(modifier = Modifier.height(6.dp))
+                                                    Text(
+                                                        text = a.title,
+                                                        color = primaryTextColor,
+                                                        fontSize = 14.5.sp,
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                    Text(
+                                                        text = "${a.year ?: ""}",
+                                                        color = tertiaryTextColor,
+                                                        fontSize = 12.5.sp,
+                                                        maxLines = 1
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // ── ARTIST SECTION 3: APARECE EN ──
+                            val appearsList = appearsOnSection?.items.orEmpty()
+                            if (appearsList.isNotEmpty()) {
+                                item {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(dominantColor.copy(alpha = contentAlpha))
+                                            .graphicsLayer { alpha = contentAlpha }
+                                    ) {
+                                        Spacer(modifier = Modifier.height(24.dp))
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 20.dp, vertical = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "Aparece en",
+                                                color = primaryTextColor,
+                                                fontSize = 21.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Icon(
+                                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                                contentDescription = null,
+                                                tint = tertiaryTextColor,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                        LazyRow(
+                                            contentPadding = PaddingValues(horizontal = 20.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                        ) {
+                                            items(appearsList.size) { idx ->
+                                                val item = appearsList[idx]
+                                                val title = when (item) {
+                                                    is com.echo.innertube.models.PlaylistItem -> item.title
+                                                    is com.echo.innertube.models.AlbumItem -> item.title
+                                                    else -> ""
+                                                }
+                                                val rawThumb = when (item) {
+                                                    is com.echo.innertube.models.PlaylistItem -> item.thumbnail
+                                                    is com.echo.innertube.models.AlbumItem -> item.thumbnail
+                                                    else -> ""
+                                                }
+                                                val thumb = rawThumb?.replace("=w226-h226", "=w600-h600")?.replace("=w120-h120", "=w600-h600")
+                                                Column(
+                                                    modifier = Modifier
+                                                        .width(155.dp)
+                                                        .clickable {
+                                                            when (item) {
+                                                                is com.echo.innertube.models.AlbumItem -> {
+                                                                    onAlbumSelected(
+                                                                        AlbumState(
+                                                                            id = item.browseId,
+                                                                            playlistId = item.playlistId,
+                                                                            title = item.title,
+                                                                            artist = item.artists?.joinToString { it.name } ?: albumState.artist,
+                                                                            thumbnail = thumb,
+                                                                            year = item.year
+                                                                        )
+                                                                    )
+                                                                }
+                                                                is com.echo.innertube.models.PlaylistItem -> {
+                                                                    onAlbumSelected(
+                                                                        AlbumState(
+                                                                            id = item.id,
+                                                                            playlistId = item.id,
+                                                                            title = item.title,
+                                                                            artist = item.author?.name ?: "Playlist",
+                                                                            thumbnail = thumb
+                                                                        )
+                                                                    )
+                                                                }
+                                                                else -> {}
+                                                            }
+                                                        }
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(155.dp)
+                                                            .clip(RoundedCornerShape(10.dp))
+                                                            .background(Color.DarkGray)
+                                                    ) {
+                                                        AsyncImage(
+                                                            model = ImageRequest.Builder(context).data(thumb).crossfade(true).build(),
+                                                            contentDescription = title,
+                                                            contentScale = ContentScale.Crop,
+                                                            modifier = Modifier.fillMaxSize()
+                                                        )
+                                                    }
+                                                    Spacer(modifier = Modifier.height(6.dp))
+                                                    Text(
+                                                        text = title,
+                                                        color = primaryTextColor,
+                                                        fontSize = 14.5.sp,
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
 
                             // Bottom padding
                             item {
-                                Spacer(modifier = Modifier.height(120.dp))
+                                Spacer(modifier = Modifier.height(130.dp))
                             }
                         }
                     }
@@ -872,7 +1306,7 @@ fun AlbumScreen(
                                 }
                                 .clickable { dismiss() },
                             shape = CircleShape,
-                            tint = dominantColor.copy(alpha = 0.35f),
+                            tint = glassButtonTint,
                             blur = 0.8f,
                             centerDistortion = 0.1f,
                             scale = 0.02f,
@@ -883,7 +1317,7 @@ fun AlbumScreen(
                             Icon(
                                 imageVector = Icons.Default.ArrowBackIosNew,
                                 contentDescription = "Back",
-                                tint = Color.White,
+                                tint = glassIconTint,
                                 modifier = Modifier.size(22.dp)
                             )
                         }
@@ -898,7 +1332,7 @@ fun AlbumScreen(
                                 }
                                 .height(44.dp),
                             shape = RoundedCornerShape(percent = 50),
-                            tint = dominantColor.copy(alpha = 0.35f),
+                            tint = glassButtonTint,
                             blur = 0.8f,
                             centerDistortion = 0.1f,
                             scale = 0.02f,
@@ -926,7 +1360,7 @@ fun AlbumScreen(
                                     Icon(
                                         imageVector = Icons.Default.IosShare,
                                         contentDescription = "Share",
-                                        tint = Color.White,
+                                        tint = glassIconTint,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
@@ -937,7 +1371,7 @@ fun AlbumScreen(
                                     Icon(
                                         imageVector = Icons.Default.MoreVert,
                                         contentDescription = "More",
-                                        tint = Color.White,
+                                        tint = glassIconTint,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
@@ -1096,7 +1530,7 @@ fun AlbumScreen(
                             ) {
                                 Text(
                                     text = albumState.title,
-                                    color = contentColor,
+                                    color = primaryTextColor,
                                     fontSize = 20.sp,
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1,
@@ -1106,7 +1540,7 @@ fun AlbumScreen(
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = albumState.artist,
-                                    color = contentColor.copy(alpha = 0.8f),
+                                    color = secondaryTextColor,
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Medium,
                                     maxLines = 1,
@@ -1120,20 +1554,18 @@ fun AlbumScreen(
                                     horizontalArrangement = Arrangement.Center,
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    val darkTranslucent = Color.Black.copy(alpha = 0.35f)
-                                    
                                     // Shuffle button
                                     Box(
                                         modifier = Modifier
                                             .size(40.dp)
                                             .clip(CircleShape)
-                                            .background(darkTranslucent),
+                                            .background(circularButtonBg),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Shuffle,
                                             contentDescription = "Shuffle",
-                                            tint = Color.White,
+                                            tint = primaryTextColor,
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
@@ -1146,7 +1578,7 @@ fun AlbumScreen(
                                             .width(140.dp)
                                             .height(40.dp)
                                             .clip(RoundedCornerShape(20.dp))
-                                            .background(Color.White),
+                                            .background(playButtonBg),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Row(
@@ -1156,10 +1588,10 @@ fun AlbumScreen(
                                             Icon(
                                                 imageVector = Icons.Default.PlayArrow,
                                                 contentDescription = "Play",
-                                                tint = Color.Black,
+                                                tint = playButtonTextColor,
                                                 modifier = Modifier.size(20.dp)
                                             )
-                                            Text("Play", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                                            Text("Play", color = playButtonTextColor, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                                         }
                                     }
                                     
@@ -1170,13 +1602,13 @@ fun AlbumScreen(
                                         modifier = Modifier
                                             .size(40.dp)
                                             .clip(CircleShape)
-                                            .background(darkTranslucent),
+                                            .background(circularButtonBg),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             imageVector = if (isSaved) Icons.Default.Check else Icons.Default.Add,
                                             contentDescription = "Add/Remove",
-                                            tint = Color.White,
+                                            tint = primaryTextColor,
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
@@ -1203,14 +1635,14 @@ fun AlbumScreen(
                                         alpha = popScaleBack
                                     }
                                     .clip(CircleShape)
-                                    .background(dominantColor.copy(alpha = 0.35f))
+                                    .background(glassButtonTint)
                                     .clickable { dismiss() },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.ArrowBackIosNew,
                                     contentDescription = "Back",
-                                    tint = Color.White,
+                                    tint = glassIconTint,
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
@@ -1224,7 +1656,7 @@ fun AlbumScreen(
                                     }
                                     .height(48.dp)
                                     .clip(RoundedCornerShape(percent = 50))
-                                    .background(dominantColor.copy(alpha = 0.35f)),
+                                    .background(glassButtonTint),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Row(
@@ -1247,7 +1679,7 @@ fun AlbumScreen(
                                         Icon(
                                             imageVector = Icons.Default.IosShare,
                                             contentDescription = "Share",
-                                            tint = Color.White,
+                                            tint = glassIconTint,
                                             modifier = Modifier.size(22.dp)
                                         )
                                     }
@@ -1258,7 +1690,7 @@ fun AlbumScreen(
                                         Icon(
                                             imageVector = Icons.Default.MoreVert,
                                             contentDescription = "More",
-                                            tint = Color.White,
+                                            tint = glassIconTint,
                                             modifier = Modifier.size(22.dp)
                                         )
                                     }
@@ -1330,4 +1762,22 @@ fun AlbumScreen(
     }
 }
 
-
+private fun getAlbumEditorialDescription(artistName: String, albumTitle: String): String {
+    val lowerArtist = artistName.lowercase()
+    val lowerAlbum = albumTitle.lowercase()
+    return when {
+        lowerArtist.contains("michael jackson") -> {
+            when {
+                lowerAlbum.contains("bad") -> "La continuación del álbum más épico del pop deslumbra con una potencia rítmica inigualable."
+                lowerAlbum.contains("thriller") -> "Una obra maestra legendaria que redefinió el alcance global de la música pop."
+                lowerAlbum.contains("off the wall") -> "El Rey del Pop se eleva en una brillante exhibición de funk, disco y soul."
+                lowerAlbum.contains("dangerous") -> "Una producción vanguardista cargada de new jack swing y pasión artística."
+                else -> "Una colección esencial que celebra el legado eterno y el genio musical de Michael Jackson."
+            }
+        }
+        lowerArtist.contains("the weeknd") -> "Un viaje sonoro inmersivo repleto de sintetizadores ochenteros y producción cinematográfica."
+        lowerArtist.contains("deftones") -> "Una explosión visceral de rock alternativo con melodías densas y guitarras envolventes."
+        lowerArtist.contains("daft punk") -> "Un hito de la música electrónica con grooves futuristas y producción revolucionaria."
+        else -> "Álbum completo de ${artistName} en sonido envolvente de alta fidelidad."
+    }
+}

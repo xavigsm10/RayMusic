@@ -151,6 +151,11 @@ class MainActivity : ComponentActivity() {
             .allowHardware(true)
             .crossfade(true)
             .components {
+                if (android.os.Build.VERSION.SDK_INT >= 28) {
+                    add(coil.decode.ImageDecoderDecoder.Factory())
+                } else {
+                    add(coil.decode.GifDecoder.Factory())
+                }
                 add(com.mrtdk.liquid_glass.utils.CoilUtils.HdThumbnailInterceptor())
             }
             .build()
@@ -625,185 +630,188 @@ class MainActivity : ComponentActivity() {
                                     modifier = Modifier.fillMaxSize().background(Color.Black),
                                     useShader = false,
                                     content = {
-                                    // Pager for main tabs (0: Inicio, 1: Novedades, 2: Radio, 3: Biblioteca)
-                                    // Search (4) is rendered as an overlay on top
-                                    Box(modifier = Modifier.fillMaxSize().layerBackdrop(mainBackdrop)) {
-                                        androidx.compose.foundation.pager.HorizontalPager(
-                                            state = pagerState,
-                                            modifier = Modifier.fillMaxSize().background(Color.Black),
-                                            userScrollEnabled = true,
-                                        ) { page ->
-                                            when (page) {
-                                                0 -> InicioScreen(
-                                                    innerPadding = innerPadding,
-                                                    playerState = playerState,
-                                                    state = inicioState,
-                                                    onSongSelected = playSong,
-                                                    onArtistSelected = { artistDetail = it },
-                                                    onAlbumSelected = { albumDetail = it },
-                                                    onVideoSelected = { videoId ->
-                                                        musicPlayer?.pause()
-                                                        videoDetail = videoId
-                                                    },
-                                                    onReplaySelected = { showReplay = true },
-                                                    onListenTogetherSelected = { showListenTogether = true }
-                                                )
-                                                1 -> NovedadesScreen(
-                                                    innerPadding = innerPadding,
-                                                    state = novedadesState,
-                                                    onSongSelected = playSong,
-                                                    onAlbumSelected = { albumDetail = it },
-                                                    onVideoSelected = { videoId ->
-                                                        musicPlayer?.pause()
-                                                        videoDetail = videoId
-                                                    }
-                                                )
-                                                2 -> com.mrtdk.liquid_glass.ui.screens.RadioScreen(
-                                                    innerPadding = innerPadding,
-                                                    onSongRecognized = { recognizedPlayerState ->
-                                                        playSong(recognizedPlayerState)
-                                                    },
-                                                    onSearchResult = { recognizedText ->
-                                                        searchQuery = recognizedText
-                                                        isSearchSubmitted = true
-                                                        selectedIndex = 4
-                                                    }
-                                                )
-                                                3 -> BibliotecaScreen(
-                                                    innerPadding = innerPadding, 
-                                                    onSongSelected = playSong,
-                                                    onPlaylistSelected = { playlistDetail = it },
-                                                    onArtistSelected = { artistDetail = it },
-                                                    onAlbumSelected = { albumDetail = it },
-                                                    initialCategoryKey = initialLibraryCategory,
-                                                    onCategoryConsumed = { initialLibraryCategory = null },
-                                                    onGlassStyleChanged = { glassStyle = it },
-                                                    onFavoriteSongsSelected = { showFavoriteSongs = true },
-                                                    onUpdateAvailable = { updateReleaseInfo = it },
-                                                    onDisableScreenshotChanged = { disable ->
-                                                        if (disable) {
-                                                            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
-                                                        } else {
-                                                            window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+                                    Box(modifier = Modifier.fillMaxSize()) {
+                                        // Pager for main tabs (0: Inicio, 1: Novedades, 2: Radio, 3: Biblioteca)
+                                        // Search (4) is rendered as an overlay on top
+                                        Box(modifier = Modifier.fillMaxSize().layerBackdrop(mainBackdrop)) {
+                                            androidx.compose.foundation.pager.HorizontalPager(
+                                                state = pagerState,
+                                                modifier = Modifier.fillMaxSize().background(Color.Black),
+                                                userScrollEnabled = true,
+                                            ) { page ->
+                                                when (page) {
+                                                    0 -> InicioScreen(
+                                                        innerPadding = innerPadding,
+                                                        playerState = playerState,
+                                                        state = inicioState,
+                                                        onSongSelected = playSong,
+                                                        onArtistSelected = { artistDetail = it },
+                                                        onAlbumSelected = { albumDetail = it },
+                                                        onVideoSelected = { videoId ->
+                                                            musicPlayer?.pause()
+                                                            videoDetail = videoId
+                                                        },
+                                                        onReplaySelected = { showReplay = true },
+                                                        onListenTogetherSelected = { showListenTogether = true }
+                                                    )
+                                                    1 -> NovedadesScreen(
+                                                        innerPadding = innerPadding,
+                                                        state = novedadesState,
+                                                        onSongSelected = playSong,
+                                                        onAlbumSelected = { albumDetail = it },
+                                                        onVideoSelected = { videoId ->
+                                                            musicPlayer?.pause()
+                                                            videoDetail = videoId
                                                         }
+                                                    )
+                                                    2 -> com.mrtdk.liquid_glass.ui.screens.RadioScreen(
+                                                        innerPadding = innerPadding,
+                                                        onSongRecognized = { recognizedPlayerState ->
+                                                            playSong(recognizedPlayerState)
+                                                        },
+                                                        onSearchResult = { recognizedText ->
+                                                            searchQuery = recognizedText
+                                                            isSearchSubmitted = true
+                                                            selectedIndex = 4
+                                                        }
+                                                    )
+                                                    3 -> BibliotecaScreen(
+                                                        innerPadding = innerPadding, 
+                                                        onSongSelected = playSong,
+                                                        onPlaylistSelected = { playlistDetail = it },
+                                                        onArtistSelected = { artistDetail = it },
+                                                        onAlbumSelected = { albumDetail = it },
+                                                        initialCategoryKey = initialLibraryCategory,
+                                                        onCategoryConsumed = { initialLibraryCategory = null },
+                                                        onGlassStyleChanged = { glassStyle = it },
+                                                        onFavoriteSongsSelected = { showFavoriteSongs = true },
+                                                        onUpdateAvailable = { updateReleaseInfo = it },
+                                                        onDisableScreenshotChanged = { disable ->
+                                                            if (disable) {
+                                                                window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+                                                            } else {
+                                                                window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                            }
+
+                                            // Search overlay (Page 4)
+                                            androidx.compose.animation.AnimatedVisibility(
+                                                visible = selectedIndex == 4,
+                                                enter = androidx.compose.animation.fadeIn(com.mrtdk.liquid_glass.ui.utils.Motion.appear()),
+                                                exit = androidx.compose.animation.fadeOut(com.mrtdk.liquid_glass.ui.utils.Motion.appear()),
+                                                modifier = Modifier.fillMaxSize()
+                                            ) {
+                                                BusquedaScreen(
+                                                    innerPadding = innerPadding,
+                                                    query = searchQuery,
+                                                    isSubmitted = isSearchSubmitted,
+                                                    state = busquedaState,
+                                                    onSongSelected = playSong,
+                                                    onArtistSelected = { artist -> artistDetail = artist },
+                                                    onAlbumSelected = { album -> albumDetail = album },
+                                                    onVideoSelected = { videoId ->
+                                                        musicPlayer?.pause()
+                                                        videoDetail = videoId
+                                                    },
+                                                    onCategorySelected = { category -> categoryDetail = category }
+                                                )
+                                            }
+                                        }
+
+                                        if (showReplay) {
+                                            SharedElementTransitionContainer(
+                                                onBack = { showReplay = false },
+                                                shrinkToTarget = false,
+                                                enableSwipeToDismiss = false
+                                            ) { _, _ ->
+                                                ReplayScreen(
+                                                    onBack = { showReplay = false },
+                                                    onSongSelected = playSong,
+                                                    onArtistSelected = { artistDetail = it },
+                                                    onAlbumSelected = { albumDetail = it },
+                                                    onPlaylistSelected = { playlistDetail = it }
+                                                )
+                                            }
+                                        }
+
+                                        if (artistDetail != null) {
+                                            SharedElementTransitionContainer(onBack = { artistDetail = null }, shrinkToTarget = false, enableSwipeToDismiss = false) { _, _ ->
+                                                ArtistScreen(
+                                                    artistState = artistDetail!!,
+                                                    innerPadding = innerPadding,
+                                                    onBack = { artistDetail = null },
+                                                    onSongSelected = playSong,
+                                                    onAlbumSelected = { album -> albumDetail = album },
+                                                    onArtistSelected = { artist -> artistDetail = artist },
+                                                    onVideoSelected = { videoId ->
+                                                        musicPlayer?.pause()
+                                                        videoDetail = videoId
                                                     }
                                                 )
                                             }
                                         }
 
-                                        // Search overlay (Page 4)
-                                        androidx.compose.animation.AnimatedVisibility(
-                                            visible = selectedIndex == 4,
-                                            enter = androidx.compose.animation.fadeIn(com.mrtdk.liquid_glass.ui.utils.Motion.appear()),
-                                            exit = androidx.compose.animation.fadeOut(com.mrtdk.liquid_glass.ui.utils.Motion.appear()),
-                                            modifier = Modifier.fillMaxSize()
-                                        ) {
-                                            BusquedaScreen(
-                                                innerPadding = innerPadding,
-                                                query = searchQuery,
-                                                isSubmitted = isSearchSubmitted,
-                                                state = busquedaState,
+                                        if (albumDetail != null) {
+                                            AlbumScreen(
+                                                albumState = albumDetail!!,
+                                                onBack = { albumDetail = null },
                                                 onSongSelected = playSong,
                                                 onArtistSelected = { artist -> artistDetail = artist },
                                                 onAlbumSelected = { album -> albumDetail = album },
-                                                onVideoSelected = { videoId ->
-                                                    musicPlayer?.pause()
-                                                    videoDetail = videoId
-                                                },
-                                                onCategorySelected = { category -> categoryDetail = category }
+                                                onVideoSelected = { videoId -> videoDetail = videoId },
+                                                onDominantColorChanged = { color -> globalDominantColor = color },
+                                                isPaused = showPlayer
                                             )
                                         }
 
-                                         if (showReplay) {
-                                             SharedElementTransitionContainer(
-                                                 onBack = { showReplay = false },
-                                                 shrinkToTarget = false,
-                                                 enableSwipeToDismiss = false
-                                             ) { _, _ ->
-                                                 ReplayScreen(
-                                                     onBack = { showReplay = false },
-                                                     onSongSelected = playSong,
-                                                     onArtistSelected = { artistDetail = it },
-                                                     onAlbumSelected = { albumDetail = it },
-                                                     onPlaylistSelected = { playlistDetail = it }
-                                                 )
-                                             }
-                                         }
+                                        if (playlistDetail != null) {
+                                            PlaylistDetailScreen(
+                                                playlist = playlistDetail!!,
+                                                onBack = { playlistDetail = null },
+                                                onSongSelected = playSong,
+                                                onArtistSelected = { artistDetail = it }
+                                            )
+                                        }
 
-                                         if (artistDetail != null) {
-                                             SharedElementTransitionContainer(onBack = { artistDetail = null }, shrinkToTarget = false, enableSwipeToDismiss = false) { _, _ ->
-                                                 ArtistScreen(
-                                                     artistState = artistDetail!!,
-                                                     innerPadding = innerPadding,
-                                                     onBack = { artistDetail = null },
-                                                     onSongSelected = playSong,
-                                                     onAlbumSelected = { album -> albumDetail = album },
-                                                     onArtistSelected = { artist -> artistDetail = artist },
-                                                     onVideoSelected = { videoId ->
-                                                         musicPlayer?.pause()
-                                                         videoDetail = videoId
-                                                     }
-                                                 )
-                                             }
-                                         }
+                                        androidx.compose.animation.AnimatedVisibility(
+                                            visible = categoryDetail != null,
+                                            enter = androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(100)),
+                                            exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(80))
+                                        ) {
+                                            val cat = categoryDetail
+                                            if (cat != null) {
+                                                androidx.activity.compose.BackHandler { categoryDetail = null }
+                                                com.mrtdk.liquid_glass.ui.screens.CategoriaScreen(
+                                                    category = cat,
+                                                    innerPadding = innerPadding,
+                                                    onBack = { categoryDetail = null },
+                                                    onSongSelected = playSong,
+                                                    onAlbumSelected = { album -> albumDetail = album },
+                                                    onPlaylistSelected = { playlist -> albumDetail = playlist },
+                                                    onArtistSelected = { artist -> artistDetail = artist }
+                                                )
+                                            }
+                                        }
 
-                                          if (albumDetail != null) {
-                                              AlbumScreen(
-                                                  albumState = albumDetail!!,
-                                                  onBack = { albumDetail = null },
-                                                  onSongSelected = playSong,
-                                                  onArtistSelected = { artist -> artistDetail = artist },
-                                                  onAlbumSelected = { album -> albumDetail = album },
-                                                  onDominantColorChanged = { color -> globalDominantColor = color },
-                                                  isPaused = showPlayer
-                                              )
-                                          }
+                                        if (showFavoriteSongs) {
+                                            SharedElementTransitionContainer(onBack = { showFavoriteSongs = false }) { _, _ ->
+                                                FavoriteSongsScreen(
+                                                    onBack = { showFavoriteSongs = false },
+                                                    onSongSelected = playSong
+                                                )
+                                            }
+                                        }
 
-                                          if (playlistDetail != null) {
-                                              PlaylistDetailScreen(
-                                                  playlist = playlistDetail!!,
-                                                  onBack = { playlistDetail = null },
-                                                  onSongSelected = playSong,
-                                                  onArtistSelected = { artistDetail = it }
-                                              )
-                                          }
-
-                                         androidx.compose.animation.AnimatedVisibility(
-                                             visible = categoryDetail != null,
-                                             enter = androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(100)),
-                                             exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(80))
-                                         ) {
-                                             val cat = categoryDetail
-                                             if (cat != null) {
-                                                 androidx.activity.compose.BackHandler { categoryDetail = null }
-                                                 com.mrtdk.liquid_glass.ui.screens.CategoriaScreen(
-                                                     category = cat,
-                                                     innerPadding = innerPadding,
-                                                     onBack = { categoryDetail = null },
-                                                     onSongSelected = playSong,
-                                                     onAlbumSelected = { album -> albumDetail = album },
-                                                     onPlaylistSelected = { playlist -> albumDetail = playlist },
-                                                     onArtistSelected = { artist -> artistDetail = artist }
-                                                 )
-                                             }
-                                         }
-
-                                         if (showFavoriteSongs) {
-                                             SharedElementTransitionContainer(onBack = { showFavoriteSongs = false }) { _, _ ->
-                                                 FavoriteSongsScreen(
-                                                     onBack = { showFavoriteSongs = false },
-                                                     onSongSelected = playSong
-                                                 )
-                                             }
-                                         }
-
-                                         if (showListenTogether) {
-                                             androidx.activity.compose.BackHandler { showListenTogether = false }
-                                             com.mrtdk.liquid_glass.ui.screens.ListenTogetherScreen(
-                                                 innerPadding = innerPadding,
-                                                 onBack = { showListenTogether = false }
-                                             )
-                                         }
+                                        if (showListenTogether) {
+                                            androidx.activity.compose.BackHandler { showListenTogether = false }
+                                            com.mrtdk.liquid_glass.ui.screens.ListenTogetherScreen(
+                                                innerPadding = innerPadding,
+                                                onBack = { showListenTogether = false }
+                                            )
+                                        }
                                     }
                                     },
                                     glassContent = {

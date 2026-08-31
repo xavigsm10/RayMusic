@@ -5,8 +5,11 @@ import android.view.TextureView
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.annotation.OptIn
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
@@ -70,6 +73,7 @@ fun AnimatedArtworkPlayer(
     onFrameCaptured: (android.graphics.Bitmap) -> Unit = {}
 ) {
     val context = LocalContext.current
+    var isFirstFrameRendered by remember(videoUrl) { mutableStateOf(false) }
 
     // Initialize ExoPlayer inside remember to keep instance alive
     val exoPlayer = remember {
@@ -98,6 +102,16 @@ fun AnimatedArtworkPlayer(
     // Handle synchronization if syncWithPlayer is provided
     LaunchedEffect(syncWithPlayer, exoPlayer) {
         val master = syncWithPlayer ?: return@LaunchedEffect
+        
+        // Immediate sync upon connection
+        exoPlayer.playWhenReady = master.playWhenReady
+        if (master.playbackState == Player.STATE_READY || master.playbackState == Player.STATE_BUFFERING) {
+            val drift = kotlin.math.abs(exoPlayer.currentPosition - master.currentPosition)
+            if (drift > 20) {
+                exoPlayer.seekTo(master.currentPosition)
+            }
+        }
+
         val syncListener = object : Player.Listener {
             override fun onPositionDiscontinuity(
                 oldPosition: Player.PositionInfo,
@@ -110,8 +124,18 @@ fun AnimatedArtworkPlayer(
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 exoPlayer.playWhenReady = isPlaying
                 val drift = kotlin.math.abs(exoPlayer.currentPosition - master.currentPosition)
-                if (drift > 30) {
+                if (drift > 20) {
                     exoPlayer.seekTo(master.currentPosition)
+                }
+            }
+
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_READY) {
+                    exoPlayer.playWhenReady = master.playWhenReady
+                    val drift = kotlin.math.abs(exoPlayer.currentPosition - master.currentPosition)
+                    if (drift > 20) {
+                        exoPlayer.seekTo(master.currentPosition)
+                    }
                 }
             }
         }
@@ -122,21 +146,22 @@ fun AnimatedArtworkPlayer(
             while (true) {
                 if (master.isPlaying) {
                     val drift = kotlin.math.abs(exoPlayer.currentPosition - master.currentPosition)
-                    if (drift > 30) {
+                    if (drift > 20) {
                         exoPlayer.seekTo(master.currentPosition)
                     }
                 }
-                kotlinx.coroutines.delay(30)
+                kotlinx.coroutines.delay(20)
             }
         } finally {
             master.removeListener(syncListener)
         }
     }
 
-    // Handle ExoPlayer lifecycle
+    // Handle ExoPlayer lifecycle & frame callback
     DisposableEffect(exoPlayer) {
         val listener = object : Player.Listener {
             override fun onRenderedFirstFrame() {
+                isFirstFrameRendered = true
                 onPlaybackStarted()
             }
         }
@@ -149,6 +174,7 @@ fun AnimatedArtworkPlayer(
 
     // Set media source when URL changes
     LaunchedEffect(videoUrl) {
+        isFirstFrameRendered = false
         exoPlayer.setMediaItem(MediaItem.fromUri(videoUrl))
         exoPlayer.prepare()
         if (syncWithPlayer != null) {
@@ -188,21 +214,29 @@ fun AnimatedArtworkPlayer(
         } catch (e: Exception) { }
 
         // Periodically capture the frame of the TextureView
+        val reusableBmp = android.graphics.Bitmap.createBitmap(120, 120, android.graphics.Bitmap.Config.ARGB_8888)
         while (true) {
-            kotlinx.coroutines.delay(250) // Capture frame every 250ms for smooth live updates
-            try {
-                // Fetch a very small low-res bitmap to minimize overhead
-                val bmp = tv.getBitmap(150, 150)
-                if (bmp != null) {
-                    onFrameCaptured(bmp)
+            if (exoPlayer.isPlaying && enableFrameCapture) {
+                try {
+                    val bmp = tv.getBitmap(reusableBmp)
+                    if (bmp != null) {
+                        onFrameCaptured(bmp)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
+            kotlinx.coroutines.delay(40) // Smooth ~25-30fps live reflection updates with 0 heap allocations
         }
     }
 
-    // Render using AndroidView without consuming touch gestures
+    val animatedAlpha by animateFloatAsState(
+        targetValue = if (isFirstFrameRendered) 1f else 0f,
+        animationSpec = tween(250),
+        label = "animatedArtworkAlpha"
+    )
+
+    // Render using AndroidView without consuming touch gestures, hidden until first frame is rendered
     AndroidView(
         factory = { ctx ->
             (LayoutInflater.from(ctx).inflate(R.layout.player_view_texture, null) as PlayerView).also { view ->
@@ -220,7 +254,9 @@ fun AnimatedArtworkPlayer(
             view.setOnTouchListener { _, _ -> false }
             playerViewRef = view
         },
-        modifier = modifier
+        modifier = modifier.graphicsLayer {
+            alpha = animatedAlpha
+        }
     )
 }
 

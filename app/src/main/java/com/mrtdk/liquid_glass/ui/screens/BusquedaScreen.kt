@@ -340,7 +340,21 @@ fun BusquedaScreen(
 
         // Results list
         if (state.displayResults.isNotEmpty()) {
-            items(state.displayResults.size) { index ->
+            items(
+                count = state.displayResults.size,
+                key = { index ->
+                    when (val itm = state.displayResults[index]) {
+                        is SongItem -> itm.id
+                        is com.echo.innertube.models.AlbumItem -> itm.id
+                        is com.echo.innertube.models.ArtistItem -> itm.id
+                        is com.echo.innertube.models.PlaylistItem -> itm.id
+                        else -> "$index"
+                    }
+                },
+                contentType = { index ->
+                    state.displayResults[index]::class.java.simpleName
+                }
+            ) { index ->
                 val item = state.displayResults[index]
 
                 when (item) {

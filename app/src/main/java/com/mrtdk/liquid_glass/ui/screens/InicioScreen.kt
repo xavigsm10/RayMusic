@@ -512,7 +512,21 @@ fun InicioScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    items(displaySuggestions.take(15).size) { index ->
+                    items(
+                        count = displaySuggestions.take(15).size,
+                        key = { index ->
+                            displaySuggestions[index].let {
+                                when (it) {
+                                    is com.echo.innertube.models.SongItem -> it.id
+                                    is com.echo.innertube.models.AlbumItem -> it.id
+                                    is com.echo.innertube.models.ArtistItem -> it.id
+                                    is com.echo.innertube.models.PlaylistItem -> it.id
+                                    else -> "$index"
+                                }
+                            }
+                        },
+                        contentType = { "suggestion_card" }
+                    ) { index ->
                         val itm = displaySuggestions[index]
                         FeaturedSuggestionCard(
                             context = context,
@@ -568,7 +582,11 @@ fun InicioScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    items(state.quickPickSongs.size) { index ->
+                    items(
+                        count = state.quickPickSongs.size,
+                        key = { index -> state.quickPickSongs[index].id },
+                        contentType = { "quick_pick" }
+                    ) { index ->
                         val song = state.quickPickSongs[index]
                         val hdThumb = upgradeThumb(song.thumbnail)
                         Column(
@@ -625,7 +643,11 @@ fun InicioScreen(
                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     val itemsToDisplay = recentlyPlayed.take(20)
-                    items(itemsToDisplay.size) { index ->
+                    items(
+                        count = itemsToDisplay.size,
+                        key = { index -> itemsToDisplay[index].id },
+                        contentType = { "recent_item" }
+                    ) { index ->
                         val item = itemsToDisplay[index]
                         val hdThumb = upgradeThumb(item.thumbnail)
                         val isCircle = item.type == ItemType.ARTIST

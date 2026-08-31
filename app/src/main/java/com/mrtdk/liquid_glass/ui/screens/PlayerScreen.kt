@@ -1717,125 +1717,51 @@ fun PlayerScreen(
             
 
             withContext(Dispatchers.IO) {
-
                 var foundUrl: String? = null
+                val cleanArtist = com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.cleanTerm(artist)
+                val cleanAlbum = if (!album.isNullOrBlank()) com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.cleanTerm(album) else null
+                val cleanTitle = if (!title.isNullOrBlank()) com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.cleanTerm(title) else null
 
-                
+                // 1. Unified Echo-Music Canvas Provider (EchoMusic, ArchiveTune, Tidal, AppleMusic)
+                foundUrl = com.mrtdk.liquid_glass.canvas.UnifiedCanvasProvider.getSongOrAlbumCanvas(
+                    songOrAlbum = cleanTitle ?: cleanAlbum ?: "",
+                    artist = cleanArtist,
+                    album = cleanAlbum
+                )
 
-                // Try 1: Search using album name if available
-
-                if (!album.isNullOrBlank()) {
-
+                // 2. Fallback to m8tec if still null
+                if (foundUrl == null) {
                     try {
-
-                        val cleanArtist = com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.cleanTerm(artist)
-
-                        val cleanAlbum = com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.cleanTerm(album)
-
-                        val encodedArtist = java.net.URLEncoder.encode(cleanArtist, "UTF-8")
-
-                        val encodedAlbum = java.net.URLEncoder.encode(cleanAlbum, "UTF-8")
-
-                        val url = java.net.URL("https://artwork.m8tec.top/api/v1/artwork/search?artist=$encodedArtist&album=$encodedAlbum")
-
-                        val conn = url.openConnection() as java.net.HttpURLConnection
-
-                        conn.connectTimeout = 3000
-
-                        conn.readTimeout = 3000
-
-                        if (conn.responseCode == 200) {
-
-                            val text = conn.inputStream.bufferedReader().readText()
-
-                            val obj = org.json.JSONObject(text)
-
-                            val streamUrl = obj.optString("url").takeIf { it.isNotBlank() } 
-
-                                ?: obj.optString("url_tall").takeIf { it.isNotBlank() }
-
-                            if (!streamUrl.isNullOrBlank()) {
-
-                                foundUrl = streamUrl
-
+                        val queryAlbum = cleanAlbum ?: cleanTitle
+                        if (!queryAlbum.isNullOrBlank()) {
+                            val encodedArtist = java.net.URLEncoder.encode(cleanArtist, "UTF-8")
+                            val encodedAlbum = java.net.URLEncoder.encode(queryAlbum, "UTF-8")
+                            val url = java.net.URL("https://artwork.m8tec.top/api/v1/artwork/search?artist=$encodedArtist&album=$encodedAlbum")
+                            val conn = url.openConnection() as java.net.HttpURLConnection
+                            conn.connectTimeout = 3000
+                            conn.readTimeout = 3000
+                            if (conn.responseCode == 200) {
+                                val text = conn.inputStream.bufferedReader().readText()
+                                val obj = org.json.JSONObject(text)
+                                val streamUrl = obj.optString("url").takeIf { it.isNotBlank() } 
+                                    ?: obj.optString("url_tall").takeIf { it.isNotBlank() }
+                                if (!streamUrl.isNullOrBlank()) {
+                                    foundUrl = streamUrl
+                                }
                             }
-
                         }
-
                     } catch (e: Exception) {
-
                         e.printStackTrace()
-
                     }
-
                 }
-
-                
-
-                // Try 2: Fallback or query using song title if not found yet
-
-                if (foundUrl == null && !title.isNullOrBlank()) {
-
-                    try {
-
-                        val cleanArtist = com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.cleanTerm(artist)
-
-                        val cleanTitle = com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.cleanTerm(title)
-
-                        val encodedArtist = java.net.URLEncoder.encode(cleanArtist, "UTF-8")
-
-                        val encodedTitle = java.net.URLEncoder.encode(cleanTitle, "UTF-8")
-
-                        val url = java.net.URL("https://artwork.m8tec.top/api/v1/artwork/search?artist=$encodedArtist&album=$encodedTitle")
-
-                        val conn = url.openConnection() as java.net.HttpURLConnection
-
-                        conn.connectTimeout = 3000
-
-                        conn.readTimeout = 3000
-
-                        if (conn.responseCode == 200) {
-
-                            val text = conn.inputStream.bufferedReader().readText()
-
-                            val obj = org.json.JSONObject(text)
-
-                            val streamUrl = obj.optString("url").takeIf { it.isNotBlank() } 
-
-                                ?: obj.optString("url_tall").takeIf { it.isNotBlank() }
-
-                            if (!streamUrl.isNullOrBlank()) {
-
-                                foundUrl = streamUrl
-
-                            }
-
-                        }
-
-                    } catch (e: Exception) {
-
-                        e.printStackTrace()
-
-                    }
-
-                }
-
-                
 
                 if (foundUrl != null) {
-
                     withContext(Dispatchers.Main) {
-
                         animatedArtworkUrl = foundUrl
-
                         val cacheKeyAlbum = if (!album.isNullOrBlank()) album else title ?: ""
-
                         com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.put(artist, cacheKeyAlbum, foundUrl!!)
-
                     }
-
                 }
-
             }
 
         }
@@ -1945,20 +1871,7 @@ fun PlayerScreen(
 
 
         val animatedImageLoader = remember(context) {
-            val global = coil.Coil.imageLoader(context)
-            coil.ImageLoader.Builder(context)
-                .memoryCache(global.memoryCache)
-                .diskCache(global.diskCache)
-                .allowHardware(true)
-                .components {
-                    add(com.mrtdk.liquid_glass.utils.CoilUtils.HdThumbnailInterceptor())
-                    if (android.os.Build.VERSION.SDK_INT >= 28) {
-                        add(coil.decode.ImageDecoderDecoder.Factory())
-                    } else {
-                        add(coil.decode.GifDecoder.Factory())
-                    }
-                }
-                .build()
+            coil.Coil.imageLoader(context)
         }
 
 
@@ -3642,7 +3555,7 @@ fun PlayerScreen(
                             .graphicsLayer {
                                 alpha = if (isVideoPlaying) 1f else 0f
                             },
-                        isPaused = false,
+                        isPaused = isOverlayActive,
                         enableFrameCapture = (dragProgress == 0f && !isOverlayActive),
                         onPlayerCreated = { masterAnimatedPlayer = it },
                         onPlaybackStarted = { isVideoPlaying = true },
