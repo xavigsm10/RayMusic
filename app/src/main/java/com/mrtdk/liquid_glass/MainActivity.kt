@@ -512,6 +512,10 @@ class MainActivity : ComponentActivity() {
                             
                             val isAutoplayEnabled = com.mrtdk.liquid_glass.data.LibraryManager.getString("autoplay_similar", "true") == "true"
                             if (isAutoplayEnabled) {
+                                // If upNextSongs is already populated (user playing within the queue), do not overwrite with a new radio list
+                                if (upNextSongs.isNotEmpty()) {
+                                    return@collect
+                                }
                                 radioLoadingJob?.cancel()
                                 radioLoadingJob = radioScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                                     queueSeedVideoId = vid
