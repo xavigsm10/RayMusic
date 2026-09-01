@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Build
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.draw.shadow
 
 import androidx.compose.animation.AnimatedVisibility
 
@@ -2149,27 +2150,24 @@ fun PlayerScreen(
 
             
 
-            val expandedWidth = maxWidth
+            val playerArtworkStyle by LibraryManager.playerArtworkStyle.collectAsState()
+            val isNormalArtwork = playerArtworkStyle == "normal"
 
-            val expandedHeight = maxWidth * 1.35f
+            val normalCardSize = minOf(maxWidth - 48.dp, maxHeight * 0.40f)
+            val normalX = (maxWidth - normalCardSize) / 2
+            val normalY = 60.dp
 
-            val expandedX = 0.dp
-
-            val expandedY = 0.dp
-
-            
+            val expandedWidth = if (isNormalArtwork) normalCardSize else maxWidth
+            val expandedHeight = if (isNormalArtwork) normalCardSize else (maxWidth * 1.35f)
+            val expandedX = if (isNormalArtwork) normalX else 0.dp
+            val expandedY = if (isNormalArtwork) normalY else 0.dp
+            val defaultCorner = if (isNormalArtwork) 14.dp else 12.dp
 
             val startWidth = if (isOverlayActive) lyricsImageSize else expandedWidth
-
             val startHeight = if (isOverlayActive) lyricsImageSize else expandedHeight
-
             val startOffsetX = if (isOverlayActive) 24.dp else expandedX
-
             val startOffsetY = if (isOverlayActive) 64.dp else expandedY
-
-            val startCorner = if (isOverlayActive) 8.dp else 12.dp
-
-
+            val startCorner = if (isOverlayActive) 8.dp else defaultCorner
 
             val p = dragProgress.coerceIn(0f, 1f)
 
@@ -2208,8 +2206,8 @@ fun PlayerScreen(
             val imgOffsetY = if (dragProgress > 0f) imgOffsetYTarget else animatedImgOffsetY
             val imgCorner = if (dragProgress > 0f) imageCornerTarget else animatedImgCorner
 
-            val controlsBaseY = maxWidth * 1.23f
-            val detailsOffsetYTarget = if (isOverlayActive) 64.dp else (controlsBaseY - 8.dp)
+            val controlsBaseY = if (isNormalArtwork) (normalY + normalCardSize + 18.dp) else (maxWidth * 1.23f)
+            val detailsOffsetYTarget = if (isOverlayActive) 64.dp else (if (isNormalArtwork) controlsBaseY else (controlsBaseY - 8.dp))
 
             val detailsOffsetY by androidx.compose.animation.core.animateDpAsState(detailsOffsetYTarget)
 
@@ -2374,9 +2372,45 @@ fun PlayerScreen(
                         )
                     )
             ) {
-            // Capa 4: Reflejo invertido estilo Apple Music
+            // Ambient artwork background for Normal mode
+            if (isNormalArtwork) {
+                val ambientArtModel = hdArtUrl ?: playerState?.artUrl
+                if (ambientArtModel != null) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(ambientArtModel)
+                            .crossfade(true)
+                            .build(),
+                        imageLoader = animatedImageLoader,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                scaleX = 1.4f
+                                scaleY = 1.4f
+                            }
+                            .blur(90.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        Color.Black.copy(alpha = 0.20f),
+                                        Color.Black.copy(alpha = 0.45f),
+                                        Color.Black.copy(alpha = 0.75f)
+                                    )
+                                )
+                            )
+                    )
+                }
+            }
+
+            // Capa 4: Reflejo invertido estilo Apple Music (solo para fullartwork)
             val mirrorArtModel = hdArtUrl ?: playerState?.artUrl
-            if ((coverBitmap != null || mirrorArtModel != null) && dragProgress < 1f && !showLyrics && !showQueue) {
+            if (!isNormalArtwork && (coverBitmap != null || mirrorArtModel != null) && dragProgress < 1f && !showLyrics && !showQueue) {
                 val reflectionWidth = maxWidth
                 val reflectionX = 0.dp
                 val childWidth = expandedWidth
@@ -3487,14 +3521,23 @@ fun PlayerScreen(
                             }
                         } else Modifier
                     )
+                    .then(
+                        if (isNormalArtwork && !isOverlayActive && dragProgress == 0f) {
+                            Modifier.shadow(elevation = 14.dp, shape = RoundedCornerShape(imgCorner))
+                        } else Modifier
+                    )
                     .graphicsLayer {
                         shape = if (!isOverlayActive) {
-                            RoundedCornerShape(
-                                topStart = imgCorner.toPx(),
-                                topEnd = imgCorner.toPx(),
-                                bottomStart = 0f,
-                                bottomEnd = 0f
-                            )
+                            if (isNormalArtwork) {
+                                RoundedCornerShape(imgCorner.toPx())
+                            } else {
+                                RoundedCornerShape(
+                                    topStart = imgCorner.toPx(),
+                                    topEnd = imgCorner.toPx(),
+                                    bottomStart = 0f,
+                                    bottomEnd = 0f
+                                )
+                            }
                         } else {
                             RoundedCornerShape(imgCorner.toPx())
                         }
@@ -3507,7 +3550,7 @@ fun PlayerScreen(
                     }
                     .drawWithContent {
                         drawContent()
-                        if (!isOverlayActive) {
+                        if (!isOverlayActive && !isNormalArtwork) {
                             val h = size.height
                             val fadePx = with(density) { 32.dp.toPx() }
                             if (h > fadePx) {
@@ -3586,7 +3629,7 @@ fun PlayerScreen(
                 }
 
                 // Capa de desenfoque soft blur en la curva de la parte inferior de la carátula
-                if (!isOverlayActive) {
+                if (!isOverlayActive && !isNormalArtwork) {
                     val blurRadiusPx = with(density) { 18.dp.toPx() }
                     val maskBitmapCache = remember { arrayOfNulls<androidx.compose.ui.graphics.ImageBitmap>(1) }
                     Box(
@@ -3724,7 +3767,7 @@ fun PlayerScreen(
                  exit = fadeOut()
 
              ) {
-                 val currentControlsBaseY = maxWidth * 1.23f
+                 val currentControlsBaseY = if (isNormalArtwork) (normalY + normalCardSize + 18.dp) else (maxWidth * 1.23f)
                  Box(
                       modifier = Modifier
                           .fillMaxWidth()
@@ -3750,7 +3793,7 @@ fun PlayerScreen(
 
                      ) {
 
-                         Spacer(modifier = Modifier.height(88.dp)) 
+                         Spacer(modifier = Modifier.height(if (isNormalArtwork) 54.dp else 88.dp)) 
 
                           AppleMusicSlider(
                               value = progress, onValueChange = { onSeek((it * duration).toLong()) },

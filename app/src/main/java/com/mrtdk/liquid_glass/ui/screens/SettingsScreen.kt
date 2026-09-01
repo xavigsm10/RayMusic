@@ -131,6 +131,7 @@ fun MainSettingsMenu(
 ) {
     val scrollState = rememberScrollState()
     var showGlassStyleDialog by remember { mutableStateOf(false) }
+    var showArtworkStyleDialog by remember { mutableStateOf(false) }
 
     val isDarkMode by com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState()
     var showThemeDialog by remember { mutableStateOf(false) }
@@ -194,12 +195,25 @@ fun MainSettingsMenu(
                             val currentStyle = LibraryManager.getGlassStyle()
                             val currentStyleName = when (currentStyle) {
                                 "transparent" -> stringResource(R.string.vidrio_liquido_transparente)
-                                "semitransparent" -> stringResource(R.string.semitransparente)
+                                "solid" -> "Sólido (Material 3)"
                                 else -> stringResource(R.string.vidrio_liquido_transparente)
                             }
                             Text(currentStyleName)
                         },
                         onClick = { showGlassStyleDialog = true }
+                    ),
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.Tune),
+                        title = { Text("Apariencia") },
+                        description = {
+                            val currentStyle = LibraryManager.getPlayerArtworkStyle()
+                            val currentStyleName = when (currentStyle) {
+                                "normal" -> "Normal"
+                                else -> "Fullartwork"
+                            }
+                            Text(currentStyleName)
+                        },
+                        onClick = { showArtworkStyleDialog = true }
                     )
                 )
             )
@@ -322,16 +336,31 @@ fun MainSettingsMenu(
 
     if (showGlassStyleDialog) {
         SingleChoiceDialog(
-            title = stringResource(R.string.apariencia_dialog_title),
+            title = stringResource(R.string.liquid_glass),
             options = listOf(
                 "transparent" to stringResource(R.string.vidrio_liquido_transparente),
-                "semitransparent" to stringResource(R.string.semitransparente)
+                "solid" to "Sólido (Material 3)"
             ),
             selectedValue = LibraryManager.getGlassStyle(),
             onDismiss = { showGlassStyleDialog = false },
             onSelect = {
                 LibraryManager.saveGlassStyle(it)
                 onGlassStyleChanged(it)
+            }
+        )
+    }
+
+    if (showArtworkStyleDialog) {
+        SingleChoiceDialog(
+            title = "Apariencia",
+            options = listOf(
+                "fullartwork" to "Fullartwork",
+                "normal" to "Normal"
+            ),
+            selectedValue = LibraryManager.getPlayerArtworkStyle(),
+            onDismiss = { showArtworkStyleDialog = false },
+            onSelect = {
+                LibraryManager.savePlayerArtworkStyle(it)
             }
         )
     }
