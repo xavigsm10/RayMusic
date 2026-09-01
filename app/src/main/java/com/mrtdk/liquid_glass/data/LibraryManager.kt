@@ -12,6 +12,18 @@ import androidx.compose.ui.graphics.Color
 enum class ItemType { ALBUM, ARTIST, SONG }
 
 @androidx.compose.runtime.Immutable
+data class RecentSearchItem(
+    val id: String,
+    val title: String,
+    val subtitle: String,
+    val thumbnail: String? = null,
+    val type: String = "SONG", // "ARTIST", "SONG", "ALBUM"
+    val album: String? = null,
+    val albumId: String? = null,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+@androidx.compose.runtime.Immutable
 data class LibraryItem(
     val id: String,
     val title: String,
@@ -51,6 +63,15 @@ object LibraryManager {
     private val _downloadedSongs = MutableStateFlow<List<LibraryItem>>(emptyList())
     val downloadedSongs: StateFlow<List<LibraryItem>> = _downloadedSongs
 
+    private val _recentSearches = MutableStateFlow<List<RecentSearchItem>>(emptyList())
+    val recentSearches: StateFlow<List<RecentSearchItem>> = _recentSearches
+
+    private val _glassStyle = MutableStateFlow("transparent")
+    val glassStyle: StateFlow<String> = _glassStyle
+
+    private val _playerArtworkStyle = MutableStateFlow("fullartwork")
+    val playerArtworkStyle: StateFlow<String> = _playerArtworkStyle
+
     private fun parseItemType(value: String): ItemType? {
         return try {
             ItemType.valueOf(value)
@@ -85,6 +106,9 @@ object LibraryManager {
         _playlists.value = dbHelper.getPlaylists()
         _recentlyPlayed.value = dbHelper.getRecentlyPlayed()
         _downloadedSongs.value = dbHelper.getDownloadedSongs()
+        _recentSearches.value = loadRecentSearchesFromDb()
+        _glassStyle.value = getGlassStyle()
+        _playerArtworkStyle.value = getPlayerArtworkStyle()
 
         com.mrtdk.liquid_glass.spotify.SpotifySession.init()
         com.mrtdk.liquid_glass.ui.theme.ThemeManager.init()
@@ -527,12 +551,25 @@ object LibraryManager {
 
     fun getGlassStyle(): String {
         if (!isInitialized) return "transparent"
-        return dbHelper.getSetting("glass_style", "transparent") ?: "transparent"
+        val style = dbHelper.getSetting("glass_style", "transparent") ?: "transparent"
+        return if (style == "semitransparent" || style == "semitransparente") "solid" else style
     }
 
     fun saveGlassStyle(style: String) {
         if (!isInitialized) return
         dbHelper.saveSetting("glass_style", style)
+        _glassStyle.value = style
+    }
+
+    fun getPlayerArtworkStyle(): String {
+        if (!isInitialized) return "fullartwork"
+        return dbHelper.getSetting("player_artwork_style", "fullartwork") ?: "fullartwork"
+    }
+
+    fun savePlayerArtworkStyle(style: String) {
+        if (!isInitialized) return
+        dbHelper.saveSetting("player_artwork_style", style)
+        _playerArtworkStyle.value = style
     }
 
     fun getDownloadedSongsForAlbum(albumName: String): List<LibraryItem> {
@@ -553,6 +590,73 @@ object LibraryManager {
     fun clearPlaybackHistory() {
         if (!isInitialized) return
         dbHelper.clearPlaybackHistory()
+    }
+
+    fun addRecentSearch(item: RecentSearchItem) {
+        if (item.id.isBlank() && item.title.isBlank()) return
+        val current = _recentSearches.value.filterNot { it.id == item.id || (it.title.equals(item.title, ignoreCase = true) && it.type == item.type) }
+        val updated = (listOf(item) + current).take(25)
+        _recentSearches.value = updated
+        saveRecentSearchesDirect(updated)
+    }
+
+    fun removeRecentSearch(id: String) {
+        val updated = _recentSearches.value.filterNot { it.id == id }
+        _recentSearches.value = updated
+        saveRecentSearchesDirect(updated)
+    }
+
+    fun clearRecentSearches() {
+        _recentSearches.value = emptyList()
+        saveRecentSearchesDirect(emptyList())
+    }
+
+    private fun saveRecentSearchesDirect(list: List<RecentSearchItem>) {
+        if (!isInitialized) return
+        try {
+            val arr = org.json.JSONArray()
+            for (itm in list) {
+                val obj = org.json.JSONObject()
+                obj.put("id", itm.id)
+                obj.put("title", itm.title)
+                obj.put("subtitle", itm.subtitle)
+                obj.put("thumbnail", itm.thumbnail ?: "")
+                obj.put("type", itm.type)
+                obj.put("album", itm.album ?: "")
+                obj.put("albumId", itm.albumId ?: "")
+                obj.put("timestamp", itm.timestamp)
+                arr.put(obj)
+            }
+            dbHelper.saveSetting("recent_searches_json", arr.toString())
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun loadRecentSearchesFromDb(): List<RecentSearchItem> {
+        val jsonStr = dbHelper.getSetting("recent_searches_json", null) ?: return emptyList()
+        return try {
+            val arr = org.json.JSONArray(jsonStr)
+            val list = mutableListOf<RecentSearchItem>()
+            for (i in 0 until arr.length()) {
+                val obj = arr.getJSONObject(i)
+                list.add(
+                    RecentSearchItem(
+                        id = obj.optString("id", ""),
+                        title = obj.optString("title", ""),
+                        subtitle = obj.optString("subtitle", ""),
+                        thumbnail = obj.optString("thumbnail", "").takeIf { it.isNotBlank() },
+                        type = obj.optString("type", "SONG"),
+                        album = obj.optString("album", "").takeIf { it.isNotBlank() },
+                        albumId = obj.optString("albumId", "").takeIf { it.isNotBlank() },
+                        timestamp = obj.optLong("timestamp", System.currentTimeMillis())
+                    )
+                )
+            }
+            list
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 }
 

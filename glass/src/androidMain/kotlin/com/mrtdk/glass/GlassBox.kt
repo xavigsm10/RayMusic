@@ -26,6 +26,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -115,8 +116,17 @@ fun GlassBoxScope.GlassBox(
     val glassStyle = LocalGlassStyle.current
     val density = LocalDensity.current
 
+    val isSolid = glassStyle == "solid"
     val adjustedTint = remember(tint, glassStyle) {
-        if (glassStyle == "semitransparente" || glassStyle == "semitransparent") {
+        if (glassStyle == "solid") {
+            if (tint != Color.Transparent && tint.alpha > 0.85f) {
+                tint
+            } else if (darkness > 0.4f || (tint != Color.Transparent && tint.luminance() < 0.5f)) {
+                Color(0xFF242428)
+            } else {
+                Color(0xFF28282C)
+            }
+        } else if (glassStyle == "semitransparente" || glassStyle == "semitransparent") {
             val baseColor = if (tint == Color.Transparent) {
                 Color.White
             } else {
@@ -134,7 +144,7 @@ fun GlassBoxScope.GlassBox(
     }
 
     val scopeImpl = (this as? GlassBoxScopeImpl)?.glassScope as? GlassScopeImpl
-    if (scopeImpl != null) {
+    if (scopeImpl != null && !isSolid) {
         val elementId = "glass_$id"
         DisposableEffect(elementId) {
             onDispose {
@@ -163,20 +173,31 @@ fun GlassBoxScope.GlassBox(
         }
     }
 
-    Box(
-        modifier = modifier.glassBackground(
-            id, 
-            scale.coerceIn(0f, 1f), 
-            blur.coerceIn(0f, 1f), 
-            centerDistortion.coerceIn(0f, 1f), 
-            shape, 
-            elevation, 
-            adjustedTint, 
-            darkness.coerceIn(0f, 1f), 
-            warpEdges.coerceIn(0f, 1f)
-        ),
-        contentAlignment, propagateMinConstraints, content
-    )
+    if (isSolid) {
+        Box(
+            modifier = modifier
+                .clip(shape)
+                .background(adjustedTint, shape),
+            contentAlignment = contentAlignment,
+            propagateMinConstraints = propagateMinConstraints,
+            content = content
+        )
+    } else {
+        Box(
+            modifier = modifier.glassBackground(
+                id, 
+                scale.coerceIn(0f, 1f), 
+                blur.coerceIn(0f, 1f), 
+                centerDistortion.coerceIn(0f, 1f), 
+                shape, 
+                elevation, 
+                adjustedTint, 
+                darkness.coerceIn(0f, 1f), 
+                warpEdges.coerceIn(0f, 1f)
+            ),
+            contentAlignment, propagateMinConstraints, content
+        )
+    }
 }
 
 private class GlassBoxScopeImpl(

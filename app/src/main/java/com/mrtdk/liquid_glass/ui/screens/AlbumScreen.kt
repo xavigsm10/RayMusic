@@ -17,6 +17,26 @@ import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.IosShare
+import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.activity.compose.BackHandler
+import androidx.compose.material3.Divider
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.window.Dialog
+import android.content.Intent
+import androidx.compose.material.icons.filled.AddCircleOutline
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.QueuePlayNext
+import androidx.compose.material.icons.filled.Queue
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.ThumbDownOffAlt
+import androidx.compose.material.icons.filled.QueueMusic
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Shuffle
@@ -72,6 +92,7 @@ import com.echo.innertube.YouTube
 import com.echo.innertube.models.SongItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 import android.widget.Toast
 import com.mrtdk.liquid_glass.ui.components.AppleMusicSongMenu
 import com.mrtdk.liquid_glass.ui.components.AppleMusicAlbumMenu
@@ -1287,24 +1308,40 @@ fun AlbumScreen(
                 },
                 glassContent = {
                     val scope = this
-                    Row(
+
+                    // Semi-transparent overlay to dismiss morphing menu when clicking outside
+                    if (showAlbumMenu) {
+                        androidx.activity.compose.BackHandler {
+                            showAlbumMenu = false
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.35f))
+                                .clickable(
+                                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                    indication = null
+                                ) { showAlbumMenu = false }
+                        )
+                    }
+
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .statusBarsPadding()
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(horizontal = 16.dp, vertical = 14.dp)
                     ) {
                         // Bigger circular back button
                         scope.GlassBox(
                             modifier = Modifier
+                                .align(Alignment.TopStart)
                                 .size(48.dp)
                                 .graphicsLayer {
                                     scaleX = popScaleBack
                                     scaleY = popScaleBack
-                                    alpha = popScaleBack
+                                    alpha = if (showAlbumMenu) popScaleBack * 0.4f else popScaleBack
                                 }
-                                .clickable { dismiss() },
+                                .clickable(enabled = !showAlbumMenu) { dismiss() },
                             shape = CircleShape,
                             tint = glassButtonTint,
                             blur = 0.8f,
@@ -1321,61 +1358,80 @@ fun AlbumScreen(
                                 modifier = Modifier.size(22.dp)
                             )
                         }
-                        
-                        // Capsule containing Share and More options
-                        scope.GlassBox(
+
+                        // Morphing Liquid Glass Pill -> Menu on the Top-Right
+                        Box(
                             modifier = Modifier
+                                .align(Alignment.TopEnd)
                                 .graphicsLayer {
                                     scaleX = popScaleShare
                                     scaleY = popScaleShare
                                     alpha = popScaleShare
                                 }
-                                .height(44.dp),
-                            shape = RoundedCornerShape(percent = 50),
-                            tint = glassButtonTint,
-                            blur = 0.8f,
-                            centerDistortion = 0.1f,
-                            scale = 0.02f,
-                            warpEdges = 0.4f,
-                            elevation = 4.dp,
-                            contentAlignment = Alignment.Center
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 6.dp),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                IconButton(
-                                    onClick = {
-                                        val shareUrl = "https://music.youtube.com/playlist?list=${albumState.playlistId.ifEmpty { albumState.id }.removePrefix("VL")}"
-                                        val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                            type = "text/plain"
-                                            putExtra(android.content.Intent.EXTRA_SUBJECT, albumState.title)
-                                            putExtra(android.content.Intent.EXTRA_TEXT, "$shareUrl")
+                            AlbumTopRightMorphingPill(
+                                glassScope = scope,
+                                albumState = albumState,
+                                isExpanded = showAlbumMenu,
+                                onExpandChange = { showAlbumMenu = it },
+                                glassButtonTint = glassButtonTint,
+                                glassIconTint = glassIconTint,
+                                tracks = tracks,
+                                onAddAlbumToQueue = {
+                                    if (tracks.isNotEmpty()) {
+                                        val current = PlaybackQueue.currentSong
+                                        val qItems = tracks.map { t ->
+                                            QueueItem(
+                                                title = t.title,
+                                                artist = t.artists.joinToString { it.name },
+                                                artUrl = songArtUrl,
+                                                videoId = t.id,
+                                                album = albumState.title
+                                            )
                                         }
-                                        context.startActivity(android.content.Intent.createChooser(shareIntent, "Compartir"))
-                                    },
-                                    modifier = Modifier.size(36.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.IosShare,
-                                        contentDescription = "Share",
-                                        tint = glassIconTint,
-                                        modifier = Modifier.size(20.dp)
+                                        if (current == null) {
+                                            val s = tracks.first()
+                                            onSongSelected(
+                                                PlayerState(
+                                                    title = s.title,
+                                                    artist = s.artists.joinToString { it.name },
+                                                    artUrl = songArtUrl,
+                                                    videoId = s.id,
+                                                    queue = qItems.drop(1),
+                                                    isExclusiveQueue = true,
+                                                    album = albumState.title
+                                                )
+                                            )
+                                        } else {
+                                            PlaybackQueue.queue = PlaybackQueue.queue + qItems
+                                            PlaybackQueue.onQueueChanged?.invoke()
+                                            Toast.makeText(context, "Álbum añadido a la cola", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                },
+                                onSaveAlbumToLibrary = {
+                                    LibraryManager.saveItem(
+                                        LibraryItem(
+                                            id = albumState.id,
+                                            title = albumState.title,
+                                            subtitle = albumState.artist,
+                                            thumbnail = hdThumb,
+                                            type = ItemType.ALBUM
+                                        )
+                                    )
+                                    Toast.makeText(context, "Álbum guardado en la biblioteca", Toast.LENGTH_SHORT).show()
+                                },
+                                onGoToArtist = {
+                                    val aId = artistPageData?.artist?.id ?: albumState.artist
+                                    onArtistSelected(
+                                        com.mrtdk.liquid_glass.ui.screens.ArtistState(
+                                            id = aId,
+                                            name = albumState.artist,
+                                            thumbnail = null
+                                        )
                                     )
                                 }
-                                IconButton(
-                                    onClick = { showAlbumMenu = true },
-                                    modifier = Modifier.size(36.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.MoreVert,
-                                        contentDescription = "More",
-                                        tint = glassIconTint,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
+                            )
                         }
                     }
 
@@ -1395,65 +1451,6 @@ fun AlbumScreen(
                             },
                             onGoToAlbum = null,
                             onSongSelected = onSongSelected
-                        )
-                    }
-
-                    if (showAlbumMenu) {
-                        AppleMusicAlbumMenu(
-                            album = ContextMenuAlbum(
-                                id = albumState.id,
-                                playlistId = albumState.playlistId,
-                                title = albumState.title,
-                                artist = albumState.artist,
-                                thumbnail = albumState.thumbnail,
-                                year = albumState.year
-                            ),
-                            onDismiss = { showAlbumMenu = false },
-                            tracks = tracks,
-                            onAddAlbumToQueue = {
-                                if (tracks.isNotEmpty()) {
-                                    val current = PlaybackQueue.currentSong
-                                    val qItems = tracks.map { t ->
-                                        QueueItem(
-                                            title = t.title,
-                                            artist = t.artists.joinToString { it.name },
-                                            artUrl = songArtUrl,
-                                            videoId = t.id,
-                                            album = albumState.title
-                                        )
-                                    }
-                                    if (current == null) {
-                                        val s = tracks.first()
-                                        onSongSelected(
-                                            PlayerState(
-                                                title = s.title,
-                                                artist = s.artists.joinToString { it.name },
-                                                artUrl = songArtUrl,
-                                                videoId = s.id,
-                                                queue = qItems.drop(1),
-                                                isExclusiveQueue = true,
-                                                album = albumState.title
-                                            )
-                                        )
-                                    } else {
-                                        PlaybackQueue.queue = PlaybackQueue.queue + qItems
-                                        PlaybackQueue.onQueueChanged?.invoke()
-                                        Toast.makeText(context, "Álbum añadido a la cola", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            },
-                            onSaveAlbumToLibrary = {
-                                LibraryManager.saveItem(
-                                    LibraryItem(
-                                        id = albumState.id,
-                                        title = albumState.title,
-                                        subtitle = albumState.artist,
-                                        thumbnail = hdThumb,
-                                        type = ItemType.ALBUM
-                                    )
-                                )
-                                Toast.makeText(context, "Álbum guardado en la biblioteca", Toast.LENGTH_SHORT).show()
-                            }
                         )
                     }
                 }
@@ -1781,3 +1778,692 @@ private fun getAlbumEditorialDescription(artistName: String, albumTitle: String)
         else -> "Álbum completo de ${artistName} en sonido envolvente de alta fidelidad."
     }
 }
+
+@Composable
+fun AlbumTopRightMorphingPill(
+    glassScope: com.mrtdk.glass.GlassBoxScope,
+    albumState: AlbumState,
+    isExpanded: Boolean,
+    onExpandChange: (Boolean) -> Unit,
+    glassButtonTint: Color,
+    glassIconTint: Color,
+    tracks: List<SongItem>,
+    onAddAlbumToQueue: () -> Unit,
+    onSaveAlbumToLibrary: () -> Unit,
+    onGoToArtist: () -> Unit
+) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var isPlaylistsScreen by remember { mutableStateOf(false) }
+    var showNewPlaylistDialog by remember { mutableStateOf(false) }
+    var playlistName by remember { mutableStateOf("") }
+
+    // Reset internal screen if menu closes
+    LaunchedEffect(isExpanded) {
+        if (!isExpanded) {
+            isPlaylistsScreen = false
+            showNewPlaylistDialog = false
+        }
+    }
+
+    val savedItems by LibraryManager.savedItems.collectAsState()
+    val isSaved = savedItems.any { it.id == albumState.id }
+    var isFavorite by remember(albumState.id) { mutableStateOf(false) }
+
+    val morphProgress by animateFloatAsState(
+        targetValue = if (isExpanded) 1f else 0f,
+        animationSpec = spring(
+            dampingRatio = 0.74f,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "albumPillToMenuMorph"
+    )
+
+    // Smooth continuous 2D size & corner interpolation
+    val targetMenuHeight = if (isPlaylistsScreen) 370.dp else 390.dp
+    val morphWidth = androidx.compose.ui.unit.lerp(86.dp, 268.dp, morphProgress)
+    val morphHeight = androidx.compose.ui.unit.lerp(44.dp, targetMenuHeight, morphProgress)
+    val morphCorner = androidx.compose.ui.unit.lerp(22.dp, 24.dp, morphProgress)
+    val morphTint = androidx.compose.ui.graphics.lerp(glassButtonTint, Color(0xFF1B1B1E).copy(alpha = 0.88f), morphProgress)
+
+    // Smooth crossfade opacities
+    val pillIconsAlpha = ((0.28f - morphProgress) / 0.28f).coerceIn(0f, 1f)
+    val menuContentAlpha = ((morphProgress - 0.22f) / 0.78f).coerceIn(0f, 1f)
+
+    glassScope.GlassBox(
+        modifier = Modifier
+            .size(width = morphWidth, height = morphHeight)
+            .clip(RoundedCornerShape(morphCorner))
+            .then(
+                if (morphProgress > 0.05f) {
+                    Modifier.border(
+                        width = 0.8.dp,
+                        brush = Brush.verticalGradient(
+                            listOf(
+                                Color.White.copy(alpha = morphProgress * 0.35f),
+                                Color.White.copy(alpha = morphProgress * 0.08f)
+                            )
+                        ),
+                        shape = RoundedCornerShape(morphCorner)
+                    )
+                } else Modifier
+            ),
+        shape = RoundedCornerShape(morphCorner),
+        tint = morphTint,
+        blur = 0.85f,
+        centerDistortion = 0.1f,
+        scale = 0.02f,
+        warpEdges = 0.4f,
+        elevation = if (isExpanded) 16.dp else 4.dp,
+        contentAlignment = Alignment.TopEnd
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            // 1. Collapsed: Original Share + 3 Dots Capsule
+            if (pillIconsAlpha > 0.001f) {
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .height(44.dp)
+                        .padding(horizontal = 6.dp)
+                        .graphicsLayer { alpha = pillIconsAlpha },
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = {
+                            val shareUrl = "https://music.youtube.com/playlist?list=${albumState.playlistId.ifEmpty { albumState.id }.removePrefix("VL")}"
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_SUBJECT, albumState.title)
+                                putExtra(Intent.EXTRA_TEXT, shareUrl)
+                            }
+                            context.startActivity(Intent.createChooser(shareIntent, "Compartir"))
+                        },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.IosShare,
+                            contentDescription = "Share",
+                            tint = glassIconTint,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    IconButton(
+                        onClick = { onExpandChange(true) },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "More",
+                            tint = glassIconTint,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+
+            // 2. Expanded: Apple Music Liquid Glass Menu
+            if (menuContentAlpha > 0.001f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { alpha = menuContentAlpha }
+                ) {
+                    if (!isPlaylistsScreen) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(vertical = 8.dp)
+                        ) {
+                            // ── Top 3 Actions Row (Agregar, Favorito, Compartir) ──
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                            // 1. Agregar
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        if (isSaved) {
+                                            LibraryManager.removeItem(albumState.id)
+                                            Toast.makeText(context, "Eliminado de la biblioteca", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            onSaveAlbumToLibrary()
+                                        }
+                                    }
+                                    .padding(vertical = 6.dp, horizontal = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = if (isSaved) Icons.Default.CheckCircle else Icons.Default.AddCircleOutline,
+                                    contentDescription = null,
+                                    tint = if (isSaved) Color(0xFFFA243C) else Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = if (isSaved) "Agregado" else "Agregar",
+                                    color = Color.White,
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1
+                                )
+                            }
+
+                            // 2. Favorito
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        isFavorite = !isFavorite
+                                        if (isFavorite) {
+                                            onSaveAlbumToLibrary()
+                                            Toast.makeText(context, "Añadido a favoritos", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            Toast.makeText(context, "Eliminado de favoritos", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                    .padding(vertical = 6.dp, horizontal = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                                    contentDescription = null,
+                                    tint = if (isFavorite) Color(0xFFFA243C) else Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = if (isFavorite) "En Favoritos" else "Favorito",
+                                    color = Color.White,
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1
+                                )
+                            }
+
+                            // 3. Compartir
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        val pId = albumState.playlistId.ifEmpty { albumState.id }.removePrefix("VL")
+                                        val shareUrl = "https://music.youtube.com/playlist?list=$pId"
+                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(Intent.EXTRA_SUBJECT, albumState.title)
+                                            putExtra(Intent.EXTRA_TEXT, shareUrl)
+                                        }
+                                        context.startActivity(Intent.createChooser(shareIntent, "Compartir"))
+                                        onExpandChange(false)
+                                    }
+                                    .padding(vertical = 6.dp, horizontal = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.IosShare,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Compartir",
+                                    color = Color.White,
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+
+                        Divider(color = Color.White.copy(alpha = 0.12f), thickness = 0.6.dp)
+
+                        // ── Vertical Action Options ──
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            // 1. Agregar a playlist
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { isPlaylistsScreen = true }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(modifier = Modifier.width(14.dp))
+                                Text(
+                                    text = "Agregar a playlist",
+                                    color = Color.White,
+                                    fontSize = 15.sp
+                                )
+                            }
+
+                            Divider(color = Color.White.copy(alpha = 0.08f), thickness = 0.5.dp)
+
+                            // 2. Poner a continuación
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onAddAlbumToQueue()
+                                        onExpandChange(false)
+                                    }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.QueuePlayNext,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(modifier = Modifier.width(14.dp))
+                                Text(
+                                    text = "Poner a continuación",
+                                    color = Color.White,
+                                    fontSize = 15.sp
+                                )
+                            }
+
+                            Divider(color = Color.White.copy(alpha = 0.08f), thickness = 0.5.dp)
+
+                            // 3. Poner después
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onAddAlbumToQueue()
+                                        onExpandChange(false)
+                                    }
+                                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Queue,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(modifier = Modifier.width(14.dp))
+                                Column {
+                                    Text(
+                                        text = "Poner después",
+                                        color = Color.White,
+                                        fontSize = 15.sp
+                                    )
+                                    Text(
+                                        text = albumState.title,
+                                        color = Color.White.copy(alpha = 0.55f),
+                                        fontSize = 12.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+
+                            Divider(color = Color.White.copy(alpha = 0.08f), thickness = 0.5.dp)
+
+                            // 4. Descargar
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onExpandChange(false)
+                                        Toast.makeText(context, "Obteniendo canciones para descargar...", Toast.LENGTH_SHORT).show()
+                                        coroutineScope.launch {
+                                            try {
+                                                withContext(Dispatchers.IO) {
+                                                    val tracksToDownload = if (tracks.isNotEmpty()) {
+                                                        tracks
+                                                    } else {
+                                                        val isAlbum = albumState.id.startsWith("MPREb") || albumState.id.startsWith("FEmusic")
+                                                        if (isAlbum) {
+                                                            YouTube.album(albumState.id).getOrNull()?.songs
+                                                                ?: run {
+                                                                    val pId = albumState.playlistId.ifEmpty { albumState.id }.removePrefix("VL")
+                                                                    YouTube.playlist(pId).getOrNull()?.songs
+                                                                }
+                                                        } else {
+                                                            val pId = albumState.playlistId.ifEmpty { albumState.id }.removePrefix("VL")
+                                                            YouTube.playlist(pId).getOrNull()?.songs
+                                                                ?: run {
+                                                                    YouTube.album(albumState.id).getOrNull()?.songs
+                                                                }
+                                                        }
+                                                    }
+
+                                                    withContext(Dispatchers.Main) {
+                                                        if (tracksToDownload.isNullOrEmpty()) {
+                                                            Toast.makeText(context, "No se encontraron pistas para descargar", Toast.LENGTH_SHORT).show()
+                                                        } else {
+                                                            Toast.makeText(context, "Descargando ${tracksToDownload.size} canciones del álbum...", Toast.LENGTH_SHORT).show()
+                                                            tracksToDownload.forEach { track ->
+                                                                downloadSong(
+                                                                    context = context,
+                                                                    videoId = track.id,
+                                                                    title = track.title,
+                                                                    artist = track.artists.joinToString { it.name },
+                                                                    artUrl = track.thumbnail,
+                                                                    album = albumState.title,
+                                                                    silent = true
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            } catch (e: Exception) {
+                                                Toast.makeText(context, "Error al descargar: ${e.localizedMessage ?: e.message}", Toast.LENGTH_LONG).show()
+                                            }
+                                        }
+                                    }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Download,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(modifier = Modifier.width(14.dp))
+                                Text(
+                                    text = "Descargar",
+                                    color = Color.White,
+                                    fontSize = 15.sp
+                                )
+                            }
+
+                            Divider(color = Color.White.copy(alpha = 0.08f), thickness = 0.5.dp)
+
+                            // 5. Ver artista
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onGoToArtist()
+                                        onExpandChange(false)
+                                    }
+                                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(modifier = Modifier.width(14.dp))
+                                Column {
+                                    Text(
+                                        text = "Ver artista",
+                                        color = Color.White,
+                                        fontSize = 15.sp
+                                    )
+                                    Text(
+                                        text = albumState.artist,
+                                        color = Color.White.copy(alpha = 0.55f),
+                                        fontSize = 12.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+
+                            Divider(color = Color.White.copy(alpha = 0.08f), thickness = 0.5.dp)
+
+                            // 6. Sugerir menos
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        Toast.makeText(context, "Se sugerirá menos contenido similar", Toast.LENGTH_SHORT).show()
+                                        onExpandChange(false)
+                                    }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ThumbDownOffAlt,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(modifier = Modifier.width(14.dp))
+                                Text(
+                                    text = "Sugerir menos",
+                                    color = Color.White,
+                                    fontSize = 15.sp
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    // ── Sub-pantalla: Agregar a Playlist ──
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(
+                                onClick = { isPlaylistsScreen = false },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.ArrowBackIosNew,
+                                    contentDescription = "Volver",
+                                    tint = Color(0xFFFA243C),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Agregar a playlist",
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Divider(color = Color.White.copy(alpha = 0.1f))
+
+                        val playlists by LibraryManager.playlists.collectAsState()
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 260.dp)
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            // Crear nueva playlist
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { showNewPlaylistDialog = true }
+                                    .padding(vertical = 12.dp, horizontal = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Add,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFA243C),
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = "Nueva playlist...",
+                                    color = Color(0xFFFA243C),
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+
+                            Divider(color = Color.White.copy(alpha = 0.08f))
+
+                            playlists.forEach { playlist ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            coroutineScope.launch {
+                                                val tracksToAdd = if (tracks.isNotEmpty()) {
+                                                    tracks
+                                                } else {
+                                                    val isAlbum = albumState.id.startsWith("MPREb") || albumState.id.startsWith("FEmusic")
+                                                    withContext(Dispatchers.IO) {
+                                                        if (isAlbum) YouTube.album(albumState.id).getOrNull()?.songs
+                                                        else YouTube.playlist(albumState.playlistId.ifEmpty { albumState.id }.removePrefix("VL")).getOrNull()?.songs
+                                                    }
+                                                }
+                                                if (!tracksToAdd.isNullOrEmpty()) {
+                                                    tracksToAdd.forEach { track ->
+                                                        val trackLibItem = LibraryItem(
+                                                            id = track.id,
+                                                            title = track.title,
+                                                            subtitle = track.artists.joinToString { it.name },
+                                                            thumbnail = track.thumbnail,
+                                                            type = ItemType.SONG,
+                                                            album = albumState.title
+                                                        )
+                                                        LibraryManager.addSongToPlaylist(playlist.id, trackLibItem)
+                                                    }
+                                                    Toast.makeText(context, "Se agregaron las canciones a ${playlist.name}", Toast.LENGTH_SHORT).show()
+                                                }
+                                                onExpandChange(false)
+                                            }
+                                        }
+                                        .padding(vertical = 10.dp, horizontal = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Default.QueueMusic,
+                                        contentDescription = null,
+                                        tint = Color.Gray,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text(
+                                            text = playlist.name,
+                                            color = Color.White,
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                        Text(
+                                            text = "${playlist.items.size} canciones",
+                                            color = Color.Gray,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                }
+                                Divider(color = Color.White.copy(alpha = 0.06f))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+    // Diálogo para crear nueva playlist
+    if (showNewPlaylistDialog) {
+        Dialog(onDismissRequest = { showNewPlaylistDialog = false }) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xFF1E1E22))
+                    .padding(20.dp)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Nueva Playlist",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = playlistName,
+                        onValueChange = { playlistName = it },
+                        placeholder = { Text("Nombre de la playlist", color = Color.Gray) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = Color(0xFFFA243C),
+                            unfocusedBorderColor = Color.Gray
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = { showNewPlaylistDialog = false }) {
+                            Text("Cancelar", color = Color.Gray)
+                        }
+                        TextButton(onClick = {
+                            if (playlistName.isNotBlank()) {
+                                LibraryManager.createPlaylist(playlistName)
+                                coroutineScope.launch {
+                                    val newPlaylist = LibraryManager.playlists.value.firstOrNull { it.name == playlistName }
+                                    val tracksToAdd = if (tracks.isNotEmpty()) {
+                                        tracks
+                                    } else {
+                                        val isAlbum = albumState.id.startsWith("MPREb") || albumState.id.startsWith("FEmusic")
+                                        withContext(Dispatchers.IO) {
+                                            if (isAlbum) YouTube.album(albumState.id).getOrNull()?.songs
+                                            else YouTube.playlist(albumState.playlistId.ifEmpty { albumState.id }.removePrefix("VL")).getOrNull()?.songs
+                                        }
+                                    }
+                                    if (!tracksToAdd.isNullOrEmpty() && newPlaylist != null) {
+                                        tracksToAdd.forEach { track ->
+                                            val trackLibItem = LibraryItem(
+                                                id = track.id,
+                                                title = track.title,
+                                                subtitle = track.artists.joinToString { it.name },
+                                                thumbnail = track.thumbnail,
+                                                type = ItemType.SONG,
+                                                album = albumState.title
+                                            )
+                                            LibraryManager.addSongToPlaylist(newPlaylist.id, trackLibItem)
+                                        }
+                                    }
+                                    Toast.makeText(context, "Playlist creada con las canciones del álbum", Toast.LENGTH_SHORT).show()
+                                    showNewPlaylistDialog = false
+                                    onExpandChange(false)
+                                }
+                            }
+                        }) {
+                            Text("Crear", color = Color(0xFFFA243C), fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+

@@ -208,72 +208,27 @@ fun LiquidBottomNavBar(
     val actualContentColor = if (contentColor != Color.Unspecified) contentColor
     else if (!isDarkMode) Color.Black else Color.White
 
-    AnimatedContent(
-        targetState = navSearchState.keyboardActive,
-        modifier = modifier,
-        transitionSpec = {
-            if (targetState) {
-                (slideInVertically(
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessMedium
-                    )
-                ) { it / 2 } + fadeIn()) togetherWith
-                    (slideOutVertically(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessMedium
-                        )
-                    ) { it } + fadeOut())
-            } else {
-                (slideInVertically(
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessMedium
-                    )
-                ) { it } + fadeIn()) togetherWith
-                    (slideOutVertically(
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessMedium
-                        )
-                    ) { it / 2 } + fadeOut())
-            }
-        },
-        label = "navBarKeyboardActive",
-    ) { isKeyboardActive ->
-        if (isKeyboardActive) {
-            NavBarSearchInputBar(
-                state = navSearchState,
-                pureBlack = pureBlack,
-                tintColor = actualTintColor,
-                contentColor = actualContentColor,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        } else {
-            AppFloatingNavBarChrome(
-                selectedIndex = selectedIndex,
-                lastSelectedTabIndex = lastSelectedTabIndex,
-                onTabSelected = onTabSelected,
-                playerState = playerState,
-                isPlaying = isPlaying,
-                onTogglePlayPause = onTogglePlayPause,
-                onMiniPlayerClick = onMiniPlayerClick,
-                onNext = onNext,
-                onPrevious = onPrevious,
-                playbackProgress = playbackProgress,
-                onSeek = onSeek,
-                scrollConnection = scrollConnection,
-                pureBlack = pureBlack,
-                tintColor = actualTintColor,
-                contentColor = actualContentColor,
-                searchModeActive = isSearchActive,
-                navSearch = navSearchState,
-                tabPosition = tabPosition,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-    }
+    AppFloatingNavBarChrome(
+        selectedIndex = selectedIndex,
+        lastSelectedTabIndex = lastSelectedTabIndex,
+        onTabSelected = onTabSelected,
+        playerState = playerState,
+        isPlaying = isPlaying,
+        onTogglePlayPause = onTogglePlayPause,
+        onMiniPlayerClick = onMiniPlayerClick,
+        onNext = onNext,
+        onPrevious = onPrevious,
+        playbackProgress = playbackProgress,
+        onSeek = onSeek,
+        scrollConnection = scrollConnection,
+        pureBlack = pureBlack,
+        tintColor = actualTintColor,
+        contentColor = actualContentColor,
+        searchModeActive = isSearchActive,
+        navSearch = navSearchState,
+        tabPosition = tabPosition,
+        modifier = modifier.fillMaxWidth(),
+    )
 }
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -320,28 +275,38 @@ private fun AppFloatingNavBarChrome(
 
     val surfaceTintColor = if (isDarkMode) Color(0xFF1A1A1A).copy(alpha = 0.35f) else Color(0xFFFAFAFA).copy(alpha = 0.45f)
 
-    val tabBarContentModifier = Modifier
-        .drawBackdrop(
-            backdrop = backdrop,
-            shape = { NavBarShape },
-            effects = {
-                vibrancy()
-                blur(3f.dp.toPx())
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                    lens(
-                        refractionHeight = 19f.dp.toPx(),
-                        refractionAmount = 28f.dp.toPx(),
-                        depthEffect = true,
-                        chromaticAberration = true
-                    )
+    val glassStyle = com.mrtdk.glass.LocalGlassStyle.current
+    val isSolid = glassStyle == "solid"
+    val solidBgColor = if (isDarkMode) Color(0xFF242428) else Color(0xFFE8E8EC)
+
+    val tabBarContentModifier = if (isSolid) {
+        Modifier
+            .clip(NavBarShape)
+            .background(solidBgColor)
+    } else {
+        Modifier
+            .drawBackdrop(
+                backdrop = backdrop,
+                shape = { NavBarShape },
+                effects = {
+                    vibrancy()
+                    blur(3f.dp.toPx())
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                        lens(
+                            refractionHeight = 19f.dp.toPx(),
+                            refractionAmount = 28f.dp.toPx(),
+                            depthEffect = true,
+                            chromaticAberration = true
+                        )
+                    }
+                },
+                highlight = { Highlight.Default.copy(alpha = 0.35f) },
+                shadow = { Shadow.Default },
+                onDrawSurface = { 
+                    drawRect(if (tintColor != Color.Unspecified) tintColor.copy(alpha = 0.35f) else surfaceTintColor) 
                 }
-            },
-            highlight = { Highlight.Default.copy(alpha = 0.35f) },
-            shadow = { Shadow.Default },
-            onDrawSurface = { 
-                drawRect(if (tintColor != Color.Unspecified) tintColor.copy(alpha = 0.35f) else surfaceTintColor) 
-            }
-        )
+            )
+    }
 
     val inlineAccessory: (@Composable SharedTransitionScope.(Modifier, AnimatedVisibilityScope) -> Unit)? =
         if (playerState != null) {
@@ -412,9 +377,9 @@ private fun AppFloatingNavBarChrome(
             searchMode = searchModeActive,
             searchBarContent = if (searchModeActive) {
                 { contentModifier ->
-                    SearchBarPlaceholder(
+                    SearchBarInteractivePill(
                         state = navSearch,
-                        contentColor = if (isDarkMode) Color.White.copy(alpha = 0.75f) else Color.Black.copy(alpha = 0.75f),
+                        contentColor = if (isDarkMode) Color.White else Color.Black,
                         modifier = contentModifier,
                     )
                 }
@@ -487,10 +452,10 @@ private fun AppFloatingNavBarChrome(
 }
 
 /**
- * Pre-keyboard search placeholder row inside [SearchExpandedBar].
+ * Interactive search pill row directly inside [SearchExpandedBar] with embedded [BasicTextField].
  */
 @Composable
-private fun SearchBarPlaceholder(
+private fun SearchBarInteractivePill(
     state: NavSearchState,
     contentColor: Color,
     modifier: Modifier,
@@ -498,19 +463,25 @@ private fun SearchBarPlaceholder(
     val glowScope = rememberCoroutineScope()
     val glow = remember(glowScope) { InteractiveHighlight(animationScope = glowScope) }
 
+    LaunchedEffect(Unit) {
+        delay(120)
+        try {
+            state.focusRequester.requestFocus()
+        } catch (_: Exception) {}
+    }
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .then(glow.gestureModifier)
             .then(glow.modifier)
-            .bounceClick(onClick = state.onTapBar)
-            .padding(start = 4.dp, end = 8.dp),
+            .padding(horizontal = 4.dp),
     ) {
         Box(
             modifier = Modifier
-                .size(40.dp)
+                .size(36.dp)
                 .bounceClick { state.onExit() }
-                .padding(8.dp),
+                .padding(6.dp),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -520,92 +491,19 @@ private fun SearchBarPlaceholder(
                 modifier = Modifier.fillMaxSize(),
             )
         }
-        Box(Modifier.weight(1f)) {
-            Text(
-                text = if (state.query.text.isEmpty()) stringResource(R.string.search_placeholder) else state.query.text,
-                style = TextStyle(color = contentColor.copy(alpha = if (state.query.text.isEmpty()) 0.6f else 1f), fontSize = 15.sp),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
-}
-
-/**
- * Search input bar docked above the IME keyboard with spring elevation.
- */
-@Composable
-fun NavBarSearchInputBar(
-    state: NavSearchState,
-    pureBlack: Boolean,
-    tintColor: Color,
-    contentColor: Color,
-    modifier: Modifier,
-) {
-    val onTint = contentColor
-    val pillShape = ContinuousRoundedRectangle(percent = 50)
-    val coroutineScope = rememberCoroutineScope()
-    val pillGlow = remember(coroutineScope) { InteractiveHighlight(animationScope = coroutineScope) }
-    val backdrop = LocalBackdrop.current
-
-    BackHandler(onBack = state.onCloseKeyboard)
-
-    LaunchedEffect(Unit) {
-        delay(KeyboardOpenDelayMs)
-        state.focusRequester.requestFocus()
-    }
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier
-            .imePadding()
-            .navigationBarsPadding()
-            .padding(horizontal = 16.dp)
-            .padding(top = 6.dp, bottom = 2.dp)
-            .height(NavBarSearchBarHeight)
-            .clip(pillShape)
-            .drawBackdrop(
-                backdrop = backdrop,
-                shape = { pillShape },
-                effects = {
-                    vibrancy()
-                    blur(3f.dp.toPx())
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                        lens(
-                            refractionHeight = 19f.dp.toPx(),
-                            refractionAmount = 28f.dp.toPx(),
-                            depthEffect = true,
-                            chromaticAberration = true
-                        )
-                    }
-                },
-                highlight = { Highlight.Default.copy(alpha = 0.35f) },
-                shadow = { Shadow.Default },
-                onDrawSurface = { drawRect(if (tintColor != Color.Unspecified) tintColor.copy(alpha = 0.35f) else Color(0xFF1A1A1A).copy(alpha = 0.35f)) }
-            )
-            .then(pillGlow.gestureModifier)
-            .then(pillGlow.modifier)
-            .padding(horizontal = 4.dp)
-    ) {
         Box(
             modifier = Modifier
-                .size(44.dp)
-                .bounceClick { state.onExit() }
-                .padding(10.dp),
-            contentAlignment = Alignment.Center
+                .weight(1f)
+                .padding(horizontal = 4.dp),
+            contentAlignment = Alignment.CenterStart
         ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = stringResource(R.string.close_action),
-                tint = onTint,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-        Box(modifier = Modifier.weight(1f)) {
             if (state.query.text.isEmpty()) {
                 Text(
                     text = stringResource(R.string.search_placeholder),
-                    style = TextStyle(color = onTint.copy(alpha = 0.6f), fontSize = 15.sp),
+                    style = TextStyle(
+                        color = contentColor.copy(alpha = 0.6f),
+                        fontSize = 15.sp
+                    ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -614,8 +512,11 @@ fun NavBarSearchInputBar(
                 value = state.query,
                 onValueChange = state.onQueryChange,
                 singleLine = true,
-                textStyle = TextStyle(color = onTint, fontSize = 15.sp),
-                cursorBrush = SolidColor(onTint),
+                textStyle = TextStyle(
+                    color = contentColor,
+                    fontSize = 15.sp
+                ),
+                cursorBrush = SolidColor(contentColor),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(
                     onSearch = { state.onSubmit(state.query.text) },
@@ -638,15 +539,15 @@ fun NavBarSearchInputBar(
         if (state.query.text.isNotEmpty()) {
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(36.dp)
                     .bounceClick { state.onQueryChange(TextFieldValue("")) }
-                    .padding(10.dp),
+                    .padding(6.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = stringResource(R.string.close_action),
-                    tint = onTint,
+                    tint = contentColor,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
