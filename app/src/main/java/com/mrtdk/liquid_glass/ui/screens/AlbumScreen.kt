@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.shadow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBackIosNew
@@ -155,6 +156,9 @@ fun AlbumScreen(
 
     val headerArt = hdThumb
     val songArtUrl = hdThumb
+
+    val playerArtworkStyle by LibraryManager.playerArtworkStyle.collectAsState()
+    val isNormalArtwork = playerArtworkStyle == "normal"
 
     val albumHeightRatio = when {
         isAroundTheFurAlbum -> 1.40f
@@ -506,63 +510,65 @@ fun AlbumScreen(
                             .fillMaxSize()
                             .background(dominantColor.copy(alpha = contentAlpha))
                     ) {
-                        // ── FIXED / PARALLAX HERO ARTWORK BACKDROP ──
-                        val heroHeightRatio = albumHeightRatio
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(1f / heroHeightRatio)
-                                .graphicsLayer {
-                                    translationY = heroParallaxY
-                                    alpha = if (progress < 0.99f) 0f else heroAlpha
-                                }
-                                .then(
-                                    if (blurRadiusDp > 0.5.dp && android.os.Build.VERSION.SDK_INT >= 31) {
-                                        Modifier.blur(blurRadiusDp)
-                                    } else Modifier
-                                )
-                        ) {
-                            // Base sharp album cover
-                            AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(headerArt).crossfade(true).build(),
-                                imageLoader = animatedImageLoader,
-                                contentDescription = albumState.title,
-                                contentScale = ContentScale.Crop,
-                                alignment = Alignment.TopCenter,
-                                modifier = Modifier.fillMaxSize()
-                            )
-
-                            var isVideoPlaying by remember(albumState.id) { mutableStateOf(false) }
-                            val currentAnimatedUrl = animatedArtworkUrl
-
-                            if (!currentAnimatedUrl.isNullOrBlank()) {
-                                com.mrtdk.liquid_glass.ui.components.AnimatedArtworkPlayer(
-                                    videoUrl = currentAnimatedUrl,
-                                    modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (isVideoPlaying) 1f else 0f },
-                                    isPaused = isPaused,
-                                    onPlaybackStarted = { isVideoPlaying = true }
-                                )
-                            }
-
-                            // Subtle gradient fade only at the very bottom edge of the image
+                        // ── FIXED / PARALLAX HERO ARTWORK BACKDROP (Fullartwork mode only) ──
+                        if (!isNormalArtwork) {
+                            val heroHeightRatio = albumHeightRatio
                             Box(
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.verticalGradient(
-                                            0.0f to Color.Transparent,
-                                            0.78f to Color.Transparent,
-                                            0.94f to dominantColor.copy(alpha = 0.6f),
-                                            1.0f to dominantColor.copy(alpha = contentAlpha)
-                                        )
+                                    .fillMaxWidth()
+                                    .aspectRatio(1f / heroHeightRatio)
+                                    .graphicsLayer {
+                                        translationY = heroParallaxY
+                                        alpha = if (progress < 0.99f) 0f else heroAlpha
+                                    }
+                                    .then(
+                                        if (blurRadiusDp > 0.5.dp && android.os.Build.VERSION.SDK_INT >= 31) {
+                                            Modifier.blur(blurRadiusDp)
+                                        } else Modifier
                                     )
-                            )
+                            ) {
+                                // Base sharp album cover
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context)
+                                        .data(headerArt).crossfade(true).build(),
+                                    imageLoader = animatedImageLoader,
+                                    contentDescription = albumState.title,
+                                    contentScale = ContentScale.Crop,
+                                    alignment = Alignment.TopCenter,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+
+                                var isVideoPlaying by remember(albumState.id) { mutableStateOf(false) }
+                                val currentAnimatedUrl = animatedArtworkUrl
+
+                                if (!currentAnimatedUrl.isNullOrBlank()) {
+                                    com.mrtdk.liquid_glass.ui.components.AnimatedArtworkPlayer(
+                                        videoUrl = currentAnimatedUrl,
+                                        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (isVideoPlaying) 1f else 0f },
+                                        isPaused = isPaused,
+                                        onPlaybackStarted = { isVideoPlaying = true }
+                                    )
+                                }
+
+                                // Subtle gradient fade only at the very bottom edge of the image
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            Brush.verticalGradient(
+                                                0.0f to Color.Transparent,
+                                                0.78f to Color.Transparent,
+                                                0.94f to dominantColor.copy(alpha = 0.6f),
+                                                1.0f to dominantColor.copy(alpha = contentAlpha)
+                                            )
+                                        )
+                                )
+                            }
                         }
 
                         // ── SCROLLABLE ALBUM CONTENT ──
                         val screenWidthDp = LocalConfiguration.current.screenWidthDp.dp
-                        val heroHeightDp = screenWidthDp * heroHeightRatio
+                        val heroHeightDp = screenWidthDp * albumHeightRatio
                         val spacerHeightDp = (heroHeightDp - 22.dp).coerceAtLeast(0.dp)
 
                         val videoSection = remember(artistPageData) {
@@ -603,24 +609,58 @@ fun AlbumScreen(
                             state = listState,
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            // Spacer pushing content down so title begins right at the bottom edge of the image
-                            item {
-                                Spacer(modifier = Modifier.height(spacerHeightDp))
-                            }
-
-                            // Smooth gradient transition coat into solid dominantColor
-                            item {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(24.dp)
-                                        .background(
-                                            Brush.verticalGradient(
-                                                0.0f to Color.Transparent,
-                                                1.0f to dominantColor.copy(alpha = contentAlpha)
+                            if (isNormalArtwork) {
+                                item {
+                                    Spacer(modifier = Modifier.statusBarsPadding().height(56.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = 12.dp, bottom = 20.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(220.dp)
+                                                .shadow(
+                                                    elevation = 16.dp,
+                                                    shape = RoundedCornerShape(18.dp),
+                                                    ambientColor = Color.Black.copy(alpha = 0.5f),
+                                                    spotColor = Color.Black.copy(alpha = 0.5f)
+                                                )
+                                                .clip(RoundedCornerShape(18.dp))
+                                                .background(Color(0xFF1C1C1E))
+                                        ) {
+                                            AsyncImage(
+                                                model = ImageRequest.Builder(context)
+                                                    .data(headerArt).crossfade(true).build(),
+                                                imageLoader = animatedImageLoader,
+                                                contentDescription = albumState.title,
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier.fillMaxSize()
                                             )
-                                        )
-                                )
+                                        }
+                                    }
+                                }
+                            } else {
+                                // Spacer pushing content down so title begins right at the bottom edge of the image
+                                item {
+                                    Spacer(modifier = Modifier.height(spacerHeightDp))
+                                }
+
+                                // Smooth gradient transition coat into solid dominantColor
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(24.dp)
+                                            .background(
+                                                Brush.verticalGradient(
+                                                    0.0f to Color.Transparent,
+                                                    1.0f to dominantColor.copy(alpha = contentAlpha)
+                                                )
+                                            )
+                                    )
+                                }
                             }
 
                             // ── ALBUM TITLE & METADATA ──

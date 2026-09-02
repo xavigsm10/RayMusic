@@ -104,6 +104,8 @@ fun BusquedaScreen(
     innerPadding: PaddingValues,
     query: String,
     isSubmitted: Boolean,
+    isInputActive: Boolean = false,
+    onInputActiveChange: (Boolean) -> Unit = {},
     state: BusquedaState = remember { BusquedaState() },
     onSongSelected: (PlayerState) -> Unit,
     onArtistSelected: (ArtistState) -> Unit = {},
@@ -270,6 +272,21 @@ fun BusquedaScreen(
 
     val categories = remember { loadCategories(context) }
     val listState = rememberLazyListState()
+    val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+
+    val dismissKeyboardAndClearFocus: () -> Unit = {
+        focusManager.clearFocus()
+        keyboardController?.hide()
+        onInputActiveChange(false)
+    }
+
+    LaunchedEffect(listState.isScrollInProgress) {
+        if (listState.isScrollInProgress) {
+            focusManager.clearFocus()
+            keyboardController?.hide()
+        }
+    }
 
     GlassContainer(
         modifier = Modifier.fillMaxSize(),
@@ -284,8 +301,8 @@ fun BusquedaScreen(
                         bottom = innerPadding.calculateBottomPadding()
                     )
             ) {
-                // Top Origin Selector (RayMusic | Biblioteca) - Only shown while writing (Mode B), hidden on initial screen & full results
-                val shouldShowSourceSelector = (query.isNotEmpty() && !state.isFullResultsMode) || (state.searchSource == 1 && !state.isFullResultsMode)
+                // Top Origin Selector (RayMusic | Biblioteca) - Only shown while writing (Mode B / Active Input), hidden on initial browse screen & full results
+                val shouldShowSourceSelector = (isInputActive && !state.isFullResultsMode) || (state.searchSource == 1 && !state.isFullResultsMode)
                 if (shouldShowSourceSelector) {
                     SearchSourceSelector(
                         selectedSource = state.searchSource,
@@ -341,6 +358,7 @@ fun BusquedaScreen(
                                 LibrarySearchResultRow(
                                     item = item,
                                     onClick = {
+                                        dismissKeyboardAndClearFocus()
                                         when (item.type) {
                                             ItemType.SONG -> {
                                                 onSongSelected(
@@ -380,104 +398,104 @@ fun BusquedaScreen(
                         }
                     }
                 } else if (query.isEmpty()) {
-                    // MODE A: INITIAL STATE (Recent searches or Categories) - Imagen 3
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 180.dp)
-                    ) {
-                        if (recentSearches.isNotEmpty()) {
-                            item {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "Búsquedas recientes",
-                                        fontSize = 20.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = ThemeManager.textColor
-                                    )
-                                    Text(
-                                        text = "Borrar",
-                                        color = ThemeManager.accentColor,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.SemiBold,
+                    // MODE A: INITIAL STATE vs WRITING RECENT SEARCHES
+                    if (isInputActive) {
+                        // WRITING STATE (Image 5 style): Only show Recent Searches
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(bottom = 180.dp)
+                        ) {
+                            if (recentSearches.isNotEmpty()) {
+                                item {
+                                    Row(
                                         modifier = Modifier
-                                            .bounceClick { LibraryManager.clearRecentSearches() }
-                                            .padding(vertical = 4.dp, horizontal = 6.dp)
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Búsquedas recientes",
+                                            fontSize = 20.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = ThemeManager.textColor
+                                        )
+                                        Text(
+                                            text = "Borrar",
+                                            color = ThemeManager.accentColor,
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            modifier = Modifier
+                                                .bounceClick { LibraryManager.clearRecentSearches() }
+                                                .padding(vertical = 4.dp, horizontal = 6.dp)
+                                        )
+                                    }
+                                }
+
+                                items(recentSearches, key = { "${it.type}_${it.id}_${it.timestamp}" }) { recentItem ->
+                                    RecentSearchRow(
+                                        item = recentItem,
+                                        onClick = {
+                                            dismissKeyboardAndClearFocus()
+                                            when (recentItem.type) {
+                                                "ARTIST" -> {
+                                                    onArtistSelected(
+                                                        ArtistState(
+                                                            id = recentItem.id,
+                                                            name = recentItem.title,
+                                                            thumbnail = recentItem.thumbnail
+                                                        )
+                                                    )
+                                                }
+                                                "ALBUM" -> {
+                                                    onAlbumSelected(
+                                                        AlbumState(
+                                                            id = recentItem.id,
+                                                            playlistId = recentItem.albumId ?: recentItem.id,
+                                                            title = recentItem.title,
+                                                            artist = recentItem.subtitle,
+                                                            thumbnail = recentItem.thumbnail
+                                                        )
+                                                    )
+                                                }
+                                                else -> {
+                                                    onSongSelected(
+                                                        PlayerState(
+                                                            title = recentItem.title,
+                                                            artist = recentItem.subtitle,
+                                                            artUrl = recentItem.thumbnail,
+                                                            videoId = recentItem.id,
+                                                            album = recentItem.album,
+                                                            albumId = recentItem.albumId
+                                                        )
+                                                    )
+                                                }
+                                            }
+                                        },
+                                        onMoreClick = {
+                                            if (recentItem.type == "SONG") {
+                                                activeSongForMenu = ContextMenuSong(
+                                                    id = recentItem.id,
+                                                    title = recentItem.title,
+                                                    artist = recentItem.subtitle,
+                                                    thumbnail = recentItem.thumbnail,
+                                                    album = recentItem.album,
+                                                    albumId = recentItem.albumId
+                                                )
+                                            }
+                                        }
                                     )
                                 }
                             }
-
-                            items(recentSearches, key = { "${it.type}_${it.id}_${it.timestamp}" }) { recentItem ->
-                                RecentSearchRow(
-                                    item = recentItem,
-                                    onClick = {
-                                        when (recentItem.type) {
-                                            "ARTIST" -> {
-                                                onArtistSelected(
-                                                    ArtistState(
-                                                        id = recentItem.id,
-                                                        name = recentItem.title,
-                                                        thumbnail = recentItem.thumbnail
-                                                    )
-                                                )
-                                            }
-                                            "ALBUM" -> {
-                                                onAlbumSelected(
-                                                    AlbumState(
-                                                        id = recentItem.id,
-                                                        playlistId = recentItem.albumId ?: recentItem.id,
-                                                        title = recentItem.title,
-                                                        artist = recentItem.subtitle,
-                                                        thumbnail = recentItem.thumbnail
-                                                    )
-                                                )
-                                            }
-                                            else -> {
-                                                onSongSelected(
-                                                    PlayerState(
-                                                        title = recentItem.title,
-                                                        artist = recentItem.subtitle,
-                                                        artUrl = recentItem.thumbnail,
-                                                        videoId = recentItem.id,
-                                                        album = recentItem.album,
-                                                        albumId = recentItem.albumId
-                                                    )
-                                                )
-                                            }
-                                        }
-                                    },
-                                    onMoreClick = {
-                                        if (recentItem.type == "SONG") {
-                                            activeSongForMenu = ContextMenuSong(
-                                                id = recentItem.id,
-                                                title = recentItem.title,
-                                                artist = recentItem.subtitle,
-                                                thumbnail = recentItem.thumbnail,
-                                                album = recentItem.album,
-                                                albumId = recentItem.albumId
-                                            )
-                                        }
-                                    }
-                                )
-                            }
-
-                            item {
-                                Spacer(modifier = Modifier.height(24.dp))
-                                Text(
-                                    text = "Explorar géneros",
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = ThemeManager.textColor,
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                                )
-                            }
-                        } else {
+                        }
+                    } else {
+                        // INITIAL BROWSE STATE: Title "Buscar" + "Explorar géneros" + Categories Grid
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(bottom = 180.dp)
+                        ) {
                             item {
                                 Box(
                                     modifier = Modifier
@@ -492,58 +510,70 @@ fun BusquedaScreen(
                                     )
                                 }
                             }
-                        }
+                            item {
+                                Text(
+                                    text = "Explorar géneros",
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = ThemeManager.textColor,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                )
+                            }
 
-                        // Grid of Categories
-                        item {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp)
-                            ) {
-                                categories.chunked(2).forEach { rowCategories ->
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 6.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        rowCategories.forEach { category ->
-                                            Box(
-                                                modifier = Modifier
-                                                    .weight(1f)
-                                                    .aspectRatio(1.5f)
-                                                    .clip(RoundedCornerShape(12.dp))
-                                                    .background(ThemeManager.surfaceColor)
-                                                    .clickable { onCategorySelected(category) }
-                                            ) {
-                                                AsyncImage(
-                                                    model = ImageRequest.Builder(context)
-                                                        .data(category.imageUrl)
-                                                        .crossfade(false)
-                                                        .build(),
-                                                    contentDescription = category.name,
-                                                    contentScale = ContentScale.Crop,
-                                                    modifier = Modifier.fillMaxSize()
-                                                )
+                            // Grid of Categories
+                            item {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp)
+                                ) {
+                                    categories.chunked(2).forEach { rowCategories ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 6.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            rowCategories.forEach { category ->
                                                 Box(
                                                     modifier = Modifier
-                                                        .fillMaxSize()
-                                                        .background(Color.Black.copy(alpha = 0.25f))
-                                                )
-                                                Text(
-                                                    text = category.name,
-                                                    color = Color.White,
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontSize = 16.sp,
-                                                    modifier = Modifier
-                                                        .align(Alignment.BottomStart)
-                                                        .padding(12.dp)
-                                                )
+                                                        .weight(1f)
+                                                        .aspectRatio(1.5f)
+                                                        .clip(RoundedCornerShape(12.dp))
+                                                        .background(ThemeManager.surfaceColor)
+                                                        .clickable {
+                                                            dismissKeyboardAndClearFocus()
+                                                            onCategorySelected(category)
+                                                        }
+                                                ) {
+                                                    AsyncImage(
+                                                        model = ImageRequest.Builder(context)
+                                                            .data(category.imageUrl)
+                                                            .crossfade(false)
+                                                            .build(),
+                                                        contentDescription = category.name,
+                                                        contentScale = ContentScale.Crop,
+                                                        modifier = Modifier.fillMaxSize()
+                                                    )
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .fillMaxSize()
+                                                            .background(Color.Black.copy(alpha = 0.25f))
+                                                    )
+                                                    Text(
+                                                        text = category.name,
+                                                        color = Color.White,
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontSize = 15.sp,
+                                                        modifier = Modifier
+                                                            .align(Alignment.BottomStart)
+                                                            .padding(12.dp)
+                                                    )
+                                                }
                                             }
-                                        }
-                                        if (rowCategories.size == 1) {
-                                            Spacer(modifier = Modifier.weight(1f))
+                                            if (rowCategories.size == 1) {
+                                                Spacer(modifier = Modifier.weight(1f))
+                                            }
                                         }
                                     }
                                 }
@@ -564,6 +594,7 @@ fun BusquedaScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable {
+                                            dismissKeyboardAndClearFocus()
                                             onQueryChange(suggestion)
                                             onSubmitChange(true)
                                             state.isFullResultsMode = true
@@ -596,6 +627,7 @@ fun BusquedaScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable {
+                                            dismissKeyboardAndClearFocus()
                                             LibraryManager.addRecentSearch(
                                                 RecentSearchItem(
                                                     id = artist.id,
@@ -670,6 +702,7 @@ fun BusquedaScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable {
+                                            dismissKeyboardAndClearFocus()
                                             val songItem = RecentSearchItem(
                                                 id = song.id,
                                                 title = song.title,
@@ -847,6 +880,7 @@ fun BusquedaScreen(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .clickable {
+                                                    dismissKeyboardAndClearFocus()
                                                     LibraryManager.addRecentSearch(
                                                         RecentSearchItem(
                                                             id = item.id,
@@ -924,6 +958,7 @@ fun BusquedaScreen(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .clickable {
+                                                    dismissKeyboardAndClearFocus()
                                                     LibraryManager.addRecentSearch(
                                                         RecentSearchItem(
                                                             id = item.id,
@@ -993,6 +1028,7 @@ fun BusquedaScreen(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .clickable {
+                                                    dismissKeyboardAndClearFocus()
                                                     LibraryManager.addRecentSearch(
                                                         RecentSearchItem(
                                                             id = item.id,
