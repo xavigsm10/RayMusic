@@ -23,6 +23,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -837,6 +838,8 @@ fun PlaylistDetailScreen(
     }
     val isReplay = remember(currentPlaylist.id) { currentPlaylist.id.startsWith("replay_") }
     val defaultDominantColor = if (isReplay) Color(0xFF12351B) else Color(0xFF2B2B2B)
+    val playerArtworkStyle by LibraryManager.playerArtworkStyle.collectAsState()
+    val isNormalArtwork = playerArtworkStyle == "normal"
     var showAddMusicOverlay by remember { mutableStateOf(false) }
     var dominantColor by remember(currentPlaylist.id) { mutableStateOf(defaultDominantColor) }
     var contentColor by remember(currentPlaylist.id) { mutableStateOf(Color.White) }
@@ -977,92 +980,21 @@ fun PlaylistDetailScreen(
                     ) {
             // Hero section
             item {
-                GlassContainer(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(1f / 1.15f),
-                    content = {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .layerBackdrop(localBackdrop)
-                                .graphicsLayer {
-                                    alpha = if (progress < 0.99f) 0f else 1f
-                                }
-                        ) {
-                            if (isReplay) {
-                                val replayYearShort = currentPlaylist.id.substringAfter("replay_").takeLast(2)
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(
-                                            Brush.linearGradient(
-                                                colors = listOf(
-                                                    Color(0xFFFF9500), // Yellow/orange
-                                                    Color(0xFF4CD964)  // Green
-                                                )
-                                            )
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        Text(
-                                            text = "Replay",
-                                            color = Color.White.copy(alpha = 0.9f),
-                                            fontSize = 32.sp,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                        Text(
-                                            text = "'$replayYearShort",
-                                            color = Color.White,
-                                            fontSize = 84.sp,
-                                            fontWeight = FontWeight.Black,
-                                            lineHeight = 80.sp
-                                        )
-                                    }
-                                }
-                            } else if (coverUrl != null) {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(context).data(coverUrl).crossfade(true).build(),
-                                    contentDescription = currentPlaylist.name,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            } else {
-                                Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1C1C1E)), contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Default.MusicNote, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(64.dp))
-                                }
-                            }
-                            
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.verticalGradient(
-                                            0.0f to Color.Transparent,
-                                            0.7f to Color.Transparent,
-                                            0.85f to dominantColor.copy(alpha = 0.25f * contentAlpha),
-                                            0.95f to dominantColor.copy(alpha = 0.7f * contentAlpha),
-                                            1.0f to dominantColor.copy(alpha = contentAlpha)
-                                        )
-                                    )
-                            )
-                        }
-                    },
-                    glassContent = {
-                        val scope = this
+                if (isNormalArtwork) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                    ) {
+                        // Top bar
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .statusBarsPadding()
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Bigger circular back button
-                            scope.GlassBox(
+                            Box(
                                 modifier = Modifier
                                     .size(54.dp)
                                     .graphicsLayer {
@@ -1071,14 +1003,8 @@ fun PlaylistDetailScreen(
                                         alpha = popScaleBack
                                     }
                                     .clip(CircleShape)
+                                    .background(dominantColor.copy(alpha = 0.35f))
                                     .clickable { dismiss() },
-                                shape = CircleShape,
-                                tint = dominantColor.copy(alpha = 0.35f),
-                                blur = 0.8f,
-                                centerDistortion = 0.1f,
-                                scale = 0.02f,
-                                warpEdges = 0.4f,
-                                elevation = 4.dp,
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -1088,23 +1014,17 @@ fun PlaylistDetailScreen(
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
-                            
-                            // Capsule containing Share and More options
-                            scope.GlassBox(
+
+                            Box(
                                 modifier = Modifier
                                     .graphicsLayer {
                                         scaleX = popScaleShare
                                         scaleY = popScaleShare
                                         alpha = popScaleShare
                                     }
-                                    .height(48.dp),
-                                shape = RoundedCornerShape(percent = 50),
-                                tint = dominantColor.copy(alpha = 0.35f),
-                                blur = 0.8f,
-                                centerDistortion = 0.1f,
-                                scale = 0.02f,
-                                warpEdges = 0.4f,
-                                elevation = 4.dp,
+                                    .height(48.dp)
+                                    .clip(RoundedCornerShape(percent = 50))
+                                    .background(dominantColor.copy(alpha = 0.35f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Row(
@@ -1147,8 +1067,235 @@ fun PlaylistDetailScreen(
                                 }
                             }
                         }
+
+                        // Centered square artwork
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp, bottom = 20.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(220.dp)
+                                    .shadow(
+                                        elevation = 16.dp,
+                                        shape = RoundedCornerShape(18.dp),
+                                        ambientColor = Color.Black.copy(alpha = 0.5f),
+                                        spotColor = Color.Black.copy(alpha = 0.5f)
+                                    )
+                                    .clip(RoundedCornerShape(18.dp))
+                                    .background(Color(0xFF1C1C1E))
+                            ) {
+                                if (isReplay) {
+                                    val replayYearShort = currentPlaylist.id.substringAfter("replay_").takeLast(2)
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(
+                                                Brush.linearGradient(
+                                                    colors = listOf(
+                                                        Color(0xFFFF9500),
+                                                        Color(0xFF4CD964)
+                                                    )
+                                                )
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text("Replay", color = Color.White.copy(alpha = 0.9f), fontSize = 24.sp, fontWeight = FontWeight.Medium)
+                                            Text("'$replayYearShort", color = Color.White, fontSize = 64.sp, fontWeight = FontWeight.Black, lineHeight = 60.sp)
+                                        }
+                                    }
+                                } else if (coverUrl != null) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(context).data(coverUrl).crossfade(true).build(),
+                                        contentDescription = currentPlaylist.name,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                } else {
+                                    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1C1C1E)), contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Default.MusicNote, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(64.dp))
+                                    }
+                                }
+                            }
+                        }
                     }
-                )
+                } else {
+                    GlassContainer(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1f / 1.15f),
+                        content = {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .layerBackdrop(localBackdrop)
+                                    .graphicsLayer {
+                                        alpha = if (progress < 0.99f) 0f else 1f
+                                    }
+                            ) {
+                                if (isReplay) {
+                                    val replayYearShort = currentPlaylist.id.substringAfter("replay_").takeLast(2)
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(
+                                                Brush.linearGradient(
+                                                    colors = listOf(
+                                                        Color(0xFFFF9500), // Yellow/orange
+                                                        Color(0xFF4CD964)  // Green
+                                                    )
+                                                )
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            Text(
+                                                text = "Replay",
+                                                color = Color.White.copy(alpha = 0.9f),
+                                                fontSize = 32.sp,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                            Text(
+                                                text = "'$replayYearShort",
+                                                color = Color.White,
+                                                fontSize = 84.sp,
+                                                fontWeight = FontWeight.Black,
+                                                lineHeight = 80.sp
+                                            )
+                                        }
+                                    }
+                                } else if (coverUrl != null) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(context).data(coverUrl).crossfade(true).build(),
+                                        contentDescription = currentPlaylist.name,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                } else {
+                                    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1C1C1E)), contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Default.MusicNote, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(64.dp))
+                                    }
+                                }
+                                
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            Brush.verticalGradient(
+                                                0.0f to Color.Transparent,
+                                                0.7f to Color.Transparent,
+                                                0.85f to dominantColor.copy(alpha = 0.25f * contentAlpha),
+                                                0.95f to dominantColor.copy(alpha = 0.7f * contentAlpha),
+                                                1.0f to dominantColor.copy(alpha = contentAlpha)
+                                            )
+                                        )
+                                )
+                            }
+                        },
+                        glassContent = {
+                            val scope = this
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .statusBarsPadding()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Bigger circular back button
+                                scope.GlassBox(
+                                    modifier = Modifier
+                                        .size(54.dp)
+                                        .graphicsLayer {
+                                            scaleX = popScaleBack
+                                            scaleY = popScaleBack
+                                            alpha = popScaleBack
+                                        }
+                                        .clip(CircleShape)
+                                        .clickable { dismiss() },
+                                    shape = CircleShape,
+                                    tint = dominantColor.copy(alpha = 0.35f),
+                                    blur = 0.8f,
+                                    centerDistortion = 0.1f,
+                                    scale = 0.02f,
+                                    warpEdges = 0.4f,
+                                    elevation = 4.dp,
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowBackIosNew,
+                                        contentDescription = "Back",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                                
+                                // Capsule containing Share and More options
+                                scope.GlassBox(
+                                    modifier = Modifier
+                                        .graphicsLayer {
+                                            scaleX = popScaleShare
+                                            scaleY = popScaleShare
+                                            alpha = popScaleShare
+                                        }
+                                        .height(48.dp),
+                                    shape = RoundedCornerShape(percent = 50),
+                                    tint = dominantColor.copy(alpha = 0.35f),
+                                    blur = 0.8f,
+                                    centerDistortion = 0.1f,
+                                    scale = 0.02f,
+                                    warpEdges = 0.4f,
+                                    elevation = 4.dp,
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 8.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        IconButton(
+                                            onClick = {
+                                                val shareUrl = "https://music.youtube.com/playlist?list=${currentPlaylist.id.removePrefix("VL")}"
+                                                val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                                    type = "text/plain"
+                                                    putExtra(android.content.Intent.EXTRA_SUBJECT, currentPlaylist.name)
+                                                    putExtra(android.content.Intent.EXTRA_TEXT, "$shareUrl")
+                                                }
+                                                context.startActivity(android.content.Intent.createChooser(shareIntent, "Compartir"))
+                                            },
+                                            modifier = Modifier.size(40.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.IosShare,
+                                                contentDescription = "Share",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(22.dp)
+                                            )
+                                        }
+                                        IconButton(
+                                            onClick = {
+                                                showPlaylistMenu = true
+                                            },
+                                            modifier = Modifier.size(40.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.MoreVert,
+                                                contentDescription = "More",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(22.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    )
+                }
             }
 
             // Title info
@@ -1753,6 +1900,8 @@ fun FavoriteSongsScreen(
     val context = LocalContext.current
     val favoriteSongs by LibraryManager.savedItems.collectAsState()
     val songs = favoriteSongs.filter { it.type == com.mrtdk.liquid_glass.data.ItemType.SONG }
+    val playerArtworkStyle by LibraryManager.playerArtworkStyle.collectAsState()
+    val isNormalArtwork = playerArtworkStyle == "normal"
 
     // Dynamic color extraction from the first song thumbnail - same algorithm as albums/playlists
     var dominantColor by remember { mutableStateOf(Color(0xFF8B0000)) }
@@ -1821,16 +1970,101 @@ fun FavoriteSongsScreen(
                 ) {
                     // Hero section - star artwork with dynamic color
                     item {
-                        GlassContainer(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(1f / 1.15f),
-                            content = {
-                                Box(modifier = Modifier.fillMaxSize().layerBackdrop(localBackdrop)) {
-                                    // Dynamic-color gradient background as cover art
+                        if (isNormalArtwork) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .statusBarsPadding()
+                            ) {
+                                // Top bar
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
                                     Box(
                                         modifier = Modifier
-                                            .fillMaxSize()
+                                            .size(54.dp)
+                                            .graphicsLayer {
+                                                scaleX = popScaleBack
+                                                scaleY = popScaleBack
+                                                alpha = popScaleBack
+                                            }
+                                            .clip(CircleShape)
+                                            .background(dominantColor.copy(alpha = 0.35f))
+                                            .clickable { dismiss() },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowBackIosNew,
+                                            contentDescription = "Back",
+                                            tint = contentColor,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+
+                                    Box(
+                                        modifier = Modifier
+                                            .graphicsLayer {
+                                                scaleX = popScaleRight
+                                                scaleY = popScaleRight
+                                                alpha = popScaleRight
+                                            }
+                                            .height(48.dp)
+                                            .clip(RoundedCornerShape(percent = 50))
+                                            .background(dominantColor.copy(alpha = 0.35f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 8.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            IconButton(
+                                                onClick = { /* TODO: download all */ },
+                                                modifier = Modifier.size(40.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.ArrowCircleDown,
+                                                    contentDescription = "Download",
+                                                    tint = contentColor,
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                            }
+                                            IconButton(
+                                                onClick = { /* TODO: more options */ },
+                                                modifier = Modifier.size(40.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.MoreHoriz,
+                                                    contentDescription = "More",
+                                                    tint = contentColor,
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Centered square artwork
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 8.dp, bottom = 20.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(220.dp)
+                                            .shadow(
+                                                elevation = 16.dp,
+                                                shape = RoundedCornerShape(18.dp),
+                                                ambientColor = Color.Black.copy(alpha = 0.5f),
+                                                spotColor = Color.Black.copy(alpha = 0.5f)
+                                            )
+                                            .clip(RoundedCornerShape(18.dp))
                                             .background(
                                                 Brush.radialGradient(
                                                     colors = listOf(
@@ -1843,152 +2077,185 @@ fun FavoriteSongsScreen(
                                             ),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        // Decorative subtle circles
-                                        androidx.compose.foundation.Canvas(
-                                            modifier = Modifier.fillMaxSize()
-                                        ) {
-                                            val cx = size.width / 2f
-                                            val cy = size.height / 2f
-                                            val starPositions = listOf(
-                                                Pair(cx * 0.2f, cy * 0.3f) to 18f,
-                                                Pair(cx * 1.7f, cy * 0.4f) to 14f,
-                                                Pair(cx * 0.3f, cy * 1.6f) to 16f,
-                                                Pair(cx * 1.6f, cy * 1.5f) to 20f,
-                                                Pair(cx * 0.9f, cy * 0.15f) to 10f,
-                                                Pair(cx * 1.1f, cy * 1.85f) to 12f
-                                            )
-                                            starPositions.forEach { (pos, r) ->
-                                                drawCircle(
-                                                    color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.08f),
-                                                    radius = r,
-                                                    center = androidx.compose.ui.geometry.Offset(pos.first, pos.second)
-                                                )
-                                            }
-                                        }
-                                        // Red glow behind the star
-                                        Box(
-                                            modifier = Modifier
-                                                .size(160.dp)
-                                                .background(
-                                                    Brush.radialGradient(
-                                                        colors = listOf(
-                                                            Color(0xFFFA243C).copy(alpha = 0.8f),
-                                                            Color.Transparent
-                                                        )
-                                                    )
-                                                )
-                                        )
                                         Icon(
                                             imageVector = Icons.Default.Star,
                                             contentDescription = null,
                                             tint = Color.White,
-                                            modifier = Modifier.size(120.dp)
+                                            modifier = Modifier.size(100.dp)
                                         )
                                     }
-
-                                    // Bottom fade to match dynamic background
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(
-                                                Brush.verticalGradient(
-                                                    0.0f to Color.Transparent,
-                                                    0.7f to Color.Transparent,
-                                                    0.85f to Color(0xFFFA243C).copy(alpha = 0.25f * contentAlpha),
-                                                    0.95f to Color(0xFFFA243C).copy(alpha = 0.7f * contentAlpha),
-                                                    1.0f to Color(0xFFFA243C).copy(alpha = contentAlpha)
-                                                )
-                                            )
-                                    )
                                 }
-                            },
-                            glassContent = {
-                                val scope = this
-                                Row(
-                                     modifier = Modifier
-                                         .fillMaxWidth()
-                                         .statusBarsPadding()
-                                         .padding(horizontal = 16.dp, vertical = 12.dp),
-                                     horizontalArrangement = Arrangement.SpaceBetween,
-                                     verticalAlignment = Alignment.CenterVertically
-                                 ) {
-                                     // ← Back button pill (left)
-                                     scope.GlassBox(
+                            }
+                        } else {
+                            GlassContainer(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(1f / 1.15f),
+                                content = {
+                                    Box(modifier = Modifier.fillMaxSize().layerBackdrop(localBackdrop)) {
+                                        // Dynamic-color gradient background as cover art
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(
+                                                    Brush.radialGradient(
+                                                        colors = listOf(
+                                                            Color(0xFFFA243C),
+                                                            Color(0xFFFA243C),
+                                                            Color(0xFFE91E63),
+                                                            Color(0xFF8B091A)
+                                                        )
+                                                    )
+                                                ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            // Decorative subtle circles
+                                            androidx.compose.foundation.Canvas(
+                                                modifier = Modifier.fillMaxSize()
+                                            ) {
+                                                val cx = size.width / 2f
+                                                val cy = size.height / 2f
+                                                val starPositions = listOf(
+                                                    Pair(cx * 0.2f, cy * 0.3f) to 18f,
+                                                    Pair(cx * 1.7f, cy * 0.4f) to 14f,
+                                                    Pair(cx * 0.3f, cy * 1.6f) to 16f,
+                                                    Pair(cx * 1.6f, cy * 1.5f) to 20f,
+                                                    Pair(cx * 0.9f, cy * 0.15f) to 10f,
+                                                    Pair(cx * 1.1f, cy * 1.85f) to 12f
+                                                )
+                                                starPositions.forEach { (pos, r) ->
+                                                    drawCircle(
+                                                        color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.08f),
+                                                        radius = r,
+                                                        center = androidx.compose.ui.geometry.Offset(pos.first, pos.second)
+                                                    )
+                                                }
+                                            }
+                                            // Red glow behind the star
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(160.dp)
+                                                    .background(
+                                                        Brush.radialGradient(
+                                                            colors = listOf(
+                                                                Color(0xFFFA243C).copy(alpha = 0.8f),
+                                                                Color.Transparent
+                                                            )
+                                                        )
+                                                    )
+                                            )
+                                            Icon(
+                                                imageVector = Icons.Default.Star,
+                                                contentDescription = null,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(120.dp)
+                                            )
+                                        }
+
+                                        // Bottom fade to match dynamic background
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(
+                                                    Brush.verticalGradient(
+                                                        0.0f to Color.Transparent,
+                                                        0.7f to Color.Transparent,
+                                                        0.85f to Color(0xFFFA243C).copy(alpha = 0.25f * contentAlpha),
+                                                        0.95f to Color(0xFFFA243C).copy(alpha = 0.7f * contentAlpha),
+                                                        1.0f to Color(0xFFFA243C).copy(alpha = contentAlpha)
+                                                    )
+                                                )
+                                        )
+                                    }
+                                },
+                                glassContent = {
+                                    val scope = this
+                                    Row(
                                          modifier = Modifier
-                                             .size(54.dp)
-                                             .graphicsLayer {
-                                                 scaleX = popScaleBack
-                                                 scaleY = popScaleBack
-                                                 alpha = popScaleBack
-                                             }
-                                             .clickable { dismiss() },
-                                         shape = CircleShape,
-                                         tint = Color.White.copy(alpha = 0.15f),
-                                         blur = 0.8f,
-                                         centerDistortion = 0.1f,
-                                         scale = 0.02f,
-                                         warpEdges = 0.4f,
-                                         elevation = 4.dp,
-                                         contentAlignment = Alignment.Center
+                                             .fillMaxWidth()
+                                             .statusBarsPadding()
+                                             .padding(horizontal = 16.dp, vertical = 12.dp),
+                                         horizontalArrangement = Arrangement.SpaceBetween,
+                                         verticalAlignment = Alignment.CenterVertically
                                      ) {
-                                         Icon(
-                                             imageVector = Icons.Default.ArrowBackIosNew,
-                                             contentDescription = "Back",
-                                             tint = contentColor,
-                                             modifier = Modifier.size(24.dp)
-                                         )
-                                     }
- 
-                                     // Right side: single capsule containing download and more options
-                                     scope.GlassBox(
-                                         modifier = Modifier
-                                             .graphicsLayer {
-                                                 scaleX = popScaleRight
-                                                 scaleY = popScaleRight
-                                                 alpha = popScaleRight
-                                             }
-                                             .height(48.dp),
-                                         shape = RoundedCornerShape(percent = 50),
-                                         tint = Color.White.copy(alpha = 0.15f),
-                                         blur = 0.8f,
-                                         centerDistortion = 0.1f,
-                                         scale = 0.02f,
-                                         warpEdges = 0.4f,
-                                         elevation = 4.dp,
-                                         contentAlignment = Alignment.Center
-                                     ) {
-                                         Row(
-                                             modifier = Modifier.padding(horizontal = 8.dp),
-                                             horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                             verticalAlignment = Alignment.CenterVertically
+                                         // ← Back button pill (left)
+                                         scope.GlassBox(
+                                             modifier = Modifier
+                                                 .size(54.dp)
+                                                 .graphicsLayer {
+                                                     scaleX = popScaleBack
+                                                     scaleY = popScaleBack
+                                                     alpha = popScaleBack
+                                                 }
+                                                 .clickable { dismiss() },
+                                             shape = CircleShape,
+                                             tint = Color.White.copy(alpha = 0.15f),
+                                             blur = 0.8f,
+                                             centerDistortion = 0.1f,
+                                             scale = 0.02f,
+                                             warpEdges = 0.4f,
+                                             elevation = 4.dp,
+                                             contentAlignment = Alignment.Center
                                          ) {
-                                             IconButton(
-                                                 onClick = { /* TODO: download all */ },
-                                                 modifier = Modifier.size(40.dp)
+                                             Icon(
+                                                 imageVector = Icons.Default.ArrowBackIosNew,
+                                                 contentDescription = "Back",
+                                                 tint = contentColor,
+                                                 modifier = Modifier.size(24.dp)
+                                             )
+                                         }
+     
+                                         // Right side: single capsule containing download and more options
+                                         scope.GlassBox(
+                                             modifier = Modifier
+                                                 .graphicsLayer {
+                                                     scaleX = popScaleRight
+                                                     scaleY = popScaleRight
+                                                     alpha = popScaleRight
+                                                 }
+                                                 .height(48.dp),
+                                             shape = RoundedCornerShape(percent = 50),
+                                             tint = Color.White.copy(alpha = 0.15f),
+                                             blur = 0.8f,
+                                             centerDistortion = 0.1f,
+                                             scale = 0.02f,
+                                             warpEdges = 0.4f,
+                                             elevation = 4.dp,
+                                             contentAlignment = Alignment.Center
+                                         ) {
+                                             Row(
+                                                 modifier = Modifier.padding(horizontal = 8.dp),
+                                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                 verticalAlignment = Alignment.CenterVertically
                                              ) {
-                                                 Icon(
-                                                     imageVector = Icons.Default.ArrowCircleDown,
-                                                     contentDescription = "Download",
-                                                     tint = contentColor,
-                                                     modifier = Modifier.size(22.dp)
-                                                 )
-                                             }
-                                             IconButton(
-                                                 onClick = { /* TODO: more options */ },
-                                                 modifier = Modifier.size(40.dp)
-                                             ) {
-                                                 Icon(
-                                                     imageVector = Icons.Default.MoreHoriz,
-                                                     contentDescription = "More",
-                                                     tint = contentColor,
-                                                     modifier = Modifier.size(22.dp)
-                                                 )
+                                                 IconButton(
+                                                     onClick = { /* TODO: download all */ },
+                                                     modifier = Modifier.size(40.dp)
+                                                 ) {
+                                                     Icon(
+                                                         imageVector = Icons.Default.ArrowCircleDown,
+                                                         contentDescription = "Download",
+                                                         tint = contentColor,
+                                                         modifier = Modifier.size(22.dp)
+                                                     )
+                                                 }
+                                                 IconButton(
+                                                     onClick = { /* TODO: more options */ },
+                                                     modifier = Modifier.size(40.dp)
+                                                 ) {
+                                                     Icon(
+                                                         imageVector = Icons.Default.MoreHoriz,
+                                                         contentDescription = "More",
+                                                         tint = contentColor,
+                                                         modifier = Modifier.size(22.dp)
+                                                     )
+                                                 }
                                              }
                                          }
                                      }
                                  }
-                             }
-                        )
+                            )
+                        }
                     }
 
                     // Title info

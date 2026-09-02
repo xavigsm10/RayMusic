@@ -14,6 +14,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
@@ -120,6 +121,8 @@ fun LiquidBottomNavBar(
     searchQuery: String = "",
     onSearchQueryChange: (String) -> Unit = {},
     onSearchSubmit: (String) -> Unit = {},
+    isSearchInputActive: Boolean = false,
+    onSearchInputActiveChange: (Boolean) -> Unit = {},
     playerState: PlayerState? = null,
     isPlaying: Boolean = false,
     onTogglePlayPause: () -> Unit = {},
@@ -141,11 +144,18 @@ fun LiquidBottomNavBar(
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
 
-    var keyboardActive by remember { mutableStateOf(false) }
+    var keyboardActive by remember { mutableStateOf(isSearchInputActive) }
 
     LaunchedEffect(isSearchActive) {
         if (!isSearchActive) {
             keyboardActive = false
+            onSearchInputActiveChange(false)
+        }
+    }
+
+    LaunchedEffect(isSearchInputActive) {
+        if (keyboardActive != isSearchInputActive) {
+            keyboardActive = isSearchInputActive
         }
     }
 
@@ -181,21 +191,26 @@ fun LiquidBottomNavBar(
                 onSearchSubmit(queryText)
                 focusManager.clearFocus()
                 keyboardActive = false
+                onSearchInputActiveChange(false)
             },
             onTapSearchIcon = {
                 onTabSelected(4)
                 keyboardActive = false
+                onSearchInputActiveChange(false)
             },
             onTapBar = {
                 keyboardActive = true
+                onSearchInputActiveChange(true)
             },
             onExit = {
                 keyboardActive = false
+                onSearchInputActiveChange(false)
                 focusManager.clearFocus()
                 onTabSelected(lastSelectedTabIndex)
             },
             onCloseKeyboard = {
                 keyboardActive = false
+                onSearchInputActiveChange(false)
                 focusManager.clearFocus()
             },
             focusRequester = focusRequester
@@ -268,7 +283,7 @@ private fun AppFloatingNavBarChrome(
     val tabTextColor = if (isDarkMode) Color.White else Color.Black
     val activeAccentColor = Color(0xFFFA243C)
     val selectedContentColor = activeAccentColor
-    val unselectedContentColor = tabTextColor.copy(alpha = 0.6f)
+    val unselectedContentColor = if (isDarkMode) Color.White.copy(alpha = 0.55f) else Color.Black.copy(alpha = 0.55f)
     val miniPlayerContentColor = tabTextColor
 
     val selectedTabKey = if (selectedIndex == 4) lastSelectedTabIndex else selectedIndex
@@ -373,7 +388,7 @@ private fun AppFloatingNavBarChrome(
                 tabWidth = tabWidth,
             ),
             backdrop = backdrop,
-            accentColor = activeAccentColor,
+            accentColor = null,
             searchMode = searchModeActive,
             searchBarContent = if (searchModeActive) {
                 { contentModifier ->
@@ -436,7 +451,7 @@ private fun AppFloatingNavBarChrome(
                         imageVector = Icons.Default.Search,
                         contentDescription = stringResource(R.string.search_action),
                         tint = if (selectedIndex == 4) selectedContentColor else unselectedContentColor,
-                        modifier = Modifier.size(26.dp),
+                        modifier = Modifier.size(34.dp),
                     )
                 },
                 onClick = {
@@ -463,11 +478,13 @@ private fun SearchBarInteractivePill(
     val glowScope = rememberCoroutineScope()
     val glow = remember(glowScope) { InteractiveHighlight(animationScope = glowScope) }
 
-    LaunchedEffect(Unit) {
-        delay(120)
-        try {
-            state.focusRequester.requestFocus()
-        } catch (_: Exception) {}
+    LaunchedEffect(state.keyboardActive) {
+        if (state.keyboardActive) {
+            delay(120)
+            try {
+                state.focusRequester.requestFocus()
+            } catch (_: Exception) {}
+        }
     }
 
     Row(
@@ -494,6 +511,12 @@ private fun SearchBarInteractivePill(
         Box(
             modifier = Modifier
                 .weight(1f)
+                .clickable(
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null
+                ) {
+                    state.onTapBar()
+                }
                 .padding(horizontal = 4.dp),
             contentAlignment = Alignment.CenterStart
         ) {
@@ -510,7 +533,12 @@ private fun SearchBarInteractivePill(
             }
             BasicTextField(
                 value = state.query,
-                onValueChange = state.onQueryChange,
+                onValueChange = {
+                    state.onQueryChange(it)
+                    if (!state.keyboardActive) {
+                        state.onTapBar()
+                    }
+                },
                 singleLine = true,
                 textStyle = TextStyle(
                     color = contentColor,

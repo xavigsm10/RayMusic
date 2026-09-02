@@ -332,13 +332,15 @@ class MainActivity : ComponentActivity() {
                     var showFavoriteSongs by remember { mutableStateOf(false) }
                     var showReplay by remember { mutableStateOf(false) }
                     var showListenTogether by remember { mutableStateOf(false) }
+                    var isSearchInputActive by remember { mutableStateOf(false) }
                     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
                     val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
 
-                    LaunchedEffect(showPlayer, videoDetail, artistDetail, albumDetail, playlistDetail) {
-                        if (showPlayer || videoDetail != null || artistDetail != null || albumDetail != null || playlistDetail != null) {
+                    LaunchedEffect(showPlayer, videoDetail, artistDetail, albumDetail, playlistDetail, categoryDetail) {
+                        if (showPlayer || videoDetail != null || artistDetail != null || albumDetail != null || playlistDetail != null || categoryDetail != null) {
                             focusManager.clearFocus()
                             keyboardController?.hide()
+                            isSearchInputActive = false
                         }
                     }
 
@@ -636,7 +638,7 @@ class MainActivity : ComponentActivity() {
                                         androidx.compose.foundation.pager.HorizontalPager(
                                             state = pagerState,
                                             modifier = Modifier.fillMaxSize().background(Color.Black),
-                                            userScrollEnabled = true,
+                                            userScrollEnabled = false,
                                         ) { page ->
                                             when (page) {
                                                 0 -> InicioScreen(
@@ -707,15 +709,40 @@ class MainActivity : ComponentActivity() {
                                                 innerPadding = innerPadding,
                                                 query = searchQuery,
                                                 isSubmitted = isSearchSubmitted,
+                                                isInputActive = isSearchInputActive,
+                                                onInputActiveChange = { isSearchInputActive = it },
                                                 state = busquedaState,
-                                                onSongSelected = playSong,
-                                                onArtistSelected = { artist -> artistDetail = artist },
-                                                onAlbumSelected = { album -> albumDetail = album },
+                                                onSongSelected = { song ->
+                                                    isSearchInputActive = false
+                                                    focusManager.clearFocus()
+                                                    keyboardController?.hide()
+                                                    playSong(song)
+                                                },
+                                                onArtistSelected = { artist ->
+                                                    isSearchInputActive = false
+                                                    focusManager.clearFocus()
+                                                    keyboardController?.hide()
+                                                    artistDetail = artist
+                                                },
+                                                onAlbumSelected = { album ->
+                                                    isSearchInputActive = false
+                                                    focusManager.clearFocus()
+                                                    keyboardController?.hide()
+                                                    albumDetail = album
+                                                },
                                                 onVideoSelected = { videoId ->
+                                                    isSearchInputActive = false
+                                                    focusManager.clearFocus()
+                                                    keyboardController?.hide()
                                                     musicPlayer?.pause()
                                                     videoDetail = videoId
                                                 },
-                                                onCategorySelected = { category -> categoryDetail = category },
+                                                onCategorySelected = { category ->
+                                                    isSearchInputActive = false
+                                                    focusManager.clearFocus()
+                                                    keyboardController?.hide()
+                                                    categoryDetail = category
+                                                },
                                                 onQueryChange = { newQuery -> searchQuery = newQuery },
                                                 onSubmitChange = { submitted -> isSearchSubmitted = submitted }
                                             )
@@ -842,7 +869,7 @@ class MainActivity : ComponentActivity() {
                                                     tintColor = globalDominantColor.copy(alpha = 0.35f),
                                                     contentColor = contentTintColor,
                                                     scrollConnection = floatingNavBarScrollConnection,
-                                                    tabPosition = null,
+                                                    tabPosition = { if (pagerState.isScrollInProgress) pagerState.currentPage + pagerState.currentPageOffsetFraction else null },
                                                     playerState = playerState,
                                                     isPlaying = isPlaying,
                                                     playbackProgress = { if (duration > 0) (currentPosition.toFloat() / duration).coerceIn(0f, 1f) else 0f },
@@ -879,6 +906,9 @@ class MainActivity : ComponentActivity() {
                                                         if (newIndex != 4) {
                                                             searchQuery = ""
                                                             isSearchSubmitted = false
+                                                            isSearchInputActive = false
+                                                            focusManager.clearFocus()
+                                                            keyboardController?.hide()
                                                         }
                                                     },
                                                     searchQuery = searchQuery,
@@ -893,12 +923,17 @@ class MainActivity : ComponentActivity() {
                                                     },
                                                     onSearchSubmit = { 
                                                         isSearchSubmitted = true
+                                                        isSearchInputActive = false
+                                                        focusManager.clearFocus()
+                                                        keyboardController?.hide()
                                                         artistDetail = null
                                                         albumDetail = null
                                                         playlistDetail = null
                                                         categoryDetail = null
                                                         videoDetail = null
-                                                    }
+                                                    },
+                                                    isSearchInputActive = isSearchInputActive,
+                                                    onSearchInputActiveChange = { isSearchInputActive = it }
                                                 )
                                             }
                                             if (updateReleaseInfo != null) {

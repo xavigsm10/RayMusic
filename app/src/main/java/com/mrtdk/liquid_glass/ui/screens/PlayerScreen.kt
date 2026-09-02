@@ -7,6 +7,7 @@ import android.os.Build
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.zIndex
 
 import androidx.compose.animation.AnimatedVisibility
 
@@ -33,10 +34,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
-
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 
 import androidx.compose.animation.core.FastOutSlowInEasing
 
@@ -2153,15 +2154,17 @@ fun PlayerScreen(
             val playerArtworkStyle by LibraryManager.playerArtworkStyle.collectAsState()
             val isNormalArtwork = playerArtworkStyle == "normal"
 
-            val normalCardSize = minOf(maxWidth - 48.dp, maxHeight * 0.40f)
+            val controlsBaseY = maxWidth * 1.23f
+
+            val normalCardSize = minOf(maxWidth - 56.dp, (controlsBaseY - 8.dp - 64.dp - 24.dp).coerceAtLeast(220.dp))
             val normalX = (maxWidth - normalCardSize) / 2
-            val normalY = 60.dp
+            val normalY = 56.dp + ((controlsBaseY - 8.dp - 56.dp - 20.dp) - normalCardSize).coerceAtLeast(0.dp) / 2
 
             val expandedWidth = if (isNormalArtwork) normalCardSize else maxWidth
             val expandedHeight = if (isNormalArtwork) normalCardSize else (maxWidth * 1.35f)
             val expandedX = if (isNormalArtwork) normalX else 0.dp
             val expandedY = if (isNormalArtwork) normalY else 0.dp
-            val defaultCorner = if (isNormalArtwork) 14.dp else 12.dp
+            val defaultCorner = if (isNormalArtwork) 22.dp else 12.dp
 
             val startWidth = if (isOverlayActive) lyricsImageSize else expandedWidth
             val startHeight = if (isOverlayActive) lyricsImageSize else expandedHeight
@@ -2206,8 +2209,7 @@ fun PlayerScreen(
             val imgOffsetY = if (dragProgress > 0f) imgOffsetYTarget else animatedImgOffsetY
             val imgCorner = if (dragProgress > 0f) imageCornerTarget else animatedImgCorner
 
-            val controlsBaseY = if (isNormalArtwork) (normalY + normalCardSize + 18.dp) else (maxWidth * 1.23f)
-            val detailsOffsetYTarget = if (isOverlayActive) 64.dp else (if (isNormalArtwork) controlsBaseY else (controlsBaseY - 8.dp))
+            val detailsOffsetYTarget = if (isOverlayActive) 64.dp else (controlsBaseY - 8.dp)
 
             val detailsOffsetY by androidx.compose.animation.core.animateDpAsState(detailsOffsetYTarget)
 
@@ -2359,54 +2361,37 @@ fun PlayerScreen(
 
 
 
+            val normalTopColor = dominantColor.copy(alpha = 1.0f)
+            val normalMidColor = bottomAverageColor.copy(alpha = 1.0f)
+            val normalBottomColor = Color(
+                red = (bottomAverageColor.red * 0.50f + dominantColor.red * 0.20f).coerceIn(0f, 1f),
+                green = (bottomAverageColor.green * 0.50f + dominantColor.green * 0.20f).coerceIn(0f, 1f),
+                blue = (bottomAverageColor.blue * 0.50f + dominantColor.blue * 0.20f).coerceIn(0f, 1f),
+                alpha = 1.0f
+            )
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(Color.Black)
                     .background(
                         brush = Brush.verticalGradient(
-                            colors = listOf(
-                                dominantColor.copy(alpha = 1.0f),
-                                Color(0xFF16181B),
-                                Color(0xFF101113)
-                            )
+                            colors = if (isNormalArtwork) {
+                                listOf(
+                                    normalTopColor,
+                                    normalMidColor,
+                                    normalBottomColor
+                                )
+                            } else {
+                                listOf(
+                                    dominantColor.copy(alpha = 1.0f),
+                                    Color(0xFF16181B),
+                                    Color(0xFF101113)
+                                )
+                            }
                         )
                     )
             ) {
-            // Ambient artwork background for Normal mode
-            if (isNormalArtwork) {
-                val ambientArtModel = hdArtUrl ?: playerState?.artUrl
-                if (ambientArtModel != null) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(ambientArtModel)
-                            .crossfade(true)
-                            .build(),
-                        imageLoader = animatedImageLoader,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .graphicsLayer {
-                                scaleX = 1.4f
-                                scaleY = 1.4f
-                            }
-                            .blur(90.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
-                    )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(
-                                        Color.Black.copy(alpha = 0.20f),
-                                        Color.Black.copy(alpha = 0.45f),
-                                        Color.Black.copy(alpha = 0.75f)
-                                    )
-                                )
-                            )
-                    )
-                }
-            }
 
             // Capa 4: Reflejo invertido estilo Apple Music (solo para fullartwork)
             val mirrorArtModel = hdArtUrl ?: playerState?.artUrl
@@ -2486,10 +2471,10 @@ fun PlayerScreen(
 
                  ) {
 
-                     // Full-screen rich blurred background image of album cover for lyrics/queue view
+                     // Full-screen rich blurred background image of album cover for lyrics/queue view (only in fullartwork mode)
                      val overlayArtSource = hdArtUrl ?: playerState?.artUrl
 
-                     if (overlayArtSource != null) {
+                     if (!isNormalArtwork && overlayArtSource != null) {
                          AsyncImage(
                              model = ImageRequest.Builder(context)
                                  .data(overlayArtSource)
@@ -2513,13 +2498,23 @@ fun PlayerScreen(
                          modifier = Modifier
                              .fillMaxSize()
                              .background(
-                                 Brush.verticalGradient(
-                                     colors = listOf(
-                                         dominantColor.copy(alpha = 0.32f),
-                                         bottomAverageColor.copy(alpha = 0.28f),
-                                         Color.Black.copy(alpha = 0.45f)
+                                 if (isNormalArtwork) {
+                                     Brush.verticalGradient(
+                                         colors = listOf(
+                                             normalTopColor,
+                                             normalMidColor,
+                                             normalBottomColor
+                                         )
                                      )
-                                 )
+                                 } else {
+                                     Brush.verticalGradient(
+                                         colors = listOf(
+                                             dominantColor.copy(alpha = 0.32f),
+                                             bottomAverageColor.copy(alpha = 0.28f),
+                                             Color.Black.copy(alpha = 0.45f)
+                                         )
+                                     )
+                                 }
                              )
                      )
                  }
@@ -3507,6 +3502,15 @@ fun PlayerScreen(
 
 
 
+            val playPauseScale by androidx.compose.animation.core.animateFloatAsState(
+                targetValue = if (isNormalArtwork && !isPlaying && !isOverlayActive && dragProgress == 0f) 0.85f else 1f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                ),
+                label = "playPauseScale"
+            )
+
             Box(
                 modifier = Modifier
                     .offset(x = imgOffsetX, y = imgOffsetY)
@@ -3521,9 +3525,14 @@ fun PlayerScreen(
                             }
                         } else Modifier
                     )
+                    .graphicsLayer {
+                        scaleX = playPauseScale
+                        scaleY = playPauseScale
+                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin.Center
+                    }
                     .then(
                         if (isNormalArtwork && !isOverlayActive && dragProgress == 0f) {
-                            Modifier.shadow(elevation = 14.dp, shape = RoundedCornerShape(imgCorner))
+                            Modifier.shadow(elevation = 16.dp * playPauseScale, shape = RoundedCornerShape(imgCorner))
                         } else Modifier
                     )
                     .graphicsLayer {
@@ -3767,7 +3776,7 @@ fun PlayerScreen(
                  exit = fadeOut()
 
              ) {
-                 val currentControlsBaseY = if (isNormalArtwork) (normalY + normalCardSize + 18.dp) else (maxWidth * 1.23f)
+                 val currentControlsBaseY = maxWidth * 1.23f
                  Box(
                       modifier = Modifier
                           .fillMaxWidth()
@@ -3793,7 +3802,7 @@ fun PlayerScreen(
 
                      ) {
 
-                         Spacer(modifier = Modifier.height(if (isNormalArtwork) 54.dp else 88.dp)) 
+                         Spacer(modifier = Modifier.height(88.dp)) 
 
                           AppleMusicSlider(
                               value = progress, onValueChange = { onSeek((it * duration).toLong()) },
@@ -3975,7 +3984,7 @@ fun PlayerScreen(
 
                   Row(
                       modifier = Modifier.graphicsLayer { alpha = contentAlpha },
-                      horizontalArrangement = Arrangement.spacedBy(16.dp),
+                      horizontalArrangement = Arrangement.spacedBy(10.dp),
                       verticalAlignment = Alignment.CenterVertically
                   ) {
                       Box(
@@ -3999,7 +4008,7 @@ fun PlayerScreen(
                                   painter = painterResource(id = R.drawable.fav),
                                   contentDescription = "Fav",
                                   tint = contentColor,
-                                  modifier = Modifier.size(23.dp)
+                                  modifier = Modifier.size(22.dp)
                               )
                           } else {
                               AsyncImage(
@@ -4011,11 +4020,14 @@ fun PlayerScreen(
                           }
                       }
 
-                                                         var threeDotsCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
+                      var threeDotsCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
                       Box(
                           modifier = Modifier
                               .onGloballyPositioned { threeDotsCoords = it }
-                              .size(32.dp).clip(CircleShape).background(contentColor.copy(alpha = 0.15f)).clickable { 
+                              .size(36.dp)
+                              .clip(CircleShape)
+                              .background(contentColor.copy(alpha = 0.15f))
+                              .clickable { 
                                   val parentCoords = parentCoordinates
                                   if (parentCoords != null && threeDotsCoords != null && parentCoords.isAttached && threeDotsCoords!!.isAttached) {
                                       val localOffset = parentCoords.localPositionOf(threeDotsCoords!!, Offset.Zero)
@@ -4030,32 +4042,19 @@ fun PlayerScreen(
                                       showOptionsMenu = true
                                   }
                               },
-
-                         contentAlignment = Alignment.Center
-
-                     ) {
-
-                         androidx.compose.foundation.Canvas(modifier = Modifier.size(moreIconSize)) {
-
-                             val r = 1.5.dp.toPx()
-
-                             val space = 4.dp.toPx()
-
-                             val cx = size.width / 2f
-
-                             val cy = size.height / 2f
-
-                             drawCircle(contentColor, radius = r, center = Offset(cx - space - r * 2, cy))
-
-                             drawCircle(contentColor, radius = r, center = Offset(cx, cy))
-
-                             drawCircle(contentColor, radius = r, center = Offset(cx + space + r * 2, cy))
-
-                         }
-
-                     }
-
-                 }
+                          contentAlignment = Alignment.Center
+                      ) {
+                          androidx.compose.foundation.Canvas(modifier = Modifier.size(moreIconSize)) {
+                              val r = 1.6.dp.toPx()
+                              val space = 4.dp.toPx()
+                              val cx = size.width / 2f
+                              val cy = size.height / 2f
+                              drawCircle(contentColor, radius = r, center = Offset(cx - space - r * 2, cy))
+                              drawCircle(contentColor, radius = r, center = Offset(cx, cy))
+                              drawCircle(contentColor, radius = r, center = Offset(cx + space + r * 2, cy))
+                          }
+                      }
+                  }
 
              }
 
@@ -4855,7 +4854,7 @@ fun PlayerBottomControls(
         }
 
         if (fillHeight) {
-            Spacer(modifier = Modifier.weight(0.7f))
+            Spacer(modifier = Modifier.weight(1f))
         }
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
@@ -4933,7 +4932,7 @@ fun PlayerBottomControls(
         }
 
         if (fillHeight) {
-            Spacer(modifier = Modifier.weight(1.3f))
+            Spacer(modifier = Modifier.weight(1f))
         }
 
         if (includeVolumeAndIcons) {
@@ -7493,13 +7492,39 @@ private fun QueueItemRow(
     val density = androidx.compose.ui.platform.LocalDensity.current
     val rowHeightPx = with(density) { 56.dp.toPx() }
     var dragAccumulator by remember { mutableFloatStateOf(0f) }
+    var isDragging by remember { mutableStateOf(false) }
+    var dragTranslationY by remember { mutableFloatStateOf(0f) }
+    val animatedScale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isDragging) 1.03f else 1f,
+        label = "dragScale"
+    )
+    val animatedElevation by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (isDragging) 10.dp else 0.dp,
+        label = "dragElevation"
+    )
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick)
+            .zIndex(if (isDragging) 10f else 0f)
+            .graphicsLayer {
+                translationY = dragTranslationY
+                scaleX = animatedScale
+                scaleY = animatedScale
+            }
+            .shadow(
+                elevation = animatedElevation,
+                shape = RoundedCornerShape(10.dp),
+                ambientColor = Color.Black.copy(alpha = 0.5f),
+                spotColor = Color.Black.copy(alpha = 0.5f)
+            )
+            .background(
+                color = if (isDragging) contentColor.copy(alpha = 0.15f) else Color.Transparent,
+                shape = RoundedCornerShape(10.dp)
+            )
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(enabled = !isDragging, onClick = onClick)
             .padding(vertical = 5.dp, horizontal = 2.dp)
     ) {
         AsyncImage(
@@ -7531,27 +7556,45 @@ private fun QueueItemRow(
             Icon(
                 Icons.Default.Menu,
                 contentDescription = "Reorder",
-                tint = contentColor.copy(alpha = 0.45f),
+                tint = contentColor.copy(alpha = if (isDragging) 0.95f else 0.45f),
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(36.dp)
                     .padding(4.dp)
                     .pointerInput(onMoveUp, onMoveDown) {
-                        detectVerticalDragGestures(
-                            onDragStart = { dragAccumulator = 0f },
-                            onDragEnd = { dragAccumulator = 0f },
-                            onDragCancel = { dragAccumulator = 0f },
-                            onVerticalDrag = { change, dragAmount ->
-                                change.consume()
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            down.consume()
+                            isDragging = true
+                            dragAccumulator = 0f
+                            dragTranslationY = 0f
+
+                            var pointerId = down.id
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val dragChange = event.changes.firstOrNull { it.id == pointerId } ?: event.changes.firstOrNull()
+                                if (dragChange == null || !dragChange.pressed) {
+                                    break
+                                }
+                                dragChange.consume()
+                                pointerId = dragChange.id
+                                val dragAmount = dragChange.position.y - dragChange.previousPosition.y
+                                dragTranslationY += dragAmount
                                 dragAccumulator += dragAmount
+
                                 if (dragAccumulator > rowHeightPx * 0.45f) {
                                     onMoveDown()
-                                    dragAccumulator = 0f
+                                    dragAccumulator -= rowHeightPx
+                                    dragTranslationY -= rowHeightPx
                                 } else if (dragAccumulator < -rowHeightPx * 0.45f) {
                                     onMoveUp()
-                                    dragAccumulator = 0f
+                                    dragAccumulator += rowHeightPx
+                                    dragTranslationY += rowHeightPx
                                 }
                             }
-                        )
+                            isDragging = false
+                            dragAccumulator = 0f
+                            dragTranslationY = 0f
+                        }
                     }
             )
         }
@@ -7589,13 +7632,39 @@ private fun UpNextSongRow(
     val density = androidx.compose.ui.platform.LocalDensity.current
     val rowHeightPx = with(density) { 56.dp.toPx() }
     var dragAccumulator by remember { mutableFloatStateOf(0f) }
+    var isDragging by remember { mutableStateOf(false) }
+    var dragTranslationY by remember { mutableFloatStateOf(0f) }
+    val animatedScale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isDragging) 1.03f else 1f,
+        label = "dragScale"
+    )
+    val animatedElevation by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (isDragging) 10.dp else 0.dp,
+        label = "dragElevation"
+    )
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick)
+            .zIndex(if (isDragging) 10f else 0f)
+            .graphicsLayer {
+                translationY = dragTranslationY
+                scaleX = animatedScale
+                scaleY = animatedScale
+            }
+            .shadow(
+                elevation = animatedElevation,
+                shape = RoundedCornerShape(10.dp),
+                ambientColor = Color.Black.copy(alpha = 0.5f),
+                spotColor = Color.Black.copy(alpha = 0.5f)
+            )
+            .background(
+                color = if (isDragging) contentColor.copy(alpha = 0.15f) else Color.Transparent,
+                shape = RoundedCornerShape(10.dp)
+            )
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(enabled = !isDragging, onClick = onClick)
             .padding(vertical = 5.dp, horizontal = 2.dp)
     ) {
         AsyncImage(
@@ -7627,27 +7696,45 @@ private fun UpNextSongRow(
             Icon(
                 Icons.Default.Menu,
                 contentDescription = "Reorder",
-                tint = contentColor.copy(alpha = 0.45f),
+                tint = contentColor.copy(alpha = if (isDragging) 0.95f else 0.45f),
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(36.dp)
                     .padding(4.dp)
                     .pointerInput(onMoveUp, onMoveDown) {
-                        detectVerticalDragGestures(
-                            onDragStart = { dragAccumulator = 0f },
-                            onDragEnd = { dragAccumulator = 0f },
-                            onDragCancel = { dragAccumulator = 0f },
-                            onVerticalDrag = { change, dragAmount ->
-                                change.consume()
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            down.consume()
+                            isDragging = true
+                            dragAccumulator = 0f
+                            dragTranslationY = 0f
+
+                            var pointerId = down.id
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val dragChange = event.changes.firstOrNull { it.id == pointerId } ?: event.changes.firstOrNull()
+                                if (dragChange == null || !dragChange.pressed) {
+                                    break
+                                }
+                                dragChange.consume()
+                                pointerId = dragChange.id
+                                val dragAmount = dragChange.position.y - dragChange.previousPosition.y
+                                dragTranslationY += dragAmount
                                 dragAccumulator += dragAmount
+
                                 if (dragAccumulator > rowHeightPx * 0.45f) {
                                     onMoveDown()
-                                    dragAccumulator = 0f
+                                    dragAccumulator -= rowHeightPx
+                                    dragTranslationY -= rowHeightPx
                                 } else if (dragAccumulator < -rowHeightPx * 0.45f) {
                                     onMoveUp()
-                                    dragAccumulator = 0f
+                                    dragAccumulator += rowHeightPx
+                                    dragTranslationY += rowHeightPx
                                 }
                             }
-                        )
+                            isDragging = false
+                            dragAccumulator = 0f
+                            dragTranslationY = 0f
+                        }
                     }
             )
         }
