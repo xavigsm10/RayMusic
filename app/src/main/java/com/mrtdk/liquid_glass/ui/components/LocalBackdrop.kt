@@ -14,6 +14,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -44,9 +46,11 @@ fun Modifier.wiggleOnScroll(
     scrollState: androidx.compose.foundation.lazy.grid.LazyGridState? = null,
     lazyListState: androidx.compose.foundation.lazy.LazyListState? = null,
     customScrollState: androidx.compose.foundation.ScrollState? = null
-): Modifier = composed {
-    val lastOpenedId = SharedTransitionState.lastOpenedId
-    if (lastOpenedId == null || itemId != lastOpenedId) return@composed this
+): Modifier {
+    if (SharedTransitionState.lastOpenedId == null || itemId != SharedTransitionState.lastOpenedId) return this
+    return composed {
+        val lastOpenedId = SharedTransitionState.lastOpenedId
+        if (lastOpenedId == null || itemId != lastOpenedId) return@composed this
 
     var wiggleCount by remember { mutableStateOf(0) }
     val wiggleOffset = remember { Animatable(0f) }
@@ -78,9 +82,10 @@ fun Modifier.wiggleOnScroll(
         }
     }
     
-    this.graphicsLayer {
-        translationX = wiggleOffset.value
-        rotationZ = wiggleOffset.value * 0.4f
+        this.graphicsLayer {
+            translationX = wiggleOffset.value
+            rotationZ = wiggleOffset.value * 0.4f
+        }
     }
 }
 
@@ -219,7 +224,10 @@ fun SharedElementTransitionContainer(
             }
         }
         
-        androidx.activity.compose.BackHandler(enabled = progress.value > 0.01f) {
+        val backHandlerEnabled by remember {
+            derivedStateOf { progress.value > 0.01f }
+        }
+        androidx.activity.compose.BackHandler(enabled = backHandlerEnabled) {
             dismissAction()
         }
         
@@ -233,58 +241,6 @@ fun SharedElementTransitionContainer(
                 progress.snapTo(1f)
             }
         }
-        
-        val currentProgress = progress.value
-        
-        // Interpolated geometry values
-        val currentLeft = if (staticContainer) {
-            0f
-        } else if (slideToSide) {
-            lerpFloat(screenWidth, 0f, currentProgress)
-        } else if (shrinkToTarget) {
-            lerpFloat(sourceBounds.left, 0f, currentProgress)
-        } else {
-            0f
-        }
-        val currentTop = if (staticContainer) {
-            0f
-        } else if (slideToSide) {
-            0f
-        } else if (shrinkToTarget) {
-            lerpFloat(sourceBounds.top, 0f, currentProgress)
-        } else {
-            lerpFloat(screenHeight, 0f, currentProgress)
-        }
-        val currentWidth = if (staticContainer) {
-            screenWidth
-        } else if (slideToSide) {
-            screenWidth
-        } else if (shrinkToTarget) {
-            lerpFloat(sourceBounds.width, screenWidth, currentProgress).coerceAtLeast(0f)
-        } else {
-            screenWidth
-        }
-        val currentHeight = if (staticContainer) {
-            screenHeight
-        } else if (slideToSide) {
-            screenHeight
-        } else if (shrinkToTarget) {
-            lerpFloat(sourceBounds.height, screenHeight, currentProgress).coerceAtLeast(0f)
-        } else {
-            screenHeight
-        }
-        val currentCornerRadius = if (staticContainer) {
-            0f
-        } else if (slideToSide) {
-            0f
-        } else if (shrinkToTarget) {
-            lerpFloat(24f, 0f, currentProgress).coerceAtLeast(0f)
-        } else {
-            0f
-        }
-        
-        val currentWidthDp = with(density) { currentWidth.toDp() }
-        val currentHeightDp = with(density) { currentHeight.toDp() }
         
         val nestedScrollConnection = remember(scope, progress, onBack, screenHeight) {
             object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
@@ -392,14 +348,49 @@ fun SharedElementTransitionContainer(
         ) {
             Box(
                 modifier = Modifier
-                    .offset { IntOffset(currentLeft.roundToInt(), currentTop.roundToInt()) }
-                    .size(currentWidthDp, currentHeightDp)
+                    .fillMaxSize()
                     .graphicsLayer {
-                        clip = true
-                        shape = RoundedCornerShape(currentCornerRadius.dp)
+                        val p = progress.value
+                        val curLeft = if (staticContainer) {
+                            0f
+                        } else if (slideToSide) {
+                            lerpFloat(screenWidth, 0f, p)
+                        } else if (shrinkToTarget) {
+                            lerpFloat(sourceBounds.left, 0f, p)
+                        } else {
+                            0f
+                        }
+                        val curTop = if (staticContainer) {
+                            0f
+                        } else if (slideToSide) {
+                            0f
+                        } else if (shrinkToTarget) {
+                            lerpFloat(sourceBounds.top, 0f, p)
+                        } else {
+                            lerpFloat(screenHeight, 0f, p)
+                        }
+
+                        if (shrinkToTarget) {
+                            val curW = lerpFloat(sourceBounds.width, screenWidth, p).coerceAtLeast(1f)
+                            val curH = lerpFloat(sourceBounds.height, screenHeight, p).coerceAtLeast(1f)
+                            scaleX = curW / screenWidth
+                            scaleY = curH / screenHeight
+                            transformOrigin = TransformOrigin(0f, 0f)
+                            translationX = curLeft
+                            translationY = curTop
+                            val curCorner = lerpFloat(24f, 0f, p).coerceAtLeast(0f)
+                            clip = curCorner > 0.1f
+                            shape = RoundedCornerShape(curCorner.dp)
+                        } else {
+                            translationX = curLeft
+                            translationY = curTop
+                            clip = false
+                        }
+                        compositingStrategy = CompositingStrategy.Offscreen
                     }
             ) {
-                content(currentProgress, dismissAction)
+                val contentProgress = if (staticContainer || shrinkToTarget) progress.value else 1f
+                content(contentProgress, dismissAction)
             }
         }
     }

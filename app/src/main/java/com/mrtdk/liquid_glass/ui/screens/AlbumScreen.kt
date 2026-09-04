@@ -470,6 +470,7 @@ fun AlbumScreen(
                     .graphicsLayer {
                         alpha = contentAlpha
                         translationY = translationYVal
+                        compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen
                     },
                 useShader = true,
                 content = {
@@ -546,7 +547,7 @@ fun AlbumScreen(
                                         com.mrtdk.liquid_glass.ui.components.AnimatedArtworkPlayer(
                                             videoUrl = currentAnimatedUrl,
                                             modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (isVideoPlaying) 1f else 0f },
-                                            isPaused = isPaused,
+                                            isPaused = isPaused || progress < 0.85f,
                                             onPlaybackStarted = { isVideoPlaying = true }
                                         )
                                     }
@@ -1536,6 +1537,9 @@ fun AlbumScreen(
                         modifier = Modifier
                             .offset { IntOffset(curX.roundToInt(), curY.roundToInt()) }
                             .size(with(density) { curW.toDp() }, with(density) { curH.toDp() })
+                            .graphicsLayer {
+                                compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen
+                            }
                             .clip(RoundedCornerShape(curCorner.dp))
                             .background(dominantColor)
                     ) {

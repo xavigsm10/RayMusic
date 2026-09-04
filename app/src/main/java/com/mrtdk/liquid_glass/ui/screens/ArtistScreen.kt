@@ -528,7 +528,7 @@ fun ArtistScreen(
                             .fillMaxWidth()
                             .height(475.dp)
                             .align(Alignment.TopCenter)
-                            .layerBackdrop(localBackdrop)
+                            .then(if (showArtistMenu) Modifier.layerBackdrop(localBackdrop) else Modifier)
                     ) {
                         // 1. Sharp full-res cover image
                         AsyncImage(

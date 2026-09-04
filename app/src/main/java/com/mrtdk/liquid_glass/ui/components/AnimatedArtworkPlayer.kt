@@ -9,8 +9,14 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -59,12 +65,14 @@ object AnimatedArtworkCache {
 fun AnimatedArtworkPlayer(
     videoUrl: String,
     modifier: Modifier = Modifier,
-    enableFrameCapture: Boolean = true,
+    enableFrameCapture: Boolean = false,
     isPaused: Boolean = false,
     syncWithPlayer: ExoPlayer? = null,
     onPlayerCreated: (ExoPlayer) -> Unit = {},
     onPlaybackStarted: () -> Unit = {},
-    onFrameCaptured: (android.graphics.Bitmap) -> Unit = {}
+    onFrameCaptured: ((android.graphics.Bitmap) -> Unit)? = null,
+    cornerRadius: Dp = 0.dp,
+    clipToBounds: Boolean = false
 ) {
     val context = LocalContext.current
     var isFirstFrameRendered by remember(videoUrl) { mutableStateOf(false) }
@@ -74,7 +82,8 @@ fun AnimatedArtworkPlayer(
         val trackSelector = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(context).apply {
             setParameters(
                 buildUponParameters()
-                    .setForceHighestSupportedBitrate(true)
+                    .setMaxVideoSize(1080, 1920)
+                    .setMaxVideoFrameRate(60)
             )
         }
         ExoPlayer.Builder(context)
@@ -182,8 +191,8 @@ fun AnimatedArtworkPlayer(
 
     var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
 
-    LaunchedEffect(playerViewRef, videoUrl, enableFrameCapture) {
-        if (!enableFrameCapture) return@LaunchedEffect
+    LaunchedEffect(playerViewRef, videoUrl, enableFrameCapture, onFrameCaptured) {
+        if (!enableFrameCapture || onFrameCaptured == null) return@LaunchedEffect
         val pView = playerViewRef ?: return@LaunchedEffect
         // Wait for player to be ready and playing
         while (exoPlayer.playbackState != Player.STATE_READY) {
@@ -233,6 +242,57 @@ fun AnimatedArtworkPlayer(
         label = "animatedArtworkAlpha"
     )
 
+    val density = LocalDensity.current
+    val cornerRadiusPx = with(density) { cornerRadius.toPx() }
+
+    val applyClipping: (android.view.View) -> Unit = { view ->
+        if (clipToBounds || cornerRadiusPx > 0f) {
+            view.clipToOutline = true
+            if (view is ViewGroup) {
+                view.clipChildren = true
+            }
+            val provider = object : android.view.ViewOutlineProvider() {
+                override fun getOutline(v: android.view.View, outline: android.graphics.Outline) {
+                    if (cornerRadiusPx > 0f) {
+                        outline.setRoundRect(0, 0, v.width, v.height, cornerRadiusPx)
+                    } else {
+                        outline.setRect(0, 0, v.width, v.height)
+                    }
+                }
+            }
+            view.outlineProvider = provider
+            view.invalidateOutline()
+
+            if (view is ViewGroup) {
+                for (i in 0 until view.childCount) {
+                    val child = view.getChildAt(i)
+                    child.clipToOutline = true
+                    child.outlineProvider = provider
+                    child.invalidateOutline()
+                    if (child is ViewGroup) {
+                        child.clipChildren = true
+                        for (j in 0 until child.childCount) {
+                            val grandChild = child.getChildAt(j)
+                            grandChild.clipToOutline = true
+                            grandChild.outlineProvider = provider
+                            grandChild.invalidateOutline()
+                        }
+                    }
+                }
+            }
+        } else {
+            view.clipToOutline = false
+            view.outlineProvider = null
+            if (view is ViewGroup) {
+                for (i in 0 until view.childCount) {
+                    val child = view.getChildAt(i)
+                    child.clipToOutline = false
+                    child.outlineProvider = null
+                }
+            }
+        }
+    }
+
     // Render using AndroidView without consuming touch gestures, hidden until first frame is rendered
     AndroidView(
         factory = { ctx ->
@@ -241,6 +301,12 @@ fun AnimatedArtworkPlayer(
                 view.isClickable = false
                 view.isFocusable = false
                 view.setOnTouchListener { _, _ -> false }
+                applyClipping(view)
+                view.addOnLayoutChangeListener { v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
+                    if (left != oldLeft || top != oldTop || right != oldRight || bottom != oldBottom) {
+                        applyClipping(v)
+                    }
+                }
                 playerViewRef = view
             }
         },
@@ -249,11 +315,22 @@ fun AnimatedArtworkPlayer(
             view.isClickable = false
             view.isFocusable = false
             view.setOnTouchListener { _, _ -> false }
+            applyClipping(view)
             playerViewRef = view
         },
-        modifier = modifier.graphicsLayer {
-            alpha = animatedAlpha
-        }
+        modifier = modifier
+            .then(
+                if (cornerRadius > 0.dp) {
+                    Modifier.clip(RoundedCornerShape(cornerRadius))
+                } else if (clipToBounds) {
+                    Modifier.clipToBounds()
+                } else {
+                    Modifier
+                }
+            )
+            .graphicsLayer {
+                alpha = animatedAlpha
+            }
     )
 }
 

@@ -2237,6 +2237,11 @@ private fun ArtistStationCard(
     }
 }
 
+private object SuggestionCardCache {
+    val dominantColorMap = java.util.concurrent.ConcurrentHashMap<String, Color>()
+    val coverBitmapMap = java.util.concurrent.ConcurrentHashMap<String, ImageBitmap>()
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // Featured Suggestion Card — full-bleed image with overlaid text
 // ═══════════════════════════════════════════════════════════════════
@@ -2297,11 +2302,13 @@ private fun FeaturedSuggestionCard(
     }
 
     val hdThumb = upgradeThumb(thumbUrl)
-    var dominantColor by remember { mutableStateOf(Color(0xFF1C1C1E)) }
-    var coverBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+    val cachedColor = hdThumb?.let { SuggestionCardCache.dominantColorMap[it] } ?: Color(0xFF1C1C1E)
+    val cachedBitmap = hdThumb?.let { SuggestionCardCache.coverBitmapMap[it] }
+    var dominantColor by remember(hdThumb) { mutableStateOf(cachedColor) }
+    var coverBitmap by remember(hdThumb) { mutableStateOf(cachedBitmap) }
 
     LaunchedEffect(hdThumb) {
-        if (hdThumb != null) {
+        if (hdThumb != null && (coverBitmap == null || dominantColor == Color(0xFF1C1C1E))) {
             withContext(Dispatchers.Default) {
                 val request = ImageRequest.Builder(context)
                     .data(hdThumb)
@@ -2337,11 +2344,14 @@ private fun FeaturedSuggestionCard(
                             count++
                         }
                         val sampledColor = Color((r / count).toInt(), (g / count).toInt(), (b / count).toInt())
+                        SuggestionCardCache.dominantColorMap[hdThumb] = sampledColor
+                        SuggestionCardCache.coverBitmapMap[hdThumb] = asComposeBmp
                         withContext(Dispatchers.Main) {
                             coverBitmap = asComposeBmp
                             dominantColor = sampledColor
                         }
                     } catch (e: Exception) {
+                        SuggestionCardCache.coverBitmapMap[hdThumb] = asComposeBmp
                         withContext(Dispatchers.Main) {
                             coverBitmap = asComposeBmp
                         }
