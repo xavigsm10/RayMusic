@@ -866,10 +866,10 @@ class MainActivity : ComponentActivity() {
                                             ) {
                                                 LiquidBottomNavBar(
                                                     selectedIndex = selectedIndex,
-                                                    tintColor = globalDominantColor.copy(alpha = 0.35f),
+                                                    tintColor = Color.Unspecified,
                                                     contentColor = contentTintColor,
                                                     scrollConnection = floatingNavBarScrollConnection,
-                                                    tabPosition = { if (pagerState.isScrollInProgress) pagerState.currentPage + pagerState.currentPageOffsetFraction else null },
+                                                    tabPosition = null,
                                                     playerState = playerState,
                                                     isPlaying = isPlaying,
                                                     playbackProgress = { if (duration > 0) (currentPosition.toFloat() / duration).coerceIn(0f, 1f) else 0f },
@@ -901,7 +901,7 @@ class MainActivity : ComponentActivity() {
                                                         videoDetail = null
                                                         selectedIndex = newIndex
                                                         if (newIndex in 0..3) {
-                                                            mainCoroutineScope.launch { pagerState.slideToPage(newIndex) }
+                                                            mainCoroutineScope.launch { pagerState.scrollToPage(newIndex) }
                                                         }
                                                         if (newIndex != 4) {
                                                             searchQuery = ""
@@ -1014,6 +1014,10 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onSongSelected = playSong,
                                 onSongSelectedFromQueue = playSongFromQueue,
+                                onQueueChange = { newQueue ->
+                                    playerState = playerState?.copy(queue = newQueue)
+                                    com.mrtdk.liquid_glass.playback.PlaybackQueue.queue = newQueue
+                                },
                                 shuffleModeEnabled = shuffleModeEnabled,
                                 repeatMode = repeatMode,
                                 onToggleShuffle = { musicPlayer?.setShuffleModeEnabled(!shuffleModeEnabled) },

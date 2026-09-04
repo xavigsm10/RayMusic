@@ -76,6 +76,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import com.mrtdk.liquid_glass.R
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -105,6 +106,8 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import com.mrtdk.liquid_glass.playback.PlaybackQueue
 import com.mrtdk.liquid_glass.ui.screens.QueueItem
 import com.mrtdk.liquid_glass.ui.screens.PlayerState
+import com.mrtdk.liquid_glass.data.MadeForYouRepository
+import com.mrtdk.liquid_glass.ui.components.MadeForYouCardContent
 
 data class AlbumState(
     val id: String,        // browseId
@@ -147,8 +150,10 @@ fun AlbumScreen(
                               (albumState.title.contains("Around the Fur", ignoreCase = true) && albumState.artist.contains("Deftones", ignoreCase = true))
     val isBadAlbum = albumState.title.equals("Bad", ignoreCase = true) &&
                      albumState.artist.contains("Michael Jackson", ignoreCase = true)
-    // Albums that should never use animated artwork (wrong cache hits from similar-named albums)
-    val isAnimatedArtworkBlocked = isMichaelAlbum
+    val customMadeForYou = remember(albumState.id) { MadeForYouRepository.get(albumState.id) }
+    val isMadeForYou = customMadeForYou != null || albumState.id.startsWith("made_for_you_")
+    // Albums that should never use animated artwork (only made for you playlists)
+    val isAnimatedArtworkBlocked = isMadeForYou
 
     val hdThumb = albumState.thumbnail
         ?.replace("=w226-h226", "=w720-h720")
@@ -174,51 +179,24 @@ fun AlbumScreen(
     }
 
     var animatedArtworkUrl by remember(albumState.artist, albumState.title) {
-        // Block cached animated artwork for albums that have known wrong cache entries
         val cached = if (isAnimatedArtworkBlocked) null
                      else com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.get(albumState.artist, albumState.title)
         mutableStateOf(cached)
     }
 
-    LaunchedEffect(albumState.artist, albumState.title) {
+    LaunchedEffect(albumState.artist, albumState.title, tracks.firstOrNull()?.title) {
         val artist = albumState.artist
         val album = albumState.title
-        // Block animated artwork for specific albums to prevent wrong cache hits
+        val firstSong = tracks.firstOrNull()?.title
         if (isAnimatedArtworkBlocked) return@LaunchedEffect
         if (animatedArtworkUrl != null) return@LaunchedEffect
         withContext(Dispatchers.IO) {
-            val cleanArtist = com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.cleanTerm(artist)
-            val cleanAlbum = com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.cleanTerm(album)
-
-            // 1. Unified Echo-Music Canvas Provider (EchoMusic, ArchiveTune, Tidal, AppleMusic)
-            var streamUrl = com.mrtdk.liquid_glass.canvas.UnifiedCanvasProvider.getSongOrAlbumCanvas(cleanAlbum, cleanArtist, cleanAlbum)
-
-            // 2. Fallback to m8tec
-            if (streamUrl == null) {
-                try {
-                    val encodedArtist = java.net.URLEncoder.encode(cleanArtist, "UTF-8")
-                    val encodedAlbum = java.net.URLEncoder.encode(cleanAlbum, "UTF-8")
-                    val url = java.net.URL("https://artwork.m8tec.top/api/v1/artwork/search?artist=$encodedArtist&album=$encodedAlbum")
-                    val conn = url.openConnection() as java.net.HttpURLConnection
-                    conn.connectTimeout = 3000
-                    conn.readTimeout = 3000
-                    if (conn.responseCode == 200) {
-                        val text = conn.inputStream.bufferedReader().readText()
-                        val obj = org.json.JSONObject(text)
-                        val isVertical = album.contains("After Hours", ignoreCase = true) ||
-                                album.contains("Around the Fur", ignoreCase = true)
-                        streamUrl = if (isVertical) {
-                            obj.optString("url_tall").takeIf { it.isNotBlank() } 
-                                ?: obj.optString("url").takeIf { it.isNotBlank() }
-                        } else {
-                            obj.optString("url").takeIf { it.isNotBlank() } 
-                                ?: obj.optString("url_tall").takeIf { it.isNotBlank() }
-                        }
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
+            // Unified Echo-Music Canvas Provider for Albums (EchoMusic, AppleMusic, Tidal)
+            val streamUrl = com.mrtdk.liquid_glass.canvas.UnifiedCanvasProvider.getAlbumCanvas(
+                albumTitle = album,
+                artist = artist,
+                firstSongTitle = firstSong
+            )
 
             if (!streamUrl.isNullOrBlank()) {
                 withContext(Dispatchers.Main) {
@@ -230,7 +208,13 @@ fun AlbumScreen(
     }
 
     // Extract dominant colour
-    LaunchedEffect(headerArt, isMichaelAlbum) {
+    LaunchedEffect(headerArt, isMichaelAlbum, albumState.id) {
+        if (isMadeForYou) {
+            val c = customMadeForYou?.gradientColors?.firstOrNull() ?: Color(0xFFE62B00)
+            dominantColor = c
+            onDominantColorChanged(c)
+            return@LaunchedEffect
+        }
         if (isMichaelAlbum) {
             val michaelColor = Color(0xFFC33826)
             dominantColor = michaelColor
@@ -279,7 +263,14 @@ fun AlbumScreen(
     // Load album/playlist tracks & artist info
     LaunchedEffect(albumState.id) {
         withContext(Dispatchers.IO) {
-            if (albumState.id.startsWith("offline_album_")) {
+            if (isMadeForYou) {
+                val pl = customMadeForYou ?: MadeForYouRepository.get(albumState.id)
+                if (pl != null) {
+                    tracks = pl.songs
+                    albumDescription = pl.artistsSubtitle
+                    albumError = null
+                }
+            } else if (albumState.id.startsWith("offline_album_")) {
                 val localDownloads = LibraryManager.getDownloadedSongsForAlbum(albumState.title)
                 if (localDownloads.isNotEmpty()) {
                     tracks = localDownloads.map { dl ->
@@ -390,6 +381,7 @@ fun AlbumScreen(
 
     // Artist Fallback Search if artistPageData is still empty
     LaunchedEffect(albumState.artist) {
+        if (isMadeForYou) return@LaunchedEffect
         if (artistPageData == null && albumState.artist.isNotBlank()) {
             withContext(Dispatchers.IO) {
                 try {
@@ -459,7 +451,7 @@ fun AlbumScreen(
             animationSpec = spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMediumLow),
             label = "popScaleMore"
         )
-        val contentAlpha = ((progress - 0.4f).coerceAtLeast(0f) / 0.6f)
+        val contentAlpha = if (isNormalArtwork) progress.coerceIn(0f, 1f) else ((progress - 0.4f).coerceAtLeast(0f) / 0.6f)
 
         Box(
             modifier = Modifier.fillMaxSize()
@@ -528,26 +520,36 @@ fun AlbumScreen(
                                     )
                             ) {
                                 // Base sharp album cover
-                                AsyncImage(
-                                    model = ImageRequest.Builder(context)
-                                        .data(headerArt).crossfade(true).build(),
-                                    imageLoader = animatedImageLoader,
-                                    contentDescription = albumState.title,
-                                    contentScale = ContentScale.Crop,
-                                    alignment = Alignment.TopCenter,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-
-                                var isVideoPlaying by remember(albumState.id) { mutableStateOf(false) }
-                                val currentAnimatedUrl = animatedArtworkUrl
-
-                                if (!currentAnimatedUrl.isNullOrBlank()) {
-                                    com.mrtdk.liquid_glass.ui.components.AnimatedArtworkPlayer(
-                                        videoUrl = currentAnimatedUrl,
-                                        modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (isVideoPlaying) 1f else 0f },
-                                        isPaused = isPaused,
-                                        onPlaybackStarted = { isVideoPlaying = true }
+                                if (customMadeForYou != null) {
+                                    MadeForYouCardContent(
+                                        title = customMadeForYou.title,
+                                        artistsSubtitle = customMadeForYou.artistsSubtitle,
+                                        gradientColors = customMadeForYou.gradientColors,
+                                        modifier = Modifier.fillMaxSize(),
+                                        isHero = true
                                     )
+                                } else {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(context)
+                                            .data(headerArt).crossfade(true).build(),
+                                        imageLoader = animatedImageLoader,
+                                        contentDescription = albumState.title,
+                                        contentScale = ContentScale.Crop,
+                                        alignment = Alignment.TopCenter,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+
+                                    var isVideoPlaying by remember(albumState.id) { mutableStateOf(false) }
+                                    val currentAnimatedUrl = animatedArtworkUrl
+
+                                    if (!currentAnimatedUrl.isNullOrBlank()) {
+                                        com.mrtdk.liquid_glass.ui.components.AnimatedArtworkPlayer(
+                                            videoUrl = currentAnimatedUrl,
+                                            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (isVideoPlaying) 1f else 0f },
+                                            isPaused = isPaused,
+                                            onPlaybackStarted = { isVideoPlaying = true }
+                                        )
+                                    }
                                 }
 
                                 // Subtle gradient fade only at the very bottom edge of the image
@@ -618,26 +620,48 @@ fun AlbumScreen(
                                             .padding(top = 12.dp, bottom = 20.dp),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(220.dp)
-                                                .shadow(
-                                                    elevation = 16.dp,
-                                                    shape = RoundedCornerShape(18.dp),
-                                                    ambientColor = Color.Black.copy(alpha = 0.5f),
-                                                    spotColor = Color.Black.copy(alpha = 0.5f)
+                                        if (customMadeForYou != null) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .width(220.dp)
+                                                    .height(280.dp)
+                                                    .shadow(
+                                                        elevation = 16.dp,
+                                                        shape = RoundedCornerShape(18.dp),
+                                                        ambientColor = Color.Black.copy(alpha = 0.5f),
+                                                        spotColor = Color.Black.copy(alpha = 0.5f)
+                                                    )
+                                                    .clip(RoundedCornerShape(18.dp))
+                                            ) {
+                                                MadeForYouCardContent(
+                                                    title = customMadeForYou.title,
+                                                    artistsSubtitle = customMadeForYou.artistsSubtitle,
+                                                    gradientColors = customMadeForYou.gradientColors,
+                                                    modifier = Modifier.fillMaxSize()
                                                 )
-                                                .clip(RoundedCornerShape(18.dp))
-                                                .background(Color(0xFF1C1C1E))
-                                        ) {
-                                            AsyncImage(
-                                                model = ImageRequest.Builder(context)
-                                                    .data(headerArt).crossfade(true).build(),
-                                                imageLoader = animatedImageLoader,
-                                                contentDescription = albumState.title,
-                                                contentScale = ContentScale.Crop,
-                                                modifier = Modifier.fillMaxSize()
-                                            )
+                                            }
+                                        } else {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(220.dp)
+                                                    .shadow(
+                                                        elevation = 16.dp,
+                                                        shape = RoundedCornerShape(18.dp),
+                                                        ambientColor = Color.Black.copy(alpha = 0.5f),
+                                                        spotColor = Color.Black.copy(alpha = 0.5f)
+                                                    )
+                                                    .clip(RoundedCornerShape(18.dp))
+                                                    .background(Color(0xFF1C1C1E))
+                                            ) {
+                                                AsyncImage(
+                                                    model = ImageRequest.Builder(context)
+                                                        .data(headerArt).crossfade(true).build(),
+                                                    imageLoader = animatedImageLoader,
+                                                    contentDescription = albumState.title,
+                                                    contentScale = ContentScale.Crop,
+                                                    modifier = Modifier.fillMaxSize()
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -712,8 +736,13 @@ fun AlbumScreen(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.Center
                                     ) {
+                                        val categoryText = if (isMadeForYou) {
+                                            stringResource(R.string.playlists_hechas_para_ti) + " • RayMusic • "
+                                        } else {
+                                            "Bandas sonoras • ${albumState.year ?: 2026} • "
+                                        }
                                         Text(
-                                            text = "Bandas sonoras • ${albumState.year ?: 2026} • ",
+                                            text = categoryText,
                                             color = tertiaryTextColor,
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Medium
@@ -755,11 +784,12 @@ fun AlbumScreen(
                                                 if (tracks.isNotEmpty()) {
                                                     val shuffledTracks = tracks.shuffled()
                                                     val s = shuffledTracks.first()
+                                                    val firstArt = s.thumbnail.ifBlank { songArtUrl }
                                                     val albumQueue = shuffledTracks.drop(1).map { t ->
                                                         QueueItem(
                                                             title = t.title,
                                                             artist = t.artists.joinToString { it.name },
-                                                            artUrl = songArtUrl,
+                                                            artUrl = t.thumbnail.ifBlank { songArtUrl },
                                                             videoId = t.id,
                                                             album = albumState.title,
                                                             albumId = albumState.id
@@ -769,7 +799,7 @@ fun AlbumScreen(
                                                         PlayerState(
                                                             title = s.title,
                                                             artist = s.artists.joinToString { it.name },
-                                                            artUrl = songArtUrl,
+                                                            artUrl = firstArt,
                                                             videoId = s.id,
                                                             queue = albumQueue,
                                                             isExclusiveQueue = true,
@@ -798,11 +828,12 @@ fun AlbumScreen(
                                             .background(playButtonBg)
                                             .clickable {
                                                 tracks.firstOrNull()?.let { s ->
+                                                    val firstArt = s.thumbnail.ifBlank { songArtUrl }
                                                     val albumQueue = tracks.drop(1).map { t ->
                                                         QueueItem(
                                                             title = t.title,
                                                             artist = t.artists.joinToString { it.name },
-                                                            artUrl = songArtUrl,
+                                                            artUrl = t.thumbnail.ifBlank { songArtUrl },
                                                             videoId = t.id,
                                                             album = albumState.title,
                                                             albumId = albumState.id
@@ -812,7 +843,7 @@ fun AlbumScreen(
                                                         PlayerState(
                                                             title = s.title,
                                                             artist = s.artists.joinToString { it.name },
-                                                            artUrl = songArtUrl,
+                                                            artUrl = firstArt,
                                                             videoId = s.id,
                                                             queue = albumQueue,
                                                             isExclusiveQueue = true,
@@ -916,7 +947,7 @@ fun AlbumScreen(
                                                 QueueItem(
                                                     title = t.title,
                                                     artist = t.artists.joinToString { it.name },
-                                                    artUrl = songArtUrl,
+                                                    artUrl = t.thumbnail.ifBlank { songArtUrl },
                                                     videoId = t.id,
                                                     album = albumState.title,
                                                     albumId = albumState.id
@@ -926,7 +957,7 @@ fun AlbumScreen(
                                                 PlayerState(
                                                     title = song.title,
                                                     artist = song.artists.joinToString { it.name },
-                                                    artUrl = songArtUrl,
+                                                    artUrl = song.thumbnail.ifBlank { songArtUrl },
                                                     videoId = song.id,
                                                     queue = albumQueue,
                                                     isExclusiveQueue = true,
@@ -1052,7 +1083,9 @@ fun AlbumScreen(
                                     Spacer(modifier = Modifier.height(6.dp))
 
                                     // Copyright line
-                                    val copyrightNotice = if (isMichaelAlbum || albumState.artist.contains("Michael Jackson", ignoreCase = true)) {
+                                    val copyrightNotice = if (isMadeForYou) {
+                                        "℗ $releaseYear RayMusic • ${customMadeForYou?.title ?: "Playlists hechas para ti"}"
+                                    } else if (isMichaelAlbum || albumState.artist.contains("Michael Jackson", ignoreCase = true)) {
                                         "℗ This compilation (P) $releaseYear MJJP Records, LLC / Distributed by Sony Music Entertainment"
                                     } else {
                                         "℗ $releaseYear ${albumState.artist} / Distributed by Ray Music Entertainment"
@@ -1495,7 +1528,7 @@ fun AlbumScreen(
                     }
                 }
             )
-            if (progress < 0.99f) {
+            if (progress < 0.99f && !isNormalArtwork) {
                 Box(
                     modifier = Modifier.fillMaxSize()
                 ) {
@@ -1524,6 +1557,16 @@ fun AlbumScreen(
                                         model = ImageRequest.Builder(context).data(headerArt).crossfade(false).build(),
                                         contentDescription = null,
                                         contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                } else if (isMadeForYou) {
+                                    val titleToUse = customMadeForYou?.title ?: albumState.title
+                                    val subToUse = customMadeForYou?.artistsSubtitle ?: albumState.artist
+                                    val gradToUse = customMadeForYou?.gradientColors ?: listOf(Color(0xFFE62B00), Color(0xFFFF5E3A))
+                                    MadeForYouCardContent(
+                                        title = titleToUse,
+                                        artistsSubtitle = subToUse,
+                                        gradientColors = gradToUse,
                                         modifier = Modifier.fillMaxSize()
                                     )
                                 } else {

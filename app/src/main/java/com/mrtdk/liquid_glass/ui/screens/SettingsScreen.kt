@@ -132,6 +132,7 @@ fun MainSettingsMenu(
     val scrollState = rememberScrollState()
     var showGlassStyleDialog by remember { mutableStateOf(false) }
     var showArtworkStyleDialog by remember { mutableStateOf(false) }
+    val currentArtworkStyle by LibraryManager.playerArtworkStyle.collectAsState()
 
     val isDarkMode by com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState()
     var showThemeDialog by remember { mutableStateOf(false) }
@@ -206,8 +207,7 @@ fun MainSettingsMenu(
                         icon = rememberPainter(Icons.Default.Tune),
                         title = { Text("Apariencia") },
                         description = {
-                            val currentStyle = LibraryManager.getPlayerArtworkStyle()
-                            val currentStyleName = when (currentStyle) {
+                            val currentStyleName = when (currentArtworkStyle) {
                                 "normal" -> "Normal"
                                 else -> "Fullartwork"
                             }
@@ -357,7 +357,7 @@ fun MainSettingsMenu(
                 "fullartwork" to "Fullartwork",
                 "normal" to "Normal"
             ),
-            selectedValue = LibraryManager.getPlayerArtworkStyle(),
+            selectedValue = currentArtworkStyle,
             onDismiss = { showArtworkStyleDialog = false },
             onSelect = {
                 LibraryManager.savePlayerArtworkStyle(it)

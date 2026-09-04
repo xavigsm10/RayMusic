@@ -24,27 +24,20 @@ object AnimatedArtworkCache {
     private val memoryCache = java.util.concurrent.ConcurrentHashMap<String, String>()
 
     fun cleanTerm(term: String): String {
-        var cleaned = term
-        // Remove feat/ft/with
-        cleaned = cleaned.replace(Regex("(?i)\\b(feat\\.?|ft\\.?|with)\\b.*"), "")
-        // Remove deluxe, remaster, live, ep, mono, version, etc.
-        cleaned = cleaned.replace(Regex("(?i)\\b(remastered|remaster|deluxe|anniversary|live|special|explicit|single|ep|mono|stereo|re-recorded|edition|version)\\b.*"), "")
-        // Remove parentheses/brackets and contents
-        cleaned = cleaned.replace(Regex("\\([^\\)]*\\)"), "")
-        cleaned = cleaned.replace(Regex("\\[[^\\]]*\\]"), "")
-        // Remove trailing dashes and spaces
-        cleaned = cleaned.replace(Regex("[-–—:_\\s]+$"), "")
-        cleaned = cleaned.trim().replace(Regex("\\s+"), " ")
-        return cleaned.ifEmpty { term }
+        return com.mrtdk.liquid_glass.canvas.UnifiedCanvasProvider.normalizeCanvasSongTitle(term)
     }
 
     fun get(artist: String, albumOrTitle: String): String? {
-        val cleanArtist = cleanTerm(artist)
-        val cleanAlbum = cleanTerm(albumOrTitle)
-        val key = "anim_art_${cleanArtist}_${cleanAlbum}".lowercase().trim().replace(Regex("[^a-zA-Z0-9_]"), "_")
+        val cleanArtist = com.mrtdk.liquid_glass.canvas.UnifiedCanvasProvider.normalizeCanvasArtistName(artist)
+        val cleanTitle = cleanTerm(albumOrTitle)
+        val key = "echo_motion_v3_${cleanArtist}_${cleanTitle}".lowercase().trim().replace(Regex("[^a-zA-Z0-9_]"), "_")
         memoryCache[key]?.let { return it }
         val persisted = com.mrtdk.liquid_glass.data.LibraryManager.getString(key)
-        if (persisted != null) {
+        if (!persisted.isNullOrBlank()) {
+            if (persisted.contains("m8tec.top")) {
+                com.mrtdk.liquid_glass.data.LibraryManager.saveString(key, "")
+                return null
+            }
             memoryCache[key] = persisted
             return persisted
         }
@@ -52,9 +45,10 @@ object AnimatedArtworkCache {
     }
 
     fun put(artist: String, albumOrTitle: String, url: String) {
-        val cleanArtist = cleanTerm(artist)
-        val cleanAlbum = cleanTerm(albumOrTitle)
-        val key = "anim_art_${cleanArtist}_${cleanAlbum}".lowercase().trim().replace(Regex("[^a-zA-Z0-9_]"), "_")
+        if (url.isBlank() || url.contains("m8tec.top")) return
+        val cleanArtist = com.mrtdk.liquid_glass.canvas.UnifiedCanvasProvider.normalizeCanvasArtistName(artist)
+        val cleanTitle = cleanTerm(albumOrTitle)
+        val key = "echo_motion_v3_${cleanArtist}_${cleanTitle}".lowercase().trim().replace(Regex("[^a-zA-Z0-9_]"), "_")
         memoryCache[key] = url
         com.mrtdk.liquid_glass.data.LibraryManager.saveString(key, url)
     }
@@ -197,26 +191,29 @@ fun AnimatedArtworkPlayer(
         }
 
         var textureView: TextureView? = null
-        for (i in 0 until 10) {
-            textureView = findTextureView(pView)
-            if (textureView != null) break
+        for (i in 0 until 30) {
+            textureView = (pView.videoSurfaceView as? TextureView) ?: findTextureView(pView)
+            if (textureView != null && textureView.isAvailable) break
             kotlinx.coroutines.delay(100)
         }
 
         val tv = textureView ?: return@LaunchedEffect
+        while (!tv.isAvailable) {
+            kotlinx.coroutines.delay(50)
+        }
 
         // Immediately capture first frame without waiting
         try {
-            val initialBmp = tv.getBitmap(150, 150)
+            val initialBmp = tv.getBitmap(120, 160)
             if (initialBmp != null) {
                 onFrameCaptured(initialBmp)
             }
         } catch (e: Exception) { }
 
         // Periodically capture the frame of the TextureView
-        val reusableBmp = android.graphics.Bitmap.createBitmap(120, 120, android.graphics.Bitmap.Config.ARGB_8888)
+        val reusableBmp = android.graphics.Bitmap.createBitmap(120, 160, android.graphics.Bitmap.Config.ARGB_8888)
         while (true) {
-            if (exoPlayer.isPlaying && enableFrameCapture) {
+            if (exoPlayer.isPlaying && enableFrameCapture && tv.isAvailable) {
                 try {
                     val bmp = tv.getBitmap(reusableBmp)
                     if (bmp != null) {
@@ -226,7 +223,7 @@ fun AnimatedArtworkPlayer(
                     e.printStackTrace()
                 }
             }
-            kotlinx.coroutines.delay(40) // Smooth ~25-30fps live reflection updates with 0 heap allocations
+            kotlinx.coroutines.delay(35) // Smooth ~28-30fps live reflection & blur curve updates with 0 heap allocations
         }
     }
 

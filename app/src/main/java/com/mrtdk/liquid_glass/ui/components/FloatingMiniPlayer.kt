@@ -260,19 +260,17 @@ fun FloatingMiniPlayer(
                 }
             }
 
-            if (!isInline) {
-                Spacer(Modifier.width(4.dp))
-                IconButton(
-                    onClick = onNext,
-                    modifier = Modifier.size(36.dp),
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.forward),
-                        contentDescription = "Next",
-                        tint = contentColor,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
+            Spacer(Modifier.width(if (isInline) 2.dp else 4.dp))
+            IconButton(
+                onClick = onNext,
+                modifier = Modifier.size(if (isInline) 32.dp else 36.dp),
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.forward),
+                    contentDescription = "Next",
+                    tint = contentColor,
+                    modifier = Modifier.size(if (isInline) 18.dp else 22.dp)
+                )
             }
         }
     }

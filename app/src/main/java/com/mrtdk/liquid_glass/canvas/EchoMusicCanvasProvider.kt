@@ -60,6 +60,10 @@ object EchoMusicCanvasProvider {
         }
     }
 
+    suspend fun prefetch() {
+        fetchManifest()
+    }
+
     suspend fun getBySongArtist(
         song: String,
         artist: String,

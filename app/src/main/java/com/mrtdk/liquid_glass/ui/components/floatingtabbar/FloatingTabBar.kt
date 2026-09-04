@@ -844,7 +844,7 @@ private fun SharedTransitionScope.ExpandedTabs(
 
     val isDark = MaterialTheme.colorScheme.surface.luminance() <= 0.5f
     val puckWash = if (isDark) Color(28, 27, 28) else Color(0xFFF2F2F2)
-    val puckRestAlpha = 0.28f
+    val puckRestAlpha = 0.8f
 
     val tabWidthPx = with(density) { sizes.tabWidth.toPx() }
     val paddingStartPx = with(density) { sizes.tabBarContentPadding.calculateStartPadding(layoutDirection).toPx() }
@@ -867,6 +867,7 @@ private fun SharedTransitionScope.ExpandedTabs(
         )
     }
     var hasDraggedPuck = false
+    val pressedScale = 78f / 56f
     val dampedDragAnimation = remember(animationScope, tabsCount) {
         DampedDragAnimation(
             animationScope = animationScope,
@@ -874,7 +875,7 @@ private fun SharedTransitionScope.ExpandedTabs(
             valueRange = 0f..(tabsCount - 1).toFloat(),
             visibilityThreshold = 0.001f,
             initialScale = 1f,
-            pressedScale = 78f / 56f,
+            pressedScale = pressedScale,
             onDragStarted = { hasDraggedPuck = false },
             onDragStopped = {
                 val targetIndex = targetValue.fastRoundToInt().coerceIn(0, tabsCount - 1)
@@ -1001,7 +1002,7 @@ private fun SharedTransitionScope.ExpandedTabs(
                     },
                     isInline = false,
                     isStandalone = false,
-                    contentScale = if (index == currentIndex) {
+                    contentScale = if (backdrop != null && index == currentIndex) {
                         lerp(1f, 1.12f, dampedDragAnimation.pressProgress)
                     } else {
                         1f
@@ -1020,8 +1021,57 @@ private fun SharedTransitionScope.ExpandedTabs(
             }
         }
 
-        val isDark = MaterialTheme.colorScheme.surface.luminance() <= 0.5f
-        val puckSurfaceTint = if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.08f)
+        if (backdrop != null) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clearAndSetSemantics {}
+                    .alpha(0f)
+                    .layerBackdrop(tabsBackdrop)
+                    .graphicsLayer { translationX = panelOffset }
+                    .padding(sizes.tabBarContentPadding)
+                    .drawBackdrop(
+                        backdrop = backdrop,
+                        shape = { shapes.tabBarShape },
+                        effects = {
+                            val progress = dampedDragAnimation.pressProgress
+                            vibrancy()
+                            blur(8f.dp.toPx())
+                            lens(
+                                15f.dp.toPx() * progress,
+                                18f.dp.toPx() * progress
+                            )
+                        },
+                        highlight = {
+                            val progress = dampedDragAnimation.pressProgress
+                            Highlight.Default.copy(alpha = progress)
+                        },
+                        onDrawSurface = { drawRect(colors.backgroundColor) }
+                    )
+                    .then(interactiveHighlight.modifier)
+                    .graphicsLayer(colorFilter = ColorFilter.tint(accentColor)),
+                horizontalArrangement = Arrangement.spacedBy(sizes.tabSpacing)
+            ) {
+                allTabs.forEachIndexed { index, tab ->
+                    Tab(
+                        icon = tab.icon,
+                        title = tab.title,
+                        isInline = false,
+                        isStandalone = false,
+                        contentScale = if (index == currentIndex) {
+                            lerp(1f, 1.12f, dampedDragAnimation.pressProgress)
+                        } else {
+                            1f
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .skipToLookaheadSize()
+                            .padding(sizes.tabExpandedContentPadding)
+                    )
+                }
+            }
+        }
 
         Box(
             Modifier
@@ -1038,28 +1088,30 @@ private fun SharedTransitionScope.ExpandedTabs(
                 .then(
                     if (backdrop != null) {
                         Modifier.drawBackdrop(
-                            backdrop = backdrop,
+                            backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
                             shape = { shapes.tabShape },
                             effects = {
                                 val progress = dampedDragAnimation.pressProgress
-                                blur(3f.dp.toPx())
+                                blur(3f.dp.toPx() * (1f - progress))
                                 lens(
-                                    lerp(6f.dp.toPx(), 12f.dp.toPx(), progress),
-                                    lerp(8f.dp.toPx(), 16f.dp.toPx(), progress),
-                                    chromaticAberration = true
+                                    lerp(0f.dp.toPx(), 10f.dp.toPx(), progress),
+                                    lerp(0f.dp.toPx(), 12f.dp.toPx(), progress),
+                                    chromaticAberration = progress > 0.01f
                                 )
                             },
                             highlight = {
                                 val progress = dampedDragAnimation.pressProgress
-                                Highlight.Default.copy(alpha = lerp(PuckRestHighlightAlpha, 0.9f, progress))
+                                Highlight.Default.copy(
+                                    alpha = lerp(PuckRestHighlightAlpha, 1f, progress)
+                                )
                             },
                             shadow = {
                                 val progress = dampedDragAnimation.pressProgress
-                                Shadow(alpha = lerp(PuckRestShadowAlpha, 0.6f, progress))
+                                Shadow(alpha = lerp(PuckRestShadowAlpha, 1f, progress))
                             },
                             innerShadow = {
                                 val progress = dampedDragAnimation.pressProgress
-                                InnerShadow(radius = 8f.dp * progress, alpha = progress * 0.5f)
+                                InnerShadow(radius = 8f.dp * progress, alpha = progress)
                             },
                             layerBlock = {
                                 scaleX = dampedDragAnimation.scaleX
@@ -1069,10 +1121,13 @@ private fun SharedTransitionScope.ExpandedTabs(
                                 scaleY *= 1f - (velocity * 0.25f).fastCoerceIn(-0.2f, 0.2f)
                             },
                             onDrawSurface = {
-                                drawRect(puckSurfaceTint)
+                                val progress = dampedDragAnimation.pressProgress
+                                drawRect(puckWash.copy(alpha = puckRestAlpha * (1f - 0.75f * progress)))
                             }
                         )
                     } else {
+                        // Sólido (Material 3) - No transparente, sin modo burbuja al presionar
+                        val solidIndicatorColor = if (isDark) Color(0xFF383840) else Color(0xFFD6D6DC)
                         Modifier
                             .graphicsLayer {
                                 scaleX = dampedDragAnimation.scaleX
@@ -1083,10 +1138,10 @@ private fun SharedTransitionScope.ExpandedTabs(
                             }
                             .shadow(
                                 shape = shapes.tabShape,
-                                elevation = 4.dp
+                                elevation = 2.dp
                             )
                             .background(
-                                color = puckSurfaceTint,
+                                color = solidIndicatorColor,
                                 shape = shapes.tabShape
                             )
                             .clip(shapes.tabShape)
@@ -1110,6 +1165,11 @@ private fun SharedTransitionScope.ExpandedTabs(
                         else size.width - (dampedDragAnimation.value + 1f) * tabWidthPx + panelOffset
                     scaleX = dampedDragAnimation.scaleX
                     scaleY = dampedDragAnimation.scaleY
+                    alpha = if (backdrop != null) {
+                        (1f - dampedDragAnimation.pressProgress * 3f).fastCoerceIn(0f, 1f)
+                    } else {
+                        1f
+                    }
                 }
                 .width(sizes.tabWidth)
                 .fillMaxHeight()

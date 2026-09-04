@@ -52,6 +52,9 @@ import com.mrtdk.liquid_glass.data.LibraryManager
 import com.mrtdk.liquid_glass.data.LibraryItem
 import com.mrtdk.liquid_glass.data.ItemType
 import com.mrtdk.liquid_glass.data.Song
+import com.mrtdk.liquid_glass.data.MadeForYouPlaylist
+import com.mrtdk.liquid_glass.data.MadeForYouRepository
+import com.mrtdk.liquid_glass.ui.components.MadeForYouCardContent
 import com.echo.innertube.YouTube
 import org.json.JSONArray
 import org.json.JSONObject
@@ -85,6 +88,19 @@ import kotlinx.coroutines.withContext
 
 data class SimilarSection(val artistName: String, val items: List<com.echo.innertube.models.YTItem>)
 data class PorqueEscuchasteSection(val artistName: String, val songs: List<SongItem>)
+data class ElMundoDeArtist(val artistName: String, val albums: List<com.echo.innertube.models.AlbumItem>)
+
+data class ArtistStation(
+    val id: String,
+    val title: String,
+    val subtitle: String,
+    val primaryThumb: String?,
+    val secondaryThumbs: List<String>,
+    val backgroundColor: Color,
+    val isPersonal: Boolean = false,
+    val isDiscovery: Boolean = false,
+    val candidateSongs: List<SongItem> = emptyList()
+)
 
 class InicioState {
     var isLoaded by mutableStateOf(false)
@@ -97,6 +113,12 @@ class InicioState {
     var seleccionesTitle by mutableStateOf<String?>(null)
     var featuredSuggestions by mutableStateOf<List<com.echo.innertube.models.YTItem>>(emptyList())
     var featuredPlaylists by mutableStateOf<List<com.echo.innertube.models.PlaylistItem>>(emptyList())
+
+    // Nuevas secciones
+    var elMundoDeArtist by mutableStateOf<ElMundoDeArtist?>(null)
+    var paraFiestasItems by mutableStateOf<List<com.echo.innertube.models.YTItem>>(emptyList())
+    var madeForYouPlaylists by mutableStateOf<List<MadeForYouPlaylist>>(emptyList())
+    var artistStations by mutableStateOf<List<ArtistStation>>(emptyList())
 }
 
 @Composable
@@ -127,6 +149,7 @@ fun InicioScreen(
 
     // Recently played from LibraryManager
     val recentlyPlayed by LibraryManager.recentlyPlayed.collectAsState()
+    val stationPlayIndices = remember { mutableStateMapOf<String, Int>() }
 
     // Initial load — restore from cache first, then fetch youtube homepage in background
     LaunchedEffect(Unit) {
@@ -227,7 +250,7 @@ fun InicioScreen(
                     }
 
                     withContext(Dispatchers.Main) {
-                        if (similarList.isNotEmpty()) state.similarSections = similarList
+                        if (similarList.isNotEmpty()) state.similarSections = similarList.take(2)
                         if (seleccionesListTemp.isNotEmpty()) state.seleccionesParaTi = seleccionesListTemp
                         if (!seleccionesTitleTemp.isNullOrBlank()) state.seleccionesTitle = seleccionesTitleTemp
                         if (suggestionsList.isNotEmpty()) state.featuredSuggestions = suggestionsList
@@ -268,7 +291,8 @@ fun InicioScreen(
         } else null
 
         val recentSongs = recentlyPlayed.filter { it.type == ItemType.SONG }
-        val allSeeds = (listOfNotNull(currentPlayingSeed) + recentSongs).distinctBy { "${it.title}_${it.subtitle}" }
+        val allSeeds = (listOfNotNull(currentPlayingSeed) + recentSongs)
+            .distinctBy { (it.subtitle.ifBlank { it.title }).lowercase().trim() }
 
         if (allSeeds.isNotEmpty()) {
             val primary = allSeeds.first()
@@ -352,7 +376,7 @@ fun InicioScreen(
                 }
             }
 
-            val results = deferreds.awaitAll().filterNotNull()
+            val results = deferreds.awaitAll().filterNotNull().distinctBy { it.first.lowercase().trim() }
 
             for ((seedArtist, songs, artists) in results) {
                 allQuickPicks.addAll(songs.take(8))
@@ -382,7 +406,201 @@ fun InicioScreen(
                 }
             }
 
+            // 1. Fetch albums for "El mundo de [Artista]"
+            val primaryArtist = results.firstOrNull()?.first?.takeIf { it.isNotBlank() && it != "Artistas" }
+                ?: algorithmSeeds.firstOrNull()?.subtitle?.takeIf { it.isNotBlank() && it != "Artistas" }
+                ?: algorithmSeeds.firstOrNull()?.title ?: ""
+
+            var fetchedElMundoDe: ElMundoDeArtist? = null
+            if (primaryArtist.isNotBlank() && primaryArtist != "Artistas") {
+                val albumsResult = YouTube.search(primaryArtist, com.echo.innertube.YouTube.SearchFilter.FILTER_ALBUM).getOrNull()
+                val albums = albumsResult?.items?.filterIsInstance<com.echo.innertube.models.AlbumItem>()?.distinctBy { it.id }?.take(15) ?: emptyList()
+                if (albums.isNotEmpty()) {
+                    fetchedElMundoDe = ElMundoDeArtist(artistName = primaryArtist, albums = albums)
+                }
+            }
+
+            // 2. Fetch results for "Para fiestas"
+            var fetchedParaFiestas: List<com.echo.innertube.models.YTItem> = emptyList()
+            val fiestaQuery = if (primaryArtist.isNotBlank() && primaryArtist != "Artistas") "Para la fiesta $primaryArtist" else "Fiesta"
+            val fiestaRes = YouTube.search(fiestaQuery, com.echo.innertube.YouTube.SearchFilter.FILTER_FEATURED_PLAYLIST).getOrNull()
+            val fiestaPlaylists = fiestaRes?.items?.filterIsInstance<com.echo.innertube.models.PlaylistItem>() ?: emptyList()
+            if (fiestaPlaylists.isNotEmpty()) {
+                fetchedParaFiestas = fiestaPlaylists.take(15)
+            } else {
+                val fiestaSongsRes = YouTube.search(fiestaQuery, com.echo.innertube.YouTube.SearchFilter.FILTER_SONG).getOrNull()
+                fetchedParaFiestas = fiestaSongsRes?.items?.filterIsInstance<SongItem>()?.take(15) ?: emptyList()
+            }
+
+            // 3. Generate "Playlists hechas para ti" (Image 1 style)
+            val allArtists = results.map { it.first }.filter { it.isNotBlank() && it != "Artistas" }
+            val relatedArtistNames = results.flatMap { it.third.map { a -> a.title } }.filter { it.isNotBlank() }
+            val allCombinedArtists = (allArtists + relatedArtistNames).distinct()
+
+            val topArtistsStr = allCombinedArtists.take(5).joinToString(", ") + if (allCombinedArtists.size > 5) " y más" else ""
+            val chillArtistsStr = allCombinedArtists.reversed().take(5).joinToString(", ") + if (allCombinedArtists.size > 5) " y más" else ""
+            val newMusicArtistsStr = allCombinedArtists.shuffled().take(5).joinToString(", ") + if (allCombinedArtists.size > 5) " y más" else ""
+            val workoutArtistsStr = allCombinedArtists.drop(2).take(5).joinToString(", ") + if (allCombinedArtists.size > 7) " y más" else ""
+
+            val allSongs = results.flatMap { it.second }
+
+            val generatedPlaylists = mutableListOf<MadeForYouPlaylist>()
+            if (allSongs.isNotEmpty()) {
+                val animateTitle = context.getString(R.string.playlist_animate_title)
+                val chillTitle = context.getString(R.string.playlist_chill_title)
+                val nuevaMusicaTitle = context.getString(R.string.playlist_nueva_musica_title)
+                val entrenarTitle = context.getString(R.string.playlist_entrenar_title)
+
+                val animateSub = if (allCombinedArtists.isNotEmpty()) {
+                    context.getString(R.string.and_more_artists, allCombinedArtists.take(5).joinToString(", "))
+                } else {
+                    context.getString(R.string.playlist_animate_fallback_artists)
+                }
+
+                val chillSub = if (allCombinedArtists.isNotEmpty()) {
+                    context.getString(R.string.and_more_artists, allCombinedArtists.reversed().take(5).joinToString(", "))
+                } else {
+                    context.getString(R.string.playlist_chill_fallback_artists)
+                }
+
+                val nuevaMusicaSub = if (allCombinedArtists.isNotEmpty()) {
+                    context.getString(R.string.and_more_artists, allCombinedArtists.shuffled().take(5).joinToString(", "))
+                } else {
+                    context.getString(R.string.playlist_nueva_musica_fallback_artists)
+                }
+
+                val entrenarSub = if (allCombinedArtists.isNotEmpty()) {
+                    context.getString(R.string.and_more_artists, allCombinedArtists.drop(2).take(5).joinToString(", "))
+                } else {
+                    context.getString(R.string.playlist_entrenar_fallback_artists)
+                }
+
+                generatedPlaylists.add(
+                    MadeForYouPlaylist(
+                        id = "made_for_you_animate",
+                        title = animateTitle,
+                        artistsSubtitle = animateSub,
+                        gradientColors = listOf(Color(0xFFE62B00), Color(0xFFFF4100), Color(0xFFC00000)),
+                        seedSong = allSongs.firstOrNull(),
+                        songs = allSongs.take(25)
+                    )
+                )
+                generatedPlaylists.add(
+                    MadeForYouPlaylist(
+                        id = "made_for_you_chill",
+                        title = chillTitle,
+                        artistsSubtitle = chillSub,
+                        gradientColors = listOf(Color(0xFF0F58A0), Color(0xFF1E88B5), Color(0xFF00897B)),
+                        seedSong = allSongs.drop(4).firstOrNull() ?: allSongs.firstOrNull(),
+                        songs = allSongs.drop(4).take(25)
+                    )
+                )
+                generatedPlaylists.add(
+                    MadeForYouPlaylist(
+                        id = "made_for_you_nueva_musica",
+                        title = nuevaMusicaTitle,
+                        artistsSubtitle = nuevaMusicaSub,
+                        gradientColors = listOf(Color(0xFFE24C78), Color(0xFFFF7597), Color(0xFFC2185B)),
+                        seedSong = allSongs.drop(8).firstOrNull() ?: allSongs.firstOrNull(),
+                        songs = allSongs.drop(8).take(25)
+                    )
+                )
+                generatedPlaylists.add(
+                    MadeForYouPlaylist(
+                        id = "made_for_you_entrenar",
+                        title = entrenarTitle,
+                        artistsSubtitle = entrenarSub,
+                        gradientColors = listOf(Color(0xFF5B2C8C), Color(0xFF8E24AA), Color(0xFFAB47BC)),
+                        seedSong = allSongs.drop(12).firstOrNull() ?: allSongs.firstOrNull(),
+                        songs = allSongs.drop(12).take(25)
+                    )
+                )
+                MadeForYouRepository.registerAll(generatedPlaylists)
+            }
+
+            // 4. Generate "Estaciones para ti" (Image 2 style)
+            val stationColors = listOf(
+                Color(0xFF194A8D), // Blue
+                Color(0xFFA31D24), // Crimson
+                Color(0xFF4A1525), // Burgundy
+                Color(0xFF36433E), // Slate olive
+                Color(0xFF5A3825), // Brown/ochre
+                Color(0xFF1B4D3E)  // Forest
+            )
+
+            val generatedStations = mutableListOf<ArtistStation>()
+            if (allSongs.isNotEmpty()) {
+                val username = LibraryManager.getString("spotify_user_name", "")?.ifBlank { "RayMusic" } ?: "RayMusic"
+                generatedStations.add(
+                    ArtistStation(
+                        id = "station_personal",
+                        title = context.getString(R.string.estacion_personal, username),
+                        subtitle = "",
+                        primaryThumb = null,
+                        secondaryThumbs = emptyList(),
+                        backgroundColor = Color(0xFFFF3B30),
+                        isPersonal = true,
+                        candidateSongs = allSongs.shuffled()
+                    )
+                )
+
+                val discoveryPool = (results.flatMap { it.third.flatMap { a -> allSongs.filter { s -> s.artists.any { art -> art.name.contains(a.title, ignoreCase = true) } } } } + allSongs.shuffled()).distinctBy { it.id }.ifEmpty { allSongs.shuffled() }
+                generatedStations.add(
+                    ArtistStation(
+                        id = "station_discovery",
+                        title = context.getString(R.string.estacion_por_descubrir),
+                        subtitle = "",
+                        primaryThumb = null,
+                        secondaryThumbs = emptyList(),
+                        backgroundColor = Color(0xFF5856D6),
+                        isDiscovery = true,
+                        candidateSongs = discoveryPool
+                    )
+                )
+
+                results.forEachIndexed { i, (seedArtist, songs, relatedArtists) ->
+                    if (seedArtist.isNotBlank() && seedArtist != "Artistas") {
+                        val mainThumb = relatedArtists.firstOrNull()?.thumbnail ?: songs.firstOrNull()?.thumbnail
+                        val secThumbs = relatedArtists.drop(1).mapNotNull { it.thumbnail }.take(2).let { list ->
+                            if (list.size < 2) {
+                                (list + songs.drop(1).mapNotNull { it.thumbnail }).take(2)
+                            } else list
+                        }
+                        val color = stationColors[i % stationColors.size]
+                        val artistSongPool = songs.ifEmpty { allSongs.filter { s -> s.artists.any { it.name.contains(seedArtist, ignoreCase = true) } } }
+                        generatedStations.add(
+                            ArtistStation(
+                                id = "station_${seedArtist.trim()}",
+                                title = seedArtist,
+                                subtitle = context.getString(R.string.y_artistas_similares, seedArtist),
+                                primaryThumb = mainThumb,
+                                secondaryThumbs = secThumbs,
+                                backgroundColor = color,
+                                isPersonal = false,
+                                isDiscovery = false,
+                                candidateSongs = artistSongPool
+                            )
+                        )
+                    }
+                }
+            }
+
+            val uniqueStations = generatedStations.distinctBy { it.id }
+
             withContext(Dispatchers.Main) {
+                if (fetchedElMundoDe != null) {
+                    state.elMundoDeArtist = fetchedElMundoDe
+                }
+                if (fetchedParaFiestas.isNotEmpty()) {
+                    state.paraFiestasItems = fetchedParaFiestas
+                }
+                if (generatedPlaylists.isNotEmpty()) {
+                    state.madeForYouPlaylists = generatedPlaylists
+                }
+                if (uniqueStations.isNotEmpty()) {
+                    state.artistStations = uniqueStations
+                }
+
                 if (allQuickPicks.isNotEmpty()) {
                     state.quickPickSongs = allQuickPicks.distinctBy { it.id }.shuffled().take(12)
                 }
@@ -390,13 +608,14 @@ fun InicioScreen(
                     state.seleccionesParaTi = allParaTi.distinctBy { it.id }.shuffled().take(20)
                 }
                 if (porqueEscuchasteList.isNotEmpty()) {
-                    state.porqueEscuchasteSections = porqueEscuchasteList.distinctBy { it.artistName }
+                    // Strictly limit to 2 sections
+                    state.porqueEscuchasteSections = porqueEscuchasteList.distinctBy { it.artistName }.take(2)
                 }
 
                 if (results.isNotEmpty()) {
-                    val primaryArtist = results.first().first
-                    if (primaryArtist.isNotEmpty() && primaryArtist != "Artistas") {
-                        state.seleccionesTitle = primaryArtist
+                    val primarySeedArtist = results.first().first
+                    if (primarySeedArtist.isNotEmpty() && primarySeedArtist != "Artistas") {
+                        state.seleccionesTitle = primarySeedArtist
                     }
                 }
 
@@ -418,10 +637,10 @@ fun InicioScreen(
                     state.featuredPlaylists = combinedPlaylists.shuffled().take(10)
                 }
 
-                // Merge similar sections from seeds and homePage
+                // Merge similar sections from seeds and homePage — strictly limit to 2 sections
                 if (sections.isNotEmpty()) {
                     val currentSimilar = state.similarSections
-                    state.similarSections = (sections + currentSimilar).distinctBy { it.artistName }.take(12)
+                    state.similarSections = (sections + currentSimilar).distinctBy { it.artistName }.take(2)
                 }
 
                 // Cache the updated recommendations
@@ -515,15 +734,15 @@ fun InicioScreen(
                     items(
                         count = displaySuggestions.take(15).size,
                         key = { index ->
-                            displaySuggestions[index].let {
-                                when (it) {
-                                    is com.echo.innertube.models.SongItem -> it.id
-                                    is com.echo.innertube.models.AlbumItem -> it.id
-                                    is com.echo.innertube.models.ArtistItem -> it.id
-                                    is com.echo.innertube.models.PlaylistItem -> it.id
-                                    else -> "$index"
-                                }
+                            val item = displaySuggestions.getOrNull(index)
+                            val baseId = when (item) {
+                                is com.echo.innertube.models.SongItem -> item.id
+                                is com.echo.innertube.models.AlbumItem -> item.id
+                                is com.echo.innertube.models.ArtistItem -> item.id
+                                is com.echo.innertube.models.PlaylistItem -> item.id
+                                else -> "$index"
                             }
+                            "${baseId}_$index"
                         },
                         contentType = { "suggestion_card" }
                     ) { index ->
@@ -545,81 +764,7 @@ fun InicioScreen(
 
 
         // ═══════════════════════════════════════════════════════════
-        // QUICK PICKS — "Selecciones rápidas"
-        // ═══════════════════════════════════════════════════════════
-        if (state.quickPickSongs.isNotEmpty()) {
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(stringResource(R.string.selecciones_rapidas), color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                    Row(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(Color(0xFF2C2C2E))
-                            .clickable {
-                                if (state.quickPickSongs.isNotEmpty()) {
-                                    val first = state.quickPickSongs.first()
-                                    val hdThumb = upgradeThumbHD(first.thumbnail)
-                                    onSongSelected(PlayerState(title = first.title, artist = first.artists.joinToString { it.name }, artUrl = hdThumb, videoId = first.id))
-                                }
-                            }
-                            .padding(horizontal = 14.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = "Play all", tint = Color.White, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(stringResource(R.string.play_all), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            item {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    items(
-                        count = state.quickPickSongs.size,
-                        key = { index -> state.quickPickSongs[index].id },
-                        contentType = { "quick_pick" }
-                    ) { index ->
-                        val song = state.quickPickSongs[index]
-                        val hdThumb = upgradeThumb(song.thumbnail)
-                        Column(
-                            modifier = Modifier
-                                .width(180.dp)
-                                .clickable {
-                                    onSongSelected(PlayerState(
-                                        title = song.title,
-                                        artist = song.artists.joinToString { it.name },
-                                        artUrl = upgradeThumbHD(song.thumbnail),
-                                        videoId = song.id
-                                    ))
-                                }
-                        ) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
-                                contentDescription = song.title,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.size(180.dp).clip(RoundedCornerShape(12.dp))
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(song.title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(song.artists.joinToString { it.name }, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                    }
-                }
-            }
-
-            item { Spacer(modifier = Modifier.height(24.dp)) }
-        }
-
-        // ═══════════════════════════════════════════════════════════
-        // KEEP LISTENING — "Sigue escuchando" (2-row horizontal grid)
+        // ESCUCHADO RECIENTEMENTE (Anteriormente "Sigue escuchando")
         // ═══════════════════════════════════════════════════════════
         if (recentlyPlayed.isNotEmpty()) {
             item {
@@ -634,7 +779,7 @@ fun InicioScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(stringResource(R.string.sigue_escuchando), color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.escuchado_recientemente), color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                     Icon(Icons.Default.ChevronRight, contentDescription = "More", tint = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor)
                 }
                 Spacer(modifier = Modifier.height(12.dp))
@@ -645,7 +790,7 @@ fun InicioScreen(
                     val itemsToDisplay = recentlyPlayed.take(20)
                     items(
                         count = itemsToDisplay.size,
-                        key = { index -> itemsToDisplay[index].id },
+                        key = { index -> "${itemsToDisplay.getOrNull(index)?.id ?: index}_$index" },
                         contentType = { "recent_item" }
                     ) { index ->
                         val item = itemsToDisplay[index]
@@ -707,15 +852,254 @@ fun InicioScreen(
         }
 
         // ═══════════════════════════════════════════════════════════
-        // SIMILAR TO [ARTIST] — Multiple sections (Playlist destacada dynamically embedded)
+        // EL MUNDO DE [ARTISTA] — Álbumes del artista que escuchó
         // ═══════════════════════════════════════════════════════════
-        val similarSections = state.similarSections
-        val showPlaylistDestacadaAfterIndex = if (similarSections.size >= 3) 2 else similarSections.size - 1
+        val elMundoDe = state.elMundoDeArtist
+        if (elMundoDe != null && elMundoDe.albums.isNotEmpty()) {
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.el_mundo_de, elMundoDe.artistName),
+                        color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    items(
+                        count = elMundoDe.albums.size,
+                        key = { index -> "${elMundoDe.albums.getOrNull(index)?.id ?: index}_$index" },
+                        contentType = { "mundo_album" }
+                    ) { index ->
+                        val album = elMundoDe.albums[index]
+                        val hdThumb = upgradeThumb(album.thumbnail)
+                        var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+                        Column(
+                            modifier = Modifier
+                                .width(180.dp)
+                                .wiggleOnScroll(album.id, lazyListState = listState)
+                                .clickable {
+                                    SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
+                                    SharedTransitionState.lastOpenedId = album.id
+                                    onAlbumSelected(
+                                        AlbumState(
+                                            id = album.id,
+                                            playlistId = album.playlistId ?: album.id,
+                                            title = album.title,
+                                            artist = elMundoDe.artistName,
+                                            thumbnail = hdThumb,
+                                            year = album.year as? Int ?: album.year?.toString()?.toIntOrNull()
+                                        )
+                                    )
+                                }
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                                contentDescription = album.title,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(180.dp)
+                                    .onGloballyPositioned { coords ->
+                                        imageCoords = coords
+                                        val bounds = coords.unclippedBoundsInRoot()
+                                        if (bounds.width > 0f && bounds.height > 0f) {
+                                            SharedTransitionState.carouselItemBounds[album.id] = bounds
+                                        }
+                                    }
+                                    .graphicsLayer {
+                                        alpha = if (SharedTransitionState.animatingItemIds.contains(album.id) || (SharedTransitionState.isDetailOpen && SharedTransitionState.lastOpenedId == album.id)) 0f else 1f
+                                    }
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFF1C1C1E))
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = album.title,
+                                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            val yearStr = album.year?.toString()?.let { " • $it" } ?: ""
+                            Text(
+                                text = "Álbum$yearStr",
+                                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor,
+                                fontSize = 13.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
 
-        if (similarSections.isEmpty() && state.featuredPlaylists.isNotEmpty()) {
+        // ═══════════════════════════════════════════════════════════
+        // PARA FIESTAS — Resultados de YouTube Music según su estilo
+        // ═══════════════════════════════════════════════════════════
+        if (state.paraFiestasItems.isNotEmpty()) {
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.para_fiestas),
+                        color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    val fiestaItems = state.paraFiestasItems
+                    items(
+                        count = fiestaItems.size,
+                        key = { index ->
+                            val itm = fiestaItems.getOrNull(index)
+                            val baseId = when (itm) {
+                                is PlaylistItem -> itm.id
+                                is SongItem -> itm.id
+                                is com.echo.innertube.models.AlbumItem -> itm.id
+                                else -> "$index"
+                            }
+                            "${baseId}_$index"
+                        },
+                        contentType = { "fiesta_item" }
+                    ) { index ->
+                        val itm = fiestaItems[index]
+                        val thumb = upgradeThumb(
+                            when (itm) {
+                                is PlaylistItem -> itm.thumbnail
+                                is SongItem -> itm.thumbnail
+                                is com.echo.innertube.models.AlbumItem -> itm.thumbnail
+                                else -> null
+                            }
+                        )
+                        val title = when (itm) {
+                            is PlaylistItem -> itm.title
+                            is SongItem -> itm.title
+                            is com.echo.innertube.models.AlbumItem -> itm.title
+                            else -> ""
+                        }
+                        val subtitle = when (itm) {
+                            is PlaylistItem -> itm.author?.name ?: "Playlist"
+                            is SongItem -> itm.artists.joinToString { it.name }
+                            is com.echo.innertube.models.AlbumItem -> itm.artists?.joinToString { it.name } ?: "Álbum"
+                            else -> ""
+                        }
+                        var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+                        Column(
+                            modifier = Modifier
+                                .width(180.dp)
+                                .wiggleOnScroll(
+                                    when (itm) {
+                                        is PlaylistItem -> itm.id
+                                        is SongItem -> itm.id
+                                        is com.echo.innertube.models.AlbumItem -> itm.id
+                                        else -> "$index"
+                                    },
+                                    lazyListState = listState
+                                )
+                                .clickable {
+                                    SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
+                                    when (itm) {
+                                        is PlaylistItem -> {
+                                            SharedTransitionState.lastOpenedId = itm.id
+                                            onAlbumSelected(
+                                                AlbumState(
+                                                    id = itm.id,
+                                                    playlistId = itm.id,
+                                                    title = itm.title,
+                                                    artist = itm.author?.name ?: "Playlist",
+                                                    thumbnail = thumb,
+                                                    year = null
+                                                )
+                                            )
+                                        }
+                                        is SongItem -> {
+                                            onSongSelected(
+                                                PlayerState(
+                                                    title = itm.title,
+                                                    artist = itm.artists.joinToString { it.name },
+                                                    artUrl = upgradeThumbHD(itm.thumbnail),
+                                                    videoId = itm.id
+                                                )
+                                            )
+                                        }
+                                        is com.echo.innertube.models.AlbumItem -> {
+                                            SharedTransitionState.lastOpenedId = itm.id
+                                            onAlbumSelected(
+                                                AlbumState(
+                                                    id = itm.id,
+                                                    playlistId = itm.playlistId ?: itm.id,
+                                                    title = itm.title,
+                                                    artist = itm.artists?.joinToString { it.name } ?: "",
+                                                    thumbnail = thumb,
+                                                    year = itm.year as? Int ?: itm.year?.toString()?.toIntOrNull()
+                                                )
+                                            )
+                                        }
+                                        else -> {}
+                                    }
+                                }
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context).data(thumb).crossfade(true).build(),
+                                contentDescription = title,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(180.dp)
+                                    .onGloballyPositioned { imageCoords = it }
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFF1C1C1E))
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = title,
+                                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = subtitle,
+                                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor,
+                                fontSize = 13.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // PLAYLISTS HECHAS PARA TI (Imagen 1 style — RayMusic)
+        // ═══════════════════════════════════════════════════════════
+        if (state.madeForYouPlaylists.isNotEmpty()) {
             item {
                 Text(
-                    text = stringResource(R.string.playlist_destacada),
+                    text = stringResource(R.string.playlists_hechas_para_ti),
                     color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
@@ -723,289 +1107,240 @@ fun InicioScreen(
                 )
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    items(state.featuredPlaylists.size) { playlistIndex ->
-                        val playlist = state.featuredPlaylists[playlistIndex]
-                        val hdThumb = upgradeThumb(playlist.thumbnail)
+                    val playlists = state.madeForYouPlaylists
+                    items(
+                        count = playlists.size,
+                        key = { index -> "${playlists.getOrNull(index)?.id ?: index}_$index" },
+                        contentType = { "made_for_you_playlist" }
+                    ) { index ->
+                        val pl = playlists[index]
                         var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
-                        
-                        Column(
+                        MadeForYouPlaylistCard(
+                            playlist = pl,
                             modifier = Modifier
-                                .width(320.dp)
-                                .wiggleOnScroll(playlist.id, lazyListState = listState)
-                                .clickable {
-                                    SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
-                                    SharedTransitionState.lastOpenedId = playlist.id
-                                    onAlbumSelected(AlbumState(
-                                        id = playlist.id,
-                                        playlistId = playlist.id,
-                                        title = playlist.title,
-                                        artist = playlist.author?.name ?: "Playlist",
-                                        thumbnail = playlist.thumbnail,
-                                        year = null
-                                    ))
+                                .wiggleOnScroll(pl.id, lazyListState = listState)
+                                .onGloballyPositioned { coords ->
+                                    imageCoords = coords
+                                    val bounds = coords.unclippedBoundsInRoot()
+                                    if (bounds.width > 0f && bounds.height > 0f) {
+                                        SharedTransitionState.carouselItemBounds[pl.id] = bounds
+                                    }
                                 }
-                        ) {
-                            Text(
-                                text = stringResource(R.string.nos_encanta),
-                                color = Color(0xFFFA243C).copy(alpha = 0.9f),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "\"${playlist.title}\"",
-                                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(320.dp)
-                                    .onGloballyPositioned { imageCoords = it }
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(Color(0xFF1C1C1E))
-                            ) {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
-                                    contentDescription = playlist.title,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(
-                                            Brush.verticalGradient(
-                                                colors = listOf(
-                                                    Color.Transparent,
-                                                    Color.Black.copy(alpha = 0.4f)
-                                                ),
-                                                startY = 300f
-                                            )
-                                        )
+                                .graphicsLayer {
+                                    alpha = if (SharedTransitionState.animatingItemIds.contains(pl.id) || (SharedTransitionState.isDetailOpen && SharedTransitionState.lastOpenedId == pl.id)) 0f else 1f
+                                },
+                            onSelected = {
+                                SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
+                                SharedTransitionState.lastOpenedId = pl.id
+                                onAlbumSelected(
+                                    AlbumState(
+                                        id = pl.id,
+                                        playlistId = pl.id,
+                                        title = pl.title,
+                                        artist = pl.artistsSubtitle,
+                                        thumbnail = null,
+                                        year = null
+                                    )
                                 )
                             }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // ESTACIONES PARA TI (Imagen 2 style — RayMusic burbujas y radio)
+        // ═══════════════════════════════════════════════════════════
+        if (state.artistStations.isNotEmpty()) {
+            item {
+                Text(
+                    text = stringResource(R.string.estaciones_para_ti),
+                    color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+                )
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    val stations = state.artistStations.distinctBy { it.id }
+                    items(
+                        count = stations.size,
+                        key = { index -> "${stations.getOrNull(index)?.id ?: index}_$index" },
+                        contentType = { "artist_station" }
+                    ) { index ->
+                        val station = stations[index]
+                        ArtistStationCard(
+                            context = context,
+                            station = station,
+                            onSelected = {
+                                val songs = station.candidateSongs
+                                if (songs.isNotEmpty()) {
+                                    val currentIdx = stationPlayIndices[station.id] ?: -1
+                                    val nextIdx = (currentIdx + 1) % songs.size
+                                    stationPlayIndices[station.id] = nextIdx
+                                    val song = songs[nextIdx]
+                                    val stationQueue = (songs.drop(nextIdx + 1) + songs.take(nextIdx)).map { s ->
+                                        QueueItem(
+                                            title = s.title,
+                                            artist = s.artists.joinToString { it.name },
+                                            artUrl = upgradeThumbHD(s.thumbnail),
+                                            videoId = s.id,
+                                            album = s.album?.name
+                                        )
+                                    }
+                                    onSongSelected(
+                                        PlayerState(
+                                            title = song.title,
+                                            artist = song.artists.joinToString { it.name },
+                                            artUrl = upgradeThumbHD(song.thumbnail),
+                                            videoId = song.id,
+                                            queue = stationQueue,
+                                            isExclusiveQueue = true,
+                                            album = song.album?.name
+                                        )
+                                    )
+                                }
+                            }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // SIMILAR A [ARTISTA] — Estrictamente 2 secciones
+        // ═══════════════════════════════════════════════════════════
+        val similarSectionsToDisplay = state.similarSections.take(2)
+        similarSectionsToDisplay.forEachIndexed { index, section ->
+            item {
+                Text(stringResource(R.string.similar_a), color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 16.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            similarSectionSnapshotBounds = SharedTransitionState.carouselItemBounds.toMap()
+                            activeSimilarSection = section
+                        }
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(section.artistName, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Icon(Icons.Default.ChevronRight, contentDescription = "More", tint = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor)
+                }
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    items(section.items.size) { idx ->
+                        val item = section.items[idx]
+                        val hdThumb = upgradeThumb(
+                            when (item) {
+                                is com.echo.innertube.models.ArtistItem -> item.thumbnail
+                                is com.echo.innertube.models.SongItem -> item.thumbnail
+                                is com.echo.innertube.models.AlbumItem -> item.thumbnail
+                                else -> null
+                            }
+                        )
+                        val title = when (item) {
+                            is com.echo.innertube.models.ArtistItem -> item.title
+                            is com.echo.innertube.models.SongItem -> item.title
+                            is com.echo.innertube.models.AlbumItem -> item.title
+                            else -> "Desconocido"
+                        }
+                        val subtitle = when (item) {
+                            is com.echo.innertube.models.ArtistItem -> "Artista"
+                            is com.echo.innertube.models.SongItem -> "Canción • ${item.artists.joinToString { it.name }}"
+                            is com.echo.innertube.models.AlbumItem -> "Álbum • ${item.year ?: ""}"
+                            else -> ""
+                        }
+                        val isCircle = item is com.echo.innertube.models.ArtistItem
+                        var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+                        Column(
+                            modifier = Modifier
+                                .width(180.dp)
+                                .wiggleOnScroll(item.id, lazyListState = listState)
+                                .clickable {
+                                    SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
+                                    when (item) {
+                                        is com.echo.innertube.models.ArtistItem -> {
+                                            SharedTransitionState.lastOpenedId = item.id
+                                            onArtistSelected(com.mrtdk.liquid_glass.ui.screens.ArtistState(item.id, item.title, item.thumbnail))
+                                        }
+                                        is com.echo.innertube.models.SongItem -> {
+                                            onSongSelected(PlayerState(item.title, item.artists.joinToString { it.name }, item.thumbnail, item.id, album = item.album?.name, albumId = item.album?.id))
+                                        }
+                                        is com.echo.innertube.models.AlbumItem -> {
+                                            SharedTransitionState.lastOpenedId = item.id
+                                            onAlbumSelected(com.mrtdk.liquid_glass.ui.screens.AlbumState(item.id, item.playlistId ?: item.id, item.title, item.artists?.joinToString { it.name } ?: "Varios", item.thumbnail, item.year as? Int))
+                                        }
+                                        else -> {}
+                                    }
+                                }
+                        ) {
+                            if (isCircle) {
+                                com.mrtdk.liquid_glass.spotify.SpotifyArtistAvatar(
+                                    artistName = title,
+                                    fallbackUrl = hdThumb,
+                                    contentDescription = title,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .size(180.dp)
+                                        .onGloballyPositioned { coords ->
+                                            imageCoords = coords
+                                            val bounds = coords.unclippedBoundsInRoot()
+                                            if (bounds.width > 0f && bounds.height > 0f) {
+                                                SharedTransitionState.carouselItemBounds[item.id] = bounds
+                                            }
+                                        }
+                                        .clip(CircleShape)
+                                        .graphicsLayer {
+                                            alpha = if (SharedTransitionState.animatingItemIds.contains(item.id)) 0f else 1f
+                                        }
+                                )
+                            } else {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                                    contentDescription = title,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .size(180.dp)
+                                        .onGloballyPositioned { coords ->
+                                            imageCoords = coords
+                                            val bounds = coords.unclippedBoundsInRoot()
+                                            if (bounds.width > 0f && bounds.height > 0f) {
+                                                SharedTransitionState.carouselItemBounds[item.id] = bounds
+                                            }
+                                        }
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .graphicsLayer {
+                                            alpha = if (SharedTransitionState.animatingItemIds.contains(item.id)) 0f else 1f
+                                        }
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(subtitle, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
                 Spacer(modifier = Modifier.height(32.dp))
             }
-        } else {
-            similarSections.forEachIndexed { index, section ->
-                item {
-                    Text(stringResource(R.string.similar_a), color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 16.dp))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                similarSectionSnapshotBounds = SharedTransitionState.carouselItemBounds.toMap()
-                                activeSimilarSection = section
-                            }
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(section.artistName, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                        Icon(Icons.Default.ChevronRight, contentDescription = "More", tint = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor)
-                    }
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        items(section.items.size) { idx ->
-                            val item = section.items[idx]
-                            val hdThumb = upgradeThumb(
-                                when (item) {
-                                    is com.echo.innertube.models.ArtistItem -> item.thumbnail
-                                    is com.echo.innertube.models.SongItem -> item.thumbnail
-                                    is com.echo.innertube.models.AlbumItem -> item.thumbnail
-                                    else -> null
-                                }
-                            )
-                            val title = when (item) {
-                                is com.echo.innertube.models.ArtistItem -> item.title
-                                is com.echo.innertube.models.SongItem -> item.title
-                                is com.echo.innertube.models.AlbumItem -> item.title
-                                else -> "Desconocido"
-                            }
-                            val subtitle = when (item) {
-                                is com.echo.innertube.models.ArtistItem -> "Artista"
-                                is com.echo.innertube.models.SongItem -> "Canción • ${item.artists.joinToString { it.name }}"
-                                is com.echo.innertube.models.AlbumItem -> "Álbum • ${item.year ?: ""}"
-                                else -> ""
-                            }
-                            val isCircle = item is com.echo.innertube.models.ArtistItem
-                            var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
-                            Column(
-                                modifier = Modifier
-                                    .width(180.dp)
-                                    .wiggleOnScroll(item.id, lazyListState = listState)
-                                    .clickable {
-                                        SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
-                                        when (item) {
-                                            is com.echo.innertube.models.ArtistItem -> {
-                                                SharedTransitionState.lastOpenedId = item.id
-                                                onArtistSelected(com.mrtdk.liquid_glass.ui.screens.ArtistState(item.id, item.title, item.thumbnail))
-                                            }
-                                            is com.echo.innertube.models.SongItem -> {
-                                                onSongSelected(PlayerState(item.title, item.artists.joinToString { it.name }, item.thumbnail, item.id))
-                                            }
-                                            is com.echo.innertube.models.AlbumItem -> {
-                                                SharedTransitionState.lastOpenedId = item.id
-                                                onAlbumSelected(com.mrtdk.liquid_glass.ui.screens.AlbumState(item.id, item.playlistId ?: item.id, item.title, item.artists?.joinToString { it.name } ?: "Varios", item.thumbnail, item.year as? Int))
-                                            }
-                                            else -> {}
-                                        }
-                                    }
-                            ) {
-                                if (isCircle) {
-                                    com.mrtdk.liquid_glass.spotify.SpotifyArtistAvatar(
-                                        artistName = title,
-                                        fallbackUrl = hdThumb,
-                                        contentDescription = title,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier
-                                            .size(180.dp)
-                                            .onGloballyPositioned { coords ->
-                                                imageCoords = coords
-                                                val bounds = coords.unclippedBoundsInRoot()
-                                                if (bounds.width > 0f && bounds.height > 0f) {
-                                                    SharedTransitionState.carouselItemBounds[item.id] = bounds
-                                                }
-                                            }
-                                            .clip(CircleShape)
-                                            .graphicsLayer {
-                                                alpha = if (SharedTransitionState.animatingItemIds.contains(item.id)) 0f else 1f
-                                            }
-                                    )
-                                } else {
-                                    AsyncImage(
-                                        model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
-                                        contentDescription = title,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier
-                                            .size(180.dp)
-                                            .onGloballyPositioned { coords ->
-                                                imageCoords = coords
-                                                val bounds = coords.unclippedBoundsInRoot()
-                                                if (bounds.width > 0f && bounds.height > 0f) {
-                                                    SharedTransitionState.carouselItemBounds[item.id] = bounds
-                                                }
-                                            }
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .graphicsLayer {
-                                                alpha = if (SharedTransitionState.animatingItemIds.contains(item.id)) 0f else 1f
-                                            }
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(subtitle, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(32.dp))
-                }
-
-                if (index == showPlaylistDestacadaAfterIndex && state.featuredPlaylists.isNotEmpty()) {
-                    item {
-                        Text(
-                            text = stringResource(R.string.playlist_destacada),
-                            color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
-                        )
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            items(state.featuredPlaylists.size) { playlistIndex ->
-                                val playlist = state.featuredPlaylists[playlistIndex]
-                                val hdThumb = upgradeThumb(playlist.thumbnail)
-                                var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
-                                
-                                Column(
-                                    modifier = Modifier
-                                        .width(320.dp)
-                                        .wiggleOnScroll(playlist.id, lazyListState = listState)
-                                        .clickable {
-                                            SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
-                                            SharedTransitionState.lastOpenedId = playlist.id
-                                            onAlbumSelected(AlbumState(
-                                                id = playlist.id,
-                                                playlistId = playlist.id,
-                                                title = playlist.title,
-                                                artist = playlist.author?.name ?: "Playlist",
-                                                thumbnail = playlist.thumbnail,
-                                                year = null
-                                            ))
-                                        }
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.nos_encanta),
-                                        color = Color(0xFFFA243C).copy(alpha = 0.9f),
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = "\"${playlist.title}\"",
-                                        color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
-                                        fontSize = 20.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Spacer(modifier = Modifier.height(10.dp))
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(320.dp)
-                                            .onGloballyPositioned { imageCoords = it }
-                                            .clip(RoundedCornerShape(16.dp))
-                                            .background(Color(0xFF1C1C1E))
-                                    ) {
-                                        AsyncImage(
-                                            model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
-                                            contentDescription = playlist.title,
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier.fillMaxSize()
-                                        )
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .background(
-                                                    Brush.verticalGradient(
-                                                        colors = listOf(
-                                                            Color.Transparent,
-                                                            Color.Black.copy(alpha = 0.4f)
-                                                        ),
-                                                        startY = 300f
-                                                    )
-                                                )
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(32.dp))
-                    }
-                }
-            }
         }
 
-        // (Old Escuchado Recientemente block removed in favor of Sigue escuchando)
-
         // ═══════════════════════════════════════════════════════════
-        // Secciones "Porque escuchaste a..." (Dynamic multiple sections)
+        // PORQUE ESCUCHASTE A [ARTISTA] — Estrictamente 2 secciones
         // ═══════════════════════════════════════════════════════════
-        if (state.porqueEscuchasteSections.isNotEmpty()) {
-            state.porqueEscuchasteSections.forEach { section ->
+        val porqueEscuchasteToDisplay = state.porqueEscuchasteSections.take(2)
+        if (porqueEscuchasteToDisplay.isNotEmpty()) {
+            porqueEscuchasteToDisplay.forEach { section ->
                 item {
                     Row(
                         modifier = Modifier
@@ -1036,7 +1371,7 @@ fun InicioScreen(
                             Column(
                                 modifier = Modifier.width(180.dp).clickable {
                                     SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
-                                    onSongSelected(PlayerState(title = song.title, artist = song.artists.joinToString { it.name }, artUrl = upgradeThumbHD(song.thumbnail), videoId = song.id))
+                                    onSongSelected(PlayerState(title = song.title, artist = song.artists.joinToString { it.name }, artUrl = upgradeThumbHD(song.thumbnail), videoId = song.id, album = song.album?.name, albumId = song.album?.id))
                                 }
                             ) {
                                 Box(
@@ -1103,7 +1438,7 @@ fun InicioScreen(
                         Column(
                             modifier = Modifier.width(180.dp).clickable {
                                 SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
-                                onSongSelected(PlayerState(title = song.title, artist = song.artists.joinToString { it.name }, artUrl = upgradeThumbHD(song.thumbnail), videoId = song.id))
+                                onSongSelected(PlayerState(title = song.title, artist = song.artists.joinToString { it.name }, artUrl = upgradeThumbHD(song.thumbnail), videoId = song.id, album = song.album?.name, albumId = song.album?.id))
                             }
                         ) {
                             Box(
@@ -1137,120 +1472,6 @@ fun InicioScreen(
                     }
                 }
                 Spacer(modifier = Modifier.height(32.dp))
-            }
-        }
-
-        // ═══════════════════════════════════════════════════════════
-        // YouTube Music Home Page Sections (skip first since we used it for featured)
-        // ═══════════════════════════════════════════════════════════
-        if (state.homePage != null) {
-            // Skip first section since it's used for featured cards
-            state.homePage!!.sections.drop(1).forEach { section ->
-                if (section.items.isNotEmpty()) {
-                    item {
-                        SectionTitle(section.title, isDark = true, small = false)
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(14.dp)
-                        ) {
-                            items(section.items.size) { index ->
-                                val itm = section.items[index]
-                                var titleStr = ""
-                                var subtitleStr = ""
-                                var thumbUrl: String? = null
-                                var clickAction: () -> Unit = {}
-                                var isCircle = false
-
-                                when (itm) {
-                                    is com.echo.innertube.models.SongItem -> {
-                                        titleStr = itm.title
-                                        subtitleStr = itm.artists.joinToString { it.name }
-                                        thumbUrl = itm.thumbnail
-                                        clickAction = {
-                                            onSongSelected(PlayerState(title = titleStr, artist = subtitleStr, artUrl = upgradeThumbHD(thumbUrl), videoId = itm.id))
-                                        }
-                                    }
-                                    is com.echo.innertube.models.AlbumItem -> {
-                                        titleStr = itm.title
-                                        subtitleStr = itm.artists?.joinToString { it.name } ?: "Album"
-                                        thumbUrl = itm.thumbnail
-                                        clickAction = {
-                                            SharedTransitionState.lastOpenedId = itm.id
-                                            onAlbumSelected(AlbumState(id = itm.id, playlistId = itm.playlistId ?: itm.id, title = titleStr, artist = subtitleStr, thumbnail = thumbUrl, year = itm.year as? Int ?: itm.year?.toString()?.toIntOrNull()))
-                                        }
-                                    }
-                                    is com.echo.innertube.models.ArtistItem -> {
-                                        titleStr = itm.title
-                                        subtitleStr = "Artist"
-                                        thumbUrl = itm.thumbnail
-                                        isCircle = true
-                                        clickAction = {
-                                            SharedTransitionState.lastOpenedId = itm.id
-                                            onArtistSelected(ArtistState(id = itm.id, name = titleStr, thumbnail = thumbUrl))
-                                        }
-                                    }
-                                    is com.echo.innertube.models.PlaylistItem -> {
-                                        titleStr = itm.title
-                                        subtitleStr = itm.author?.name ?: "Playlist"
-                                        thumbUrl = itm.thumbnail
-                                        clickAction = {
-                                            SharedTransitionState.lastOpenedId = itm.id
-                                            onAlbumSelected(AlbumState(id = itm.id, playlistId = itm.id, title = titleStr, artist = subtitleStr, thumbnail = thumbUrl, year = null))
-                                        }
-                                    }
-                                    is com.echo.innertube.models.EpisodeItem -> {
-                                        titleStr = itm.title
-                                        subtitleStr = itm.author?.name ?: "Podcast"
-                                        thumbUrl = itm.thumbnail
-                                    }
-                                    is com.echo.innertube.models.PodcastItem -> {
-                                        titleStr = itm.title
-                                        subtitleStr = itm.author?.name ?: "Podcast"
-                                        thumbUrl = itm.thumbnail
-                                        clickAction = {
-                                            SharedTransitionState.lastOpenedId = itm.id
-                                            onAlbumSelected(AlbumState(id = itm.id, playlistId = itm.id, title = titleStr, artist = subtitleStr, thumbnail = thumbUrl, year = null))
-                                        }
-                                    }
-                                    else -> {}
-                                }
-
-                                val hdThumb = upgradeThumb(thumbUrl)
-
-                                // Standard card (180dp for consistency with recently played)
-                                var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
-                                Column(
-                                    modifier = Modifier
-                                        .width(180.dp)
-                                        .wiggleOnScroll(itm.id, lazyListState = listState)
-                                        .clickable {
-                                            SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
-                                            clickAction()
-                                        }
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(180.dp)
-                                            .onGloballyPositioned { imageCoords = it }
-                                            .clip(if (isCircle) CircleShape else RoundedCornerShape(12.dp))
-                                            .background(Color(0xFF1C1C1E))
-                                    ) {
-                                        AsyncImage(
-                                            model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
-                                            contentDescription = titleStr,
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier.fillMaxSize()
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(titleStr, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text(subtitleStr, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                }
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(32.dp))
-                    }
-                }
             }
         }
 
@@ -1423,7 +1644,7 @@ fun InicioScreen(
                                             onArtistSelected(com.mrtdk.liquid_glass.ui.screens.ArtistState(item.id, item.title, item.thumbnail))
                                         }
                                         is com.echo.innertube.models.SongItem -> {
-                                            onSongSelected(PlayerState(item.title, item.artists.joinToString { it.name }, upgradeThumbHD(item.thumbnail), item.id))
+                                            onSongSelected(PlayerState(item.title, item.artists.joinToString { it.name }, upgradeThumbHD(item.thumbnail), item.id, album = item.album?.name, albumId = item.album?.id))
                                         }
                                         is com.echo.innertube.models.AlbumItem -> {
                                             SharedTransitionState.lastOpenedId = item.id
@@ -1664,7 +1885,7 @@ fun InicioScreen(
                                 .wiggleOnScroll(item.id, porqueEscuchasteGridState)
                                 .clickable {
                                     SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
-                                    onSongSelected(PlayerState(item.title, item.artists.joinToString { it.name }, upgradeThumbHD(item.thumbnail), item.id))
+                                    onSongSelected(PlayerState(item.title, item.artists.joinToString { it.name }, upgradeThumbHD(item.thumbnail), item.id, album = item.album?.name, albumId = item.album?.id))
                                 }
                         ) {
                             Box(
@@ -1768,7 +1989,7 @@ fun InicioScreen(
                                 .wiggleOnScroll(item.id, seleccionesGridState)
                                 .clickable {
                                     SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
-                                    onSongSelected(PlayerState(item.title, item.artists.joinToString { it.name }, upgradeThumbHD(item.thumbnail), item.id))
+                                    onSongSelected(PlayerState(item.title, item.artists.joinToString { it.name }, upgradeThumbHD(item.thumbnail), item.id, album = item.album?.name, albumId = item.album?.id))
                                 }
                         ) {
                             Box(
@@ -1840,6 +2061,183 @@ private fun LibraryItem.toYTItem(): com.echo.innertube.models.YTItem {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// Playlists Hechas Para Ti Card (Image 1 style)
+// ═══════════════════════════════════════════════════════════════════
+@Composable
+private fun MadeForYouPlaylistCard(
+    playlist: MadeForYouPlaylist,
+    modifier: Modifier = Modifier,
+    onSelected: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .width(195.dp)
+            .height(265.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .clickable(onClick = onSelected)
+    ) {
+        MadeForYouCardContent(
+            title = playlist.title,
+            artistsSubtitle = playlist.artistsSubtitle,
+            gradientColors = playlist.gradientColors,
+            modifier = Modifier.fillMaxSize()
+        )
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Estaciones Para Ti Card (Image 2 style)
+// ═══════════════════════════════════════════════════════════════════
+@Composable
+private fun ArtistStationCard(
+    context: android.content.Context,
+    station: ArtistStation,
+    onSelected: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .width(175.dp)
+            .clickable { onSelected() }
+    ) {
+        Box(
+            modifier = Modifier
+                .size(175.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(station.backgroundColor)
+        ) {
+            if (station.isPersonal) {
+                // Geometric Chevrons (Warm Orange / Coral / Pink)
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val w = size.width
+                    val h = size.height
+                    val brush1 = Brush.linearGradient(listOf(Color(0xFFFF9500), Color(0xFFFF2D55)))
+                    val brush2 = Brush.linearGradient(listOf(Color(0xFFFF3B30), Color(0xFFFF2D55), Color(0xFFD6002A)))
+                    val brush3 = Brush.linearGradient(listOf(Color(0xFFFF5E3A), Color(0xFFFF2A68)))
+
+                    val p1 = androidx.compose.ui.graphics.Path().apply {
+                        moveTo(0f, 0f)
+                        lineTo(w * 0.55f, h * 0.5f)
+                        lineTo(0f, h)
+                        close()
+                    }
+                    drawPath(p1, brush = brush1)
+
+                    val p2 = androidx.compose.ui.graphics.Path().apply {
+                        moveTo(w * 0.18f, h * 0.12f)
+                        lineTo(w * 0.72f, h * 0.5f)
+                        lineTo(w * 0.18f, h * 0.88f)
+                        close()
+                    }
+                    drawPath(p2, brush = brush2)
+
+                    val p3 = androidx.compose.ui.graphics.Path().apply {
+                        moveTo(w * 0.36f, h * 0.24f)
+                        lineTo(w * 0.90f, h * 0.5f)
+                        lineTo(w * 0.36f, h * 0.76f)
+                        close()
+                    }
+                    drawPath(p3, brush = brush3)
+                }
+            } else if (station.isDiscovery) {
+                // Geometric Radial Rays (Deep Purple / Indigo / Blue / Cyan)
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val w = size.width
+                    val h = size.height
+                    val originX = w * 0.05f
+                    val originY = h * 0.5f
+                    val colors = listOf(
+                        Color(0xFF5856D6), Color(0xFF3634A3), Color(0xFF1B237C),
+                        Color(0xFF007AFF), Color(0xFF00C7BE), Color(0xFF30D158),
+                        Color(0xFF5856D6), Color(0xFF3634A3)
+                    )
+                    val rayCount = 12
+                    for (i in 0 until rayCount) {
+                        val angle1 = (i.toFloat() / rayCount) * (Math.PI.toFloat()) - (Math.PI.toFloat() / 2f)
+                        val angle2 = ((i + 1).toFloat() / rayCount) * (Math.PI.toFloat()) - (Math.PI.toFloat() / 2f)
+                        val r = w * 1.5f
+                        val path = androidx.compose.ui.graphics.Path().apply {
+                            moveTo(originX, originY)
+                            lineTo(originX + r * kotlin.math.cos(angle1), originY + r * kotlin.math.sin(angle1))
+                            lineTo(originX + r * kotlin.math.cos(angle2), originY + r * kotlin.math.sin(angle2))
+                            close()
+                        }
+                        drawPath(path, color = colors[i % colors.size])
+                    }
+                }
+            } else {
+                // Three circular avatars collage (Main artist + 2 similar artists)
+                val mainThumb = upgradeThumb(station.primaryThumb)
+                val sec1 = upgradeThumb(station.secondaryThumbs.getOrNull(0))
+                val sec2 = upgradeThumb(station.secondaryThumbs.getOrNull(1) ?: station.secondaryThumbs.getOrNull(0))
+
+                Box(modifier = Modifier.fillMaxSize()) {
+                    // Big circle (Main artist)
+                    AsyncImage(
+                        model = ImageRequest.Builder(context).data(mainThumb).crossfade(true).build(),
+                        contentDescription = station.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(100.dp)
+                            .offset(x = 8.dp, y = 38.dp)
+                            .clip(CircleShape)
+                            .border(2.dp, Color.White.copy(alpha = 0.15f), CircleShape)
+                    )
+
+                    // Secondary circle 1 (Top right)
+                    if (sec1 != null) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context).data(sec1).crossfade(true).build(),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(62.dp)
+                                .offset(x = 98.dp, y = 52.dp)
+                                .clip(CircleShape)
+                                .border(2.dp, station.backgroundColor, CircleShape)
+                        )
+                    }
+
+                    // Secondary circle 2 (Bottom right)
+                    if (sec2 != null) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context).data(sec2).crossfade(true).build(),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(50.dp)
+                                .offset(x = 86.dp, y = 110.dp)
+                                .clip(CircleShape)
+                                .border(2.dp, station.backgroundColor, CircleShape)
+                        )
+                    }
+                }
+            }
+
+            // Top right: "RayMusic"
+            Text(
+                text = "RayMusic",
+                color = Color.White.copy(alpha = 0.9f),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 10.dp, end = 10.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = if (station.isPersonal || station.isDiscovery) station.title else station.subtitle,
+            color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // Featured Suggestion Card — full-bleed image with overlaid text
 // ═══════════════════════════════════════════════════════════════════
 @Composable
@@ -1863,7 +2261,7 @@ private fun FeaturedSuggestionCard(
             subtitleStr = item.artists.joinToString { it.name }
             thumbUrl = item.thumbnail
             labelStr = "Canción"
-            clickAction = { onSongSelected(PlayerState(title = titleStr, artist = subtitleStr, artUrl = upgradeThumbHD(thumbUrl), videoId = item.id)) }
+            clickAction = { onSongSelected(PlayerState(title = titleStr, artist = subtitleStr, artUrl = upgradeThumbHD(thumbUrl), videoId = item.id, album = (item as? com.echo.innertube.models.SongItem)?.album?.name, albumId = (item as? com.echo.innertube.models.SongItem)?.album?.id)) }
         }
         is com.echo.innertube.models.AlbumItem -> {
             titleStr = item.title

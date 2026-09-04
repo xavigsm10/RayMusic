@@ -72,6 +72,8 @@ import com.mrtdk.liquid_glass.data.LibraryItem
 import com.mrtdk.liquid_glass.data.ItemType
 import com.mrtdk.liquid_glass.ui.components.trackClickBounds
 import com.mrtdk.liquid_glass.ui.components.trackTapBounds
+import com.mrtdk.liquid_glass.ui.components.MadeForYouCardContent
+import com.mrtdk.liquid_glass.data.MadeForYouRepository
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -837,7 +839,10 @@ fun PlaylistDetailScreen(
         playlists.find { it.id == playlist.id } ?: playlist
     }
     val isReplay = remember(currentPlaylist.id) { currentPlaylist.id.startsWith("replay_") }
-    val defaultDominantColor = if (isReplay) Color(0xFF12351B) else Color(0xFF2B2B2B)
+    val isMadeForYou = remember(currentPlaylist.id) { currentPlaylist.id.startsWith("made_for_you_") }
+    val defaultDominantColor = if (isReplay) Color(0xFF12351B) else if (isMadeForYou) {
+        com.mrtdk.liquid_glass.data.MadeForYouRepository.get(currentPlaylist.id)?.gradientColors?.firstOrNull() ?: Color(0xFFE62B00)
+    } else Color(0xFF2B2B2B)
     val playerArtworkStyle by LibraryManager.playerArtworkStyle.collectAsState()
     val isNormalArtwork = playerArtworkStyle == "normal"
     var showAddMusicOverlay by remember { mutableStateOf(false) }
@@ -854,9 +859,13 @@ fun PlaylistDetailScreen(
     }
 
     // Exact same color extraction logic
-    LaunchedEffect(coverUrl, isReplay) {
+    LaunchedEffect(coverUrl, isReplay, isMadeForYou) {
         if (isReplay) {
             dominantColor = Color(0xFF12351B)
+            contentColor = Color.White
+        } else if (isMadeForYou) {
+            val c = com.mrtdk.liquid_glass.data.MadeForYouRepository.get(currentPlaylist.id)?.gradientColors?.firstOrNull() ?: Color(0xFFE62B00)
+            dominantColor = c
             contentColor = Color.White
         } else if (coverUrl != null) {
             val hdUrl = if (coverUrl is String) {
@@ -951,7 +960,7 @@ fun PlaylistDetailScreen(
                 animationSpec = spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMediumLow),
                 label = "popScaleMore"
             )
-            val contentAlpha = ((progress - 0.4f).coerceAtLeast(0f) / 0.6f)
+            val contentAlpha = if (isNormalArtwork) progress.coerceIn(0f, 1f) else ((progress - 0.4f).coerceAtLeast(0f) / 0.6f)
 
             Box(
                 modifier = Modifier.fillMaxSize()
@@ -1107,6 +1116,16 @@ fun PlaylistDetailScreen(
                                             Text("'$replayYearShort", color = Color.White, fontSize = 64.sp, fontWeight = FontWeight.Black, lineHeight = 60.sp)
                                         }
                                     }
+                                } else if (isMadeForYou) {
+                                    val mfy = MadeForYouRepository.get(currentPlaylist.id)
+                                    if (mfy != null) {
+                                        MadeForYouCardContent(
+                                            title = mfy.title,
+                                            artistsSubtitle = mfy.artistsSubtitle,
+                                            gradientColors = mfy.gradientColors,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    }
                                 } else if (coverUrl != null) {
                                     AsyncImage(
                                         model = ImageRequest.Builder(context).data(coverUrl).crossfade(true).build(),
@@ -1168,6 +1187,17 @@ fun PlaylistDetailScreen(
                                                 lineHeight = 80.sp
                                             )
                                         }
+                                    }
+                                } else if (isMadeForYou) {
+                                    val mfy = MadeForYouRepository.get(currentPlaylist.id)
+                                    if (mfy != null) {
+                                        MadeForYouCardContent(
+                                            title = mfy.title,
+                                            artistsSubtitle = mfy.artistsSubtitle,
+                                            gradientColors = mfy.gradientColors,
+                                            modifier = Modifier.fillMaxSize(),
+                                            isHero = true
+                                        )
                                     }
                                 } else if (coverUrl != null) {
                                     AsyncImage(
@@ -1599,7 +1629,7 @@ fun PlaylistDetailScreen(
             }
         }
         )
-            if (progress < 0.99f) {
+            if (progress < 0.99f && !isNormalArtwork) {
                 Box(
                     modifier = Modifier.fillMaxSize()
                 ) {
