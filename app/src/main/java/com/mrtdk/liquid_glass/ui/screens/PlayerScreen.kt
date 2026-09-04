@@ -32,12 +32,17 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 
 import androidx.compose.foundation.clickable
-
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 
 import androidx.compose.animation.core.FastOutSlowInEasing
 
@@ -1172,6 +1177,7 @@ fun PlayerScreen(
     onSongSelected: (PlayerState) -> Unit = {},
 
     onSongSelectedFromQueue: (PlayerState) -> Unit = {},
+    onQueueChange: ((List<QueueItem>) -> Unit)? = null,
 
     shuffleModeEnabled: Boolean = false,
 
@@ -1672,110 +1678,54 @@ fun PlayerScreen(
 
 
 
-        var animatedArtworkUrl by remember(playerState?.artist, playerState?.album, playerState?.title) {
-
+        var animatedArtworkUrl by remember(playerState?.artist, playerState?.title) {
             val artist = playerState?.artist
-
-            val album = playerState?.album
-
             val title = playerState?.title
-
-            val cached = if (!artist.isNullOrBlank()) {
-
-                val cacheKey = if (!album.isNullOrBlank()) album else title
-
-                if (!cacheKey.isNullOrBlank()) {
-
-                    com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.get(artist, cacheKey)
-
-                } else null
-
+            val cached = if (!artist.isNullOrBlank() && !title.isNullOrBlank()) {
+                com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.get(artist, title)
             } else null
-
             mutableStateOf(cached)
-
         }
 
         var isVideoPlaying by remember { mutableStateOf(false) }
+        var coverBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+        var frameToken by remember { mutableStateOf(0L) }
+        var reflectionSkew by remember { mutableStateOf(0.12f) }
+        var masterAnimatedPlayer by remember { mutableStateOf<androidx.media3.exoplayer.ExoPlayer?>(null) }
 
-
-
-        LaunchedEffect(playerState?.artist, playerState?.album, playerState?.title) {
-
+        LaunchedEffect(playerState?.artist, playerState?.title, playerState?.album) {
             val artist = playerState?.artist
-
-            val album = playerState?.album
-
             val title = playerState?.title
-
+            val album = playerState?.album
             isVideoPlaying = false
+            coverBitmap = null
+            frameToken++
 
-            
-
-            if (artist.isNullOrBlank()) return@LaunchedEffect
-
+            if (artist.isNullOrBlank() || title.isNullOrBlank()) return@LaunchedEffect
             if (animatedArtworkUrl != null) return@LaunchedEffect
 
-            
-
             withContext(Dispatchers.IO) {
-                var foundUrl: String? = null
-                val cleanArtist = com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.cleanTerm(artist)
-                val cleanAlbum = if (!album.isNullOrBlank()) com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.cleanTerm(album) else null
-                val cleanTitle = if (!title.isNullOrBlank()) com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.cleanTerm(title) else null
-
-                // 1. Unified Echo-Music Canvas Provider (EchoMusic, ArchiveTune, Tidal, AppleMusic)
-                foundUrl = com.mrtdk.liquid_glass.canvas.UnifiedCanvasProvider.getSongOrAlbumCanvas(
-                    songOrAlbum = cleanTitle ?: cleanAlbum ?: "",
-                    artist = cleanArtist,
-                    album = cleanAlbum
+                // Unified Echo-Music Canvas Provider for Songs (EchoMusic, Tidal, AppleMusic, ArchiveTune)
+                val foundUrl = com.mrtdk.liquid_glass.canvas.UnifiedCanvasProvider.getSongCanvas(
+                    songTitle = title,
+                    artist = artist,
+                    album = album
                 )
-
-                // 2. Fallback to m8tec if still null
-                if (foundUrl == null) {
-                    try {
-                        val queryAlbum = cleanAlbum ?: cleanTitle
-                        if (!queryAlbum.isNullOrBlank()) {
-                            val encodedArtist = java.net.URLEncoder.encode(cleanArtist, "UTF-8")
-                            val encodedAlbum = java.net.URLEncoder.encode(queryAlbum, "UTF-8")
-                            val url = java.net.URL("https://artwork.m8tec.top/api/v1/artwork/search?artist=$encodedArtist&album=$encodedAlbum")
-                            val conn = url.openConnection() as java.net.HttpURLConnection
-                            conn.connectTimeout = 3000
-                            conn.readTimeout = 3000
-                            if (conn.responseCode == 200) {
-                                val text = conn.inputStream.bufferedReader().readText()
-                                val obj = org.json.JSONObject(text)
-                                val streamUrl = obj.optString("url").takeIf { it.isNotBlank() } 
-                                    ?: obj.optString("url_tall").takeIf { it.isNotBlank() }
-                                if (!streamUrl.isNullOrBlank()) {
-                                    foundUrl = streamUrl
-                                }
-                            }
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
 
                 if (foundUrl != null) {
                     withContext(Dispatchers.Main) {
                         animatedArtworkUrl = foundUrl
-                        val cacheKeyAlbum = if (!album.isNullOrBlank()) album else title ?: ""
-                        com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.put(artist, cacheKeyAlbum, foundUrl!!)
+                        com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.put(artist, title, foundUrl)
                     }
                 }
             }
-
         }
 
 
 
-        var coverBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
-        var reflectionSkew by remember { mutableStateOf(0.12f) }
-        var masterAnimatedPlayer by remember { mutableStateOf<androidx.media3.exoplayer.ExoPlayer?>(null) }
-
-        LaunchedEffect(hdArtUrl) {
+        LaunchedEffect(hdArtUrl, playerState?.title, playerState?.artist) {
             coverBitmap = null
+            frameToken++
             reflectionSkew = 0.12f
 
             if (hdArtUrl != null) {
@@ -1835,7 +1785,10 @@ fun PlayerScreen(
                                 val rightColor = Color((rRight / countY).toInt(), (gRight / countY).toInt(), (bRight / countY).toInt())
 
                                 withContext(Dispatchers.Main) {
-                                    coverBitmap = asComposeBmp
+                                    if (!isVideoPlaying && animatedArtworkUrl.isNullOrBlank()) {
+                                        coverBitmap = asComposeBmp
+                                        frameToken++
+                                    }
                                     reflectionSkew = skew
                                     bottomAverageColor = avgColor
                                     dominantColor = avgColor
@@ -1844,7 +1797,10 @@ fun PlayerScreen(
                                 }
                             } catch (e: Exception) {
                                 withContext(Dispatchers.Main) {
-                                    coverBitmap = asComposeBmp
+                                    if (!isVideoPlaying && animatedArtworkUrl.isNullOrBlank()) {
+                                        coverBitmap = asComposeBmp
+                                        frameToken++
+                                    }
                                     reflectionSkew = skew
                                 }
                             }
@@ -2419,8 +2375,16 @@ fun PlayerScreen(
                             alpha = 1f
                         }
                 ) {
-                    val currentBitmap = coverBitmap
-                    val mirrorModel = mirrorArtModel ?: currentBitmap
+                    val currentBitmap = if (!animatedArtworkUrl.isNullOrBlank()) {
+                        if (isVideoPlaying) coverBitmap else null
+                    } else {
+                        coverBitmap
+                    }
+                    val mirrorModel = if (!animatedArtworkUrl.isNullOrBlank()) {
+                        if (isVideoPlaying && coverBitmap != null) coverBitmap else mirrorArtModel
+                    } else {
+                        mirrorArtModel ?: currentBitmap
+                    }
 
                     Box(
                         modifier = Modifier
@@ -2441,6 +2405,7 @@ fun PlayerScreen(
                                 verticalScale = verticalScale,
                                 pivotY = 0f,
                                 horizontalScale = 1.0f,
+                                frameToken = frameToken,
                                 syncWithPlayer = masterAnimatedPlayer,
                                 imageLoader = animatedImageLoader
                             )
@@ -2471,34 +2436,24 @@ fun PlayerScreen(
 
                  ) {
 
-                     // Full-screen rich blurred background image of album cover for lyrics/queue view (only in fullartwork mode)
-                     val overlayArtSource = hdArtUrl ?: playerState?.artUrl
-
-                     if (!isNormalArtwork && overlayArtSource != null) {
-                         AsyncImage(
-                             model = ImageRequest.Builder(context)
-                                 .data(overlayArtSource)
-                                 .crossfade(true)
-                                 .build(),
-                             imageLoader = animatedImageLoader,
-                             contentDescription = null,
-                             contentScale = ContentScale.Crop,
+                     // Capa de difusión de colores vivos y contraste de texto para letras y cola
+                     if (!isNormalArtwork) {
+                         val secCol = if (rightSideAverageColor != Color.Transparent && rightSideAverageColor != dominantColor) {
+                             rightSideAverageColor
+                         } else {
+                             bottomAverageColor
+                         }
+                         AnimatedLiquidMeshBackground(
+                             primaryColor = dominantColor,
+                             secondaryColor = secCol,
+                             accentColor = bottomAverageColor,
+                             modifier = Modifier.fillMaxSize()
+                         )
+                     } else {
+                         Box(
                              modifier = Modifier
                                  .fillMaxSize()
-                                 .graphicsLayer {
-                                     scaleX = 1.35f
-                                     scaleY = 1.35f
-                                 }
-                                 .blur(120.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
-                         )
-                     }
-
-                     // Capa de difusión de colores vivos y contraste de texto para letras y cola
-                     Box(
-                         modifier = Modifier
-                             .fillMaxSize()
-                             .background(
-                                 if (isNormalArtwork) {
+                                 .background(
                                      Brush.verticalGradient(
                                          colors = listOf(
                                              normalTopColor,
@@ -2506,17 +2461,9 @@ fun PlayerScreen(
                                              normalBottomColor
                                          )
                                      )
-                                 } else {
-                                     Brush.verticalGradient(
-                                         colors = listOf(
-                                             dominantColor.copy(alpha = 0.32f),
-                                             bottomAverageColor.copy(alpha = 0.28f),
-                                             Color.Black.copy(alpha = 0.45f)
-                                         )
-                                     )
-                                 }
-                             )
-                     )
+                                 )
+                         )
+                     }
                  }
 
                       // Height of the content area = exactly the cover image height (player controls start below)
@@ -2696,111 +2643,130 @@ fun PlayerScreen(
                                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                 )
                             }
-                          
-                            // Fading edge Box: clips queue list before it reaches the player controls area
-                             Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxWidth()
-                            ) {
-                            LazyColumn(
-                                state = queueListState, 
-                                modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp), 
-                                contentPadding = PaddingValues(top = 2.dp, bottom = 20.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                              // 1. Manual Queue Section (Album/Playlist)
-                              if (playerState != null && playerState.queue.isNotEmpty()) {
-                                   val state = playerState
-                                   items(
-                                       count = state.queue.size,
-                                       key = { index -> state.queue[index].videoId ?: index.toString() },
-                                       contentType = { "queue_item" }
-                                   ) { index ->
-                                        val qItem = state.queue[index]
-                                        val isCurrent = state.videoId != null && qItem.videoId == state.videoId
+                                            // Fading edge Box: clips queue list before it reaches the player controls area
+                             var isAnyItemDragging by remember { mutableStateOf(false) }
+                             val queueListCoroutineScope = rememberCoroutineScope()
 
-                                        val rowData = remember(qItem.title, qItem.artist, qItem.artUrl) {
-                                            QueueItemRowData(
-                                                title = qItem.title,
-                                                artist = qItem.artist,
-                                                artUrl = qItem.artUrl
+                             Box(
+                                 modifier = Modifier
+                                     .weight(1f)
+                                     .fillMaxWidth()
+                                     .clipToBounds()
+                             ) {
+                             LazyColumn(
+                                 state = queueListState, 
+                                 userScrollEnabled = !isAnyItemDragging,
+                                 modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp), 
+                                 contentPadding = PaddingValues(top = 8.dp, bottom = 20.dp),
+                                 verticalArrangement = Arrangement.spacedBy(4.dp)
+                             ) {
+                               // 1. Manual Queue Section (Album/Playlist)
+                               if (playerState != null && playerState.queue.isNotEmpty()) {
+                                    val state = playerState
+                                    items(
+                                        count = state.queue.size,
+                                        key = { index -> state.queue[index].videoId ?: index.toString() },
+                                        contentType = { "queue_item" }
+                                    ) { index ->
+                                         val qItem = state.queue[index]
+                                         val isCurrent = state.videoId != null && qItem.videoId == state.videoId
+
+                                         val rowData = remember(qItem.title, qItem.artist, qItem.artUrl) {
+                                             QueueItemRowData(
+                                                 title = qItem.title,
+                                                 artist = qItem.artist,
+                                                 artUrl = qItem.artUrl
+                                             )
+                                         }
+
+                                         val onRowClick = remember(qItem, index, state) {
+                                             {
+                                                 swipeDirection = 1
+                                                 val upgradedArt = qItem.artUrl?.let {
+                                                     val itStr = it.toString()
+                                                     if (itStr.startsWith("file:///android_asset/")) {
+                                                         it
+                                                     } else {
+                                                         val upgraded = com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(itStr) ?: itStr
+                                                         if (it is android.net.Uri) android.net.Uri.parse(upgraded) else upgraded
+                                                     }
+                                                 } ?: qItem.artUrl
+                                                 val remaining = state.queue.toMutableList().apply {
+                                                     if (index in indices) removeAt(index)
+                                                 }
+                                                 onSongSelectedFromQueue(PlayerState(
+                                                     title = qItem.title,
+                                                     artist = qItem.artist,
+                                                     artUrl = upgradedArt,
+                                                     videoId = qItem.videoId,
+                                                     queue = remaining,
+                                                     isExclusiveQueue = state.isExclusiveQueue,
+                                                     album = qItem.album,
+                                                     albumId = qItem.albumId
+                                                 ))
+                                             }
+                                         }
+
+                                         QueueItemRow(
+                                              rowData = rowData,
+                                              contentColor = contentColor,
+                                              isPlaying = if (isCurrent) isPlaying else false,
+                                              isCurrentPlayingItem = isCurrent,
+                                              context = context,
+                                              titleFontSize = 15.sp,
+                                              artistFontSize = 13.sp,
+                                              onClick = onRowClick,
+                                              isAnyDragging = isAnyItemDragging,
+                                              canMoveUp = index > 0,
+                                              canMoveDown = index < state.queue.size - 1,
+                                              onDragStateChanged = { isAnyItemDragging = it },
+                                              onScrollBy = { delta -> queueListCoroutineScope.launch { queueListState.scrollBy(delta) } },
+                                              onMoveUp = {
+                                                  if (index > 0 && index in state.queue.indices) {
+                                                      val mutable = state.queue.toMutableList()
+                                                      val item = mutable.removeAt(index)
+                                                      mutable.add(index - 1, item)
+                                                      if (onQueueChange != null) {
+                                                          onQueueChange(mutable)
+                                                      } else {
+                                                          com.mrtdk.liquid_glass.playback.PlaybackQueue.queue = mutable
+                                                      }
+                                                  }
+                                              },
+                                              onMoveDown = {
+                                                  if (index < state.queue.size - 1 && index in state.queue.indices) {
+                                                      val mutable = state.queue.toMutableList()
+                                                      val item = mutable.removeAt(index)
+                                                      mutable.add(index + 1, item)
+                                                      if (onQueueChange != null) {
+                                                          onQueueChange(mutable)
+                                                      } else {
+                                                          com.mrtdk.liquid_glass.playback.PlaybackQueue.queue = mutable
+                                                      }
+                                                  }
+                                              }
+                                         )
+                                     }
+                                }
+
+                                if (playerState?.isExclusiveQueue != true) {
+                                    val state = playerState
+                                    itemsIndexed(
+                                        items = upNextSongs,
+                                        key = { _, song -> song.id },
+                                        contentType = { _, _ -> "up_next_item" }
+                                    ) { i, song ->
+                                        val isCurrent = state != null && song.id == state.videoId
+
+                                        val rowData = remember(song.title, song.artists, song.thumbnail) {
+                                            UpNextSongRowData(
+                                                title = song.title,
+                                                artist = song.artists.joinToString { it.name },
+                                                thumbnail = song.thumbnail
                                             )
                                         }
 
-                                        val onRowClick = remember(qItem, index, state) {
-                                            {
-                                                swipeDirection = 1
-                                                val upgradedArt = qItem.artUrl?.let {
-                                                    val itStr = it.toString()
-                                                    if (itStr.startsWith("file:///android_asset/")) {
-                                                        it
-                                                    } else {
-                                                        val upgraded = com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(itStr) ?: itStr
-                                                        if (it is android.net.Uri) android.net.Uri.parse(upgraded) else upgraded
-                                                    }
-                                                } ?: qItem.artUrl
-                                                val remaining = state.queue.toMutableList().apply {
-                                                    if (index in indices) removeAt(index)
-                                                }
-                                                onSongSelectedFromQueue(PlayerState(
-                                                    title = qItem.title,
-                                                    artist = qItem.artist,
-                                                    artUrl = upgradedArt,
-                                                    videoId = qItem.videoId,
-                                                    queue = remaining,
-                                                    isExclusiveQueue = state.isExclusiveQueue,
-                                                    album = qItem.album,
-                                                    albumId = qItem.albumId
-                                                ))
-                                            }
-                                        }
 
-                                        QueueItemRow(
-                                             rowData = rowData,
-                                             contentColor = contentColor,
-                                             isPlaying = if (isCurrent) isPlaying else false,
-                                             isCurrentPlayingItem = isCurrent,
-                                             context = context,
-                                             titleFontSize = 15.sp,
-                                             artistFontSize = 13.sp,
-                                             onClick = onRowClick,
-                                             onMoveUp = {
-                                                 if (index > 0 && index in state.queue.indices) {
-                                                     val mutable = state.queue.toMutableList()
-                                                     val item = mutable.removeAt(index)
-                                                     mutable.add(index - 1, item)
-                                                     onSongSelected(state.copy(queue = mutable))
-                                                 }
-                                             },
-                                             onMoveDown = {
-                                                 if (index < state.queue.size - 1 && index in state.queue.indices) {
-                                                     val mutable = state.queue.toMutableList()
-                                                     val item = mutable.removeAt(index)
-                                                     mutable.add(index + 1, item)
-                                                     onSongSelected(state.copy(queue = mutable))
-                                                 }
-                                             }
-                                        )
-                                    }
-                               }
-
-                               if (playerState?.isExclusiveQueue != true) {
-                                   val state = playerState
-                                   itemsIndexed(
-                                       items = upNextSongs,
-                                       key = { _, song -> song.id },
-                                       contentType = { _, _ -> "up_next_item" }
-                                   ) { i, song ->
-                                       val isCurrent = state != null && song.id == state.videoId
-
-                                       val rowData = remember(song.title, song.artists, song.thumbnail) {
-                                           UpNextSongRowData(
-                                               title = song.title,
-                                               artist = song.artists.joinToString { it.name },
-                                               thumbnail = song.thumbnail
-                                           )
-                                       }
 
                                        val onRowClick = remember(song, i, upNextSongs, state) {
                                            {
@@ -2833,6 +2799,11 @@ fun PlayerScreen(
                                            titleFontSize = 15.sp,
                                            artistFontSize = 13.sp,
                                            onClick = onRowClick,
+                                           isAnyDragging = isAnyItemDragging,
+                                           canMoveUp = i > 0,
+                                           canMoveDown = i < upNextSongs.size - 1,
+                                           onDragStateChanged = { isAnyItemDragging = it },
+                                           onScrollBy = { delta -> queueListCoroutineScope.launch { queueListState.scrollBy(delta) } },
                                            onMoveUp = {
                                                if (i > 0 && i in upNextSongs.indices) {
                                                    val mutable = upNextSongs.toMutableList()
@@ -3613,6 +3584,7 @@ fun PlayerScreen(
                         onPlaybackStarted = { isVideoPlaying = true },
                         onFrameCaptured = { frameBitmap ->
                             coverBitmap = frameBitmap.asImageBitmap()
+                            frameToken++
                             reflectionSkew = calculateDominantSkew(frameBitmap)
 
                             try {
@@ -3702,15 +3674,39 @@ fun PlayerScreen(
                     ) {
                         val currentBitmap = coverBitmap
                         if (currentBitmap != null) {
-                            Image(
-                                bitmap = currentBitmap,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                alignment = artworkBiasAlignment,
+                            Canvas(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .blur(14.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
-                            )
+                            ) {
+                                val token = frameToken
+                                val cW = currentBitmap.width.toFloat()
+                                val cH = currentBitmap.height.toFloat()
+                                if (cW > 0f && cH > 0f && size.width > 0f && size.height > 0f) {
+                                    val scale = maxOf(size.width / cW, size.height / cH)
+                                    val scaledW = cW * scale
+                                    val scaledH = cH * scale
+                                    val srcX = ((scaledW - size.width) / 2f) / scale
+                                    val srcY = 0f
+                                    val srcW = size.width / scale
+                                    val srcH = size.height / scale
+
+                                    drawImage(
+                                        image = currentBitmap,
+                                        srcOffset = androidx.compose.ui.unit.IntOffset(
+                                            srcX.roundToInt().coerceIn(0, currentBitmap.width - 1),
+                                            srcY.roundToInt().coerceIn(0, currentBitmap.height - 1)
+                                        ),
+                                        srcSize = androidx.compose.ui.unit.IntSize(
+                                            srcW.roundToInt().coerceIn(1, currentBitmap.width),
+                                            srcH.roundToInt().coerceIn(1, currentBitmap.height)
+                                        ),
+                                        dstOffset = androidx.compose.ui.unit.IntOffset.Zero,
+                                        dstSize = androidx.compose.ui.unit.IntSize(size.width.roundToInt(), size.height.roundToInt()),
+                                        filterQuality = FilterQuality.Low
+                                    )
+                                }
+                            }
                         } else {
                             AsyncImage(
                                 model = ImageRequest.Builder(context)
@@ -3728,8 +3724,6 @@ fun PlayerScreen(
                         }
                     }
                 }
-
-                // Capa transparente para captura de gestos de deslizamiento hacia abajo (funciona tanto con imagen estática como animada)
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -6724,15 +6718,10 @@ fun LandscapePlayerLayout(
 
 
                             LazyColumn(
-
                                 state = queueListState,
-
-                                modifier = Modifier.weight(1f).fillMaxWidth(),
-
+                                modifier = Modifier.weight(1f).fillMaxWidth().clipToBounds(),
                                 contentPadding = PaddingValues(top = 4.dp, bottom = 16.dp),
-
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
-
                             ) {
 
                                 if (playerState != null) {
@@ -6866,8 +6855,10 @@ fun LandscapePlayerLayout(
 
                                              artistFontSize = 13.sp,
 
-                                            onClick = onRowClick,
-                                            onMoveUp = {
+                                             onClick = onRowClick,
+                                             canMoveUp = index > 0,
+                                             canMoveDown = index < state.queue.size - 1,
+                                             onMoveUp = {
                                                 if (index > 0 && index in state.queue.indices) {
                                                     val mutable = state.queue.toMutableList()
                                                     val item = mutable.removeAt(index)
@@ -6951,6 +6942,8 @@ fun LandscapePlayerLayout(
                                             titleFontSize = 15.sp,
                                             artistFontSize = 13.sp,
                                             onClick = onRowClick,
+                                            canMoveUp = i > 0,
+                                            canMoveDown = i < upNextSongs.size - 1,
                                             onMoveUp = {
                                                 if (i > 0 && i in upNextSongs.indices) {
                                                     val mutable = upNextSongs.toMutableList()
@@ -7456,6 +7449,149 @@ private fun PlayingEqualizer(
 }
 
 @Composable
+private fun AnimatedLiquidMeshBackground(
+    primaryColor: Color,
+    secondaryColor: Color,
+    accentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "liquid_mesh")
+    val t1 by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2 * Math.PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 14000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "t1"
+    )
+    val t2 by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2 * Math.PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 19000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "t2"
+    )
+    val t3 by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2 * Math.PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 24000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "t3"
+    )
+
+    // Base dark background tinted with primary hue for cohesive dark theme
+    val baseDarkColor = remember(primaryColor) {
+        val r = primaryColor.red * 0.12f
+        val g = primaryColor.green * 0.12f
+        val b = primaryColor.blue * 0.12f
+        Color(r.coerceIn(0.04f, 0.15f), g.coerceIn(0.04f, 0.15f), b.coerceIn(0.04f, 0.15f), 1f)
+    }
+
+    val safeSecColor = if (secondaryColor == Color.Transparent || secondaryColor == primaryColor) {
+        primaryColor.copy(alpha = 0.8f)
+    } else secondaryColor
+
+    val safeAccentColor = if (accentColor == Color.Transparent || accentColor == primaryColor) {
+        safeSecColor
+    } else accentColor
+
+    androidx.compose.foundation.Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+
+        // 1. Deep solid backdrop
+        drawRect(baseDarkColor)
+
+        // 2. Blob 1 (Primary - drifting around top / upper-left)
+        val cx1 = w * (0.35f + 0.22f * kotlin.math.sin(t1.toDouble()).toFloat())
+        val cy1 = h * (0.28f + 0.15f * kotlin.math.cos((t1 * 0.8f).toDouble()).toFloat())
+        val r1 = (w * 0.70f) * (1f + 0.12f * kotlin.math.sin((t2 * 0.6f).toDouble()).toFloat())
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    primaryColor.copy(alpha = 0.58f),
+                    primaryColor.copy(alpha = 0.22f),
+                    Color.Transparent
+                ),
+                center = Offset(cx1, cy1),
+                radius = r1
+            ),
+            center = Offset(cx1, cy1),
+            radius = r1
+        )
+
+        // 3. Blob 2 (Secondary / Gold / Warm tone - drifting around upper-right / mid-right as in Image 3)
+        val cx2 = w * (0.72f + 0.18f * kotlin.math.cos(t2.toDouble()).toFloat())
+        val cy2 = h * (0.42f + 0.18f * kotlin.math.sin((t2 * 0.7f).toDouble()).toFloat())
+        val r2 = (w * 0.75f) * (1f + 0.10f * kotlin.math.cos((t1 * 0.5f).toDouble()).toFloat())
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    safeSecColor.copy(alpha = 0.52f),
+                    safeSecColor.copy(alpha = 0.18f),
+                    Color.Transparent
+                ),
+                center = Offset(cx2, cy2),
+                radius = r2
+            ),
+            center = Offset(cx2, cy2),
+            radius = r2
+        )
+
+        // 4. Blob 3 (Accent tone - drifting around lower half)
+        val cx3 = w * (0.38f + 0.24f * kotlin.math.sin(t3.toDouble()).toFloat())
+        val cy3 = h * (0.75f + 0.14f * kotlin.math.cos((t3 * 0.85f).toDouble()).toFloat())
+        val r3 = (w * 0.65f) * (1f + 0.12f * kotlin.math.sin((t1 * 0.7f).toDouble()).toFloat())
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    safeAccentColor.copy(alpha = 0.48f),
+                    safeAccentColor.copy(alpha = 0.14f),
+                    Color.Transparent
+                ),
+                center = Offset(cx3, cy3),
+                radius = r3
+            ),
+            center = Offset(cx3, cy3),
+            radius = r3
+        )
+
+        // 5. Blob 4 (Deep ambient highlight)
+        val cx4 = w * (0.68f + 0.15f * kotlin.math.cos((t3 * 0.6f).toDouble()).toFloat())
+        val cy4 = h * (0.85f + 0.12f * kotlin.math.sin((t2 * 0.5f).toDouble()).toFloat())
+        val r4 = w * 0.58f
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    primaryColor.copy(alpha = 0.35f),
+                    Color.Transparent
+                ),
+                center = Offset(cx4, cy4),
+                radius = r4
+            ),
+            center = Offset(cx4, cy4),
+            radius = r4
+        )
+
+        // 6. Contrast & Vignette Overlay to ensure text legibility
+        drawRect(
+            brush = Brush.verticalGradient(
+                colors = listOf(
+                    Color.Black.copy(alpha = 0.35f),
+                    Color.Black.copy(alpha = 0.10f),
+                    Color.Black.copy(alpha = 0.50f)
+                )
+            )
+        )
+    }
+}
+
+@Composable
 private fun QueueItemRow(
     rowData: QueueItemRowData,
     contentColor: Color,
@@ -7465,9 +7601,22 @@ private fun QueueItemRow(
     titleFontSize: androidx.compose.ui.unit.TextUnit = 15.sp,
     artistFontSize: androidx.compose.ui.unit.TextUnit = 13.sp,
     onClick: () -> Unit,
+    isAnyDragging: Boolean = false,
+    canMoveUp: Boolean = true,
+    canMoveDown: Boolean = true,
+    onDragStateChanged: (Boolean) -> Unit = {},
+    onScrollBy: (Float) -> Unit = {},
     onMoveUp: () -> Unit = {},
     onMoveDown: () -> Unit = {}
 ) {
+    val currentOnMoveUp by rememberUpdatedState(onMoveUp)
+    val currentOnMoveDown by rememberUpdatedState(onMoveDown)
+    val currentCanMoveUp by rememberUpdatedState(canMoveUp)
+    val currentCanMoveDown by rememberUpdatedState(canMoveDown)
+    val currentOnDragStateChanged by rememberUpdatedState(onDragStateChanged)
+    val currentOnScrollBy by rememberUpdatedState(onScrollBy)
+    val haptic = LocalHapticFeedback.current
+
     val upgradedArt = remember(rowData.artUrl) {
         rowData.artUrl?.let {
             val itStr = it.toString()
@@ -7490,47 +7639,63 @@ private fun QueueItemRow(
     }
 
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val rowHeightPx = with(density) { 56.dp.toPx() }
+    val rowHeightPx = with(density) { 60.dp.toPx() }
     var dragAccumulator by remember { mutableFloatStateOf(0f) }
     var isDragging by remember { mutableStateOf(false) }
     var dragTranslationY by remember { mutableFloatStateOf(0f) }
     val animatedScale by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (isDragging) 1.03f else 1f,
+        targetValue = if (isDragging) 1.02f else 1f,
         label = "dragScale"
     )
     val animatedElevation by androidx.compose.animation.core.animateDpAsState(
-        targetValue = if (isDragging) 10.dp else 0.dp,
+        targetValue = if (isDragging) 8.dp else 0.dp,
         label = "dragElevation"
     )
+
+    val rowAlpha = if (isAnyDragging && !isDragging) 0.45f else 1f
+    val rowShape = RoundedCornerShape(14.dp)
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .zIndex(if (isDragging) 10f else 0f)
+            .zIndex(if (isDragging) 20f else 0f)
             .graphicsLayer {
                 translationY = dragTranslationY
                 scaleX = animatedScale
                 scaleY = animatedScale
+                alpha = rowAlpha
             }
-            .shadow(
-                elevation = animatedElevation,
-                shape = RoundedCornerShape(10.dp),
-                ambientColor = Color.Black.copy(alpha = 0.5f),
-                spotColor = Color.Black.copy(alpha = 0.5f)
+            .then(
+                if (isDragging) {
+                    Modifier
+                        .shadow(
+                            elevation = animatedElevation,
+                            shape = rowShape,
+                            ambientColor = Color.Black.copy(alpha = 0.5f),
+                            spotColor = Color.Black.copy(alpha = 0.5f)
+                        )
+                        .background(
+                            color = Color.White.copy(alpha = 0.16f),
+                            shape = rowShape
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = Color.White.copy(alpha = 0.25f),
+                            shape = rowShape
+                        )
+                } else {
+                    Modifier
+                }
             )
-            .background(
-                color = if (isDragging) contentColor.copy(alpha = 0.15f) else Color.Transparent,
-                shape = RoundedCornerShape(10.dp)
-            )
-            .clip(RoundedCornerShape(10.dp))
+            .clip(rowShape)
             .clickable(enabled = !isDragging, onClick = onClick)
-            .padding(vertical = 5.dp, horizontal = 2.dp)
+            .padding(vertical = 5.dp, horizontal = 8.dp)
     ) {
         AsyncImage(
             model = imageModel,
             contentDescription = null,
-            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(6.dp))
+            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp))
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -7556,17 +7721,19 @@ private fun QueueItemRow(
             Icon(
                 Icons.Default.Menu,
                 contentDescription = "Reorder",
-                tint = contentColor.copy(alpha = if (isDragging) 0.95f else 0.45f),
+                tint = if (isDragging) Color.White else contentColor.copy(alpha = 0.45f),
                 modifier = Modifier
                     .size(36.dp)
                     .padding(4.dp)
-                    .pointerInput(onMoveUp, onMoveDown) {
+                    .pointerInput(Unit) {
                         awaitEachGesture {
                             val down = awaitFirstDown(requireUnconsumed = false)
                             down.consume()
                             isDragging = true
+                            currentOnDragStateChanged(true)
                             dragAccumulator = 0f
                             dragTranslationY = 0f
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
 
                             var pointerId = down.id
                             while (true) {
@@ -7581,17 +7748,43 @@ private fun QueueItemRow(
                                 dragTranslationY += dragAmount
                                 dragAccumulator += dragAmount
 
+                                if (!currentCanMoveUp && dragTranslationY < 0f) {
+                                    dragTranslationY = 0f
+                                    dragAccumulator = dragAccumulator.coerceAtLeast(0f)
+                                }
+                                if (!currentCanMoveDown && dragTranslationY > 0f) {
+                                    dragTranslationY = 0f
+                                    dragAccumulator = dragAccumulator.coerceAtMost(0f)
+                                }
+
+                                if (dragTranslationY < -rowHeightPx * 0.7f) {
+                                    currentOnScrollBy(-14f)
+                                } else if (dragTranslationY > rowHeightPx * 0.7f) {
+                                    currentOnScrollBy(14f)
+                                }
+
                                 if (dragAccumulator > rowHeightPx * 0.45f) {
-                                    onMoveDown()
-                                    dragAccumulator -= rowHeightPx
-                                    dragTranslationY -= rowHeightPx
+                                    if (currentCanMoveDown) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        currentOnMoveDown()
+                                        dragAccumulator -= rowHeightPx
+                                        dragTranslationY -= rowHeightPx
+                                    } else {
+                                        dragAccumulator = rowHeightPx * 0.45f
+                                    }
                                 } else if (dragAccumulator < -rowHeightPx * 0.45f) {
-                                    onMoveUp()
-                                    dragAccumulator += rowHeightPx
-                                    dragTranslationY += rowHeightPx
+                                    if (currentCanMoveUp) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        currentOnMoveUp()
+                                        dragAccumulator += rowHeightPx
+                                        dragTranslationY += rowHeightPx
+                                    } else {
+                                        dragAccumulator = -rowHeightPx * 0.45f
+                                    }
                                 }
                             }
                             isDragging = false
+                            currentOnDragStateChanged(false)
                             dragAccumulator = 0f
                             dragTranslationY = 0f
                         }
@@ -7611,9 +7804,22 @@ private fun UpNextSongRow(
     titleFontSize: androidx.compose.ui.unit.TextUnit = 15.sp,
     artistFontSize: androidx.compose.ui.unit.TextUnit = 13.sp,
     onClick: () -> Unit,
+    isAnyDragging: Boolean = false,
+    canMoveUp: Boolean = true,
+    canMoveDown: Boolean = true,
+    onDragStateChanged: (Boolean) -> Unit = {},
+    onScrollBy: (Float) -> Unit = {},
     onMoveUp: () -> Unit = {},
     onMoveDown: () -> Unit = {}
 ) {
+    val currentOnMoveUp by rememberUpdatedState(onMoveUp)
+    val currentOnMoveDown by rememberUpdatedState(onMoveDown)
+    val currentCanMoveUp by rememberUpdatedState(canMoveUp)
+    val currentCanMoveDown by rememberUpdatedState(canMoveDown)
+    val currentOnDragStateChanged by rememberUpdatedState(onDragStateChanged)
+    val currentOnScrollBy by rememberUpdatedState(onScrollBy)
+    val haptic = LocalHapticFeedback.current
+
     val hdThumb = remember(rowData.thumbnail) {
         rowData.thumbnail?.let {
             com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(it) ?: it
@@ -7630,47 +7836,63 @@ private fun UpNextSongRow(
     }
 
     val density = androidx.compose.ui.platform.LocalDensity.current
-    val rowHeightPx = with(density) { 56.dp.toPx() }
+    val rowHeightPx = with(density) { 60.dp.toPx() }
     var dragAccumulator by remember { mutableFloatStateOf(0f) }
     var isDragging by remember { mutableStateOf(false) }
     var dragTranslationY by remember { mutableFloatStateOf(0f) }
     val animatedScale by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (isDragging) 1.03f else 1f,
+        targetValue = if (isDragging) 1.02f else 1f,
         label = "dragScale"
     )
     val animatedElevation by androidx.compose.animation.core.animateDpAsState(
-        targetValue = if (isDragging) 10.dp else 0.dp,
+        targetValue = if (isDragging) 8.dp else 0.dp,
         label = "dragElevation"
     )
+
+    val rowAlpha = if (isAnyDragging && !isDragging) 0.45f else 1f
+    val rowShape = RoundedCornerShape(14.dp)
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .zIndex(if (isDragging) 10f else 0f)
+            .zIndex(if (isDragging) 20f else 0f)
             .graphicsLayer {
                 translationY = dragTranslationY
                 scaleX = animatedScale
                 scaleY = animatedScale
+                alpha = rowAlpha
             }
-            .shadow(
-                elevation = animatedElevation,
-                shape = RoundedCornerShape(10.dp),
-                ambientColor = Color.Black.copy(alpha = 0.5f),
-                spotColor = Color.Black.copy(alpha = 0.5f)
+            .then(
+                if (isDragging) {
+                    Modifier
+                        .shadow(
+                            elevation = animatedElevation,
+                            shape = rowShape,
+                            ambientColor = Color.Black.copy(alpha = 0.5f),
+                            spotColor = Color.Black.copy(alpha = 0.5f)
+                        )
+                        .background(
+                            color = Color.White.copy(alpha = 0.16f),
+                            shape = rowShape
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = Color.White.copy(alpha = 0.25f),
+                            shape = rowShape
+                        )
+                } else {
+                    Modifier
+                }
             )
-            .background(
-                color = if (isDragging) contentColor.copy(alpha = 0.15f) else Color.Transparent,
-                shape = RoundedCornerShape(10.dp)
-            )
-            .clip(RoundedCornerShape(10.dp))
+            .clip(rowShape)
             .clickable(enabled = !isDragging, onClick = onClick)
-            .padding(vertical = 5.dp, horizontal = 2.dp)
+            .padding(vertical = 5.dp, horizontal = 8.dp)
     ) {
         AsyncImage(
             model = imageModel,
             contentDescription = null,
-            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(6.dp))
+            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp))
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -7696,17 +7918,19 @@ private fun UpNextSongRow(
             Icon(
                 Icons.Default.Menu,
                 contentDescription = "Reorder",
-                tint = contentColor.copy(alpha = if (isDragging) 0.95f else 0.45f),
+                tint = if (isDragging) Color.White else contentColor.copy(alpha = 0.45f),
                 modifier = Modifier
                     .size(36.dp)
                     .padding(4.dp)
-                    .pointerInput(onMoveUp, onMoveDown) {
+                    .pointerInput(Unit) {
                         awaitEachGesture {
                             val down = awaitFirstDown(requireUnconsumed = false)
                             down.consume()
                             isDragging = true
+                            currentOnDragStateChanged(true)
                             dragAccumulator = 0f
                             dragTranslationY = 0f
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
 
                             var pointerId = down.id
                             while (true) {
@@ -7721,17 +7945,43 @@ private fun UpNextSongRow(
                                 dragTranslationY += dragAmount
                                 dragAccumulator += dragAmount
 
+                                if (!currentCanMoveUp && dragTranslationY < 0f) {
+                                    dragTranslationY = 0f
+                                    dragAccumulator = dragAccumulator.coerceAtLeast(0f)
+                                }
+                                if (!currentCanMoveDown && dragTranslationY > 0f) {
+                                    dragTranslationY = 0f
+                                    dragAccumulator = dragAccumulator.coerceAtMost(0f)
+                                }
+
+                                if (dragTranslationY < -rowHeightPx * 0.7f) {
+                                    currentOnScrollBy(-14f)
+                                } else if (dragTranslationY > rowHeightPx * 0.7f) {
+                                    currentOnScrollBy(14f)
+                                }
+
                                 if (dragAccumulator > rowHeightPx * 0.45f) {
-                                    onMoveDown()
-                                    dragAccumulator -= rowHeightPx
-                                    dragTranslationY -= rowHeightPx
+                                    if (currentCanMoveDown) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        currentOnMoveDown()
+                                        dragAccumulator -= rowHeightPx
+                                        dragTranslationY -= rowHeightPx
+                                    } else {
+                                        dragAccumulator = rowHeightPx * 0.45f
+                                    }
                                 } else if (dragAccumulator < -rowHeightPx * 0.45f) {
-                                    onMoveUp()
-                                    dragAccumulator += rowHeightPx
-                                    dragTranslationY += rowHeightPx
+                                    if (currentCanMoveUp) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        currentOnMoveUp()
+                                        dragAccumulator += rowHeightPx
+                                        dragTranslationY += rowHeightPx
+                                    } else {
+                                        dragAccumulator = -rowHeightPx * 0.45f
+                                    }
                                 }
                             }
                             isDragging = false
+                            currentOnDragStateChanged(false)
                             dragAccumulator = 0f
                             dragTranslationY = 0f
                         }

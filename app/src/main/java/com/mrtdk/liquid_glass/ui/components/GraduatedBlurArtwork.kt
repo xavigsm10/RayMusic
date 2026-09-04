@@ -1,6 +1,7 @@
 package com.mrtdk.liquid_glass.ui.components
 
 import androidx.annotation.OptIn
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,6 +31,7 @@ import coil.ImageLoader
 import coil.imageLoader
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import kotlin.math.roundToInt
 
 /**
  * Reflejo de artwork invertido estilo Apple Music:
@@ -56,6 +58,7 @@ fun GraduatedBlurArtwork(
     scaleOriginX: Float = 0.5f,
     scaleOriginY: Float = 0.0f,
     blurTransitionEndFraction: Float = 0.28f,
+    frameToken: Long = 0L,
     syncWithPlayer: ExoPlayer? = null,
     imageLoader: ImageLoader? = null
 ) {
@@ -101,6 +104,7 @@ fun GraduatedBlurArtwork(
             internalZoomModifier = internalZoomModifier,
             blurRadiusX = mildBlurRadiusX,
             blurRadiusY = mildBlurRadiusY,
+            frameToken = frameToken,
             imageLoader = imageLoader
         )
 
@@ -140,6 +144,7 @@ fun GraduatedBlurArtwork(
                 internalZoomModifier = internalZoomModifier,
                 blurRadiusX = strongBlurRadiusX,
                 blurRadiusY = strongBlurRadiusY,
+                frameToken = frameToken,
                 imageLoader = imageLoader
             )
         }
@@ -154,6 +159,7 @@ private fun StaticArtworkLayer(
     internalZoomModifier: Modifier,
     blurRadiusX: Dp = 0.dp,
     blurRadiusY: Dp = 0.dp,
+    frameToken: Long = 0L,
     imageLoader: ImageLoader? = null
 ) {
     val context = LocalContext.current
@@ -170,14 +176,35 @@ private fun StaticArtworkLayer(
         }
 
     if (imageUrl is ImageBitmap) {
-        Image(
-            bitmap = imageUrl,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            filterQuality = FilterQuality.Medium,
-            alignment = artworkAlignment,
-            modifier = baseModifier
-        )
+        Canvas(modifier = baseModifier) {
+            val token = frameToken
+            val cW = imageUrl.width.toFloat()
+            val cH = imageUrl.height.toFloat()
+            if (cW > 0f && cH > 0f && size.width > 0f && size.height > 0f) {
+                val scale = maxOf(size.width / cW, size.height / cH)
+                val scaledW = cW * scale
+                val scaledH = cH * scale
+                val srcX = ((scaledW - size.width) / 2f) / scale
+                val srcY = 0f
+                val srcW = size.width / scale
+                val srcH = size.height / scale
+
+                drawImage(
+                    image = imageUrl,
+                    srcOffset = androidx.compose.ui.unit.IntOffset(
+                        srcX.roundToInt().coerceIn(0, imageUrl.width - 1),
+                        srcY.roundToInt().coerceIn(0, imageUrl.height - 1)
+                    ),
+                    srcSize = androidx.compose.ui.unit.IntSize(
+                        srcW.roundToInt().coerceIn(1, imageUrl.width),
+                        srcH.roundToInt().coerceIn(1, imageUrl.height)
+                    ),
+                    dstOffset = androidx.compose.ui.unit.IntOffset.Zero,
+                    dstSize = androidx.compose.ui.unit.IntSize(size.width.roundToInt(), size.height.roundToInt()),
+                    filterQuality = FilterQuality.Low
+                )
+            }
+        }
     } else if (imageUrl != null) {
         AsyncImage(
             model = ImageRequest.Builder(context)

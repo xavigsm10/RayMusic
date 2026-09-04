@@ -35,6 +35,11 @@ class App : Application() {
                     YouTube.visitorData = YouTube.visitorData().getOrNull()
                 }
             } catch (_: Exception) {}
+
+            try {
+                com.mrtdk.liquid_glass.canvas.EchoMusicCanvasProvider.prefetch()
+                com.mrtdk.liquid_glass.canvas.AppleMusicTokenProvider.getToken()
+            } catch (_: Exception) {}
         }
     }
 }

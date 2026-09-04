@@ -232,6 +232,7 @@ object LibraryManager {
                     val keys = listOf(
                         "app_language",
                         "glass_style",
+                        "player_artwork_style",
                         "audio_quality",
                         "last_player_state",
                         "cache_featured_suggestions",
@@ -563,12 +564,19 @@ object LibraryManager {
 
     fun getPlayerArtworkStyle(): String {
         if (!isInitialized) return "fullartwork"
-        return dbHelper.getSetting("player_artwork_style", "fullartwork") ?: "fullartwork"
+        val fromDb = dbHelper.getSetting("player_artwork_style", null)
+        if (fromDb != null) return fromDb
+        val fromPrefs = try { prefs.getString("player_artwork_style", null) } catch (_: Exception) { null }
+        if (fromPrefs != null) return fromPrefs
+        return "fullartwork"
     }
 
     fun savePlayerArtworkStyle(style: String) {
         if (!isInitialized) return
         dbHelper.saveSetting("player_artwork_style", style)
+        try {
+            prefs.edit().putString("player_artwork_style", style).commit()
+        } catch (_: Exception) {}
         _playerArtworkStyle.value = style
     }
 

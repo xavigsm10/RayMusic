@@ -168,8 +168,13 @@ fun SharedElementTransitionContainer(
 ) {
     DisposableEffect(Unit) {
         SharedTransitionState.isDetailOpen = true
+        val openedId = SharedTransitionState.lastOpenedId
+        if (openedId != null && !SharedTransitionState.animatingItemIds.contains(openedId)) {
+            SharedTransitionState.animatingItemIds.add(openedId)
+        }
         onDispose {
             SharedTransitionState.isDetailOpen = false
+            SharedTransitionState.animatingItemIds.clear()
         }
     }
     androidx.compose.foundation.layout.BoxWithConstraints(
@@ -194,6 +199,10 @@ fun SharedElementTransitionContainer(
         val dismissAction = remember(scope, progress, onBack, animate) {
             {
                 scope.launch {
+                    val openedId = SharedTransitionState.lastOpenedId
+                    if (openedId != null && !SharedTransitionState.animatingItemIds.contains(openedId)) {
+                        SharedTransitionState.animatingItemIds.add(openedId)
+                    }
                     if (animate) {
                         progress.animateTo(
                             targetValue = 0f,
@@ -203,6 +212,7 @@ fun SharedElementTransitionContainer(
                         progress.snapTo(0f)
                     }
                     SharedTransitionState.isDetailOpen = false
+                    SharedTransitionState.animatingItemIds.clear()
                     onBack()
                 }
                 Unit

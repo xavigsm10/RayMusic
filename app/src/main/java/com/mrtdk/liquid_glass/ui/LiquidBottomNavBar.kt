@@ -282,13 +282,13 @@ private fun AppFloatingNavBarChrome(
 
     val tabTextColor = if (isDarkMode) Color.White else Color.Black
     val activeAccentColor = Color(0xFFFA243C)
-    val selectedContentColor = activeAccentColor
-    val unselectedContentColor = if (isDarkMode) Color.White.copy(alpha = 0.55f) else Color.Black.copy(alpha = 0.55f)
+    val selectedContentColor = Color(0xFFFA243C)
+    val unselectedContentColor = tabTextColor.copy(alpha = 0.6f)
     val miniPlayerContentColor = tabTextColor
 
     val selectedTabKey = if (selectedIndex == 4) lastSelectedTabIndex else selectedIndex
 
-    val surfaceTintColor = if (isDarkMode) Color(0xFF1A1A1A).copy(alpha = 0.35f) else Color(0xFFFAFAFA).copy(alpha = 0.45f)
+    val surfaceTintColor = if (isDarkMode) Color(0xFF1A1A1A).copy(alpha = 0.5f) else Color(0xFFFAFAFA).copy(alpha = 0.5f)
 
     val glassStyle = com.mrtdk.glass.LocalGlassStyle.current
     val isSolid = glassStyle == "solid"
@@ -315,7 +315,7 @@ private fun AppFloatingNavBarChrome(
                         )
                     }
                 },
-                highlight = { Highlight.Default.copy(alpha = 0.35f) },
+                highlight = { Highlight.Default.copy(alpha = 0.3f) },
                 shadow = { Shadow.Default },
                 onDrawSurface = { 
                     drawRect(if (tintColor != Color.Unspecified) tintColor.copy(alpha = 0.35f) else surfaceTintColor) 
@@ -387,8 +387,8 @@ private fun AppFloatingNavBarChrome(
                 tabInlineContentPadding = PaddingValues(8.dp),
                 tabWidth = tabWidth,
             ),
-            backdrop = backdrop,
-            accentColor = null,
+            backdrop = if (isSolid) null else backdrop,
+            accentColor = activeAccentColor,
             searchMode = searchModeActive,
             searchBarContent = if (searchModeActive) {
                 { contentModifier ->
