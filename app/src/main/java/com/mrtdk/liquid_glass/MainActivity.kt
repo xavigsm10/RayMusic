@@ -112,25 +112,27 @@ class MainActivity : ComponentActivity() {
         // Request highest refresh rate (90Hz/120Hz+) if supported by display
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             try {
-                val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    display
+                val disp = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    display ?: (getSystemService(android.hardware.display.DisplayManager::class.java))?.getDisplay(android.view.Display.DEFAULT_DISPLAY)
                 } else {
                     @Suppress("DEPRECATION")
                     windowManager.defaultDisplay
                 }
-                val modes = display?.supportedModes
-                val activeMode = display?.mode
-                if (modes != null && activeMode != null) {
+                val modes = disp?.supportedModes
+                val activeMode = disp?.mode
+                if (modes != null) {
                     val maxRefresh = modes.maxOfOrNull { it.refreshRate } ?: 60f
+                    val lp = window.attributes
                     if (maxRefresh > 60f) {
-                        val bestMode = modes.filter { it.physicalWidth == activeMode.physicalWidth && it.physicalHeight == activeMode.physicalHeight }
-                            .maxByOrNull { it.refreshRate }
+                        lp.preferredRefreshRate = maxRefresh
+                        val bestMode = modes.filter {
+                            activeMode == null || (it.physicalWidth == activeMode.physicalWidth && it.physicalHeight == activeMode.physicalHeight)
+                        }.maxByOrNull { it.refreshRate } ?: modes.maxByOrNull { it.refreshRate }
                         if (bestMode != null) {
-                            val lp = window.attributes
                             lp.preferredDisplayModeId = bestMode.modeId
-                            window.attributes = lp
                         }
                     }
+                    window.attributes = lp
                 }
             } catch (e: Exception) { }
         }

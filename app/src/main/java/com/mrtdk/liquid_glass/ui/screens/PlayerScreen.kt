@@ -3506,6 +3506,11 @@ fun PlayerScreen(
                             Modifier.shadow(elevation = 16.dp * playPauseScale, shape = RoundedCornerShape(imgCorner))
                         } else Modifier
                     )
+                    .then(
+                        if (isNormalArtwork) {
+                            Modifier.clip(RoundedCornerShape(imgCorner))
+                        } else Modifier
+                    )
                     .graphicsLayer {
                         shape = if (!isOverlayActive) {
                             if (isNormalArtwork) {
@@ -3575,6 +3580,13 @@ fun PlayerScreen(
                         videoUrl = currentAnimatedUrl,
                         modifier = Modifier
                             .fillMaxSize()
+                            .then(
+                                if (isNormalArtwork) {
+                                    Modifier.clip(RoundedCornerShape(imgCorner))
+                                } else {
+                                    Modifier
+                                }
+                            )
                             .graphicsLayer {
                                 alpha = if (isVideoPlaying) 1f else 0f
                             },
@@ -3605,7 +3617,9 @@ fun PlayerScreen(
                                 dominantColor = avgColor
                                 onDominantColorChanged(avgColor)
                             } catch (e: Exception) { }
-                        }
+                        },
+                        cornerRadius = if (isNormalArtwork) imgCorner else 0.dp,
+                        clipToBounds = isNormalArtwork
                     )
                 }
 
@@ -3796,7 +3810,7 @@ fun PlayerScreen(
 
                      ) {
 
-                         Spacer(modifier = Modifier.height(88.dp)) 
+                         Spacer(modifier = Modifier.height(68.dp)) 
 
                           AppleMusicSlider(
                               value = progress, onValueChange = { onSeek((it * duration).toLong()) },
@@ -4826,7 +4840,12 @@ fun PlayerBottomControls(
 ) {
     val isLightBackground = contentColor != Color.White
 
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).then(if (fillHeight) Modifier.fillMaxHeight() else Modifier)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (includeProgress) Modifier.padding(horizontal = 24.dp) else Modifier)
+            .then(if (fillHeight) Modifier.fillMaxHeight() else Modifier)
+    ) {
         if (includeProgress) {
             AppleMusicSlider(
                 value = progress, onValueChange = { onSeek((it * duration).toLong()) },
@@ -4848,7 +4867,7 @@ fun PlayerBottomControls(
         }
 
         if (fillHeight) {
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.weight(0.65f))
         }
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
@@ -4882,7 +4901,7 @@ fun PlayerBottomControls(
 
             Box(
                 modifier = Modifier
-                    .size(84.dp)
+                    .size(96.dp)
                     .clip(CircleShape)
                     .background(playPauseBgColor)
                     .clickable(
@@ -4905,7 +4924,7 @@ fun PlayerBottomControls(
                         contentDescription = if (playing) "Pause" else "Play",
                         tint = contentColor,
                         modifier = Modifier
-                            .size(64.dp)
+                            .size(76.dp)
                             .graphicsLayer {
                                 rotationZ = playPauseRotation
                             }
@@ -4926,21 +4945,13 @@ fun PlayerBottomControls(
         }
 
         if (fillHeight) {
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.weight(1.35f))
         }
 
         if (includeVolumeAndIcons) {
             if (!fillHeight) {
                 Spacer(modifier = Modifier.height(70.dp))
             }
-            val deviceLabel = AudioRoutingState.connectedDeviceName ?: stringResource(R.string.celular_speaker)
-            Text(
-                text = deviceLabel,
-                color = contentColor.copy(alpha = 0.5f),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 8.dp)
-            )
 
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Icon(
@@ -4950,7 +4961,7 @@ fun PlayerBottomControls(
                     modifier = Modifier.size(16.dp)
                 )
 
-                Spacer(modifier = Modifier.width(20.dp))
+                Spacer(modifier = Modifier.width(10.dp))
 
                 AppleMusicSlider(
                     value = volumePosition, onValueChange = { onVolumeChange(it) },
@@ -4960,7 +4971,7 @@ fun PlayerBottomControls(
                     barHeightDp = 8.dp
                 )
 
-                Spacer(modifier = Modifier.width(20.dp))
+                Spacer(modifier = Modifier.width(10.dp))
 
                 Icon(
                     painter = painterResource(id = R.drawable.albumspeakerlarge),
@@ -7073,7 +7084,7 @@ fun LandscapePlayerLayout(
 
                                     modifier = Modifier
 
-                                        .size(84.dp)
+                                        .size(96.dp)
 
                                         .clip(CircleShape)
 
@@ -7119,7 +7130,7 @@ fun LandscapePlayerLayout(
 
                                             modifier = Modifier
 
-                                                .size(64.dp)
+                                                .size(76.dp)
 
                                                 .graphicsLayer {
 
@@ -7161,24 +7172,6 @@ fun LandscapePlayerLayout(
 
 
 
-                            val deviceLabel = AudioRoutingState.connectedDeviceName ?: stringResource(R.string.celular_speaker)
-
-                            Text(
-
-                                text = deviceLabel,
-
-                                color = contentColor.copy(alpha = 0.5f),
-
-                                fontSize = 12.sp,
-
-                                fontWeight = FontWeight.Bold,
-
-                                modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 8.dp)
-
-                            )
-
-
-
                             // Volume Row
 
                             Row(
@@ -7201,7 +7194,7 @@ fun LandscapePlayerLayout(
 
                                 )
 
-                                Spacer(modifier = Modifier.width(20.dp))
+                                Spacer(modifier = Modifier.width(10.dp))
 
                                 AppleMusicSlider(
 
@@ -7223,7 +7216,7 @@ fun LandscapePlayerLayout(
                                     barHeightDp = 8.dp
                                 )
 
-                                Spacer(modifier = Modifier.width(20.dp))
+                                Spacer(modifier = Modifier.width(10.dp))
 
                                 Icon(
 
@@ -7304,27 +7297,16 @@ fun LandscapePlayerLayout(
 
 
                     AsyncImage(
-
                         model = "file:///android_asset/img reproductor/parlante.png",
-
                         contentDescription = "Format",
-
                         colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(contentColor),
-
                         modifier = Modifier
-
                             .height(20.dp)
-
                             .padding(horizontal = 8.dp)
-
                             .clickable(
-
                                 interactionSource = remember { MutableInteractionSource() },
-
                                 indication = null
-
                             ) { AudioRoutingState.showAudioRoutingMenu = true }
-
                     )
 
 
