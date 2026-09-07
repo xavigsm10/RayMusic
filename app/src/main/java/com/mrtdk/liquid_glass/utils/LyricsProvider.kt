@@ -486,43 +486,86 @@ object LyricsProvider {
     }
 
     // Unified Automatic Fetch: Returns all available distributors for the floating dock (up to 8 distributors)
-    suspend fun fetchAllAvailableProviders(videoId: String, title: String, artist: String, duration: Int = -1, album: String? = null): List<LyricsFetchResult> = withContext(Dispatchers.IO) {
-        val results = mutableListOf<LyricsFetchResult>()
+    suspend fun fetchAllAvailableProviders(
+        videoId: String,
+        title: String,
+        artist: String,
+        duration: Int = -1,
+        album: String? = null,
+        onProviderFound: ((LyricsFetchResult) -> Unit)? = null
+    ): List<LyricsFetchResult> = withContext(Dispatchers.IO) {
+        val results = java.util.Collections.synchronizedList(mutableListOf<LyricsFetchResult>())
 
         coroutineScope {
-            val blDeferred = async { fetchBetterLyrics(title, artist, duration, album) }
-            val unisonDeferred = async { fetchUnisonLyrics(videoId, title, artist, duration, album) }
-            val biniDeferred = async { fetchBiniLyrics(title, artist, duration) }
-            val lrcDeferred = async { fetchLRCLib(title, artist, duration) }
-            val kugouDeferred = async { fetchKuGouLyrics(title, artist) }
-            val ytCaptionsDeferred = async { if (videoId.isNotBlank()) fetchYouTubeCaptions(videoId) else null }
-            val simpDeferred = async { fetchSimpMusicLyrics(title, artist) }
-            val ytMusicDeferred = async { if (videoId.isNotBlank()) fetchYouTubeLyrics(videoId) else null }
-
-            blDeferred.await()?.let { 
-                results.add(it)
-                if (it.syncType == "syllable") {
-                    results.add(LyricsFetchResult(it.lyrics, "Better Lyrics Portato", "word"))
-                    results.add(LyricsFetchResult(it.lyrics, "Better Lyrics Legato", "line"))
+            launch {
+                fetchBetterLyrics(title, artist, duration, album)?.let {
+                    results.add(it)
+                    onProviderFound?.invoke(it)
+                    if (it.syncType == "syllable") {
+                        val portato = LyricsFetchResult(it.lyrics, "Better Lyrics Portato", "word")
+                        val legato = LyricsFetchResult(it.lyrics, "Better Lyrics Legato", "line")
+                        results.add(portato)
+                        results.add(legato)
+                        onProviderFound?.invoke(portato)
+                        onProviderFound?.invoke(legato)
+                    }
                 }
             }
-            biniDeferred.await()?.let { 
-                results.add(it)
-            }
-            unisonDeferred.await()?.let { results.add(it) }
-            lrcDeferred.await()?.let { 
-                results.add(it)
-                if (it.syncType != "plain") {
-                    results.add(LyricsFetchResult(it.lyrics, "LRCLib (Texto)", "plain"))
+            launch {
+                fetchUnisonLyrics(videoId, title, artist, duration, album)?.let {
+                    results.add(it)
+                    onProviderFound?.invoke(it)
                 }
             }
-            kugouDeferred.await()?.let { results.add(it) }
-            ytCaptionsDeferred.await()?.let { results.add(it) }
-            simpDeferred.await()?.let { results.add(it) }
-            ytMusicDeferred.await()?.let { results.add(LyricsFetchResult(it.lyrics, "YouTube", "plain")) }
+            launch {
+                fetchBiniLyrics(title, artist, duration)?.let {
+                    results.add(it)
+                    onProviderFound?.invoke(it)
+                }
+            }
+            launch {
+                fetchLRCLib(title, artist, duration)?.let {
+                    results.add(it)
+                    onProviderFound?.invoke(it)
+                    if (it.syncType != "plain") {
+                        val plain = LyricsFetchResult(it.lyrics, "LRCLib (Texto)", "plain")
+                        results.add(plain)
+                        onProviderFound?.invoke(plain)
+                    }
+                }
+            }
+            launch {
+                fetchKuGouLyrics(title, artist)?.let {
+                    results.add(it)
+                    onProviderFound?.invoke(it)
+                }
+            }
+            launch {
+                if (videoId.isNotBlank()) {
+                    fetchYouTubeCaptions(videoId)?.let {
+                        results.add(it)
+                        onProviderFound?.invoke(it)
+                    }
+                }
+            }
+            launch {
+                fetchSimpMusicLyrics(title, artist)?.let {
+                    results.add(it)
+                    onProviderFound?.invoke(it)
+                }
+            }
+            launch {
+                if (videoId.isNotBlank()) {
+                    fetchYouTubeLyrics(videoId)?.let {
+                        val ytRes = LyricsFetchResult(it.lyrics, "YouTube", "plain")
+                        results.add(ytRes)
+                        onProviderFound?.invoke(ytRes)
+                    }
+                }
+            }
         }
 
-        results.distinctBy { "${it.providerName}:::${it.syncType}" }
+        results.toList().distinctBy { "${it.providerName}:::${it.syncType}" }
     }
 
     // Backwards compatibility aliases

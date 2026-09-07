@@ -29,6 +29,7 @@ fun RowScope.LiquidBottomTab(
     val scale = LocalLiquidBottomTabScale.current
     Column(
         modifier
+            .clip(Capsule())
             .clickable(
                 interactionSource = null,
                 indication = null,
@@ -42,7 +43,7 @@ fun RowScope.LiquidBottomTab(
                 scaleX = scaleVal
                 scaleY = scaleVal
             },
-        verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
+        verticalArrangement = Arrangement.spacedBy((-4).dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
         content = content
     )

@@ -3006,10 +3006,11 @@ fun GlassBoxScope.LyricsOptionsMenu(
     isDuetEnabled: Boolean = true,
     onToggleDuet: () -> Unit = {},
     onCopyLyricsAsFormat: (String) -> Unit = {},
-    pivotBounds: androidx.compose.ui.geometry.Rect? = null
+    pivotBounds: androidx.compose.ui.geometry.Rect? = null,
+    initialShowProviderSelection: Boolean = false
 ) {
     var visible by remember { mutableStateOf(false) }
-    var showProviderSelection by remember { mutableStateOf(false) }
+    var showProviderSelection by remember { mutableStateOf(initialShowProviderSelection) }
     var showExportFormatSelection by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 

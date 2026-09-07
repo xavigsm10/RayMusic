@@ -540,6 +540,16 @@ object LibraryManager {
         return dbHelper.getSetting(key, defaultValue)
     }
 
+    fun saveInt(key: String, value: Int) {
+        if (!isInitialized) return
+        dbHelper.saveSettingInt(key, value)
+    }
+
+    fun getInt(key: String, defaultValue: Int = 0): Int {
+        if (!isInitialized) return defaultValue
+        return dbHelper.getSettingInt(key, defaultValue)
+    }
+
     fun saveLastTab(index: Int) {
         if (!isInitialized) return
         dbHelper.saveSettingInt("last_tab_index", index)

@@ -40,6 +40,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -629,7 +630,23 @@ class MainActivity : ComponentActivity() {
                             containerColor = Color.Black
                         ) { innerPadding ->
                             Box(modifier = Modifier.fillMaxSize().background(Color.Black).nestedScroll(floatingNavBarScrollConnection)) {
-                                val mainBackdrop = rememberLayerBackdrop()
+                                val density = androidx.compose.ui.platform.LocalDensity.current
+                                val imeBottom = androidx.compose.foundation.layout.WindowInsets.ime.getBottom(density)
+                                val navBottom = androidx.compose.foundation.layout.WindowInsets.navigationBars.getBottom(density)
+                                val bottomRegionHeightPx = with(density) { 240.dp.toPx() } + imeBottom + navBottom
+
+                                val mainBackdrop = rememberLayerBackdrop(
+                                    onDraw = {
+                                        val contentScope = this
+                                        val topClip = (size.height - bottomRegionHeightPx).coerceAtLeast(0f)
+                                        clipRect(
+                                            top = topClip,
+                                            bottom = size.height
+                                        ) {
+                                            contentScope.drawContent()
+                                        }
+                                    }
+                                )
                                 GlassContainer(
                                     modifier = Modifier.fillMaxSize().background(Color.Black),
                                     useShader = false,
@@ -871,7 +888,7 @@ class MainActivity : ComponentActivity() {
                                                     tintColor = Color.Unspecified,
                                                     contentColor = contentTintColor,
                                                     scrollConnection = floatingNavBarScrollConnection,
-                                                    tabPosition = null,
+                                                    tabPosition = tabPositionProvider,
                                                     playerState = playerState,
                                                     isPlaying = isPlaying,
                                                     playbackProgress = { if (duration > 0) (currentPosition.toFloat() / duration).coerceIn(0f, 1f) else 0f },

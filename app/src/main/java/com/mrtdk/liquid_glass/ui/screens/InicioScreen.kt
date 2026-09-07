@@ -89,6 +89,7 @@ import kotlinx.coroutines.withContext
 data class SimilarSection(val artistName: String, val items: List<com.echo.innertube.models.YTItem>)
 data class PorqueEscuchasteSection(val artistName: String, val songs: List<SongItem>)
 data class ElMundoDeArtist(val artistName: String, val albums: List<com.echo.innertube.models.AlbumItem>)
+data class FansDeArtistSection(val artistName: String, val playlists: List<com.echo.innertube.models.PlaylistItem>)
 
 data class ArtistStation(
     val id: String,
@@ -116,6 +117,7 @@ class InicioState {
 
     // Nuevas secciones
     var elMundoDeArtist by mutableStateOf<ElMundoDeArtist?>(null)
+    var fansDeArtistSection by mutableStateOf<FansDeArtistSection?>(null)
     var paraFiestasItems by mutableStateOf<List<com.echo.innertube.models.YTItem>>(emptyList())
     var madeForYouPlaylists by mutableStateOf<List<MadeForYouPlaylist>>(emptyList())
     var artistStations by mutableStateOf<List<ArtistStation>>(emptyList())
@@ -162,6 +164,8 @@ fun InicioScreen(
                 val cachedPlaylistsStr = LibraryManager.getString("cache_playlists")
                 val cachedSimilarStr = LibraryManager.getString("cache_similar_sections")
                 val cachedTitle = LibraryManager.getString("cache_selecciones_title")
+                val cachedFansArtist = LibraryManager.getString("cache_fans_artist_name")
+                val cachedFansPlaylistsStr = LibraryManager.getString("cache_fans_playlists")
 
                 if (!cachedSuggestionsStr.isNullOrBlank()) {
                     val sList = deserializeYTItemList(cachedSuggestionsStr)
@@ -169,7 +173,8 @@ fun InicioScreen(
                     val pList = deserializeYTItemList(cachedSeleccionesStr ?: "").filterIsInstance<SongItem>()
                     val plList = deserializeYTItemList(cachedPlaylistsStr ?: "").filterIsInstance<PlaylistItem>()
                     val simList = deserializeSimilarSections(cachedSimilarStr ?: "")
-                    
+                    val fansPlList = deserializeYTItemList(cachedFansPlaylistsStr ?: "").filterIsInstance<PlaylistItem>()
+
                     withContext(Dispatchers.Main) {
                         state.featuredSuggestions = sList
                         state.quickPickSongs = qList
@@ -177,6 +182,9 @@ fun InicioScreen(
                         state.featuredPlaylists = plList
                         state.similarSections = simList
                         state.seleccionesTitle = cachedTitle
+                        if (fansPlList.isNotEmpty() && !cachedFansArtist.isNullOrBlank()) {
+                            state.fansDeArtistSection = FansDeArtistSection(cachedFansArtist, fansPlList)
+                        }
                         state.isLoaded = true
                     }
                 }
@@ -275,29 +283,58 @@ fun InicioScreen(
         }
     }
 
+    // Recommendation stability counter: requires listening to ~5 songs before refreshing
+    var songsPlayedSinceRefresh by remember {
+        mutableIntStateOf(LibraryManager.getInt("songs_played_since_rec_refresh", 0))
+    }
+    var lastTrackedVideoId by remember {
+        mutableStateOf(LibraryManager.getString("last_rec_tracked_song"))
+    }
+
+    LaunchedEffect(playerState?.videoId) {
+        val currentVid = playerState?.videoId
+        if (!currentVid.isNullOrBlank() && currentVid != lastTrackedVideoId) {
+            lastTrackedVideoId = currentVid
+            LibraryManager.saveString("last_rec_tracked_song", currentVid)
+            val newCount = songsPlayedSinceRefresh + 1
+            songsPlayedSinceRefresh = newCount
+            LibraryManager.saveInt("songs_played_since_rec_refresh", newCount)
+        }
+    }
+
     // Dynamic Quick Picks + Similar sections + "Porque escuchaste" mixed algorithm
     var algorithmSeeds by remember { mutableStateOf<List<LibraryItem>>(emptyList()) }
 
-    LaunchedEffect(playerState?.videoId, playerState?.title, playerState?.artist, recentlyPlayed) {
-        val currentPlayingSeed = if (playerState != null && !playerState.title.isNullOrBlank()) {
-            LibraryItem(
-                id = playerState.videoId ?: playerState.title,
-                title = playerState.title,
-                subtitle = playerState.artist ?: "",
-                thumbnail = playerState.artUrl?.toString(),
-                type = ItemType.SONG,
-                album = playerState.album
-            )
-        } else null
+    LaunchedEffect(playerState?.videoId, playerState?.title, playerState?.artist, recentlyPlayed, songsPlayedSinceRefresh) {
+        val isInitialColdStart = algorithmSeeds.isEmpty() && state.quickPickSongs.isEmpty()
+        val thresholdReached = songsPlayedSinceRefresh >= 5
 
-        val recentSongs = recentlyPlayed.filter { it.type == ItemType.SONG }
-        val allSeeds = (listOfNotNull(currentPlayingSeed) + recentSongs)
-            .distinctBy { (it.subtitle.ifBlank { it.title }).lowercase().trim() }
+        if (isInitialColdStart || thresholdReached) {
+            val currentPlayingSeed = if (playerState != null && !playerState.title.isNullOrBlank()) {
+                LibraryItem(
+                    id = playerState.videoId ?: playerState.title,
+                    title = playerState.title,
+                    subtitle = playerState.artist ?: "",
+                    thumbnail = playerState.artUrl?.toString(),
+                    type = ItemType.SONG,
+                    album = playerState.album
+                )
+            } else null
 
-        if (allSeeds.isNotEmpty()) {
-            val primary = allSeeds.first()
-            val remaining = allSeeds.drop(1).shuffled().take(4)
-            algorithmSeeds = listOf(primary) + remaining
+            val recentSongs = recentlyPlayed.filter { it.type == ItemType.SONG }
+            val allSeeds = (listOfNotNull(currentPlayingSeed) + recentSongs)
+                .distinctBy { (it.subtitle.ifBlank { it.title }).lowercase().trim() }
+
+            if (allSeeds.isNotEmpty()) {
+                val primary = allSeeds.first()
+                val remaining = allSeeds.drop(1).shuffled().take(4)
+                algorithmSeeds = listOf(primary) + remaining
+
+                if (thresholdReached) {
+                    songsPlayedSinceRefresh = 0
+                    LibraryManager.saveInt("songs_played_since_rec_refresh", 0)
+                }
+            }
         }
     }
 
@@ -420,7 +457,39 @@ fun InicioScreen(
                 }
             }
 
-            // 2. Fetch results for "Para fiestas"
+            // 2. Fetch playlists for "Les gusta a los fans de [Artista]"
+            var fetchedFansDeArtist: FansDeArtistSection? = null
+            if (primaryArtist.isNotBlank() && primaryArtist != "Artistas") {
+                val artistPlaylistsRes = YouTube.search(
+                    query = primaryArtist,
+                    filter = com.echo.innertube.YouTube.SearchFilter.FILTER_FEATURED_PLAYLIST
+                ).getOrNull()
+                var artistPlaylists = artistPlaylistsRes?.items?.filterIsInstance<com.echo.innertube.models.PlaylistItem>().orEmpty()
+
+                if (artistPlaylists.size < 6) {
+                    val morePlaylistsRes = YouTube.search(
+                        query = "$primaryArtist playlist",
+                        filter = com.echo.innertube.YouTube.SearchFilter.FILTER_FEATURED_PLAYLIST
+                    ).getOrNull()
+                    val more = morePlaylistsRes?.items?.filterIsInstance<com.echo.innertube.models.PlaylistItem>().orEmpty()
+                    artistPlaylists = (artistPlaylists + more).distinctBy { it.id }
+                }
+
+                val matchingCollected = allPlaylists.filter { pl ->
+                    pl.title.contains(primaryArtist, ignoreCase = true) ||
+                    (pl.author?.name?.contains(primaryArtist, ignoreCase = true) == true)
+                }
+                artistPlaylists = (artistPlaylists + matchingCollected).distinctBy { it.id }
+
+                if (artistPlaylists.isNotEmpty()) {
+                    fetchedFansDeArtist = FansDeArtistSection(
+                        artistName = primaryArtist,
+                        playlists = artistPlaylists.take(15)
+                    )
+                }
+            }
+
+            // 3. Fetch results for "Para fiestas"
             var fetchedParaFiestas: List<com.echo.innertube.models.YTItem> = emptyList()
             val fiestaQuery = if (primaryArtist.isNotBlank() && primaryArtist != "Artistas") "Para la fiesta $primaryArtist" else "Fiesta"
             val fiestaRes = YouTube.search(fiestaQuery, com.echo.innertube.YouTube.SearchFilter.FILTER_FEATURED_PLAYLIST).getOrNull()
@@ -432,17 +501,21 @@ fun InicioScreen(
                 fetchedParaFiestas = fiestaSongsRes?.items?.filterIsInstance<SongItem>()?.take(15) ?: emptyList()
             }
 
-            // 3. Generate "Playlists hechas para ti" (Image 1 style)
+            // 4. Generate "Playlists hechas para ti" (Image 1 style) — accumulate artists across songs
             val allArtists = results.map { it.first }.filter { it.isNotBlank() && it != "Artistas" }
             val relatedArtistNames = results.flatMap { it.third.map { a -> a.title } }.filter { it.isNotBlank() }
-            val allCombinedArtists = (allArtists + relatedArtistNames).distinct()
+            val recentHistoricalArtists = recentlyPlayed
+                .filter { it.type == ItemType.SONG }
+                .map { it.subtitle.ifBlank { it.title } }
+                .filter { it.isNotBlank() && it != "Artistas" }
+            val allCombinedArtists = (allArtists + relatedArtistNames + recentHistoricalArtists).distinct()
 
             val topArtistsStr = allCombinedArtists.take(5).joinToString(", ") + if (allCombinedArtists.size > 5) " y más" else ""
             val chillArtistsStr = allCombinedArtists.reversed().take(5).joinToString(", ") + if (allCombinedArtists.size > 5) " y más" else ""
             val newMusicArtistsStr = allCombinedArtists.shuffled().take(5).joinToString(", ") + if (allCombinedArtists.size > 5) " y más" else ""
             val workoutArtistsStr = allCombinedArtists.drop(2).take(5).joinToString(", ") + if (allCombinedArtists.size > 7) " y más" else ""
 
-            val allSongs = results.flatMap { it.second }
+            val allSongs = (results.flatMap { it.second } + state.madeForYouPlaylists.flatMap { it.songs }).distinctBy { it.id }
 
             val generatedPlaylists = mutableListOf<MadeForYouPlaylist>()
             if (allSongs.isNotEmpty()) {
@@ -591,25 +664,32 @@ fun InicioScreen(
                 if (fetchedElMundoDe != null) {
                     state.elMundoDeArtist = fetchedElMundoDe
                 }
+                if (fetchedFansDeArtist != null) {
+                    state.fansDeArtistSection = fetchedFansDeArtist
+                }
                 if (fetchedParaFiestas.isNotEmpty()) {
                     state.paraFiestasItems = fetchedParaFiestas
                 }
                 if (generatedPlaylists.isNotEmpty()) {
-                    state.madeForYouPlaylists = generatedPlaylists
+                    val existing = state.madeForYouPlaylists
+                    state.madeForYouPlaylists = (generatedPlaylists + existing).distinctBy { it.id }.take(8)
                 }
                 if (uniqueStations.isNotEmpty()) {
-                    state.artistStations = uniqueStations
+                    val existing = state.artistStations
+                    state.artistStations = (uniqueStations + existing).distinctBy { it.id }.take(10)
                 }
 
                 if (allQuickPicks.isNotEmpty()) {
-                    state.quickPickSongs = allQuickPicks.distinctBy { it.id }.shuffled().take(12)
+                    val existing = state.quickPickSongs
+                    state.quickPickSongs = (allQuickPicks + existing).distinctBy { it.id }.take(20)
                 }
                 if (allParaTi.isNotEmpty()) {
-                    state.seleccionesParaTi = allParaTi.distinctBy { it.id }.shuffled().take(20)
+                    val existing = state.seleccionesParaTi
+                    state.seleccionesParaTi = (allParaTi + existing).distinctBy { it.id }.take(25)
                 }
                 if (porqueEscuchasteList.isNotEmpty()) {
-                    // Strictly limit to 2 sections
-                    state.porqueEscuchasteSections = porqueEscuchasteList.distinctBy { it.artistName }.take(2)
+                    val existing = state.porqueEscuchasteSections
+                    state.porqueEscuchasteSections = (porqueEscuchasteList + existing).distinctBy { it.artistName }.take(3)
                 }
 
                 if (results.isNotEmpty()) {
@@ -620,27 +700,28 @@ fun InicioScreen(
                 }
 
                 if (allSuggestions.isNotEmpty()) {
-                    state.featuredSuggestions = allSuggestions.distinctBy {
+                    val existing = state.featuredSuggestions
+                    state.featuredSuggestions = (allSuggestions + existing).distinctBy {
                         when (it) {
                             is SongItem -> it.id
                             is com.echo.innertube.models.AlbumItem -> it.id
                             is com.echo.innertube.models.ArtistItem -> it.id
                             else -> it.toString()
                         }
-                    }.shuffled().take(15)
+                    }.take(20)
                 }
 
                 // Extract playlists from homePage
                 val homePlaylists = state.homePage?.sections?.flatMap { it.items.filterIsInstance<com.echo.innertube.models.PlaylistItem>() } ?: emptyList()
-                val combinedPlaylists = (allPlaylists + homePlaylists).distinctBy { it.id }
+                val combinedPlaylists = (allPlaylists + homePlaylists + state.featuredPlaylists).distinctBy { it.id }
                 if (combinedPlaylists.isNotEmpty()) {
-                    state.featuredPlaylists = combinedPlaylists.shuffled().take(10)
+                    state.featuredPlaylists = combinedPlaylists.take(15)
                 }
 
-                // Merge similar sections from seeds and homePage — strictly limit to 2 sections
+                // Merge similar sections from seeds and homePage — up to 3 sections
                 if (sections.isNotEmpty()) {
                     val currentSimilar = state.similarSections
-                    state.similarSections = (sections + currentSimilar).distinctBy { it.artistName }.take(2)
+                    state.similarSections = (sections + currentSimilar).distinctBy { it.artistName }.take(3)
                 }
 
                 // Cache the updated recommendations
@@ -649,6 +730,10 @@ fun InicioScreen(
                 if (state.seleccionesParaTi.isNotEmpty()) LibraryManager.saveString("cache_selecciones", serializeYTItemList(state.seleccionesParaTi))
                 if (state.featuredPlaylists.isNotEmpty()) LibraryManager.saveString("cache_playlists", serializeYTItemList(state.featuredPlaylists))
                 if (state.similarSections.isNotEmpty()) LibraryManager.saveString("cache_similar_sections", serializeSimilarSections(state.similarSections))
+                if (state.fansDeArtistSection != null) {
+                    LibraryManager.saveString("cache_fans_artist_name", state.fansDeArtistSection!!.artistName)
+                    LibraryManager.saveString("cache_fans_playlists", serializeYTItemList(state.fansDeArtistSection!!.playlists))
+                }
                 if (!state.seleccionesTitle.isNullOrBlank()) LibraryManager.saveString("cache_selecciones_title", state.seleccionesTitle)
             }
         }
@@ -933,6 +1018,100 @@ fun InicioScreen(
                             val yearStr = album.year?.toString()?.let { " • $it" } ?: ""
                             Text(
                                 text = "Álbum$yearStr",
+                                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor,
+                                fontSize = 13.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(32.dp))
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // LES GUSTA A LOS FANS DE [ARTISTA] — Playlists recomendadas
+        // ═══════════════════════════════════════════════════════════
+        val fansSection = state.fansDeArtistSection
+        if (fansSection != null && fansSection.playlists.isNotEmpty()) {
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.les_gusta_a_los_fans_de, fansSection.artistName),
+                        color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    val playlists = fansSection.playlists
+                    items(
+                        count = playlists.size,
+                        key = { index -> "${playlists.getOrNull(index)?.id ?: index}_$index" },
+                        contentType = { "fans_playlist" }
+                    ) { index ->
+                        val pl = playlists[index]
+                        val hdThumb = upgradeThumb(pl.thumbnail)
+                        var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+                        Column(
+                            modifier = Modifier
+                                .width(180.dp)
+                                .wiggleOnScroll(pl.id, lazyListState = listState)
+                                .clickable {
+                                    SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
+                                    SharedTransitionState.lastOpenedId = pl.id
+                                    onAlbumSelected(
+                                        AlbumState(
+                                            id = pl.id,
+                                            playlistId = pl.id,
+                                            title = pl.title,
+                                            artist = pl.author?.name ?: "Playlist",
+                                            thumbnail = hdThumb,
+                                            year = null
+                                        )
+                                    )
+                                }
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                                contentDescription = pl.title,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(180.dp)
+                                    .onGloballyPositioned { coords ->
+                                        imageCoords = coords
+                                        val bounds = coords.unclippedBoundsInRoot()
+                                        if (bounds.width > 0f && bounds.height > 0f) {
+                                            SharedTransitionState.carouselItemBounds[pl.id] = bounds
+                                        }
+                                    }
+                                    .graphicsLayer {
+                                        alpha = if (SharedTransitionState.animatingItemIds.contains(pl.id) || (SharedTransitionState.isDetailOpen && SharedTransitionState.lastOpenedId == pl.id)) 0f else 1f
+                                    }
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFF1C1C1E))
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = pl.title,
+                                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = pl.author?.name ?: "Playlist",
                                 color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor,
                                 fontSize = 13.sp,
                                 maxLines = 1,
