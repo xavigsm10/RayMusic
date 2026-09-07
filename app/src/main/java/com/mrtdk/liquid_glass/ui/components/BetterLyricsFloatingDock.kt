@@ -202,37 +202,88 @@ fun BetterLyricsFloatingDock(
             }
         }
 
-        // --- Main Floating Dock Pill (Ultra-clean and sleek, exact to Glassy Music screenshot) ---
+        // --- Main Floating Dock Pill (Ultra-clean, exact replica of Glassy Music screenshots) ---
         Row(
             modifier = Modifier
-                .height(34.dp)
-                .clip(RoundedCornerShape(17.dp))
-                .background(Color(0xFF1E1E22).copy(alpha = 0.85f))
-                .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(17.dp))
+                .height(36.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(Color(0xFF1E1E22).copy(alpha = 0.88f))
+                .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(18.dp))
                 .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 1. Sync Type Badge & Dropdown Trigger
+            // 1. Prev Arrow
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .clickable {
+                        val prev = if (safeIndex > 0) safeIndex - 1 else totalProviders - 1
+                        onSelectProviderIndex(prev)
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ChevronLeft,
+                    contentDescription = "Previous Provider",
+                    tint = Color.White.copy(alpha = 0.65f),
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+
+            // Provider Name, Badge & Index (e.g. Better Lyrics Portato 1/7)
             Row(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(10.dp))
                     .clickable { isMenuOpen = !isMenuOpen }
-                    .padding(horizontal = 10.dp),
+                    .padding(horizontal = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 SyncTypeBadge(
                     syncType = currentProvider.syncType,
                     color = syncColor,
                     modifier = Modifier.size(14.dp)
                 )
+                Text(
+                    text = currentProvider.providerName,
+                    color = Color.White,
+                    fontSize = 12.5.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1
+                )
+                Text(
+                    text = "${safeIndex + 1}/$totalProviders",
+                    color = Color.White.copy(alpha = 0.50f),
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.Normal
+                )
+            }
+
+            // Next Arrow
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .clickable {
+                        val next = (safeIndex + 1) % totalProviders
+                        onSelectProviderIndex(next)
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = "Next Provider",
+                    tint = Color.White.copy(alpha = 0.65f),
+                    modifier = Modifier.size(16.dp)
+                )
             }
 
             // Divider 1
             Box(
                 modifier = Modifier
-                    .height(14.dp)
+                    .height(16.dp)
                     .width(1.dp)
                     .background(Color.White.copy(alpha = 0.15f))
             )
@@ -240,7 +291,7 @@ fun BetterLyricsFloatingDock(
             // 2. Translation / Romanization Button (文A)
             Box(
                 modifier = Modifier
-                    .size(30.dp)
+                    .size(28.dp)
                     .clip(CircleShape)
                     .background(if (isTranslateEnabled) Color.White.copy(alpha = 0.15f) else Color.Transparent)
                     .clickable { onToggleTranslate() },
@@ -249,44 +300,85 @@ fun BetterLyricsFloatingDock(
                 Icon(
                     imageVector = Icons.Default.Translate,
                     contentDescription = "Romanize / Translate",
-                    tint = if (isTranslateEnabled) Color(0xFFFA243C) else Color.White.copy(alpha = 0.8f),
-                    modifier = Modifier.size(15.dp)
+                    tint = if (isTranslateEnabled) Color(0xFFFA243C) else Color.White.copy(alpha = 0.75f),
+                    modifier = Modifier.size(14.dp)
                 )
             }
 
             // Divider 2
             Box(
                 modifier = Modifier
-                    .height(14.dp)
+                    .height(16.dp)
                     .width(1.dp)
                     .background(Color.White.copy(alpha = 0.15f))
             )
 
-            // 3. Timing Offset Controls (Clock icon + offset value)
+            // 3. Timing Offset Controls (Clock + [-] [0.0s] [+])
             Row(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable { isOffsetMenuOpen = !isOffsetMenuOpen }
-                    .padding(horizontal = 8.dp),
+                    .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Schedule,
-                    contentDescription = "Offset Timing",
-                    tint = Color.White.copy(alpha = 0.7f),
-                    modifier = Modifier.size(13.5.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .size(26.dp)
+                        .clip(CircleShape)
+                        .clickable { isOffsetMenuOpen = !isOffsetMenuOpen },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Schedule,
+                        contentDescription = "Offset Menu",
+                        tint = Color.White.copy(alpha = 0.65f),
+                        modifier = Modifier.size(13.5.dp)
+                    )
+                }
+
+                // Decrement Button
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clip(CircleShape)
+                        .clickable { onAdjustOffset(-0.1f) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "—",
+                        color = Color.White.copy(alpha = 0.75f),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
 
                 val offsetSign = if (offsetSeconds > 0.001f) "+" else ""
                 val offsetText = String.format("%.1fs", offsetSeconds)
                 Text(
                     text = "$offsetSign$offsetText",
                     color = Color.White.copy(alpha = 0.9f),
-                    fontSize = 11.5.sp,
-                    fontWeight = FontWeight.Medium
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .clickable { onResetOffset() }
+                        .padding(horizontal = 2.dp)
                 )
+
+                // Increment Button
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clip(CircleShape)
+                        .clickable { onAdjustOffset(0.1f) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "+",
+                        color = Color.White.copy(alpha = 0.75f),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }
@@ -298,32 +390,49 @@ fun SyncTypeBadge(
     color: Color,
     modifier: Modifier = Modifier
 ) {
-    // 3 mini dashed blocks matching the Better Lyrics svg icon
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(1.5.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .width(3.5.dp)
-                .height(7.5.dp)
-                .clip(RoundedCornerShape(1.dp))
-                .background(color)
-        )
-        Box(
-            modifier = Modifier
-                .width(3.5.dp)
-                .height(7.5.dp)
-                .clip(RoundedCornerShape(1.dp))
-                .background(color)
-        )
-        Box(
-            modifier = Modifier
-                .width(3.5.dp)
-                .height(7.5.dp)
-                .clip(RoundedCornerShape(1.dp))
-                .background(color)
-        )
+    // Renders segmented dashes exactly like Glassy Music's icon:
+    // Word sync (Portato): 3 bars
+    // Syllable sync (Better Lyrics / BiniLyrics): 2 bars
+    // Line sync (LRCLib / Legato / Musixmatch): 1 bar
+    // Plain: 1 empty/dashed bar
+    when (syncType.lowercase()) {
+        "word" -> {
+            Row(
+                modifier = modifier,
+                horizontalArrangement = Arrangement.spacedBy(1.5.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(modifier = Modifier.width(3.dp).height(7.dp).clip(RoundedCornerShape(1.dp)).background(color))
+                Box(modifier = Modifier.width(3.dp).height(7.dp).clip(RoundedCornerShape(1.dp)).background(color))
+                Box(modifier = Modifier.width(3.dp).height(7.dp).clip(RoundedCornerShape(1.dp)).background(color))
+            }
+        }
+        "syllable", "richsync" -> {
+            Row(
+                modifier = modifier,
+                horizontalArrangement = Arrangement.spacedBy(1.5.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(modifier = Modifier.width(4.5.dp).height(7.dp).clip(RoundedCornerShape(1.dp)).background(color))
+                Box(modifier = Modifier.width(4.5.dp).height(7.dp).clip(RoundedCornerShape(1.dp)).background(color))
+            }
+        }
+        "line", "linesync" -> {
+            Box(
+                modifier = modifier
+                    .width(10.dp)
+                    .height(6.5.dp)
+                    .clip(RoundedCornerShape(1.5.dp))
+                    .background(color)
+            )
+        }
+        else -> {
+            Box(
+                modifier = modifier
+                    .width(10.dp)
+                    .height(6.5.dp)
+                    .border(1.dp, color.copy(alpha = 0.5f), RoundedCornerShape(1.5.dp))
+            )
+        }
     }
 }

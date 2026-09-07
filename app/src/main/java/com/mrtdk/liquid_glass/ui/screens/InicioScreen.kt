@@ -129,6 +129,7 @@ fun InicioScreen(
     playerState: PlayerState? = null,
     state: InicioState = remember { InicioState() },
     onSongSelected: (PlayerState) -> Unit = {},
+    onStationSelected: (PlayerState) -> Unit = onSongSelected,
     onArtistSelected: (ArtistState) -> Unit = {},
     onAlbumSelected: (AlbumState) -> Unit = {},
     onVideoSelected: (String) -> Unit = {},
@@ -1373,7 +1374,7 @@ fun InicioScreen(
                                             album = s.album?.name
                                         )
                                     }
-                                    onSongSelected(
+                                    onStationSelected(
                                         PlayerState(
                                             title = song.title,
                                             artist = song.artists.joinToString { it.name },

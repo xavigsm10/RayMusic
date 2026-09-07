@@ -40,7 +40,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -444,9 +443,11 @@ class MainActivity : ComponentActivity() {
                     val listenTogetherManager = remember { com.mrtdk.liquid_glass.listentogether.ListenTogetherManager.getInstance(context) }
 
                     // Helper to play a song
-                    val playSongInternal: (PlayerState, Boolean) -> Unit = { state, keepQueue ->
+                    val playSongInternal: (PlayerState, Boolean, Boolean) -> Unit = { state, keepQueue, openPlayer ->
                         playerState = state
-                        showPlayer = true
+                        if (openPlayer) {
+                            showPlayer = true
+                        }
                         
                         if (!keepQueue) {
                             // Reset autoplay recommendation queue and continuation details
@@ -483,18 +484,23 @@ class MainActivity : ComponentActivity() {
 
                     val playSong: (PlayerState) -> Unit = { state ->
                         if (listenTogetherManager.onSongSelectedAttempt(state)) {
-                            playSongInternal(state, false)
+                            playSongInternal(state, false, true)
+                        }
+                    }
+                    val playSongMiniPlayer: (PlayerState) -> Unit = { state ->
+                        if (listenTogetherManager.onSongSelectedAttempt(state)) {
+                            playSongInternal(state, false, false)
                         }
                     }
                     val playSongFromQueue: (PlayerState) -> Unit = { state ->
                         if (listenTogetherManager.onSongSelectedAttempt(state)) {
-                            playSongInternal(state, true)
+                            playSongInternal(state, true, true)
                         }
                     }
 
                     LaunchedEffect(listenTogetherManager) {
                         listenTogetherManager.onSongSelectedCallback = { targetState ->
-                            playSongInternal(targetState, false)
+                            playSongInternal(targetState, false, true)
                         }
                         listenTogetherManager.onTogglePlayPauseCallback = {
                             musicPlayer?.togglePlayPause()
@@ -630,23 +636,7 @@ class MainActivity : ComponentActivity() {
                             containerColor = Color.Black
                         ) { innerPadding ->
                             Box(modifier = Modifier.fillMaxSize().background(Color.Black).nestedScroll(floatingNavBarScrollConnection)) {
-                                val density = androidx.compose.ui.platform.LocalDensity.current
-                                val imeBottom = androidx.compose.foundation.layout.WindowInsets.ime.getBottom(density)
-                                val navBottom = androidx.compose.foundation.layout.WindowInsets.navigationBars.getBottom(density)
-                                val bottomRegionHeightPx = with(density) { 240.dp.toPx() } + imeBottom + navBottom
-
-                                val mainBackdrop = rememberLayerBackdrop(
-                                    onDraw = {
-                                        val contentScope = this
-                                        val topClip = (size.height - bottomRegionHeightPx).coerceAtLeast(0f)
-                                        clipRect(
-                                            top = topClip,
-                                            bottom = size.height
-                                        ) {
-                                            contentScope.drawContent()
-                                        }
-                                    }
-                                )
+                                val mainBackdrop = rememberLayerBackdrop()
                                 GlassContainer(
                                     modifier = Modifier.fillMaxSize().background(Color.Black),
                                     useShader = false,
@@ -665,6 +655,7 @@ class MainActivity : ComponentActivity() {
                                                     playerState = playerState,
                                                     state = inicioState,
                                                     onSongSelected = playSong,
+                                                    onStationSelected = playSongMiniPlayer,
                                                     onArtistSelected = { artistDetail = it },
                                                     onAlbumSelected = { albumDetail = it },
                                                     onVideoSelected = { videoId ->

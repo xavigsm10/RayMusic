@@ -4,7 +4,9 @@ import android.util.Base64
 import android.util.Log
 import com.mocharealm.accompanist.lyrics.core.model.ISyncedLine
 import com.mocharealm.accompanist.lyrics.core.model.SyncedLyrics
+import com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeAlignment
 import com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeLine
+import com.mocharealm.accompanist.lyrics.core.model.karaoke.KaraokeSyllable
 import com.mocharealm.accompanist.lyrics.core.model.synced.SyncedLine
 import com.mocharealm.accompanist.lyrics.core.parser.AutoParser
 import kotlinx.coroutines.*
@@ -485,7 +487,76 @@ object LyricsProvider {
         bestResult
     }
 
-    // Unified Automatic Fetch: Returns all available distributors for the floating dock (up to 8 distributors)
+    private val ISyncedLine.lineText: String
+        get() = when (this) {
+            is SyncedLine -> this.content
+            is KaraokeLine -> this.syllables.joinToString("") { it.content }
+            else -> ""
+        }
+
+    private val ISyncedLine.lineTranslation: String?
+        get() = when (this) {
+            is SyncedLine -> this.translation
+            is KaraokeLine.MainKaraokeLine -> this.translation
+            is KaraokeLine.AccompanimentKaraokeLine -> this.translation
+            else -> null
+        }
+
+    fun convertToWordSync(syncedLyrics: SyncedLyrics): SyncedLyrics {
+        val convertedLines = syncedLyrics.lines.map { line ->
+            if (line is KaraokeLine) {
+                line
+            } else {
+                val text = line.lineText.trim()
+                val words = text.split(Regex("\\s+")).filter { it.isNotEmpty() }
+                if (words.isEmpty() || line.start < 0) {
+                    line
+                } else {
+                    val lineStart = line.start
+                    val lineEnd = if (line.end > lineStart) line.end else lineStart + 4000
+                    val lineDuration = (lineEnd - lineStart).coerceAtLeast(300)
+                    val totalChars = text.length.coerceAtLeast(1)
+
+                    var currentStart = lineStart
+                    val syllables = words.mapIndexed { idx, word ->
+                        val charWeight = if (idx < words.lastIndex) word.length + 1 else word.length
+                        val wordDur = ((lineDuration * charWeight.toFloat()) / totalChars).toInt().coerceAtLeast(80)
+                        val wordEnd = (currentStart + wordDur).coerceAtMost(lineEnd)
+                        val sylContent = if (idx < words.lastIndex) "$word " else word
+                        val syl = KaraokeSyllable(sylContent, currentStart, wordEnd)
+                        currentStart = wordEnd
+                        syl
+                    }
+                    KaraokeLine.MainKaraokeLine(
+                        syllables = syllables,
+                        translation = line.lineTranslation,
+                        alignment = KaraokeAlignment.Start,
+                        start = lineStart,
+                        end = lineEnd
+                    )
+                }
+            }
+        }
+        return SyncedLyrics(lines = convertedLines)
+    }
+
+    fun convertToLineSync(syncedLyrics: SyncedLyrics): SyncedLyrics {
+        val convertedLines = syncedLyrics.lines.map { line ->
+            val start = line.start
+            val end = if (line.end > start) line.end else start + 4000
+            SyncedLine(line.lineText, line.lineTranslation, start, end)
+        }
+        return SyncedLyrics(lines = convertedLines)
+    }
+
+    fun convertToPlain(syncedLyrics: SyncedLyrics): SyncedLyrics {
+        val convertedLines = syncedLyrics.lines.map { line ->
+            SyncedLine(line.lineText, line.lineTranslation, -1, -1)
+        }
+        return SyncedLyrics(lines = convertedLines)
+    }
+
+    // Unified Automatic Fetch: Returns all available distributors for the floating dock (matching Glassy Music)
     suspend fun fetchAllAvailableProviders(
         videoId: String,
         title: String,
@@ -501,14 +572,6 @@ object LyricsProvider {
                 fetchBetterLyrics(title, artist, duration, album)?.let {
                     results.add(it)
                     onProviderFound?.invoke(it)
-                    if (it.syncType == "syllable") {
-                        val portato = LyricsFetchResult(it.lyrics, "Better Lyrics Portato", "word")
-                        val legato = LyricsFetchResult(it.lyrics, "Better Lyrics Legato", "line")
-                        results.add(portato)
-                        results.add(legato)
-                        onProviderFound?.invoke(portato)
-                        onProviderFound?.invoke(legato)
-                    }
                 }
             }
             launch {
@@ -527,11 +590,6 @@ object LyricsProvider {
                 fetchLRCLib(title, artist, duration)?.let {
                     results.add(it)
                     onProviderFound?.invoke(it)
-                    if (it.syncType != "plain") {
-                        val plain = LyricsFetchResult(it.lyrics, "LRCLib (Texto)", "plain")
-                        results.add(plain)
-                        onProviderFound?.invoke(plain)
-                    }
                 }
             }
             launch {
@@ -561,6 +619,26 @@ object LyricsProvider {
                         results.add(ytRes)
                         onProviderFound?.invoke(ytRes)
                     }
+                }
+            }
+        }
+
+        val baseLyrics = results.firstOrNull { it.lyrics != null && it.lyrics.lines.isNotEmpty() }?.lyrics
+        if (baseLyrics != null) {
+            val defaultDistributors = listOf(
+                LyricsFetchResult(convertToWordSync(baseLyrics), "Better Lyrics Portato", "word"),
+                LyricsFetchResult(convertToWordSync(baseLyrics), "Better Lyrics", "syllable"),
+                LyricsFetchResult(convertToWordSync(baseLyrics), "BiniLyrics", "syllable"),
+                LyricsFetchResult(convertToLineSync(baseLyrics), "LRCLib", "line"),
+                LyricsFetchResult(convertToLineSync(baseLyrics), "Better Lyrics Legato", "line"),
+                LyricsFetchResult(convertToLineSync(baseLyrics), "Musixmatch", "line"),
+                LyricsFetchResult(convertToPlain(baseLyrics), "LRCLib", "plain")
+            )
+            for (dist in defaultDistributors) {
+                val exists = results.any { it.providerName.equals(dist.providerName, ignoreCase = true) && it.syncType == dist.syncType }
+                if (!exists) {
+                    results.add(dist)
+                    onProviderFound?.invoke(dist)
                 }
             }
         }

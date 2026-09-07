@@ -173,16 +173,6 @@ fun LiquidBottomNavBar(
     val density = LocalDensity.current
     val isKeyboardOpen = WindowInsets.ime.getBottom(density) > 0
 
-    // Auto-focus the search bar when expanding
-    LaunchedEffect(visualState) {
-        if (visualState == LiquidNavVisualState.SEARCH_EXPANDED) {
-            delay(220)
-            try {
-                focusRequester.requestFocus()
-                keyboardController?.show()
-            } catch (_: Exception) {}
-        }
-    }
 
     // System back handler while in search mode
     BackHandler(enabled = visualState == LiquidNavVisualState.SEARCH_EXPANDED) {
@@ -194,57 +184,61 @@ fun LiquidBottomNavBar(
         }
     }
 
-    val capsuleBackdropModifier = if (isSolid) {
-        Modifier
-            .clip(Capsule())
-            .background(solidBgColor)
-    } else {
-        Modifier.drawBackdrop(
-            backdrop = backdrop,
-            shape = { Capsule() },
-            effects = {
-                vibrancy()
-                blur(8.dp.toPx())
-                lens(24.dp.toPx(), 24.dp.toPx())
-            },
-            highlight = { Highlight.Default.copy(alpha = 0.35f) },
-            shadow = { Shadow.Default },
-            onDrawSurface = { drawRect(actualTintColor) }
-        )
+    val capsuleBackdropModifier = remember(isSolid, backdrop, solidBgColor, actualTintColor) {
+        if (isSolid) {
+            Modifier
+                .clip(Capsule())
+                .background(solidBgColor)
+        } else {
+            Modifier.drawBackdrop(
+                backdrop = backdrop,
+                shape = { Capsule() },
+                effects = {
+                    vibrancy()
+                    blur(8.dp.toPx())
+                    lens(24.dp.toPx(), 24.dp.toPx())
+                },
+                highlight = { Highlight.Default.copy(alpha = 0.35f) },
+                shadow = { Shadow.Default },
+                onDrawSurface = { drawRect(actualTintColor) }
+            )
+        }
     }
 
-    val miniPlayerBackdropModifier = if (isSolid) {
-        Modifier
-            .clip(MiniPlayerShape)
-            .background(solidBgColor)
-    } else {
-        Modifier.drawBackdrop(
-            backdrop = backdrop,
-            shape = { MiniPlayerShape },
-            effects = {
-                vibrancy()
-                blur(6.dp.toPx())
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                    lens(
-                        refractionHeight = 16.dp.toPx(),
-                        refractionAmount = 24.dp.toPx(),
-                        depthEffect = true,
-                        chromaticAberration = false
-                    )
-                }
-            },
-            highlight = { Highlight.Default.copy(alpha = 0.25f) },
-            shadow = { Shadow.Default },
-            onDrawSurface = { drawRect(actualTintColor) }
-        )
+    val miniPlayerBackdropModifier = remember(isSolid, backdrop, solidBgColor, actualTintColor) {
+        if (isSolid) {
+            Modifier
+                .clip(MiniPlayerShape)
+                .background(solidBgColor)
+        } else {
+            Modifier.drawBackdrop(
+                backdrop = backdrop,
+                shape = { MiniPlayerShape },
+                effects = {
+                    vibrancy()
+                    blur(6.dp.toPx())
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                        lens(
+                            refractionHeight = 16.dp.toPx(),
+                            refractionAmount = 24.dp.toPx(),
+                            depthEffect = true,
+                            chromaticAberration = false
+                        )
+                    }
+                },
+                highlight = { Highlight.Default.copy(alpha = 0.25f) },
+                shadow = { Shadow.Default },
+                onDrawSurface = { drawRect(actualTintColor) }
+            )
+        }
     }
 
     SharedTransitionLayout(modifier = modifier.fillMaxWidth()) {
         AnimatedContent(
             targetState = visualState,
             transitionSpec = {
-                fadeIn(tween(220, easing = FastOutSlowInEasing)) togetherWith
-                    fadeOut(tween(180, easing = FastOutSlowInEasing))
+                fadeIn(tween(130, easing = FastOutSlowInEasing)) togetherWith
+                    fadeOut(tween(90, easing = FastOutSlowInEasing))
             },
             contentAlignment = Alignment.BottomCenter,
             label = "navBarSharedMorphTransition"

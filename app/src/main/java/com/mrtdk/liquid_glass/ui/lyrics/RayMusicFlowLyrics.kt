@@ -128,7 +128,7 @@ internal fun calculateLineSingingDuration(
         if (nextLineTimeMs != null && nextLineTimeMs > line.timeMs) {
             val totalGap = nextLineTimeMs - line.timeMs
             val silenceGap = nextLineTimeMs - (line.timeMs + singingDuration)
-            if (silenceGap >= 4800L) {
+            if (silenceGap >= 3200L) {
                 return Pair(singingDuration, true)
             } else {
                 return Pair(minOf(singingDuration + 300L, totalGap), false)
@@ -146,7 +146,7 @@ internal fun calculateLineSingingDuration(
     if (nextLineTimeMs != null && nextLineTimeMs > line.timeMs) {
         val totalGap = nextLineTimeMs - line.timeMs
         val silenceGap = totalGap - estimatedSingingDuration
-        if (silenceGap >= 4800L) {
+        if (silenceGap >= 3200L) {
             return Pair(estimatedSingingDuration, true)
         } else {
             val activeDur = (totalGap * 0.94f).toLong().coerceAtLeast(1200L)
@@ -246,7 +246,7 @@ fun RayMusicFlowLyrics(
         }
 
         val firstLine = lyricsLines.firstOrNull { it.timeMs > 0L }
-        if (firstLine != null && firstLine.timeMs >= 5000L) {
+        if (firstLine != null && firstLine.timeMs >= 2000L) {
             items.add(RayMusicFlowItem.InstrumentalBreak(0L, firstLine.timeMs, 0L))
         }
 
@@ -444,7 +444,8 @@ fun RayMusicFlowLyrics(
 
                     is RayMusicFlowItem.Line -> {
                         val line = item.syncedLine
-                        val isPast = isSynced && line.timeMs != -1L && (currentPosition + lyricsOffset) > line.timeMs
+                        val currentPosWithOffset = currentPosition + lyricsOffset
+                        val isLineStarted = isSynced && line.timeMs != -1L && currentPosWithOffset >= line.timeMs
 
                         val nextLineTime = lyricsLines.getOrNull(item.originalIndex + 1)?.timeMs
                         val (lineDuration, _) = remember(line, nextLineTime) {
@@ -453,9 +454,11 @@ fun RayMusicFlowLyrics(
                         val activeDuration = remember(lineDuration) {
                             lineDuration.coerceAtLeast(300L)
                         }
-                        val lineRelTime = if (isItemActive && line.timeMs > 0) {
-                            ((currentPosition + lyricsOffset) - line.timeMs).coerceAtLeast(0L)
-                        } else if (isPast) activeDuration else 0L
+                        val isPast = isSynced && line.timeMs != -1L && currentPosWithOffset > (line.timeMs + lineDuration)
+
+                        val lineRelTime = if (isItemActive && isLineStarted && line.timeMs > 0) {
+                            (currentPosWithOffset - line.timeMs).coerceAtLeast(0L)
+                        } else if (isPast) activeDuration else -1L
 
                         // Desglose de palabras / sílabas para barrido karaoke continuo
                         val wordData = remember(line, activeDuration) {
@@ -511,6 +514,7 @@ fun RayMusicFlowLyrics(
                             horizontalAlignment = when (lyricsTextPosition) {
                                 "center" -> Alignment.CenterHorizontally
                                 "right" -> Alignment.End
+                                "left" -> Alignment.Start
                                 else -> Alignment.Start
                             }
                         ) {
@@ -520,18 +524,20 @@ fun RayMusicFlowLyrics(
                                 horizontalArrangement = when (lyricsTextPosition) {
                                     "center" -> Arrangement.Center
                                     "right" -> Arrangement.End
+                                    "left" -> Arrangement.Start
                                     else -> Arrangement.Start
                                 },
                                 verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 wordData.forEach { (wordText, startRel, endRel) ->
                                     val wordDur = (endRel - startRel).coerceAtLeast(1L)
-                                    val isCurrentWord = isItemActive && lineRelTime in startRel..endRel
-                                    val isPastWord = isItemActive && lineRelTime > endRel
-                                    val isFutureWord = isItemActive && lineRelTime < startRel
+                                    val isCurrentWord = isItemActive && isLineStarted && lineRelTime >= 0L && lineRelTime in startRel..endRel
+                                    val isPastWord = (isItemActive && isLineStarted && lineRelTime > endRel) || isPast
+                                    val isFutureWord = !isPastWord && !isCurrentWord
 
                                     val wordProgress by animateFloatAsState(
                                         targetValue = when {
+                                            !isLineStarted || lineRelTime < 0L -> 0f
                                             lineRelTime >= endRel -> 1f
                                             lineRelTime < startRel -> 0f
                                             else -> (lineRelTime - startRel).toFloat() / wordDur

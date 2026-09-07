@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.zIndex
+import androidx.compose.ui.layout.positionInRoot
 
 import androidx.compose.animation.AnimatedVisibility
 
@@ -2079,7 +2080,20 @@ fun PlayerScreen(
 
             val isOverlayActive = showLyrics || showQueue
 
-            
+            var draggingSection by remember { mutableStateOf<String?>(null) }
+            var draggingIndex by remember { mutableIntStateOf(-1) }
+            var targetDropIndex by remember { mutableIntStateOf(-1) }
+            var queueDragOffsetY by remember { mutableFloatStateOf(0f) }
+            var queueDragOffsetX by remember { mutableFloatStateOf(0f) }
+            var listScrollAccumulator by remember { mutableFloatStateOf(0f) }
+            var queueViewportHeightPx by remember { mutableFloatStateOf(0f) }
+            var queueTouchYInViewport by remember { mutableFloatStateOf(0f) }
+            var autoScrollVelocity by remember { mutableFloatStateOf(0f) }
+            var draggedItemInitialYInBox by remember { mutableFloatStateOf(0f) }
+            var draggedItemTitle by remember { mutableStateOf("") }
+            var draggedItemArtist by remember { mutableStateOf("") }
+            var draggedItemArtUrl by remember { mutableStateOf<Any?>(null) }
+            var playerBoxRootY by remember { mutableFloatStateOf(0f) }
 
             // Calculating destinations depending on normal vs collapsed bottom bar
 
@@ -2391,6 +2405,9 @@ fun PlayerScreen(
                             }
                         )
                     )
+                    .onGloballyPositioned { coordinates ->
+                        playerBoxRootY = coordinates.positionInRoot().y
+                    }
             ) {
 
             // Capa 4: Reflejo invertido estilo Apple Music (solo para fullartwork)
@@ -2504,7 +2521,7 @@ fun PlayerScreen(
                       // For lyrics immersive mode (controls hidden) animate up to full screen height
 
                       val overlayContentHeight by animateDpAsState(
-                          targetValue = if ((showLyrics && !showLyricsControls) || showQueue) maxHeight else (controlsBaseY + 68.dp),
+                          targetValue = if (showLyrics && !showLyricsControls) maxHeight else (controlsBaseY + 68.dp),
                           animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
                           label = "overlayContentHeight"
                       )
@@ -2513,6 +2530,7 @@ fun PlayerScreen(
                            modifier = Modifier
                                .fillMaxWidth()
                                .height(overlayContentHeight)
+                               .clipToBounds()
                        ) {
 
                        if (showQueue) {
@@ -2677,79 +2695,43 @@ fun PlayerScreen(
                                 )
                             }
                                              val queueDensity = androidx.compose.ui.platform.LocalDensity.current
-                                             val queueRowHeightPx = with(queueDensity) { 60.dp.toPx() }
+                                             val queueRowHeightPx = with(queueDensity) { 62.dp.toPx() }
                                              val queueHaptic = LocalHapticFeedback.current
 
-                                             var draggingSection by remember { mutableStateOf<String?>(null) }
-                                             var draggingIndex by remember { mutableIntStateOf(-1) }
-                                             var dragOffsetY by remember { mutableFloatStateOf(0f) }
-                                             var dragOffsetX by remember { mutableFloatStateOf(0f) }
-                                             var queueViewportHeightPx by remember { mutableFloatStateOf(0f) }
-                                             var queueTouchYInViewport by remember { mutableFloatStateOf(0f) }
-                                             var autoScrollVelocity by remember { mutableFloatStateOf(0f) }
-
-                                             // Auto-scroll continuo a 60fps mientras se arrastre cerca de los bordes
+                                              // Auto-scroll continuo y suave a 60fps mientras se mantenga cerca de los bordes
                                               LaunchedEffect(isQueueItemDragging, autoScrollVelocity) {
                                                   if (!isQueueItemDragging || autoScrollVelocity == 0f) return@LaunchedEffect
                                                   while (isQueueItemDragging && autoScrollVelocity != 0f) {
                                                       val canScroll = if (autoScrollVelocity > 0f) queueListState.canScrollForward else queueListState.canScrollBackward
                                                       if (!canScroll) {
-                                                          kotlinx.coroutines.delay(40L)
+                                                          kotlinx.coroutines.delay(20L)
                                                           continue
                                                       }
 
                                                       val consumed = queueListState.scrollBy(autoScrollVelocity)
                                                       if (consumed == 0f) {
-                                                          kotlinx.coroutines.delay(40L)
+                                                          kotlinx.coroutines.delay(20L)
                                                           continue
                                                       }
-
-                                                      dragOffsetY += consumed
+                                                      listScrollAccumulator += consumed
 
                                                       val section = draggingSection
                                                       val curr = draggingIndex
+                                                      val totalEffectiveOffset = queueDragOffsetY + listScrollAccumulator
                                                       if (section == "queue" && playerState != null && curr in playerState.queue.indices) {
                                                           val qSize = playerState.queue.size
-                                                          while (dragOffsetY > queueRowHeightPx * 0.55f && draggingIndex < qSize - 1 && draggingIndex >= 0) {
-                                                              val idx = draggingIndex
-                                                              val mutable = playerState.queue.toMutableList()
-                                                              val item = mutable.removeAt(idx)
-                                                              mutable.add(idx + 1, item)
-                                                              if (onQueueChange != null) onQueueChange(mutable) else com.mrtdk.liquid_glass.playback.PlaybackQueue.queue = mutable
-                                                              draggingIndex = idx + 1
-                                                              dragOffsetY -= queueRowHeightPx
-                                                              queueHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                          }
-                                                          while (dragOffsetY < -queueRowHeightPx * 0.55f && draggingIndex > 0 && draggingIndex < qSize) {
-                                                              val idx = draggingIndex
-                                                              val mutable = playerState.queue.toMutableList()
-                                                              val item = mutable.removeAt(idx)
-                                                              mutable.add(idx - 1, item)
-                                                              if (onQueueChange != null) onQueueChange(mutable) else com.mrtdk.liquid_glass.playback.PlaybackQueue.queue = mutable
-                                                              draggingIndex = idx - 1
-                                                              dragOffsetY += queueRowHeightPx
+                                                          val itemsMoved = (totalEffectiveOffset / queueRowHeightPx).roundToInt()
+                                                          val newTarget = (curr + itemsMoved).coerceIn(0, qSize - 1)
+                                                          if (newTarget != targetDropIndex) {
+                                                              targetDropIndex = newTarget
                                                               queueHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                                           }
                                                       } else if (section == "up_next" && curr in upNextSongs.indices) {
                                                           val unSize = upNextSongs.size
-                                                          while (dragOffsetY > queueRowHeightPx * 0.55f && draggingIndex < unSize - 1 && draggingIndex >= 0) {
-                                                              val idx = draggingIndex
-                                                              val mutable = upNextSongs.toMutableList()
-                                                              val item = mutable.removeAt(idx)
-                                                              mutable.add(idx + 1, item)
-                                                              onUpNextSongsChange(mutable)
-                                                              draggingIndex = idx + 1
-                                                              dragOffsetY -= queueRowHeightPx
-                                                              queueHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                          }
-                                                          while (dragOffsetY < -queueRowHeightPx * 0.55f && draggingIndex > 0 && draggingIndex < unSize) {
-                                                              val idx = draggingIndex
-                                                              val mutable = upNextSongs.toMutableList()
-                                                              val item = mutable.removeAt(idx)
-                                                              mutable.add(idx - 1, item)
-                                                              onUpNextSongsChange(mutable)
-                                                              draggingIndex = idx - 1
-                                                              dragOffsetY += queueRowHeightPx
+                                                          val itemsMoved = (totalEffectiveOffset / queueRowHeightPx).roundToInt()
+                                                          val newTarget = (curr + itemsMoved).coerceIn(0, unSize - 1)
+                                                          if (newTarget != targetDropIndex) {
+                                                              targetDropIndex = newTarget
                                                               queueHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                                           }
                                                       }
@@ -2770,7 +2752,7 @@ fun PlayerScreen(
                                    state = queueListState, 
                                    userScrollEnabled = !isQueueItemDragging,
                                    modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp), 
-                                   contentPadding = PaddingValues(top = 8.dp, bottom = 48.dp),
+                                   contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp),
                                    verticalArrangement = Arrangement.spacedBy(4.dp)
                                ) {
                                  // 1. Manual Queue Section (Album/Playlist)
@@ -2784,6 +2766,22 @@ fun PlayerScreen(
                                            val qItem = state.queue[index]
                                            val isCurrent = state.videoId != null && qItem.videoId == state.videoId
                                            val isThisDragging = draggingSection == "queue" && draggingIndex == index
+
+                                           val targetShift = when {
+                                               draggingSection != "queue" || draggingIndex == -1 -> 0f
+                                               isThisDragging -> 0f
+                                               draggingIndex < targetDropIndex && index > draggingIndex && index <= targetDropIndex -> -queueRowHeightPx
+                                               draggingIndex > targetDropIndex && index < draggingIndex && index >= targetDropIndex -> queueRowHeightPx
+                                               else -> 0f
+                                           }
+                                           val animatedShiftY by animateFloatAsState(
+                                               targetValue = targetShift,
+                                               animationSpec = spring(
+                                                   dampingRatio = Spring.DampingRatioLowBouncy,
+                                                   stiffness = Spring.StiffnessMediumLow
+                                               ),
+                                               label = "shift_q_$index"
+                                           )
 
                                            val rowData = remember(qItem.title, qItem.artist, qItem.artUrl) {
                                                QueueItemRowData(
@@ -2822,80 +2820,83 @@ fun PlayerScreen(
                                            }
 
                                            QueueItemRow(
-                                                rowData = rowData,
-                                                contentColor = contentColor,
-                                                isPlaying = if (isCurrent) isPlaying else false,
-                                                isCurrentPlayingItem = isCurrent,
-                                                context = context,
-                                                titleFontSize = 15.sp,
-                                                artistFontSize = 13.sp,
-                                                onClick = onRowClick,
-                                                isDragging = isThisDragging,
-                                                isAnyDragging = isQueueItemDragging,
-                                                dragTranslationX = if (isThisDragging) dragOffsetX else 0f,
-                                                dragTranslationY = if (isThisDragging) dragOffsetY else 0f,
-                                                onDragStart = { startY ->
-                                                    draggingSection = "queue"
-                                                    draggingIndex = index
-                                                    dragOffsetY = 0f
-                                                    dragOffsetX = 0f
-                                                    queueTouchYInViewport = startY
-                                                    autoScrollVelocity = 0f
-                                                    isQueueItemDragging = true
-                                                },
-                                                onDragDelta = { dx, dy ->
-                                                    dragOffsetY += dy
-                                                    dragOffsetX = (dragOffsetX + dx * 0.40f).coerceIn(-48f, 48f)
-                                                    queueTouchYInViewport += dy
+                                                 rowData = rowData,
+                                                 contentColor = contentColor,
+                                                 isPlaying = if (isCurrent) isPlaying else false,
+                                                 isCurrentPlayingItem = isCurrent,
+                                                 context = context,
+                                                 titleFontSize = 15.sp,
+                                                 artistFontSize = 13.sp,
+                                                 onClick = onRowClick,
+                                                 isDragging = isThisDragging,
+                                                 isAnyDragging = isQueueItemDragging,
+                                                 dragTranslationX = if (isThisDragging) queueDragOffsetX else 0f,
+                                                 dragTranslationY = if (isThisDragging) queueDragOffsetY else animatedShiftY,
+                                                 onDragStart = { startY, globalY ->
+                                                      draggingSection = "queue"
+                                                      draggingIndex = index
+                                                      targetDropIndex = index
+                                                      queueDragOffsetY = 0f
+                                                      queueDragOffsetX = 0f
+                                                      listScrollAccumulator = 0f
+                                                      draggedItemInitialYInBox = globalY - playerBoxRootY
+                                                      draggedItemTitle = qItem.title
+                                                      draggedItemArtist = qItem.artist
+                                                      draggedItemArtUrl = qItem.artUrl
+                                                      queueTouchYInViewport = startY
+                                                      autoScrollVelocity = 0f
+                                                      isQueueItemDragging = true
+                                                  },
+                                                 onDragDelta = { dx, dy ->
+                                                     queueDragOffsetY += dy
+                                                     queueDragOffsetX = (queueDragOffsetX + dx * 0.40f).coerceIn(-48f, 48f)
+                                                     queueTouchYInViewport += dy
 
-                                                    val qSize = state.queue.size
-                                                    while (dragOffsetY > queueRowHeightPx * 0.55f && draggingIndex < qSize - 1 && draggingIndex >= 0) {
-                                                        val idx = draggingIndex
-                                                        val mutable = state.queue.toMutableList()
-                                                        val item = mutable.removeAt(idx)
-                                                        mutable.add(idx + 1, item)
-                                                        if (onQueueChange != null) onQueueChange(mutable) else com.mrtdk.liquid_glass.playback.PlaybackQueue.queue = mutable
-                                                        draggingIndex = idx + 1
-                                                        dragOffsetY -= queueRowHeightPx
-                                                        queueHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                    }
-                                                    while (dragOffsetY < -queueRowHeightPx * 0.55f && draggingIndex > 0 && draggingIndex < qSize) {
-                                                        val idx = draggingIndex
-                                                        val mutable = state.queue.toMutableList()
-                                                        val item = mutable.removeAt(idx)
-                                                        mutable.add(idx - 1, item)
-                                                        if (onQueueChange != null) onQueueChange(mutable) else com.mrtdk.liquid_glass.playback.PlaybackQueue.queue = mutable
-                                                        draggingIndex = idx - 1
-                                                        dragOffsetY += queueRowHeightPx
-                                                        queueHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                    }
+                                                     val qSize = state.queue.size
+                                                     val totalEffectiveOffset = queueDragOffsetY + listScrollAccumulator
+                                                     val itemsMoved = (totalEffectiveOffset / queueRowHeightPx).roundToInt()
+                                                     val newTarget = (draggingIndex + itemsMoved).coerceIn(0, qSize - 1)
+                                                     if (newTarget != targetDropIndex) {
+                                                         targetDropIndex = newTarget
+                                                         queueHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                     }
 
-                                                    val topZone = queueRowHeightPx * 1.5f
-                                                    val bottomZone = queueViewportHeightPx - (queueRowHeightPx * 1.5f)
-                                                    autoScrollVelocity = when {
-                                                        queueViewportHeightPx <= 0f -> 0f
-                                                        queueTouchYInViewport < topZone -> {
-                                                            val factor = ((topZone - queueTouchYInViewport) / topZone).coerceIn(0f, 1f)
-                                                            -(8f + factor * 22f)
-                                                        }
-                                                        queueTouchYInViewport > bottomZone -> {
-                                                            val factor = ((queueTouchYInViewport - bottomZone) / (queueViewportHeightPx - bottomZone).coerceAtLeast(1f)).coerceIn(0f, 1f)
-                                                            (8f + factor * 22f)
-                                                        }
-                                                        else -> 0f
-                                                    }
-                                                },
-                                                onDragEnd = {
-                                                    draggingSection = null
-                                                    draggingIndex = -1
-                                                    dragOffsetY = 0f
-                                                    dragOffsetX = 0f
-                                                    autoScrollVelocity = 0f
-                                                    isQueueItemDragging = false
-                                                }
-                                           )
-                                      }
-                                 }
+                                                     val topZone = queueRowHeightPx * 1.5f
+                                                     val bottomZone = queueViewportHeightPx - (queueRowHeightPx * 1.5f)
+                                                     autoScrollVelocity = when {
+                                                         queueViewportHeightPx <= 0f -> 0f
+                                                         queueTouchYInViewport < topZone -> {
+                                                             val factor = ((topZone - queueTouchYInViewport) / topZone).coerceIn(0f, 1f)
+                                                             -(8f + factor * 22f)
+                                                         }
+                                                         queueTouchYInViewport > bottomZone -> {
+                                                             val factor = ((queueTouchYInViewport - bottomZone) / (queueViewportHeightPx - bottomZone).coerceAtLeast(1f)).coerceIn(0f, 1f)
+                                                             (8f + factor * 22f)
+                                                         }
+                                                         else -> 0f
+                                                     }
+                                                 },
+                                                 onDragEnd = {
+                                                     val from = draggingIndex
+                                                     val to = targetDropIndex
+                                                     if (from != -1 && to != -1 && from != to && from in state.queue.indices && to in state.queue.indices) {
+                                                         val mutable = state.queue.toMutableList()
+                                                         val item = mutable.removeAt(from)
+                                                         mutable.add(to, item)
+                                                         if (onQueueChange != null) onQueueChange(mutable) else com.mrtdk.liquid_glass.playback.PlaybackQueue.queue = mutable
+                                                     }
+                                                     draggingSection = null
+                                                     draggingIndex = -1
+                                                     targetDropIndex = -1
+                                                     queueDragOffsetY = 0f
+                                                     queueDragOffsetX = 0f
+                                                     listScrollAccumulator = 0f
+                                                     autoScrollVelocity = 0f
+                                                     isQueueItemDragging = false
+                                                 }
+                                            )
+                                       }
+                                  }
 
                                  // 2. Up Next / Autoplay Section
                                  if (playerState?.isExclusiveQueue != true && upNextSongs.isNotEmpty()) {
@@ -2938,6 +2939,22 @@ fun PlayerScreen(
                                                }
                                            }
 
+                                           val targetShift = when {
+                                               draggingSection != "up_next" || draggingIndex == -1 -> 0f
+                                               isThisDragging -> 0f
+                                               draggingIndex < targetDropIndex && i > draggingIndex && i <= targetDropIndex -> -queueRowHeightPx
+                                               draggingIndex > targetDropIndex && i < draggingIndex && i >= targetDropIndex -> queueRowHeightPx
+                                               else -> 0f
+                                           }
+                                           val animatedShiftY by animateFloatAsState(
+                                               targetValue = targetShift,
+                                               animationSpec = spring(
+                                                   dampingRatio = Spring.DampingRatioLowBouncy,
+                                                   stiffness = Spring.StiffnessMediumLow
+                                               ),
+                                               label = "shift_un_$i"
+                                           )
+
                                            UpNextSongRow(
                                                rowData = rowData,
                                                contentColor = contentColor,
@@ -2949,67 +2966,70 @@ fun PlayerScreen(
                                                onClick = onRowClick,
                                                isDragging = isThisDragging,
                                                isAnyDragging = isQueueItemDragging,
-                                               dragTranslationX = if (isThisDragging) dragOffsetX else 0f,
-                                               dragTranslationY = if (isThisDragging) dragOffsetY else 0f,
-                                               onDragStart = { startY ->
-                                                   draggingSection = "up_next"
-                                                   draggingIndex = i
-                                                   dragOffsetY = 0f
-                                                   dragOffsetX = 0f
-                                                   queueTouchYInViewport = startY
-                                                   autoScrollVelocity = 0f
-                                                   isQueueItemDragging = true
-                                               },
-                                               onDragDelta = { dx, dy ->
-                                                   dragOffsetY += dy
-                                                   dragOffsetX = (dragOffsetX + dx * 0.40f).coerceIn(-48f, 48f)
-                                                   queueTouchYInViewport += dy
+                                               dragTranslationX = if (isThisDragging) queueDragOffsetX else 0f,
+                                               dragTranslationY = if (isThisDragging) queueDragOffsetY else animatedShiftY,
+                                               onDragStart = { startY, globalY ->
+                                                    draggingSection = "up_next"
+                                                    draggingIndex = i
+                                                    targetDropIndex = i
+                                                    queueDragOffsetY = 0f
+                                                    queueDragOffsetX = 0f
+                                                    listScrollAccumulator = 0f
+                                                    draggedItemInitialYInBox = globalY - playerBoxRootY
+                                                    draggedItemTitle = song.title
+                                                    draggedItemArtist = song.artists.joinToString { it.name }
+                                                    draggedItemArtUrl = song.thumbnail
+                                                    queueTouchYInViewport = startY
+                                                    autoScrollVelocity = 0f
+                                                    isQueueItemDragging = true
+                                                },
+                                                onDragDelta = { dx, dy ->
+                                                    queueDragOffsetY += dy
+                                                    queueDragOffsetX = (queueDragOffsetX + dx * 0.40f).coerceIn(-48f, 48f)
+                                                    queueTouchYInViewport += dy
 
-                                                   val unSize = upNextSongs.size
-                                                   while (dragOffsetY > queueRowHeightPx * 0.55f && draggingIndex < unSize - 1 && draggingIndex >= 0) {
-                                                       val idx = draggingIndex
-                                                       val mutable = upNextSongs.toMutableList()
-                                                       val item = mutable.removeAt(idx)
-                                                       mutable.add(idx + 1, item)
-                                                       onUpNextSongsChange(mutable)
-                                                       draggingIndex = idx + 1
-                                                       dragOffsetY -= queueRowHeightPx
-                                                       queueHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                   }
-                                                   while (dragOffsetY < -queueRowHeightPx * 0.55f && draggingIndex > 0 && draggingIndex < unSize) {
-                                                       val idx = draggingIndex
-                                                       val mutable = upNextSongs.toMutableList()
-                                                       val item = mutable.removeAt(idx)
-                                                       mutable.add(idx - 1, item)
-                                                       onUpNextSongsChange(mutable)
-                                                       draggingIndex = idx - 1
-                                                       dragOffsetY += queueRowHeightPx
-                                                       queueHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                   }
+                                                    val unSize = upNextSongs.size
+                                                    val totalEffectiveOffset = queueDragOffsetY + listScrollAccumulator
+                                                    val itemsMoved = (totalEffectiveOffset / queueRowHeightPx).roundToInt()
+                                                    val newTarget = (draggingIndex + itemsMoved).coerceIn(0, unSize - 1)
+                                                    if (newTarget != targetDropIndex) {
+                                                        targetDropIndex = newTarget
+                                                        queueHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                    }
 
-                                                   val topZone = queueRowHeightPx * 1.5f
-                                                   val bottomZone = queueViewportHeightPx - (queueRowHeightPx * 1.5f)
-                                                   autoScrollVelocity = when {
-                                                       queueViewportHeightPx <= 0f -> 0f
-                                                       queueTouchYInViewport < topZone -> {
-                                                           val factor = ((topZone - queueTouchYInViewport) / topZone).coerceIn(0f, 1f)
-                                                           -(8f + factor * 22f)
-                                                       }
-                                                       queueTouchYInViewport > bottomZone -> {
-                                                           val factor = ((queueTouchYInViewport - bottomZone) / (queueViewportHeightPx - bottomZone).coerceAtLeast(1f)).coerceIn(0f, 1f)
-                                                           (8f + factor * 22f)
-                                                       }
-                                                       else -> 0f
-                                                   }
-                                               },
-                                               onDragEnd = {
-                                                   draggingSection = null
-                                                   draggingIndex = -1
-                                                   dragOffsetY = 0f
-                                                   dragOffsetX = 0f
-                                                   autoScrollVelocity = 0f
-                                                   isQueueItemDragging = false
-                                               }
+                                                    val topZone = queueRowHeightPx * 1.5f
+                                                    val bottomZone = queueViewportHeightPx - (queueRowHeightPx * 1.5f)
+                                                    autoScrollVelocity = when {
+                                                        queueViewportHeightPx <= 0f -> 0f
+                                                        queueTouchYInViewport < topZone -> {
+                                                            val factor = ((topZone - queueTouchYInViewport) / topZone).coerceIn(0f, 1f)
+                                                            -(8f + factor * 22f)
+                                                        }
+                                                        queueTouchYInViewport > bottomZone -> {
+                                                            val factor = ((queueTouchYInViewport - bottomZone) / (queueViewportHeightPx - bottomZone).coerceAtLeast(1f)).coerceIn(0f, 1f)
+                                                            (8f + factor * 22f)
+                                                        }
+                                                        else -> 0f
+                                                    }
+                                                },
+                                                onDragEnd = {
+                                                    val from = draggingIndex
+                                                    val to = targetDropIndex
+                                                    if (from != -1 && to != -1 && from != to && from in upNextSongs.indices && to in upNextSongs.indices) {
+                                                        val mutable = upNextSongs.toMutableList()
+                                                        val item = mutable.removeAt(from)
+                                                        mutable.add(to, item)
+                                                        onUpNextSongsChange(mutable)
+                                                    }
+                                                    draggingSection = null
+                                                    draggingIndex = -1
+                                                    targetDropIndex = -1
+                                                    queueDragOffsetY = 0f
+                                                    queueDragOffsetX = 0f
+                                                    listScrollAccumulator = 0f
+                                                    autoScrollVelocity = 0f
+                                                    isQueueItemDragging = false
+                                                }
                                            )
                                }
                                 }
@@ -3025,7 +3045,12 @@ fun PlayerScreen(
                               Box(
                                   modifier = Modifier
                                       .weight(1f)
-                                      .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                                      .fillMaxWidth()
+                              ) {
+                                  Box(
+                                      modifier = Modifier
+                                          .fillMaxSize()
+                                          .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                                       .drawWithContent {
                                           drawContent()
                                           // Fade the lyrics at top and bottom for immersive depth
@@ -3229,10 +3254,73 @@ fun PlayerScreen(
                                           }
                                       }
                                   }
+
+                                  if (availableLyricsProviders.isNotEmpty()) {
+                                      com.mrtdk.liquid_glass.ui.components.BetterLyricsFloatingDock(
+                                          availableProviders = availableLyricsProviders,
+                                          currentProviderIndex = currentLyricsProviderIndex,
+                                          onSelectProviderIndex = { idx ->
+                                              currentLyricsProviderIndex = idx
+                                              val res = availableLyricsProviders.getOrNull(idx)
+                                              if (res != null) {
+                                                  currentLyricsProviderName = res.providerName
+                                                  currentLyricsSyncType = res.syncType
+                                                  selectedLyricsProvider = res.providerName
+                                                  scope.launch {
+                                                      val lyrics = res.lyrics
+                                                      val processed = if (isRomajiEnabled && lyrics != null) {
+                                                          val prefs = com.mrtdk.liquid_glass.utils.LyricsRomanizationPreferences(true, true, true, true, true)
+                                                          com.mrtdk.liquid_glass.utils.LyricsUtils.romanizeSyncedLyrics(lyrics, prefs)
+                                                      } else {
+                                                          lyrics
+                                                      }
+                                                      lyricsLines = processed?.lines
+                                                  }
+                                              }
+                                          },
+                                          isTranslateEnabled = isRomajiEnabled,
+                                          onToggleTranslate = {
+                                              isRomajiEnabled = !isRomajiEnabled
+                                              playerState?.videoId?.let { vid ->
+                                                  com.mrtdk.liquid_glass.data.LibraryManager.saveString("romanize_lyrics_$vid", isRomajiEnabled.toString())
+                                              }
+                                              val res = availableLyricsProviders.getOrNull(currentLyricsProviderIndex)
+                                              if (res != null) {
+                                                  scope.launch {
+                                                      val lyrics = res.lyrics
+                                                      val processed = if (isRomajiEnabled && lyrics != null) {
+                                                          val prefs = com.mrtdk.liquid_glass.utils.LyricsRomanizationPreferences(true, true, true, true, true)
+                                                          com.mrtdk.liquid_glass.utils.LyricsUtils.romanizeSyncedLyrics(lyrics, prefs)
+                                                      } else {
+                                                          lyrics
+                                                      }
+                                                      lyricsLines = processed?.lines
+                                                  }
+                                              }
+                                          },
+                                          offsetSeconds = lyricsOffset / 1000f,
+                                          onAdjustOffset = { delta ->
+                                              lyricsOffset += (delta * 1000).toInt()
+                                              playerState?.videoId?.let { vid ->
+                                                  com.mrtdk.liquid_glass.data.LibraryManager.saveString("lyrics_offset_$vid", lyricsOffset.toString())
+                                              }
+                                          },
+                                          onResetOffset = {
+                                              lyricsOffset = 0
+                                              playerState?.videoId?.let { vid ->
+                                                  com.mrtdk.liquid_glass.data.LibraryManager.saveString("lyrics_offset_$vid", "0")
+                                              }
+                                          },
+                                          modifier = Modifier
+                                              .align(Alignment.BottomCenter)
+                                              .padding(bottom = 6.dp)
+                                      )
+                                  }
                               }
                           }
                       }
-                                        } // Closes Box of overlay
+                  }
+              } // Closes Box of overlay
 
              } // Closes AnimatedVisibility of overlay
 
@@ -3333,7 +3421,7 @@ fun PlayerScreen(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                val currentAnimatedUrl = if (!showLyrics && !showQueue) animatedArtworkUrl else null
+                val currentAnimatedUrl = animatedArtworkUrl
 
                 if (!currentAnimatedUrl.isNullOrBlank()) {
                     DisposableEffect(Unit) {
@@ -3355,8 +3443,8 @@ fun PlayerScreen(
                             .graphicsLayer {
                                 alpha = if (isVideoPlaying) 1f else 0f
                             },
-                        isPaused = isOverlayActive,
-                        enableFrameCapture = (dragProgress == 0f && !isOverlayActive),
+                        isPaused = !isPlaying,
+                        enableFrameCapture = (dragProgress == 0f),
                         onPlayerCreated = { masterAnimatedPlayer = it },
                         onPlaybackStarted = { isVideoPlaying = true },
                         onFrameCaptured = { frameBitmap ->
@@ -3540,7 +3628,7 @@ fun PlayerScreen(
 
              AnimatedVisibility(
 
-                 visible = (!showLyrics || showLyricsControls) && !(showQueue && isQueueItemDragging),
+                 visible = (!showLyrics || showLyricsControls),
 
                  modifier = Modifier.align(Alignment.BottomCenter),
 
@@ -3830,7 +3918,29 @@ fun PlayerScreen(
                       }
                   }
 
-             }
+              }
+
+              if (isQueueItemDragging && draggingIndex != -1 && draggingSection != null) {
+                  val density = androidx.compose.ui.platform.LocalDensity.current
+                  val draggedInitialYDp = with(density) { draggedItemInitialYInBox.toDp() }
+                  val dragOffsetYDp = with(density) { queueDragOffsetY.toDp() }
+                  val dragOffsetXDp = with(density) { queueDragOffsetX.toDp() }
+                  Box(
+                      modifier = Modifier
+                          .fillMaxWidth()
+                          .padding(horizontal = 24.dp)
+                          .offset(x = dragOffsetXDp, y = draggedInitialYDp + dragOffsetYDp)
+                          .zIndex(9999f)
+                  ) {
+                      FloatingQueueDragCard(
+                          title = draggedItemTitle,
+                          artist = draggedItemArtist,
+                          artUrl = draggedItemArtUrl,
+                          contentColor = contentColor,
+                          context = context
+                      )
+                  }
+              }
 
          } // end inner Box
 
@@ -5535,7 +5645,7 @@ fun LandscapePlayerLayout(
 
 
 
-            val currentAnimatedUrl = if (!showLyrics && !showQueue) animatedArtworkUrl else null
+            val currentAnimatedUrl = animatedArtworkUrl
 
             if (!currentAnimatedUrl.isNullOrBlank()) {
 
@@ -6447,7 +6557,7 @@ private fun LandscapeQueueView(
                         isAnyDragging = (lsDraggingIndex != -1),
                         dragTranslationX = if (isThisDragging) lsDragOffsetX else 0f,
                         dragTranslationY = if (isThisDragging) lsDragOffsetY else animatedShiftY,
-                        onDragStart = { _ ->
+                        onDragStart = { _, _ ->
                             lsDraggingSection = "queue"
                             lsDraggingIndex = index
                             lsTargetDropIndex = index
@@ -6551,7 +6661,7 @@ private fun LandscapeQueueView(
                         isAnyDragging = (lsDraggingIndex != -1),
                         dragTranslationX = if (isThisDragging) lsDragOffsetX else 0f,
                         dragTranslationY = if (isThisDragging) lsDragOffsetY else animatedShiftY,
-                        onDragStart = { _ ->
+                        onDragStart = { _, _ ->
                             lsDraggingSection = "up_next"
                             lsDraggingIndex = i
                             lsTargetDropIndex = i
@@ -7089,7 +7199,7 @@ private fun QueueItemRow(
     isAnyDragging: Boolean = false,
     dragTranslationX: Float = 0f,
     dragTranslationY: Float = 0f,
-    onDragStart: (Float) -> Unit = {},
+    onDragStart: (Float, Float) -> Unit = { _, _ -> },
     onDragDelta: (Float, Float) -> Unit = { _, _ -> },
     onDragEnd: () -> Unit = {}
 ) {
@@ -7098,6 +7208,15 @@ private fun QueueItemRow(
     val currentOnDragEnd by rememberUpdatedState(onDragEnd)
     val haptic = LocalHapticFeedback.current
     var rowYInParent by remember { mutableFloatStateOf(0f) }
+    var rowGlobalY by remember { mutableFloatStateOf(0f) }
+
+    val pinnableContainer = androidx.compose.ui.layout.LocalPinnableContainer.current
+    DisposableEffect(isDragging) {
+        val handle = if (isDragging) pinnableContainer?.pin() else null
+        onDispose {
+            handle?.release()
+        }
+    }
 
     val upgradedArt = remember(rowData.artUrl) {
         rowData.artUrl?.let {
@@ -7129,7 +7248,7 @@ private fun QueueItemRow(
         label = "dragElevation"
     )
 
-    val rowAlpha = if (isAnyDragging && !isDragging) 0.45f else 1f
+    val rowAlpha = if (isDragging) 0f else if (isAnyDragging) 0.45f else 1f
     val rowShape = RoundedCornerShape(14.dp)
 
     Row(
@@ -7139,6 +7258,7 @@ private fun QueueItemRow(
             .zIndex(if (isDragging) 50f else 0f)
             .onGloballyPositioned { coordinates ->
                 rowYInParent = coordinates.positionInParent().y
+                rowGlobalY = coordinates.positionInRoot().y
             }
             .graphicsLayer {
                 translationX = dragTranslationX
@@ -7225,7 +7345,7 @@ private fun QueueItemRow(
                             val down = awaitFirstDown(requireUnconsumed = false)
                             down.consume()
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            currentOnDragStart(rowYInParent + down.position.y)
+                            currentOnDragStart(rowYInParent + down.position.y, rowGlobalY)
                             var pointerId = down.id
                             try {
                                 while (true) {
@@ -7265,7 +7385,7 @@ private fun UpNextSongRow(
     isAnyDragging: Boolean = false,
     dragTranslationX: Float = 0f,
     dragTranslationY: Float = 0f,
-    onDragStart: (Float) -> Unit = {},
+    onDragStart: (Float, Float) -> Unit = { _, _ -> },
     onDragDelta: (Float, Float) -> Unit = { _, _ -> },
     onDragEnd: () -> Unit = {}
 ) {
@@ -7274,6 +7394,15 @@ private fun UpNextSongRow(
     val currentOnDragEnd by rememberUpdatedState(onDragEnd)
     val haptic = LocalHapticFeedback.current
     var rowYInParent by remember { mutableFloatStateOf(0f) }
+    var rowGlobalY by remember { mutableFloatStateOf(0f) }
+
+    val pinnableContainer = androidx.compose.ui.layout.LocalPinnableContainer.current
+    DisposableEffect(isDragging) {
+        val handle = if (isDragging) pinnableContainer?.pin() else null
+        onDispose {
+            handle?.release()
+        }
+    }
 
     val hdThumb = remember(rowData.thumbnail) {
         rowData.thumbnail?.let {
@@ -7299,7 +7428,7 @@ private fun UpNextSongRow(
         label = "dragElevation"
     )
 
-    val rowAlpha = if (isAnyDragging && !isDragging) 0.45f else 1f
+    val rowAlpha = if (isDragging) 0f else if (isAnyDragging) 0.45f else 1f
     val rowShape = RoundedCornerShape(14.dp)
 
     Row(
@@ -7309,6 +7438,7 @@ private fun UpNextSongRow(
             .zIndex(if (isDragging) 50f else 0f)
             .onGloballyPositioned { coordinates ->
                 rowYInParent = coordinates.positionInParent().y
+                rowGlobalY = coordinates.positionInRoot().y
             }
             .graphicsLayer {
                 translationX = dragTranslationX
@@ -7395,7 +7525,7 @@ private fun UpNextSongRow(
                             val down = awaitFirstDown(requireUnconsumed = false)
                             down.consume()
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            currentOnDragStart(rowYInParent + down.position.y)
+                            currentOnDragStart(rowYInParent + down.position.y, rowGlobalY)
                             var pointerId = down.id
                             try {
                                 while (true) {
@@ -7467,4 +7597,110 @@ private fun calculateDominantSkew(bitmap: android.graphics.Bitmap): Float {
 
     val skew = -(bestDx / 10f) * 0.22f
     return skew.coerceIn(-0.25f, 0.25f)
+}
+
+@Composable
+private fun FloatingQueueDragCard(
+    title: String,
+    artist: String,
+    artUrl: Any?,
+    contentColor: Color,
+    context: android.content.Context,
+    titleFontSize: androidx.compose.ui.unit.TextUnit = 15.sp,
+    artistFontSize: androidx.compose.ui.unit.TextUnit = 13.sp
+) {
+    val rowShape = RoundedCornerShape(14.dp)
+    val upgradedArt = remember(artUrl) {
+        artUrl?.let {
+            val itStr = it.toString()
+            if (itStr.startsWith("file:///android_asset/")) {
+                it
+            } else {
+                val upgraded = com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(itStr) ?: itStr
+                if (it is android.net.Uri) android.net.Uri.parse(upgraded) else upgraded
+            }
+        } ?: artUrl
+    }
+
+    val imageModel = remember(upgradedArt, context) {
+        ImageRequest.Builder(context)
+            .data(upgradedArt)
+            .size(140)
+            .memoryCacheKey(upgradedArt?.toString())
+            .crossfade(false)
+            .build()
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = 1.04f
+                scaleY = 1.04f
+            }
+            .shadow(
+                elevation = 16.dp,
+                shape = rowShape,
+                ambientColor = Color.Black.copy(alpha = 0.55f),
+                spotColor = Color.Black.copy(alpha = 0.55f)
+            )
+            .background(
+                color = Color.White.copy(alpha = 0.24f),
+                shape = rowShape
+            )
+            .border(
+                width = 1.2.dp,
+                color = Color.White.copy(alpha = 0.40f),
+                shape = rowShape
+            )
+            .clip(rowShape)
+            .padding(vertical = 5.dp, horizontal = 8.dp)
+    ) {
+        AsyncImage(
+            model = imageModel,
+            contentDescription = null,
+            modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp))
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = contentColor,
+                fontSize = titleFontSize,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                fontWeight = FontWeight.SemiBold,
+                style = androidx.compose.ui.text.TextStyle(
+                    shadow = Shadow(
+                        color = Color.Black.copy(alpha = 0.40f),
+                        offset = Offset(0f, 1.5f),
+                        blurRadius = 6f
+                    )
+                )
+            )
+            Text(
+                text = artist,
+                color = contentColor.copy(alpha = 0.70f),
+                fontSize = artistFontSize,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                style = androidx.compose.ui.text.TextStyle(
+                    shadow = Shadow(
+                        color = Color.Black.copy(alpha = 0.35f),
+                        offset = Offset(0f, 1.5f),
+                        blurRadius = 5f
+                    )
+                )
+            )
+        }
+        Icon(
+            Icons.Default.Menu,
+            contentDescription = "Reorder",
+            tint = Color.White,
+            modifier = Modifier
+                .size(36.dp)
+                .padding(4.dp)
+        )
+    }
 }

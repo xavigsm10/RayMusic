@@ -484,7 +484,8 @@ fun AlbumScreen(
                     }
                     val blurRadiusDp by remember {
                         derivedStateOf {
-                            (scrollOffsetPx / 6f).coerceIn(0f, 32f).dp
+                            val raw = (scrollOffsetPx / 6f).coerceIn(0f, 32f)
+                            (kotlin.math.round(raw / 2f) * 2f).dp
                         }
                     }
                     val heroAlpha by remember {
