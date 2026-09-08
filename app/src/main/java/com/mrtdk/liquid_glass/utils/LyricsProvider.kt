@@ -507,33 +507,49 @@ object LyricsProvider {
             if (line is KaraokeLine) {
                 line
             } else {
-                val text = line.lineText.trim()
-                val words = text.split(Regex("\\s+")).filter { it.isNotEmpty() }
-                if (words.isEmpty() || line.start < 0) {
-                    line
-                } else {
-                    val lineStart = line.start
-                    val lineEnd = if (line.end > lineStart) line.end else lineStart + 4000
-                    val lineDuration = (lineEnd - lineStart).coerceAtLeast(300)
-                    val totalChars = text.length.coerceAtLeast(1)
+                try {
+                    val text = line.lineText.trim()
+                    val words = text.split(Regex("\\s+")).filter { it.isNotEmpty() }
+                    if (words.isEmpty() || line.start < 0) {
+                        line
+                    } else {
+                        val minWordDur = 25
+                        val safeLineStart = maxOf(0, line.start)
+                        val wordsCount = words.size
+                        val rawDuration = if (line.end > safeLineStart) line.end - safeLineStart else 4000
+                        val lineDuration = maxOf(rawDuration, wordsCount * minWordDur, 300)
+                        val finalLineEnd = safeLineStart + lineDuration
 
-                    var currentStart = lineStart
-                    val syllables = words.mapIndexed { idx, word ->
-                        val charWeight = if (idx < words.lastIndex) word.length + 1 else word.length
-                        val wordDur = ((lineDuration * charWeight.toFloat()) / totalChars).toInt().coerceAtLeast(80)
-                        val wordEnd = (currentStart + wordDur).coerceAtMost(lineEnd)
-                        val sylContent = if (idx < words.lastIndex) "$word " else word
-                        val syl = KaraokeSyllable(sylContent, currentStart, wordEnd)
-                        currentStart = wordEnd
-                        syl
+                        val weights = words.map { (it.length + 1).coerceAtLeast(1) }
+                        val totalWeight = weights.sum().coerceAtLeast(1)
+
+                        var currentStart = safeLineStart
+                        var cumWeight = 0
+
+                        val syllables = words.mapIndexed { idx, word ->
+                            cumWeight += weights[idx]
+                            val targetEnd = if (idx == words.lastIndex) {
+                                finalLineEnd
+                            } else {
+                                safeLineStart + ((lineDuration.toLong() * cumWeight) / totalWeight).toInt()
+                            }
+                            val safeEnd = maxOf(targetEnd, currentStart + minWordDur)
+                            val sylContent = if (idx < words.lastIndex) "$word " else word
+                            val syl = KaraokeSyllable(sylContent, currentStart, safeEnd)
+                            currentStart = safeEnd
+                            syl
+                        }
+                        val actualLineEnd = maxOf(finalLineEnd, currentStart)
+                        KaraokeLine.MainKaraokeLine(
+                            syllables = syllables,
+                            translation = line.lineTranslation,
+                            alignment = KaraokeAlignment.Start,
+                            start = safeLineStart,
+                            end = actualLineEnd
+                        )
                     }
-                    KaraokeLine.MainKaraokeLine(
-                        syllables = syllables,
-                        translation = line.lineTranslation,
-                        alignment = KaraokeAlignment.Start,
-                        start = lineStart,
-                        end = lineEnd
-                    )
+                } catch (e: Throwable) {
+                    line
                 }
             }
         }
@@ -625,24 +641,27 @@ object LyricsProvider {
 
         val baseLyrics = results.firstOrNull { it.lyrics != null && it.lyrics.lines.isNotEmpty() }?.lyrics
         if (baseLyrics != null) {
-            val defaultDistributors = listOf(
-                LyricsFetchResult(convertToWordSync(baseLyrics), "Better Lyrics Portato", "word"),
-                LyricsFetchResult(convertToWordSync(baseLyrics), "Better Lyrics", "syllable"),
-                LyricsFetchResult(convertToWordSync(baseLyrics), "BiniLyrics", "syllable"),
-                LyricsFetchResult(convertToLineSync(baseLyrics), "LRCLib", "line"),
-                LyricsFetchResult(convertToLineSync(baseLyrics), "Better Lyrics Legato", "line"),
-                LyricsFetchResult(convertToLineSync(baseLyrics), "Musixmatch", "line"),
-                LyricsFetchResult(convertToPlain(baseLyrics), "LRCLib", "plain")
+            val defaultDistributors = listOfNotNull(
+                runCatching { LyricsFetchResult(convertToWordSync(baseLyrics), "Better Lyrics Portato", "word") }.getOrNull(),
+                runCatching { LyricsFetchResult(convertToWordSync(baseLyrics), "Better Lyrics", "syllable") }.getOrNull(),
+                runCatching { LyricsFetchResult(convertToWordSync(baseLyrics), "BiniLyrics", "syllable") }.getOrNull(),
+                runCatching { LyricsFetchResult(convertToLineSync(baseLyrics), "LRCLib", "line") }.getOrNull(),
+                runCatching { LyricsFetchResult(convertToLineSync(baseLyrics), "Better Lyrics Legato", "line") }.getOrNull(),
+                runCatching { LyricsFetchResult(convertToLineSync(baseLyrics), "Musixmatch", "line") }.getOrNull(),
+                runCatching { LyricsFetchResult(convertToPlain(baseLyrics), "LRCLib", "plain") }.getOrNull()
             )
             for (dist in defaultDistributors) {
                 val exists = results.any { it.providerName.equals(dist.providerName, ignoreCase = true) && it.syncType == dist.syncType }
                 if (!exists) {
                     results.add(dist)
-                    onProviderFound?.invoke(dist)
+                    try {
+                        onProviderFound?.invoke(dist)
+                    } catch (e: Throwable) {
+                        Log.e("LyricsProvider", "Error in onProviderFound callback", e)
+                    }
                 }
             }
         }
-
         results.toList().distinctBy { "${it.providerName}:::${it.syncType}" }
     }
 

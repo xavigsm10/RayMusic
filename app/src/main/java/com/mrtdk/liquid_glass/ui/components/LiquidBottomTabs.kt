@@ -274,7 +274,7 @@ fun LiquidBottomTabs(
             )
         }
 
-        // Layer 3: Original LiquidBottomTabs selection puck from AndroidLiquidGlass
+        // Layer 3: Original LiquidBottomTabs selection puck from AndroidLiquidGlass (always active for gesture & oval indicator)
         Box(
             Modifier
                 .padding(horizontal = 4f.dp)
@@ -290,11 +290,13 @@ fun LiquidBottomTabs(
                     shape = { Capsule() },
                     effects = {
                         val progress = dampedDragAnimation.pressProgress
-                        lens(
-                            10f.dp.toPx() * progress,
-                            14f.dp.toPx() * progress,
-                            chromaticAberration = true
-                        )
+                        if (progress > 0.01f) {
+                            lens(
+                                10f.dp.toPx() * progress,
+                                14f.dp.toPx() * progress,
+                                chromaticAberration = true
+                            )
+                        }
                     },
                     highlight = {
                         val progress = dampedDragAnimation.pressProgress

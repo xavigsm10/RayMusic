@@ -287,8 +287,13 @@ fun SharedElementTransitionContainer(
                     if (dragY > 0f) {
                         scope.launch {
                             if (dragY > screenHeight * 0.2f) {
+                                val openedId = SharedTransitionState.lastOpenedId
+                                if (openedId != null && !SharedTransitionState.animatingItemIds.contains(openedId)) {
+                                    SharedTransitionState.animatingItemIds.add(openedId)
+                                }
                                 progress.animateTo(0f, DetailExitSpringSpec)
                                 SharedTransitionState.isDetailOpen = false
+                                SharedTransitionState.animatingItemIds.clear()
                                 onBack()
                             } else {
                                 progress.animateTo(1f, DetailEntrySpringSpec)
@@ -311,8 +316,13 @@ fun SharedElementTransitionContainer(
                         onDragEnd = {
                             scope.launch {
                                 if (dragY > screenHeight * 0.2f) {
+                                    val openedId = SharedTransitionState.lastOpenedId
+                                    if (openedId != null && !SharedTransitionState.animatingItemIds.contains(openedId)) {
+                                        SharedTransitionState.animatingItemIds.add(openedId)
+                                    }
                                     progress.animateTo(0f, DetailExitSpringSpec)
                                     SharedTransitionState.isDetailOpen = false
+                                    SharedTransitionState.animatingItemIds.clear()
                                     onBack()
                                 } else {
                                     progress.animateTo(1f, DetailEntrySpringSpec)

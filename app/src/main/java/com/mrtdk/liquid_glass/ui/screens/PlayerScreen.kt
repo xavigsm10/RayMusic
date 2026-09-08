@@ -1609,59 +1609,67 @@ fun PlayerScreen(
                     }
 
                     // 3. Población concurrente y progresiva de todos los distribuidores disponibles para el menú flotante
-                    val allProviders = com.mrtdk.liquid_glass.utils.LyricsProvider.fetchAllAvailableProviders(
-                        videoId,
-                        songTitle,
-                        songArtist,
-                        durSec,
-                        playerState.album
-                    ) { newProv ->
-                        val current = availableLyricsProviders.toMutableList()
-                        val exists = current.any { it.providerName.equals(newProv.providerName, ignoreCase = true) && it.syncType == newProv.syncType }
-                        if (!exists) {
-                            current.add(newProv)
-                            availableLyricsProviders = current
-                            if (currentLyricsProviderName.isEmpty()) {
-                                currentLyricsProviderName = newProv.providerName
-                                currentLyricsSyncType = newProv.syncType
-                                currentLyricsProviderIndex = 0
-                                if (lyricsLines == null && newProv.lyrics != null) {
-                                    lyricsLines = newProv.lyrics.lines
-                                    isLyricsLoading = false
-                                    isLyricsNotFound = false
+                    try {
+                        val allProviders = com.mrtdk.liquid_glass.utils.LyricsProvider.fetchAllAvailableProviders(
+                            videoId,
+                            songTitle,
+                            songArtist,
+                            durSec,
+                            playerState.album
+                        ) { newProv ->
+                            val current = availableLyricsProviders.toMutableList()
+                            val exists = current.any { it.providerName.equals(newProv.providerName, ignoreCase = true) && it.syncType == newProv.syncType }
+                            if (!exists) {
+                                current.add(newProv)
+                                availableLyricsProviders = current
+                                if (currentLyricsProviderName.isEmpty()) {
+                                    currentLyricsProviderName = newProv.providerName
+                                    currentLyricsSyncType = newProv.syncType
+                                    currentLyricsProviderIndex = 0
+                                    if (lyricsLines == null && newProv.lyrics != null) {
+                                        lyricsLines = newProv.lyrics.lines
+                                        isLyricsLoading = false
+                                        isLyricsNotFound = false
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    if (allProviders.isNotEmpty()) {
-                        availableLyricsProviders = allProviders
-                        val targetIndex = if (selectedLyricsProvider.isNotEmpty() && selectedLyricsProvider != "Auto") {
-                            allProviders.indexOfFirst { it.providerName.equals(selectedLyricsProvider, ignoreCase = true) }.coerceAtLeast(0)
-                        } else {
-                            val foundIdx = allProviders.indexOfFirst { it.providerName.equals(currentLyricsProviderName, ignoreCase = true) }
-                            if (foundIdx >= 0) foundIdx else 0
-                        }
-                        currentLyricsProviderIndex = targetIndex
-                        val activeResult = allProviders[targetIndex]
-                        currentLyricsProviderName = activeResult.providerName
-                        currentLyricsSyncType = activeResult.syncType
-
-                        if (lyricsLines == null || (selectedLyricsProvider.isNotEmpty() && selectedLyricsProvider != "Auto")) {
-                            val lines = activeResult.lyrics
-                            val processedLines = if (isRomajiEnabled && lines != null) {
-                                val prefs = com.mrtdk.liquid_glass.utils.LyricsRomanizationPreferences(true, true, true, true, true)
-                                com.mrtdk.liquid_glass.utils.LyricsUtils.romanizeSyncedLyrics(lines, prefs)
+                        if (allProviders.isNotEmpty()) {
+                            availableLyricsProviders = allProviders
+                            val targetIndex = if (selectedLyricsProvider.isNotEmpty() && selectedLyricsProvider != "Auto") {
+                                allProviders.indexOfFirst { it.providerName.equals(selectedLyricsProvider, ignoreCase = true) }.coerceAtLeast(0)
                             } else {
-                                lines
+                                val foundIdx = allProviders.indexOfFirst { it.providerName.equals(currentLyricsProviderName, ignoreCase = true) }
+                                if (foundIdx >= 0) foundIdx else 0
                             }
-                            lyricsLines = processedLines?.lines
+                            currentLyricsProviderIndex = targetIndex
+                            val activeResult = allProviders[targetIndex]
+                            currentLyricsProviderName = activeResult.providerName
+                            currentLyricsSyncType = activeResult.syncType
+
+                            if (lyricsLines == null || (selectedLyricsProvider.isNotEmpty() && selectedLyricsProvider != "Auto")) {
+                                val lines = activeResult.lyrics
+                                val processedLines = if (isRomajiEnabled && lines != null) {
+                                    val prefs = com.mrtdk.liquid_glass.utils.LyricsRomanizationPreferences(true, true, true, true, true)
+                                    com.mrtdk.liquid_glass.utils.LyricsUtils.romanizeSyncedLyrics(lines, prefs)
+                                } else {
+                                    lines
+                                }
+                                lyricsLines = processedLines?.lines
+                                isLyricsLoading = false
+                                isLyricsNotFound = false
+                            }
+                        } else if (lyricsLines == null) {
                             isLyricsLoading = false
-                            isLyricsNotFound = false
+                            isLyricsNotFound = true
                         }
-                    } else if (lyricsLines == null) {
-                        isLyricsLoading = false
-                        isLyricsNotFound = true
+                    } catch (e: Throwable) {
+                        android.util.Log.e("PlayerScreen", "Error loading lyrics providers", e)
+                        if (lyricsLines == null) {
+                            isLyricsLoading = false
+                            isLyricsNotFound = true
+                        }
                     }
                 }
             }
@@ -1970,110 +1978,85 @@ fun PlayerScreen(
 
 
             if (isLandscape) {
-
                 LandscapePlayerLayout(
-
+                    maxWidth = maxWidth,
+                    maxHeight = maxHeight,
                     playerState = playerState,
-
                     isPlaying = isPlaying,
-
                     currentPosition = currentPosition,
-
                     duration = duration,
-
                     upNextSongs = upNextSongs,
-
-                    onUpNextSongsChange = onUpNextSongsChange,
-
-                    onSkipNext = onSkipNext,
-
-                    onSkipPrevious = onSkipPrevious,
-
-                    onClose = onClose,
-
-                    onTogglePlayPause = onTogglePlayPause,
-
-                    onSeek = onSeek,
-
-                    onVolumeChange = onVolumeChange,
-
-                    onArtistSelected = onArtistSelected,
-
-                    onAlbumSelected = onAlbumSelected,
-
-                    onSongSelected = onSongSelected,
-
-                    onSongSelectedFromQueue = onSongSelectedFromQueue,
-
                     shuffleModeEnabled = shuffleModeEnabled,
-
                     repeatMode = repeatMode,
-
-                    onToggleShuffle = onToggleShuffle,
-
-                    onToggleRepeat = onToggleRepeat,
-
                     showLyrics = showLyrics,
-
-                    onShowLyricsChange = { showLyrics = it },
-
                     showQueue = showQueue,
-
-                    onShowQueueChange = { showQueue = it },
-
                     volumePosition = volumePosition,
-
-                    onVolumePositionChange = { volumePosition = it },
-
                     coverBitmap = coverBitmap,
-
-                    onCoverBitmapChange = { coverBitmap = it },
-
-                    dominantColor = dominantColor,
-
-                    onDominantColorChange = { dominantColor = it },
-
-                    bottomAverageColor = bottomAverageColor,
-
-                    onBottomAverageColorChange = { bottomAverageColor = it },
-
-                    rightSideAverageColor = rightSideAverageColor,
-
-                    onRightSideAverageColorChange = { rightSideAverageColor = it },
-
                     hdArtUrl = hdArtUrl,
-
                     lyricsLines = lyricsLines,
-
                     isRomajiEnabled = isRomajiEnabled,
-
-                    onToggleRomaji = { isRomajiEnabled = !isRomajiEnabled },
-
                     isSaved = isSaved,
-
                     animatedArtworkUrl = animatedArtworkUrl,
-
                     isVideoPlaying = isVideoPlaying,
-
-                    onVideoPlayingChange = { isVideoPlaying = it },
                     animatedImageLoader = animatedImageLoader,
-                    isLightBackground = isLightBackground,
-                    contentColor = contentColor,
-                    onShowOptionsMenu = { bounds -> menuPivotBounds = bounds; showOptionsMenu = true },
-                    onShowLyricsMenu = { openDirectlyInProvidersView = false; showLyricsOptionsMenu = true },
-                    onShowPlaylistMenu = { showPlaylistMenu = true },
-                    onShowArtistMenu = { artists, bounds ->
-                        artistMenuOptions = artists
-                        artistPivotBounds = bounds
-                        showArtistOptionsMenu = true
-                    },
                     isBottomBarCollapsed = isBottomBarCollapsed,
                     isAutoScrollEnabled = isAutoScrollEnabled,
                     scrollToCurrentTrigger = scrollToCurrentTrigger,
-                    onAutoScrollChange = { isAutoScrollEnabled = it },
                     lyricsOffset = lyricsOffset,
-                    sliderActiveColor = sliderActiveColor,
-                    sliderInactiveColor = sliderInactiveColor
+                    colors = remember(
+                        dominantColor, bottomAverageColor, rightSideAverageColor,
+                        contentColor, isLightBackground, sliderActiveColor, sliderInactiveColor
+                    ) {
+                        LandscapePlayerColors(
+                            dominantColor = dominantColor,
+                            bottomAverageColor = bottomAverageColor,
+                            rightSideAverageColor = rightSideAverageColor,
+                            contentColor = contentColor,
+                            isLightBackground = isLightBackground,
+                            sliderActiveColor = sliderActiveColor,
+                            sliderInactiveColor = sliderInactiveColor
+                        )
+                    },
+                    callbacks = remember(
+                        onUpNextSongsChange, onSkipNext, onSkipPrevious, onClose,
+                        onTogglePlayPause, onSeek, onVolumeChange, onArtistSelected,
+                        onAlbumSelected, onSongSelected, onSongSelectedFromQueue,
+                        onToggleShuffle, onToggleRepeat, isBottomBarCollapsed
+                    ) {
+                        LandscapePlayerCallbacks(
+                            onUpNextSongsChange = onUpNextSongsChange,
+                            onSkipNext = onSkipNext,
+                            onSkipPrevious = onSkipPrevious,
+                            onClose = onClose,
+                            onTogglePlayPause = onTogglePlayPause,
+                            onSeek = onSeek,
+                            onVolumeChange = onVolumeChange,
+                            onArtistSelected = onArtistSelected,
+                            onAlbumSelected = onAlbumSelected,
+                            onSongSelected = onSongSelected,
+                            onSongSelectedFromQueue = onSongSelectedFromQueue,
+                            onToggleShuffle = onToggleShuffle,
+                            onToggleRepeat = onToggleRepeat,
+                            onShowLyricsChange = { showLyrics = it },
+                            onShowQueueChange = { showQueue = it },
+                            onVolumePositionChange = { volumePosition = it },
+                            onCoverBitmapChange = { coverBitmap = it },
+                            onDominantColorChange = { dominantColor = it },
+                            onBottomAverageColorChange = { bottomAverageColor = it },
+                            onRightSideAverageColorChange = { rightSideAverageColor = it },
+                            onToggleRomaji = { isRomajiEnabled = !isRomajiEnabled },
+                            onVideoPlayingChange = { isVideoPlaying = it },
+                            onShowOptionsMenu = { bounds -> menuPivotBounds = bounds; showOptionsMenu = true },
+                            onShowLyricsMenu = { openDirectlyInProvidersView = false; showLyricsOptionsMenu = true },
+                            onShowPlaylistMenu = { showPlaylistMenu = true },
+                            onShowArtistMenu = { artists, bounds ->
+                                artistMenuOptions = artists
+                                artistPivotBounds = bounds
+                                showArtistOptionsMenu = true
+                            },
+                            onAutoScrollChange = { isAutoScrollEnabled = it }
+                        )
+                    }
                 )
             } else {
                 val lyricsImageSize = 84.dp
@@ -2166,7 +2149,12 @@ fun PlayerScreen(
             
 
             val playerArtworkStyle by LibraryManager.playerArtworkStyle.collectAsState()
-            val isNormalArtwork = playerArtworkStyle == "normal"
+            val hasAnimatedCover = !animatedArtworkUrl.isNullOrBlank() || isVideoPlaying
+            val isNormalArtwork = when (playerArtworkStyle) {
+                "normal" -> true
+                "animated_fullartwork" -> !hasAnimatedCover
+                else -> false
+            }
 
             val controlsBaseY = maxWidth * 1.23f
 
@@ -3254,68 +3242,6 @@ fun PlayerScreen(
                                           }
                                       }
                                   }
-
-                                  if (availableLyricsProviders.isNotEmpty()) {
-                                      com.mrtdk.liquid_glass.ui.components.BetterLyricsFloatingDock(
-                                          availableProviders = availableLyricsProviders,
-                                          currentProviderIndex = currentLyricsProviderIndex,
-                                          onSelectProviderIndex = { idx ->
-                                              currentLyricsProviderIndex = idx
-                                              val res = availableLyricsProviders.getOrNull(idx)
-                                              if (res != null) {
-                                                  currentLyricsProviderName = res.providerName
-                                                  currentLyricsSyncType = res.syncType
-                                                  selectedLyricsProvider = res.providerName
-                                                  scope.launch {
-                                                      val lyrics = res.lyrics
-                                                      val processed = if (isRomajiEnabled && lyrics != null) {
-                                                          val prefs = com.mrtdk.liquid_glass.utils.LyricsRomanizationPreferences(true, true, true, true, true)
-                                                          com.mrtdk.liquid_glass.utils.LyricsUtils.romanizeSyncedLyrics(lyrics, prefs)
-                                                      } else {
-                                                          lyrics
-                                                      }
-                                                      lyricsLines = processed?.lines
-                                                  }
-                                              }
-                                          },
-                                          isTranslateEnabled = isRomajiEnabled,
-                                          onToggleTranslate = {
-                                              isRomajiEnabled = !isRomajiEnabled
-                                              playerState?.videoId?.let { vid ->
-                                                  com.mrtdk.liquid_glass.data.LibraryManager.saveString("romanize_lyrics_$vid", isRomajiEnabled.toString())
-                                              }
-                                              val res = availableLyricsProviders.getOrNull(currentLyricsProviderIndex)
-                                              if (res != null) {
-                                                  scope.launch {
-                                                      val lyrics = res.lyrics
-                                                      val processed = if (isRomajiEnabled && lyrics != null) {
-                                                          val prefs = com.mrtdk.liquid_glass.utils.LyricsRomanizationPreferences(true, true, true, true, true)
-                                                          com.mrtdk.liquid_glass.utils.LyricsUtils.romanizeSyncedLyrics(lyrics, prefs)
-                                                      } else {
-                                                          lyrics
-                                                      }
-                                                      lyricsLines = processed?.lines
-                                                  }
-                                              }
-                                          },
-                                          offsetSeconds = lyricsOffset / 1000f,
-                                          onAdjustOffset = { delta ->
-                                              lyricsOffset += (delta * 1000).toInt()
-                                              playerState?.videoId?.let { vid ->
-                                                  com.mrtdk.liquid_glass.data.LibraryManager.saveString("lyrics_offset_$vid", lyricsOffset.toString())
-                                              }
-                                          },
-                                          onResetOffset = {
-                                              lyricsOffset = 0
-                                              playerState?.videoId?.let { vid ->
-                                                  com.mrtdk.liquid_glass.data.LibraryManager.saveString("lyrics_offset_$vid", "0")
-                                              }
-                                          },
-                                          modifier = Modifier
-                                              .align(Alignment.BottomCenter)
-                                              .padding(bottom = 6.dp)
-                                      )
-                                  }
                               }
                           }
                       }
@@ -4175,13 +4101,13 @@ fun PlayerScreen(
             androidx.compose.material3.AlertDialog(
                 onDismissRequest = { showLyricsEditDialog = false },
                 containerColor = Color(0xFF1E1E1E),
-                title = { Text("Editar Letras", color = Color.White, fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.lyrics_edit_dialog_title), color = Color.White, fontWeight = FontWeight.Bold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                         androidx.compose.material3.OutlinedTextField(
                             value = tempLyricsText,
                             onValueChange = { tempLyricsText = it },
-                            label = { Text("Letras (Formato LRC o Texto plano)", color = Color.Gray) },
+                            label = { Text(stringResource(R.string.lyrics_edit_label), color = Color.Gray) },
                             modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp, max = 240.dp),
                             colors = androidx.compose.material3.TextFieldDefaults.colors(
                                 focusedTextColor = Color.White, unfocusedTextColor = Color.White,
@@ -4198,15 +4124,15 @@ fun PlayerScreen(
                         if (playerState?.videoId != null) {
                             com.mrtdk.liquid_glass.data.LibraryManager.saveString("custom_lyrics_${playerState.videoId}", tempLyricsText)
                             lyricsReloadTrigger++
-                            Toast.makeText(context, "Letras guardadas", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.lyrics_saved_toast), Toast.LENGTH_SHORT).show()
                         }
                     }) {
-                        Text("Guardar", color = Color(0xFFFA243C))
+                        Text(stringResource(R.string.guardar), color = Color(0xFFFA243C))
                     }
                 },
                 dismissButton = {
                     androidx.compose.material3.TextButton(onClick = { showLyricsEditDialog = false }) {
-                        Text("Cancelar", color = Color.Gray)
+                        Text(stringResource(R.string.cancelar), color = Color.Gray)
                     }
                 }
             )
@@ -5250,159 +5176,127 @@ fun downloadSong(context: android.content.Context, videoId: String, title: Strin
 
 
 
+data class LandscapePlayerColors(
+    val dominantColor: Color,
+    val bottomAverageColor: Color,
+    val rightSideAverageColor: Color,
+    val contentColor: Color,
+    val isLightBackground: Boolean,
+    val sliderActiveColor: Color,
+    val sliderInactiveColor: Color
+)
+
+data class LandscapePlayerCallbacks(
+    val onUpNextSongsChange: (List<com.echo.innertube.models.SongItem>) -> Unit,
+    val onSkipNext: () -> Unit,
+    val onSkipPrevious: () -> Unit,
+    val onClose: () -> Unit,
+    val onTogglePlayPause: () -> Unit,
+    val onSeek: (Long) -> Unit,
+    val onVolumeChange: (Float) -> Unit,
+    val onArtistSelected: (com.mrtdk.liquid_glass.ui.screens.ArtistState) -> Unit,
+    val onAlbumSelected: (com.mrtdk.liquid_glass.ui.screens.AlbumState) -> Unit,
+    val onSongSelected: (PlayerState) -> Unit,
+    val onSongSelectedFromQueue: (PlayerState) -> Unit,
+    val onToggleShuffle: () -> Unit,
+    val onToggleRepeat: () -> Unit,
+    val onShowLyricsChange: (Boolean) -> Unit,
+    val onShowQueueChange: (Boolean) -> Unit,
+    val onVolumePositionChange: (Float) -> Unit,
+    val onCoverBitmapChange: (ImageBitmap?) -> Unit,
+    val onDominantColorChange: (Color) -> Unit,
+    val onBottomAverageColorChange: (Color) -> Unit,
+    val onRightSideAverageColorChange: (Color) -> Unit,
+    val onToggleRomaji: () -> Unit,
+    val onVideoPlayingChange: (Boolean) -> Unit,
+    val onShowOptionsMenu: (androidx.compose.ui.geometry.Rect?) -> Unit,
+    val onShowLyricsMenu: () -> Unit,
+    val onShowPlaylistMenu: () -> Unit,
+    val onShowArtistMenu: (List<String>, androidx.compose.ui.geometry.Rect?) -> Unit,
+    val onAutoScrollChange: (Boolean) -> Unit = {}
+)
+
 @Composable
-
 fun LandscapePlayerLayout(
-
+    maxWidth: androidx.compose.ui.unit.Dp,
+    maxHeight: androidx.compose.ui.unit.Dp,
     playerState: PlayerState?,
-
     isPlaying: Boolean,
-
     currentPosition: Long,
-
     duration: Long,
-
     upNextSongs: List<com.echo.innertube.models.SongItem>,
-
-    onUpNextSongsChange: (List<com.echo.innertube.models.SongItem>) -> Unit,
-
-    onSkipNext: () -> Unit,
-
-    onSkipPrevious: () -> Unit,
-
-    onClose: () -> Unit,
-
-    onTogglePlayPause: () -> Unit,
-
-    onSeek: (Long) -> Unit,
-
-    onVolumeChange: (Float) -> Unit,
-
-    onArtistSelected: (com.mrtdk.liquid_glass.ui.screens.ArtistState) -> Unit,
-
-    onAlbumSelected: (com.mrtdk.liquid_glass.ui.screens.AlbumState) -> Unit,
-
-    onSongSelected: (PlayerState) -> Unit,
-
-    onSongSelectedFromQueue: (PlayerState) -> Unit,
-
     shuffleModeEnabled: Boolean,
-
     repeatMode: Int,
-
-    onToggleShuffle: () -> Unit,
-
-    onToggleRepeat: () -> Unit,
-
     showLyrics: Boolean,
-
-    onShowLyricsChange: (Boolean) -> Unit,
-
     showQueue: Boolean,
-
-    onShowQueueChange: (Boolean) -> Unit,
-
     volumePosition: Float,
-
-    onVolumePositionChange: (Float) -> Unit,
-
     coverBitmap: ImageBitmap?,
-
-    onCoverBitmapChange: (ImageBitmap?) -> Unit,
-
-    dominantColor: Color,
-
-    onDominantColorChange: (Color) -> Unit,
-
-    bottomAverageColor: Color,
-
-    onBottomAverageColorChange: (Color) -> Unit,
-
-    rightSideAverageColor: Color,
-
-    onRightSideAverageColorChange: (Color) -> Unit,
-
     hdArtUrl: Any?,
-
     lyricsLines: List<com.mocharealm.accompanist.lyrics.core.model.ISyncedLine>?,
-
     isRomajiEnabled: Boolean,
-
-    onToggleRomaji: () -> Unit,
-
     isSaved: Boolean,
-
     animatedArtworkUrl: String?,
-
     isVideoPlaying: Boolean,
-
-    onVideoPlayingChange: (Boolean) -> Unit,
-
     animatedImageLoader: coil.ImageLoader,
-
-    isLightBackground: Boolean,
-
-    contentColor: Color,
-
-    onShowOptionsMenu: (androidx.compose.ui.geometry.Rect?) -> Unit,
-
-    onShowLyricsMenu: () -> Unit,
-
-    onShowPlaylistMenu: () -> Unit,
-
-    onShowArtistMenu: (List<String>, androidx.compose.ui.geometry.Rect?) -> Unit,
-
     isBottomBarCollapsed: Boolean,
-
     isAutoScrollEnabled: Boolean = true,
-
     scrollToCurrentTrigger: Int = 0,
-
-    onAutoScrollChange: (Boolean) -> Unit = {},
-
     lyricsOffset: Int = 0,
-    sliderActiveColor: Color = contentColor,
-    sliderInactiveColor: Color = contentColor.copy(alpha = 0.25f)
+    colors: LandscapePlayerColors,
+    callbacks: LandscapePlayerCallbacks
 ) {
+    val dominantColor = colors.dominantColor
+    val bottomAverageColor = colors.bottomAverageColor
+    val rightSideAverageColor = colors.rightSideAverageColor
+    val contentColor = colors.contentColor
+    val isLightBackground = colors.isLightBackground
+    val sliderActiveColor = colors.sliderActiveColor
+    val sliderInactiveColor = colors.sliderInactiveColor
+
+    val onUpNextSongsChange = callbacks.onUpNextSongsChange
+    val onSkipNext = callbacks.onSkipNext
+    val onSkipPrevious = callbacks.onSkipPrevious
+    val onClose = callbacks.onClose
+    val onTogglePlayPause = callbacks.onTogglePlayPause
+    val onSeek = callbacks.onSeek
+    val onVolumeChange = callbacks.onVolumeChange
+    val onArtistSelected = callbacks.onArtistSelected
+    val onAlbumSelected = callbacks.onAlbumSelected
+    val onSongSelected = callbacks.onSongSelected
+    val onSongSelectedFromQueue = callbacks.onSongSelectedFromQueue
+    val onToggleShuffle = callbacks.onToggleShuffle
+    val onToggleRepeat = callbacks.onToggleRepeat
+    val onShowLyricsChange = callbacks.onShowLyricsChange
+    val onShowQueueChange = callbacks.onShowQueueChange
+    val onVolumePositionChange = callbacks.onVolumePositionChange
+    val onCoverBitmapChange = callbacks.onCoverBitmapChange
+    val onDominantColorChange = callbacks.onDominantColorChange
+    val onBottomAverageColorChange = callbacks.onBottomAverageColorChange
+    val onRightSideAverageColorChange = callbacks.onRightSideAverageColorChange
+    val onToggleRomaji = callbacks.onToggleRomaji
+    val onVideoPlayingChange = callbacks.onVideoPlayingChange
+    val onShowOptionsMenu = callbacks.onShowOptionsMenu
+    val onShowLyricsMenu = callbacks.onShowLyricsMenu
+    val onShowPlaylistMenu = callbacks.onShowPlaylistMenu
+    val onShowArtistMenu = callbacks.onShowArtistMenu
+    val onAutoScrollChange = callbacks.onAutoScrollChange
 
     val context = LocalContext.current
-
     val density = androidx.compose.ui.platform.LocalDensity.current
-
     val dragOffsetY = remember { Animatable(0f) }
-
     val scope = rememberCoroutineScope()
-
     val isBadSong = remember(playerState) {
-
         val title = playerState?.title ?: ""
-
         val artist = playerState?.artist ?: ""
-
         val album = playerState?.album ?: ""
-
         (album.contains("Bad", ignoreCase = true) || title.contains("Bad", ignoreCase = true)) &&
-
         artist.contains("Michael Jackson", ignoreCase = true)
-
     }
 
-
-
-    BoxWithConstraints(
-
-        modifier = Modifier
-
-            .fillMaxSize()
-
+    Box(
+        modifier = Modifier.fillMaxSize()
     ) {
-
-        val maxWidth = maxWidth
-
-        val maxHeight = maxHeight
-
         val audioManager = remember { context.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager }
-
         val maxVolume = remember { audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC).toFloat() }
 
 

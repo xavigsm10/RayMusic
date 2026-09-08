@@ -844,7 +844,7 @@ fun PlaylistDetailScreen(
         com.mrtdk.liquid_glass.data.MadeForYouRepository.get(currentPlaylist.id)?.gradientColors?.firstOrNull() ?: Color(0xFFE62B00)
     } else Color(0xFF2B2B2B)
     val playerArtworkStyle by LibraryManager.playerArtworkStyle.collectAsState()
-    val isNormalArtwork = playerArtworkStyle == "normal"
+    val isNormalArtwork = playerArtworkStyle != "fullartwork"
     var showAddMusicOverlay by remember { mutableStateOf(false) }
     var dominantColor by remember(currentPlaylist.id) { mutableStateOf(defaultDominantColor) }
     var contentColor by remember(currentPlaylist.id) { mutableStateOf(Color.White) }
@@ -932,7 +932,7 @@ fun PlaylistDetailScreen(
             val curY = sourceY + progress * (0f - sourceY)
             val curW = sourceW + progress * (screenWidth - sourceW)
             val curH = sourceH + progress * (screenHeight - sourceH)
-            val curCorner = 24f * (1f - progress)
+            val curCorner = (if (isMadeForYou) 18f else 24f) * (1f - progress)
             var showPlaylistMenu by remember { mutableStateOf(false) }
             var currentSort by remember { mutableStateOf("default") }
 
@@ -1465,7 +1465,7 @@ fun PlaylistDetailScreen(
                                     modifier = Modifier.size(24.dp)
                                 )
                                 Text(
-                                    text = "Play",
+                                    text = stringResource(R.string.reproducir),
                                     color = Color.Black,
                                     fontSize = 17.sp,
                                     fontWeight = FontWeight.SemiBold
@@ -1483,10 +1483,10 @@ fun PlaylistDetailScreen(
                                 .background(darkTranslucent)
                                 .clickable {
                                     if (isSaved) {
-                                        android.widget.Toast.makeText(context, "Playlist ya guardada", android.widget.Toast.LENGTH_SHORT).show()
+                                        android.widget.Toast.makeText(context, context.getString(R.string.playlist_already_saved), android.widget.Toast.LENGTH_SHORT).show()
                                     } else {
                                         LibraryManager.createPlaylist(currentPlaylist.name, coverUrl)
-                                        android.widget.Toast.makeText(context, "Playlist guardada", android.widget.Toast.LENGTH_SHORT).show()
+                                        android.widget.Toast.makeText(context, context.getString(R.string.playlist_saved), android.widget.Toast.LENGTH_SHORT).show()
                                     }
                                 },
                             contentAlignment = Alignment.Center
@@ -1646,8 +1646,12 @@ fun PlaylistDetailScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             // Cover Art at the top of the card
-                            val coverHeightRatio = 1f + progress * 0.15f
-                            val coverHeight = curW * coverHeightRatio
+                            val coverHeight = if (isMadeForYou) {
+                                (sourceH + progress * (screenWidth * 1.25f - sourceH)).coerceAtLeast(0f)
+                            } else {
+                                val coverHeightRatio = 1f + progress * 0.15f
+                                curW * coverHeightRatio
+                            }
                             
                             Box(
                                 modifier = Modifier
@@ -1687,6 +1691,18 @@ fun PlaylistDetailScreen(
                                             )
                                         }
                                     }
+                                } else if (isMadeForYou) {
+                                    val mfy = MadeForYouRepository.get(currentPlaylist.id)
+                                    val titleToUse = mfy?.title ?: currentPlaylist.name
+                                    val subToUse = mfy?.artistsSubtitle ?: ""
+                                    val gradToUse = mfy?.gradientColors ?: listOf(Color(0xFFE62B00), Color(0xFFFF5E3A))
+                                    MadeForYouCardContent(
+                                        title = titleToUse,
+                                        artistsSubtitle = subToUse,
+                                        gradientColors = gradToUse,
+                                        modifier = Modifier.fillMaxSize(),
+                                        isHero = progress > 0.6f
+                                    )
                                 } else if (coverUrl != null) {
                                     AsyncImage(
                                         model = ImageRequest.Builder(context).data(coverUrl).crossfade(false).build(),
@@ -1703,18 +1719,20 @@ fun PlaylistDetailScreen(
                                     }
                                 }
                                 
-                                // Gradient fade at the bottom of the cover art
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(
-                                            Brush.verticalGradient(
-                                                0.0f to Color.Transparent,
-                                                0.75f to Color.Transparent,
-                                                1.0f to dominantColor
+                                // Gradient fade at the bottom of the cover art (only for normal playlists)
+                                if (!isMadeForYou) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(
+                                                Brush.verticalGradient(
+                                                    0.0f to Color.Transparent,
+                                                    0.75f to Color.Transparent,
+                                                    1.0f to dominantColor
+                                                )
                                             )
-                                        )
-                                )
+                                    )
+                                }
                             }
                             
                             // Details below the cover art (Title, Artist/Subtitle, Action Buttons)
@@ -1799,7 +1817,7 @@ fun PlaylistDetailScreen(
                                                 tint = Color.Black,
                                                 modifier = Modifier.size(20.dp)
                                             )
-                                            Text("Play", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                                            Text(stringResource(R.string.reproducir), color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                                         }
                                     }
                                     
@@ -1932,7 +1950,7 @@ fun FavoriteSongsScreen(
     val favoriteSongs by LibraryManager.savedItems.collectAsState()
     val songs = favoriteSongs.filter { it.type == com.mrtdk.liquid_glass.data.ItemType.SONG }
     val playerArtworkStyle by LibraryManager.playerArtworkStyle.collectAsState()
-    val isNormalArtwork = playerArtworkStyle == "normal"
+    val isNormalArtwork = playerArtworkStyle != "fullartwork"
 
     // Dynamic color extraction from the first song thumbnail - same algorithm as albums/playlists
     var dominantColor by remember { mutableStateOf(Color(0xFF8B0000)) }
@@ -2585,7 +2603,7 @@ fun AddMusicRow(onClick: () -> Unit, contentColor: Color) {
         }
         Spacer(modifier = Modifier.width(16.dp))
         Text(
-            text = "Añadir música",
+            text = stringResource(R.string.add_music),
             color = contentColor,
             fontSize = 17.sp,
             fontWeight = FontWeight.Medium
@@ -2631,14 +2649,14 @@ fun SuggestedSongsSection(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Canciones sugeridas",
+                        text = stringResource(R.string.suggested_songs),
                         color = contentColor,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Escucha un fragmento y añade la pista a la playlist.",
+                        text = stringResource(R.string.suggested_songs_desc),
                         color = contentColor.copy(alpha = 0.6f),
                         fontSize = 12.sp
                     )
@@ -2782,17 +2800,25 @@ fun AddMusicContent(
     }
 
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabNames = listOf("Resultados principales", "Artistas", "Álbumes", "Canciones")
+    val tabNames = listOf(
+        stringResource(R.string.search_tab_top),
+        stringResource(R.string.search_tab_artists),
+        stringResource(R.string.search_tab_albums),
+        stringResource(R.string.search_tab_songs)
+    )
+
+    val defaultHeaderTitle = stringResource(R.string.add_to_playlist_title, playlistName)
+    val addedBannerTitle = stringResource(R.string.added_song_to_playlist_banner, playlistName)
 
     // Dynamic title in header
-    var headerTitle by remember { mutableStateOf("Añadir a \"$playlistName\"") }
+    var headerTitle by remember(defaultHeaderTitle) { mutableStateOf(defaultHeaderTitle) }
 
     fun triggerAddedBanner() {
         bannerJob?.cancel()
         bannerJob = coroutineScope.launch {
-            headerTitle = "Se ha añadido 1 canción a \"$playlistName\""
+            headerTitle = addedBannerTitle
             kotlinx.coroutines.delay(3000)
-            headerTitle = "Añadir a \"$playlistName\""
+            headerTitle = defaultHeaderTitle
         }
     }
 
@@ -2935,9 +2961,11 @@ fun AddMusicContent(
                 )
             }
 
+            val defaultAlbumText = stringResource(R.string.search_type_album)
+            val defaultArtistText = stringResource(R.string.search_type_artist)
             Text(
-                text = if (activeAlbumId != null) (activeAlbumName ?: "Álbum")
-                       else if (activeArtistId != null) (activeArtistName ?: "Artista")
+                text = if (activeAlbumId != null) (activeAlbumName ?: defaultAlbumText)
+                       else if (activeArtistId != null) (activeArtistName ?: defaultArtistText)
                        else headerTitle,
                 color = Color.White,
                 fontSize = 18.sp,
@@ -2977,7 +3005,7 @@ fun AddMusicContent(
                 onValueChange = { query = it },
                 placeholder = {
                     Text(
-                        text = "Artistas, canciones, letras y más",
+                        text = stringResource(R.string.search_artists_songs_placeholder),
                         color = Color.Gray
                     )
                 },
@@ -3144,7 +3172,7 @@ fun AddMusicContent(
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     item {
                         Text(
-                            text = "Biblioteca",
+                            text = stringResource(R.string.nav_biblioteca),
                             color = Color.White,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
@@ -3153,16 +3181,16 @@ fun AddMusicContent(
                     }
                     
                     val directories = listOf(
-                        Triple("Artistas", Icons.Default.MusicNote, Color(0xFFFA243C)),
-                        Triple("Álbumes", Icons.Default.Album, Color(0xFFFA243C)),
-                        Triple("Canciones", Icons.Default.Star, Color(0xFFFA243C)),
-                        Triple("Playlists", Icons.Default.List, Color(0xFFFA243C)),
-                        Triple("Descargas", Icons.Default.ArrowCircleDown, Color(0xFFFA243C)),
-                        Triple("Música recién añadida", Icons.Default.Schedule, Color(0xFFFA243C))
+                        Triple(R.string.artistas, Icons.Default.MusicNote, Color(0xFFFA243C)),
+                        Triple(R.string.albumes, Icons.Default.Album, Color(0xFFFA243C)),
+                        Triple(R.string.canciones, Icons.Default.Star, Color(0xFFFA243C)),
+                        Triple(R.string.playlists, Icons.Default.List, Color(0xFFFA243C)),
+                        Triple(R.string.downloads_title, Icons.Default.ArrowCircleDown, Color(0xFFFA243C)),
+                        Triple(R.string.recently_added_music, Icons.Default.Schedule, Color(0xFFFA243C))
                     )
 
                     items(directories.size) { idx ->
-                        val (title, icon, tint) = directories[idx]
+                        val (titleRes, icon, tint) = directories[idx]
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -3172,7 +3200,7 @@ fun AddMusicContent(
                         ) {
                             Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(24.dp))
                             Spacer(modifier = Modifier.width(16.dp))
-                            Text(title, color = Color.White, fontSize = 16.sp)
+                            Text(stringResource(titleRes), color = Color.White, fontSize = 16.sp)
                             Spacer(modifier = Modifier.weight(1f))
                             Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
                         }
@@ -3185,7 +3213,7 @@ fun AddMusicContent(
 
                     item {
                         Text(
-                            text = "Canciones sugeridas",
+                            text = stringResource(R.string.suggested_songs),
                             color = Color.White,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
@@ -3244,7 +3272,7 @@ fun AddMusicContent(
                     }
                 } else if (searchResults.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No se encontraron resultados", color = Color.Gray)
+                        Text(stringResource(R.string.no_results_found), color = Color.Gray)
                     }
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -3280,7 +3308,7 @@ fun AddMusicContent(
                                         Spacer(modifier = Modifier.width(16.dp))
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(item.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                            Text("Canción · ${item.artists.joinToString { it.name }}", color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            Text(stringResource(R.string.song_dot_prefix, item.artists.joinToString { it.name }), color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                         }
                                         
                                         if (isAlreadyAdded) {
@@ -3298,78 +3326,78 @@ fun AddMusicContent(
                                                     .border(1.5.dp, Color(0xFFFA243C), CircleShape)
                                                     .clickable {
                                                         val songItem = LibraryItem(
-                                                            id = item.id,
-                                                            title = item.title,
-                                                            subtitle = item.artists.joinToString { it.name },
-                                                            thumbnail = hdThumb,
-                                                            type = ItemType.SONG,
-                                                            album = item.album?.name
-                                                        )
-                                                        LibraryManager.addSongToPlaylist(playlistId, songItem)
-                                                        triggerAddedBanner()
-                                                    },
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Icon(Icons.Default.Add, contentDescription = null, tint = Color(0xFFFA243C), modifier = Modifier.size(20.dp))
-                                            }
-                                        }
-                                    }
-                                }
-                                is AlbumItem -> {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                activeAlbumId = item.browseId
-                                                activeAlbumName = item.title
-                                            }
-                                            .padding(horizontal = 24.dp, vertical = 8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        AsyncImage(
-                                            model = item.thumbnail,
-                                            contentDescription = null,
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier
-                                                .size(48.dp)
-                                                .clip(RoundedCornerShape(8.dp))
-                                        )
-                                        Spacer(modifier = Modifier.width(16.dp))
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(item.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                            Text("Álbum · ${item.year ?: ""}", color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        }
-                                        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
-                                    }
-                                }
-                                is ArtistItem -> {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                activeArtistId = item.id
-                                                activeArtistName = item.title
-                                            }
-                                            .padding(horizontal = 24.dp, vertical = 8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        AsyncImage(
-                                            model = item.thumbnail,
-                                            contentDescription = null,
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier
-                                                .size(48.dp)
-                                                .clip(CircleShape)
-                                        )
-                                        Spacer(modifier = Modifier.width(16.dp))
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(item.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                            Text("Artista", color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        }
-                                        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
-                                    }
-                                }
-                            }
+                                                             id = item.id,
+                                                             title = item.title,
+                                                             subtitle = item.artists.joinToString { it.name },
+                                                             thumbnail = hdThumb,
+                                                             type = ItemType.SONG,
+                                                             album = item.album?.name
+                                                         )
+                                                         LibraryManager.addSongToPlaylist(playlistId, songItem)
+                                                         triggerAddedBanner()
+                                                     },
+                                                 contentAlignment = Alignment.Center
+                                             ) {
+                                                 Icon(Icons.Default.Add, contentDescription = null, tint = Color(0xFFFA243C), modifier = Modifier.size(20.dp))
+                                             }
+                                         }
+                                     }
+                                 }
+                                 is AlbumItem -> {
+                                     Row(
+                                         modifier = Modifier
+                                             .fillMaxWidth()
+                                             .clickable {
+                                                 activeAlbumId = item.browseId
+                                                 activeAlbumName = item.title
+                                             }
+                                             .padding(horizontal = 24.dp, vertical = 8.dp),
+                                         verticalAlignment = Alignment.CenterVertically
+                                     ) {
+                                         AsyncImage(
+                                             model = item.thumbnail,
+                                             contentDescription = null,
+                                             contentScale = ContentScale.Crop,
+                                             modifier = Modifier
+                                                 .size(48.dp)
+                                                 .clip(RoundedCornerShape(8.dp))
+                                         )
+                                         Spacer(modifier = Modifier.width(16.dp))
+                                         Column(modifier = Modifier.weight(1f)) {
+                                             Text(item.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                             Text(stringResource(R.string.album_dot_prefix, item.year ?: ""), color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                         }
+                                         Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
+                                     }
+                                 }
+                                 is ArtistItem -> {
+                                     Row(
+                                         modifier = Modifier
+                                             .fillMaxWidth()
+                                             .clickable {
+                                                 activeArtistId = item.id
+                                                 activeArtistName = item.title
+                                             }
+                                             .padding(horizontal = 24.dp, vertical = 8.dp),
+                                         verticalAlignment = Alignment.CenterVertically
+                                     ) {
+                                         AsyncImage(
+                                             model = item.thumbnail,
+                                             contentDescription = null,
+                                             contentScale = ContentScale.Crop,
+                                             modifier = Modifier
+                                                 .size(48.dp)
+                                                 .clip(CircleShape)
+                                         )
+                                         Spacer(modifier = Modifier.width(16.dp))
+                                         Column(modifier = Modifier.weight(1f)) {
+                                             Text(item.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                             Text(stringResource(R.string.search_type_artist), color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                         }
+                                         Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
+                                     }
+                                 }
+                             }
                             androidx.compose.material3.Divider(
                                 color = Color.White.copy(alpha = 0.1f),
                                 thickness = 0.5.dp,

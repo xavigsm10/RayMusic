@@ -265,6 +265,20 @@
     <string name="lyrics_menu_export_ttml">TTML (Apple Music)</string>
     <string name="lyrics_menu_enable_karaoke">Karaoke Modu</string>
     <string name="lyrics_menu_enable_duet">Düet Modu</string>
+    <string name="lyrics_settings_title">Şarkı Sözü Ayarları</string>
+    <string name="lyrics_distributors_header">Dağıtıcılar (%1$d)</string>
+    <string name="lyrics_distributor_title">Şarkı Sözü Dağıtıcısı</string>
+    <string name="lyrics_font_title">Şarkı Sözü Yazı Tipi</string>
+    <string name="lyrics_font_system">Sistem</string>
+    <string name="lyrics_menu_karaoke_glow">Karaoke Parıltısı (Glow)</string>
+    <string name="lyrics_scroll_title">Kaydırma</string>
+    <string name="lyrics_romanization_title">Romanizasyon (Romaji / Pinyin)</string>
+    <string name="lyrics_time_offset_title">Zaman Kayması</string>
+    <string name="lyrics_report_action">Bildir</string>
+    <string name="lyrics_edit_dialog_title">Şarkı Sözlerini Düzenle</string>
+    <string name="lyrics_edit_label">Şarkı Sözleri (LRC formatı veya Düz metin)</string>
+    <string name="lyrics_saved_toast">Şarkı sözleri kaydedildi</string>
+    <string name="guardar">Kaydet</string>
 
     <!-- Artist Options Menu -->
     <string name="artist_menu_select_title">Sanatçı Seç</string>
@@ -578,4 +592,50 @@
     <string name="lyrics_provider_ytmusic">YouTube Music</string>
     <string name="lyrics_provider_simpmusic">SimpMusic</string>
     <string name="lyrics_instrumental">Enstrümantal</string>
+
+    <!-- Appearance / Artwork Styles -->
+    <string name="player_artwork_style_title">Görünüm</string>
+    <string name="player_artwork_style_fullartwork">Tam Albüm Kapağı</string>
+    <string name="player_artwork_style_normal">Normal</string>
+    <string name="player_artwork_style_animated">Yalnızca hareketli kapaklarda tam kapak</string>
+    <string name="estilo_solido_material3">Katı (Material 3)</string>
+
+    <!-- Album Screen Strings -->
+    <string name="soundtracks_category">Film Müzikleri</string>
+    <string name="album_tracks_and_minutes">%1$d şarkı, %2$d dakika</string>
+    <string name="music_videos_section">Müzik videoları</string>
+    <string name="more_from_artist">%1$s tarafından daha fazla</string>
+    <string name="appears_on_section">Yer aldığı yapımlar</string>
+    <string name="error_loading_songs">Şarkılar yüklenirken hata oluştu</string>
+    <string name="error_loading_songs_desc">Albümün şarkıları yüklenemedi. Lütfen geliştiriciye göndermek için bu hatanın ekran görüntüsünü alın:</string>
+    <string name="copy_action">Kopyala</string>
+    <string name="share_action">Paylaş</string>
+    <string name="play_next">Sıradakini oynat</string>
+    <string name="play_later">Daha sonra oynat</string>
+    <string name="view_artist">Sanatçıyı görüntüle</string>
+    <string name="suggest_less">Daha az öner</string>
+    <string name="fetching_songs_download">İndirilecek şarkılar alınıyor...</string>
+    <string name="no_tracks_found_download">İndirilecek parça bulunamadı</string>
+    <string name="downloading_album_tracks">Albümden %1$d şarkı indiriliyor...</string>
+    <string name="download_error">İndirme hatası: %1$s</string>
+    <string name="suggest_less_toast">Daha az benzer içerik önerilecek</string>
+    <string name="added_songs_to_playlist">Şarkılar %1$s listesine eklendi</string>
+    <string name="playlist_created_with_album_songs">Çalma listesi albüm şarkılarıyla oluşturuldu</string>
+    <string name="playlist_name_placeholder">Çalma listesi adı</string>
+    <string name="copied_to_clipboard">Panoya kopyalandı</string>
+
+    <!-- Playlist Views Strings -->
+    <string name="playlist_already_saved">Çalma listesi zaten kaydedildi</string>
+    <string name="playlist_saved">Çalma listesi kaydedildi</string>
+    <string name="add_music">Müzik ekle</string>
+    <string name="suggested_songs">Önerilen şarkılar</string>
+    <string name="suggested_songs_desc">Bir parçayı dinleyin ve çalma listesine ekleyin.</string>
+    <string name="search_artists_songs_placeholder">Sanatçılar, şarkılar, sözler ve daha fazlası</string>
+    <string name="add_to_playlist_title">\"%1$s\" listesine ekle</string>
+    <string name="added_song_to_playlist_banner">\"%1$s\" listesine 1 şarkı eklendi</string>
+    <string name="no_results_found">Sonuç bulunamadı</string>
+    <string name="song_dot_prefix">Şarkı · %1$s</string>
+    <string name="album_dot_prefix">Albüm · %1$s</string>
+    <string name="downloads_title">İndirilenler</string>
+    <string name="recently_added_music">Yeni eklenen müzikler</string>
 </resources>

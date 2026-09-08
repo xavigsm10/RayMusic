@@ -163,7 +163,6 @@ fun AlbumScreen(
     val songArtUrl = hdThumb
 
     val playerArtworkStyle by LibraryManager.playerArtworkStyle.collectAsState()
-    val isNormalArtwork = playerArtworkStyle == "normal"
 
     val albumHeightRatio = when {
         isAroundTheFurAlbum -> 1.40f
@@ -182,6 +181,13 @@ fun AlbumScreen(
         val cached = if (isAnimatedArtworkBlocked) null
                      else com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.get(albumState.artist, albumState.title)
         mutableStateOf(cached)
+    }
+
+    val hasAnimatedCover = !isAnimatedArtworkBlocked && !animatedArtworkUrl.isNullOrBlank()
+    val isNormalArtwork = when (playerArtworkStyle) {
+        "normal" -> true
+        "animated_fullartwork" -> !hasAnimatedCover
+        else -> false
     }
 
     LaunchedEffect(albumState.artist, albumState.title, tracks.firstOrNull()?.title) {
@@ -434,7 +440,8 @@ fun AlbumScreen(
         val curY = sourceY + progress * (0f - sourceY)
         val curW = sourceW + progress * (screenWidth - sourceW)
         val curH = sourceH + progress * (screenHeight - sourceH)
-        val curCorner = 24f * (1f - progress)
+        val initialCorner = if (isMadeForYou) 18f else 24f
+        val curCorner = initialCorner * (1f - progress)
 
         val popScaleBack by animateFloatAsState(
             targetValue = if (progress > 0.80f) 1f else 0f,
@@ -741,7 +748,7 @@ fun AlbumScreen(
                                         val categoryText = if (isMadeForYou) {
                                             stringResource(R.string.playlists_hechas_para_ti) + " • RayMusic • "
                                         } else {
-                                            "Bandas sonoras • ${albumState.year ?: 2026} • "
+                                            stringResource(R.string.soundtracks_category) + " • ${albumState.year ?: 2026} • "
                                         }
                                         Text(
                                             text = categoryText,
@@ -868,7 +875,7 @@ fun AlbumScreen(
                                                 modifier = Modifier.size(22.dp)
                                             )
                                             Text(
-                                                text = "Reproducir",
+                                                text = stringResource(R.string.reproducir),
                                                 color = playButtonTextColor,
                                                 fontSize = 16.sp,
                                                 fontWeight = FontWeight.SemiBold
@@ -1076,7 +1083,7 @@ fun AlbumScreen(
                                     val totalSecs = tracks.sumOf { it.duration ?: 0 }
                                     val totalMins = if (totalSecs > 0) totalSecs / 60 else (tracks.size * 4).coerceAtLeast(1)
                                     Text(
-                                        text = "${tracks.size} canciones, $totalMins minutos",
+                                        text = stringResource(R.string.album_tracks_and_minutes, tracks.size, totalMins),
                                         color = secondaryTextColor.copy(alpha = 0.85f),
                                         fontSize = 13.5.sp,
                                         fontWeight = FontWeight.Normal
@@ -1114,7 +1121,7 @@ fun AlbumScreen(
                                         ) {
                                             Spacer(modifier = Modifier.height(20.dp))
                                             Text(
-                                                text = "Vídeos musicales",
+                                                text = stringResource(R.string.music_videos_section),
                                                 color = primaryTextColor,
                                                 fontSize = 21.sp,
                                                 fontWeight = FontWeight.Bold,
@@ -1194,7 +1201,7 @@ fun AlbumScreen(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Text(
-                                                text = "Más de ${albumState.artist}",
+                                                text = stringResource(R.string.more_from_artist, albumState.artist),
                                                 color = primaryTextColor,
                                                 fontSize = 21.sp,
                                                 fontWeight = FontWeight.Bold
@@ -1283,7 +1290,7 @@ fun AlbumScreen(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Text(
-                                                text = "Aparece en",
+                                                text = stringResource(R.string.appears_on_section),
                                                 color = primaryTextColor,
                                                 fontSize = 21.sp,
                                                 fontWeight = FontWeight.Bold
@@ -1549,8 +1556,14 @@ fun AlbumScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             // Cover Art at the top of the card
-                            val coverHeightRatio = 1f + progress * (albumHeightRatio - 1f)
-                            val coverHeight = curW * coverHeightRatio
+                            val coverHeight = if (isMadeForYou) {
+                                // For MadeForYou cards, at progress = 0 the cover fills the entire card (sourceH).
+                                // At progress = 1, it expands to the hero height (screenWidth * albumHeightRatio).
+                                (sourceH + progress * (screenWidth * albumHeightRatio - sourceH)).coerceAtLeast(0f)
+                            } else {
+                                val coverHeightRatio = 1f + progress * (albumHeightRatio - 1f)
+                                curW * coverHeightRatio
+                            }
                             
                             Box(
                                 modifier = Modifier
@@ -1572,7 +1585,8 @@ fun AlbumScreen(
                                         title = titleToUse,
                                         artistsSubtitle = subToUse,
                                         gradientColors = gradToUse,
-                                        modifier = Modifier.fillMaxSize()
+                                        modifier = Modifier.fillMaxSize(),
+                                        isHero = progress > 0.6f
                                     )
                                 } else {
                                     Box(
@@ -1583,18 +1597,20 @@ fun AlbumScreen(
                                     }
                                 }
                                 
-                                // Gradient fade at the bottom of the cover art
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(
-                                            Brush.verticalGradient(
-                                                0.0f to Color.Transparent,
-                                                0.75f to Color.Transparent,
-                                                1.0f to dominantColor
+                                // Gradient fade at the bottom of the cover art (only for normal albums)
+                                if (!isMadeForYou) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(
+                                                Brush.verticalGradient(
+                                                    0.0f to Color.Transparent,
+                                                    0.75f to Color.Transparent,
+                                                    1.0f to dominantColor
+                                                )
                                             )
-                                        )
-                                )
+                                    )
+                                }
                             }
                             
                             // Details below the cover art (Title, Artist, Action Buttons)
@@ -1676,7 +1692,7 @@ fun AlbumScreen(
                                                 tint = playButtonTextColor,
                                                 modifier = Modifier.size(20.dp)
                                             )
-                                            Text("Play", color = playButtonTextColor, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                                            Text(stringResource(R.string.reproducir), color = playButtonTextColor, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                                         }
                                     }
                                     
@@ -1794,7 +1810,7 @@ fun AlbumScreen(
             onDismissRequest = { albumError = null },
             title = {
                 Text(
-                    text = "Error al cargar canciones",
+                    text = stringResource(R.string.error_loading_songs),
                     color = Color.White,
                     fontWeight = FontWeight.Bold
                 )
@@ -1802,7 +1818,7 @@ fun AlbumScreen(
             text = {
                 Column {
                     Text(
-                        text = "No se pudieron cargar las canciones del álbum. Por favor, toma una captura de pantalla de este error para enviársela al desarrollador:",
+                        text = stringResource(R.string.error_loading_songs_desc),
                         color = Color.LightGray,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(bottom = 8.dp)
@@ -1830,15 +1846,15 @@ fun AlbumScreen(
                         val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                         val clip = android.content.ClipData.newPlainText("Error RayMusic", albumError)
                         clipboard.setPrimaryClip(clip)
-                        android.widget.Toast.makeText(context, "Copiado al portapapeles", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(context, context.getString(R.string.copied_to_clipboard), android.widget.Toast.LENGTH_SHORT).show()
                     }
                 ) {
-                    Text("Copiar", color = Color(0xFFE91E63))
+                    Text(stringResource(R.string.copy_action), color = Color(0xFFE91E63))
                 }
             },
             dismissButton = {
                 androidx.compose.material3.TextButton(onClick = { albumError = null }) {
-                    Text("Cerrar", color = Color.White)
+                    Text(stringResource(R.string.close_action), color = Color.White)
                 }
             },
             containerColor = Color(0xFF1E1E1E),
@@ -2103,7 +2119,7 @@ fun AlbumTopRightMorphingPill(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "Compartir",
+                                    text = stringResource(R.string.share_action),
                                     color = Color.White,
                                     fontSize = 11.5.sp,
                                     fontWeight = FontWeight.Medium,
@@ -2136,7 +2152,7 @@ fun AlbumTopRightMorphingPill(
                                 )
                                 Spacer(modifier = Modifier.width(14.dp))
                                 Text(
-                                    text = "Agregar a playlist",
+                                    text = stringResource(R.string.anadir_a_playlist),
                                     color = Color.White,
                                     fontSize = 15.sp
                                 )
@@ -2163,7 +2179,7 @@ fun AlbumTopRightMorphingPill(
                                 )
                                 Spacer(modifier = Modifier.width(14.dp))
                                 Text(
-                                    text = "Poner a continuación",
+                                    text = stringResource(R.string.play_next),
                                     color = Color.White,
                                     fontSize = 15.sp
                                 )
@@ -2191,7 +2207,7 @@ fun AlbumTopRightMorphingPill(
                                 Spacer(modifier = Modifier.width(14.dp))
                                 Column {
                                     Text(
-                                        text = "Poner después",
+                                        text = stringResource(R.string.play_later),
                                         color = Color.White,
                                         fontSize = 15.sp
                                     )
@@ -2213,7 +2229,7 @@ fun AlbumTopRightMorphingPill(
                                     .fillMaxWidth()
                                     .clickable {
                                         onExpandChange(false)
-                                        Toast.makeText(context, "Obteniendo canciones para descargar...", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, context.getString(R.string.fetching_songs_download), Toast.LENGTH_SHORT).show()
                                         coroutineScope.launch {
                                             try {
                                                 withContext(Dispatchers.IO) {
@@ -2238,9 +2254,9 @@ fun AlbumTopRightMorphingPill(
 
                                                     withContext(Dispatchers.Main) {
                                                         if (tracksToDownload.isNullOrEmpty()) {
-                                                            Toast.makeText(context, "No se encontraron pistas para descargar", Toast.LENGTH_SHORT).show()
+                                                            Toast.makeText(context, context.getString(R.string.no_tracks_found_download), Toast.LENGTH_SHORT).show()
                                                         } else {
-                                                            Toast.makeText(context, "Descargando ${tracksToDownload.size} canciones del álbum...", Toast.LENGTH_SHORT).show()
+                                                            Toast.makeText(context, context.getString(R.string.downloading_album_tracks, tracksToDownload.size), Toast.LENGTH_SHORT).show()
                                                             tracksToDownload.forEach { track ->
                                                                 downloadSong(
                                                                     context = context,
@@ -2256,7 +2272,7 @@ fun AlbumTopRightMorphingPill(
                                                     }
                                                 }
                                             } catch (e: Exception) {
-                                                Toast.makeText(context, "Error al descargar: ${e.localizedMessage ?: e.message}", Toast.LENGTH_LONG).show()
+                                                Toast.makeText(context, context.getString(R.string.download_error, e.localizedMessage ?: e.message ?: ""), Toast.LENGTH_LONG).show()
                                             }
                                         }
                                     }
@@ -2271,7 +2287,7 @@ fun AlbumTopRightMorphingPill(
                                 )
                                 Spacer(modifier = Modifier.width(14.dp))
                                 Text(
-                                    text = "Descargar",
+                                    text = stringResource(R.string.descargar),
                                     color = Color.White,
                                     fontSize = 15.sp
                                 )
@@ -2299,7 +2315,7 @@ fun AlbumTopRightMorphingPill(
                                 Spacer(modifier = Modifier.width(14.dp))
                                 Column {
                                     Text(
-                                        text = "Ver artista",
+                                        text = stringResource(R.string.view_artist),
                                         color = Color.White,
                                         fontSize = 15.sp
                                     )
@@ -2320,7 +2336,7 @@ fun AlbumTopRightMorphingPill(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
-                                        Toast.makeText(context, "Se sugerirá menos contenido similar", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, context.getString(R.string.suggest_less_toast), Toast.LENGTH_SHORT).show()
                                         onExpandChange(false)
                                     }
                                     .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -2334,7 +2350,7 @@ fun AlbumTopRightMorphingPill(
                                 )
                                 Spacer(modifier = Modifier.width(14.dp))
                                 Text(
-                                    text = "Sugerir menos",
+                                    text = stringResource(R.string.suggest_less),
                                     color = Color.White,
                                     fontSize = 15.sp
                                 )
@@ -2358,14 +2374,14 @@ fun AlbumTopRightMorphingPill(
                             ) {
                                 Icon(
                                     Icons.Default.ArrowBackIosNew,
-                                    contentDescription = "Volver",
+                                    contentDescription = stringResource(R.string.back_action),
                                     tint = Color(0xFFFA243C),
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Agregar a playlist",
+                                text = stringResource(R.string.anadir_a_playlist),
                                 color = Color.White,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
@@ -2400,7 +2416,7 @@ fun AlbumTopRightMorphingPill(
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Text(
-                                    text = "Nueva playlist...",
+                                    text = stringResource(R.string.nueva_playlist_ellipsis),
                                     color = Color(0xFFFA243C),
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.SemiBold
@@ -2436,7 +2452,7 @@ fun AlbumTopRightMorphingPill(
                                                         )
                                                         LibraryManager.addSongToPlaylist(playlist.id, trackLibItem)
                                                     }
-                                                    Toast.makeText(context, "Se agregaron las canciones a ${playlist.name}", Toast.LENGTH_SHORT).show()
+                                                    Toast.makeText(context, context.getString(R.string.added_songs_to_playlist, playlist.name), Toast.LENGTH_SHORT).show()
                                                 }
                                                 onExpandChange(false)
                                             }
@@ -2459,7 +2475,7 @@ fun AlbumTopRightMorphingPill(
                                             fontWeight = FontWeight.Medium
                                         )
                                         Text(
-                                            text = "${playlist.items.size} canciones",
+                                            text = stringResource(R.string.num_canciones, playlist.items.size),
                                             color = Color.Gray,
                                             fontSize = 12.sp
                                         )
@@ -2486,7 +2502,7 @@ fun AlbumTopRightMorphingPill(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "Nueva Playlist",
+                        text = stringResource(R.string.nueva_playlist),
                         color = Color.White,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
@@ -2495,7 +2511,7 @@ fun AlbumTopRightMorphingPill(
                     OutlinedTextField(
                         value = playlistName,
                         onValueChange = { playlistName = it },
-                        placeholder = { Text("Nombre de la playlist", color = Color.Gray) },
+                        placeholder = { Text(stringResource(R.string.playlist_name_placeholder), color = Color.Gray) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,
@@ -2511,7 +2527,7 @@ fun AlbumTopRightMorphingPill(
                         horizontalArrangement = Arrangement.End
                     ) {
                         TextButton(onClick = { showNewPlaylistDialog = false }) {
-                            Text("Cancelar", color = Color.Gray)
+                            Text(stringResource(R.string.cancelar), color = Color.Gray)
                         }
                         TextButton(onClick = {
                             if (playlistName.isNotBlank()) {
@@ -2540,13 +2556,13 @@ fun AlbumTopRightMorphingPill(
                                             LibraryManager.addSongToPlaylist(newPlaylist.id, trackLibItem)
                                         }
                                     }
-                                    Toast.makeText(context, "Playlist creada con las canciones del álbum", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, context.getString(R.string.playlist_created_with_album_songs), Toast.LENGTH_SHORT).show()
                                     showNewPlaylistDialog = false
                                     onExpandChange(false)
                                 }
                             }
                         }) {
-                            Text("Crear", color = Color(0xFFFA243C), fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.crear), color = Color(0xFFFA243C), fontWeight = FontWeight.Bold)
                         }
                     }
                 }

@@ -265,6 +265,20 @@
     <string name="lyrics_menu_export_ttml">TTML (Apple Music)</string>
     <string name="lyrics_menu_enable_karaoke">Karaoke Mode</string>
     <string name="lyrics_menu_enable_duet">Duet Mode</string>
+    <string name="lyrics_settings_title">Lyrics Settings</string>
+    <string name="lyrics_distributors_header">Distributors (%1$d)</string>
+    <string name="lyrics_distributor_title">Lyrics Distributor</string>
+    <string name="lyrics_font_title">Lyrics Font</string>
+    <string name="lyrics_font_system">System</string>
+    <string name="lyrics_menu_karaoke_glow">Karaoke Glow</string>
+    <string name="lyrics_scroll_title">Scrolling</string>
+    <string name="lyrics_romanization_title">Romanization (Romaji / Pinyin)</string>
+    <string name="lyrics_time_offset_title">Time Offset</string>
+    <string name="lyrics_report_action">Report</string>
+    <string name="lyrics_edit_dialog_title">Edit Lyrics</string>
+    <string name="lyrics_edit_label">Lyrics (LRC Format or Plain Text)</string>
+    <string name="lyrics_saved_toast">Lyrics saved</string>
+    <string name="guardar">Save</string>
 
     <!-- Artist Options Menu -->
     <string name="artist_menu_select_title">Select Artist</string>
@@ -578,5 +592,51 @@
     <string name="lyrics_provider_ytmusic">YouTube Music</string>
     <string name="lyrics_provider_simpmusic">SimpMusic</string>
     <string name="lyrics_instrumental">Instrumental</string>
+
+    <!-- Appearance / Artwork Styles -->
+    <string name="player_artwork_style_title">Appearance</string>
+    <string name="player_artwork_style_fullartwork">Full Artwork</string>
+    <string name="player_artwork_style_normal">Normal</string>
+    <string name="player_artwork_style_animated">Animated covers only with full artwork</string>
+    <string name="estilo_solido_material3">Solid (Material 3)</string>
+
+    <!-- Album Screen Strings -->
+    <string name="soundtracks_category">Soundtracks</string>
+    <string name="album_tracks_and_minutes">%1$d songs, %2$d minutes</string>
+    <string name="music_videos_section">Music videos</string>
+    <string name="more_from_artist">More by %1$s</string>
+    <string name="appears_on_section">Appears on</string>
+    <string name="error_loading_songs">Error loading songs</string>
+    <string name="error_loading_songs_desc">Could not load songs for this album. Please take a screenshot of this error to send to the developer:</string>
+    <string name="copy_action">Copy</string>
+    <string name="share_action">Share</string>
+    <string name="play_next">Play next</string>
+    <string name="play_later">Play later</string>
+    <string name="view_artist">View artist</string>
+    <string name="suggest_less">Suggest less</string>
+    <string name="fetching_songs_download">Fetching songs to download...</string>
+    <string name="no_tracks_found_download">No tracks found to download</string>
+    <string name="downloading_album_tracks">Downloading %1$d songs from album...</string>
+    <string name="download_error">Download error: %1$s</string>
+    <string name="suggest_less_toast">Less similar content will be suggested</string>
+    <string name="added_songs_to_playlist">Added songs to %1$s</string>
+    <string name="playlist_created_with_album_songs">Playlist created with album songs</string>
+    <string name="playlist_name_placeholder">Playlist name</string>
+    <string name="copied_to_clipboard">Copied to clipboard</string>
+
+    <!-- Playlist Views Strings -->
+    <string name="playlist_already_saved">Playlist already saved</string>
+    <string name="playlist_saved">Playlist saved</string>
+    <string name="add_music">Add music</string>
+    <string name="suggested_songs">Suggested songs</string>
+    <string name="suggested_songs_desc">Listen to a sample and add the track to the playlist.</string>
+    <string name="search_artists_songs_placeholder">Artists, songs, lyrics and more</string>
+    <string name="add_to_playlist_title">Add to \"%1$s\"</string>
+    <string name="added_song_to_playlist_banner">1 song added to \"%1$s\"</string>
+    <string name="no_results_found">No results found</string>
+    <string name="song_dot_prefix">Song · %1$s</string>
+    <string name="album_dot_prefix">Album · %1$s</string>
+    <string name="downloads_title">Downloads</string>
+    <string name="recently_added_music">Recently added music</string>
 </resources>
 

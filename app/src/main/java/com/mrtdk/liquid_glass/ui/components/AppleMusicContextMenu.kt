@@ -3149,7 +3149,7 @@ fun GlassBoxScope.LyricsOptionsMenu(
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Distribuidores (${availableProviders.size})",
+                            text = stringResource(R.string.lyrics_distributors_header, availableProviders.size),
                             color = Color.White,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
@@ -3199,7 +3199,7 @@ fun GlassBoxScope.LyricsOptionsMenu(
                                     if (isSelected) {
                                         Icon(
                                             imageVector = Icons.Default.Check,
-                                            contentDescription = "Selected",
+                                            contentDescription = stringResource(R.string.lyrics_menu_selected),
                                             tint = itemSyncColor,
                                             modifier = Modifier.size(18.dp)
                                         )
@@ -3231,7 +3231,7 @@ fun GlassBoxScope.LyricsOptionsMenu(
                                     if (isSelected) {
                                         Icon(
                                             imageVector = Icons.Default.Check,
-                                            contentDescription = "Selected",
+                                            contentDescription = stringResource(R.string.lyrics_menu_selected),
                                             tint = Color(0xFFFDE69B),
                                             modifier = Modifier.size(18.dp)
                                         )
@@ -3287,7 +3287,7 @@ fun GlassBoxScope.LyricsOptionsMenu(
                                 )
                                 Icon(
                                     imageVector = Icons.Default.ContentCopy,
-                                    contentDescription = "Copy",
+                                    contentDescription = stringResource(R.string.copy_action),
                                     tint = Color.White.copy(alpha = 0.6f),
                                     modifier = Modifier.size(18.dp)
                                 )
@@ -3304,7 +3304,7 @@ fun GlassBoxScope.LyricsOptionsMenu(
                     ) {
                         // Title
                         Text(
-                            text = "Ajustes de Letras",
+                            text = stringResource(R.string.lyrics_settings_title),
                             color = Color.White.copy(alpha = 0.95f),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
@@ -3330,7 +3330,7 @@ fun GlassBoxScope.LyricsOptionsMenu(
 
                             VerticalMenuActionItem(
                                 icon = Icons.AutoMirrored.Filled.QueueMusic,
-                                label = "Distribuidor de Letras",
+                                label = stringResource(R.string.lyrics_distributor_title),
                                 trailingContent = {
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                         SyncTypeBadge(syncType = activeSyncType, color = provSyncColor, modifier = Modifier.size(12.dp))
@@ -3352,12 +3352,13 @@ fun GlassBoxScope.LyricsOptionsMenu(
                             var currentFont by remember { 
                                 mutableStateOf(com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_font_family") ?: "Satoshi") 
                             }
+                            val displayFontText = if (currentFont == "Sistema") stringResource(R.string.lyrics_font_system) else currentFont
                             VerticalMenuActionItem(
                                 icon = Icons.Default.FontDownload,
-                                label = "Fuente de Letras",
+                                label = stringResource(R.string.lyrics_font_title),
                                 trailingContent = {
                                     Text(
-                                        text = currentFont,
+                                        text = displayFontText,
                                         color = Color.White.copy(alpha = 0.75f),
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Medium
@@ -3388,7 +3389,7 @@ fun GlassBoxScope.LyricsOptionsMenu(
                             }
                             VerticalMenuActionItem(
                                 icon = Icons.Default.AutoAwesome,
-                                label = "Resplandor Karaoke (Glow)",
+                                label = stringResource(R.string.lyrics_menu_karaoke_glow),
                                 trailingContent = {
                                     androidx.compose.material3.Switch(
                                         checked = isGlowEnabled,
@@ -3416,7 +3417,7 @@ fun GlassBoxScope.LyricsOptionsMenu(
                             }
                             VerticalMenuActionItem(
                                 icon = Icons.Default.SwapVert,
-                                label = "Desplazamiento",
+                                label = stringResource(R.string.lyrics_scroll_title),
                                 trailingContent = {
                                     Text(
                                         text = scrollMode,
@@ -3443,7 +3444,7 @@ fun GlassBoxScope.LyricsOptionsMenu(
                         ) {
                             VerticalMenuActionItem(
                                 icon = Icons.Default.Translate,
-                                label = "Romanización (Romaji / Pinyin)",
+                                label = stringResource(R.string.lyrics_romanization_title),
                                 trailingContent = {
                                     androidx.compose.material3.Switch(
                                         checked = isRomajiEnabled,
@@ -3476,7 +3477,7 @@ fun GlassBoxScope.LyricsOptionsMenu(
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                         Icon(Icons.Default.Schedule, contentDescription = null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
-                                        Text("Desfase de Tiempo", color = Color.White, fontSize = 14.sp)
+                                        Text(stringResource(R.string.lyrics_time_offset_title), color = Color.White, fontSize = 14.sp)
                                     }
                                     Text(
                                         text = "${if (lyricsOffset >= 0) "+" else ""}${String.format("%.1f", lyricsOffset / 1000f)}s",
@@ -3572,9 +3573,9 @@ fun GlassBoxScope.LyricsOptionsMenu(
                                     .padding(vertical = 4.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Icon(Icons.Default.Edit, contentDescription = "Editar", tint = Color.White, modifier = Modifier.size(20.dp))
+                                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.lyrics_menu_edit), tint = Color.White, modifier = Modifier.size(20.dp))
                                 Spacer(modifier = Modifier.height(2.dp))
-                                Text("Editar", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
+                                Text(stringResource(R.string.lyrics_menu_edit), color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
                             }
 
                             Column(
@@ -3587,9 +3588,9 @@ fun GlassBoxScope.LyricsOptionsMenu(
                                     .padding(vertical = 4.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Icon(Icons.Default.Refresh, contentDescription = "Recargar", tint = Color.White, modifier = Modifier.size(20.dp))
+                                Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.lyrics_menu_reload), tint = Color.White, modifier = Modifier.size(20.dp))
                                 Spacer(modifier = Modifier.height(2.dp))
-                                Text("Recargar", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
+                                Text(stringResource(R.string.lyrics_menu_reload), color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
                             }
 
                             Column(
@@ -3602,9 +3603,9 @@ fun GlassBoxScope.LyricsOptionsMenu(
                                     .padding(vertical = 4.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
-                                Icon(Icons.Default.Flag, contentDescription = "Reportar", tint = Color.White, modifier = Modifier.size(20.dp))
+                                Icon(Icons.Default.Flag, contentDescription = stringResource(R.string.lyrics_report_action), tint = Color.White, modifier = Modifier.size(20.dp))
                                 Spacer(modifier = Modifier.height(2.dp))
-                                Text("Reportar", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
+                                Text(stringResource(R.string.lyrics_report_action), color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
                             }
                         }
                     }

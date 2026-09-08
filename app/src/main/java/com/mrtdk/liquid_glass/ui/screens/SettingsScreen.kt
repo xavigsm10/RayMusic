@@ -196,7 +196,7 @@ fun MainSettingsMenu(
                             val currentStyle = LibraryManager.getGlassStyle()
                             val currentStyleName = when (currentStyle) {
                                 "transparent" -> stringResource(R.string.vidrio_liquido_transparente)
-                                "solid" -> "Sólido (Material 3)"
+                                "solid" -> stringResource(R.string.estilo_solido_material3)
                                 else -> stringResource(R.string.vidrio_liquido_transparente)
                             }
                             Text(currentStyleName)
@@ -205,11 +205,12 @@ fun MainSettingsMenu(
                     ),
                     Material3SettingsItem(
                         icon = rememberPainter(Icons.Default.Tune),
-                        title = { Text("Apariencia") },
+                        title = { Text(stringResource(R.string.player_artwork_style_title)) },
                         description = {
                             val currentStyleName = when (currentArtworkStyle) {
-                                "normal" -> "Normal"
-                                else -> "Fullartwork"
+                                "normal" -> stringResource(R.string.player_artwork_style_normal)
+                                "animated_fullartwork" -> stringResource(R.string.player_artwork_style_animated)
+                                else -> stringResource(R.string.player_artwork_style_fullartwork)
                             }
                             Text(currentStyleName)
                         },
@@ -339,7 +340,7 @@ fun MainSettingsMenu(
             title = stringResource(R.string.liquid_glass),
             options = listOf(
                 "transparent" to stringResource(R.string.vidrio_liquido_transparente),
-                "solid" to "Sólido (Material 3)"
+                "solid" to stringResource(R.string.estilo_solido_material3)
             ),
             selectedValue = LibraryManager.getGlassStyle(),
             onDismiss = { showGlassStyleDialog = false },
@@ -352,10 +353,11 @@ fun MainSettingsMenu(
 
     if (showArtworkStyleDialog) {
         SingleChoiceDialog(
-            title = "Apariencia",
+            title = stringResource(R.string.player_artwork_style_title),
             options = listOf(
-                "fullartwork" to "Fullartwork",
-                "normal" to "Normal"
+                "fullartwork" to stringResource(R.string.player_artwork_style_fullartwork),
+                "normal" to stringResource(R.string.player_artwork_style_normal),
+                "animated_fullartwork" to stringResource(R.string.player_artwork_style_animated)
             ),
             selectedValue = currentArtworkStyle,
             onDismiss = { showArtworkStyleDialog = false },

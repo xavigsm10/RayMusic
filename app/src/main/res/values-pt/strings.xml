@@ -265,6 +265,20 @@
     <string name="lyrics_menu_export_ttml">TTML (Apple Music)</string>
     <string name="lyrics_menu_enable_karaoke">Modo Karaokê</string>
     <string name="lyrics_menu_enable_duet">Modo Dueto</string>
+    <string name="lyrics_settings_title">Ajustes de Letras</string>
+    <string name="lyrics_distributors_header">Distribuidores (%1$d)</string>
+    <string name="lyrics_distributor_title">Distribuidor de Letras</string>
+    <string name="lyrics_font_title">Fonte das Letras</string>
+    <string name="lyrics_font_system">Sistema</string>
+    <string name="lyrics_menu_karaoke_glow">Brilho do Karaoke (Glow)</string>
+    <string name="lyrics_scroll_title">Rolagem</string>
+    <string name="lyrics_romanization_title">Romanização (Romaji / Pinyin)</string>
+    <string name="lyrics_time_offset_title">Deslocamento de Tempo</string>
+    <string name="lyrics_report_action">Reportar</string>
+    <string name="lyrics_edit_dialog_title">Editar Letras</string>
+    <string name="lyrics_edit_label">Letras (Formato LRC ou Texto simples)</string>
+    <string name="lyrics_saved_toast">Letras salvas</string>
+    <string name="guardar">Salvar</string>
 
     <!-- Artist Options Menu -->
     <string name="artist_menu_select_title">Selecionar Artista</string>
@@ -578,4 +592,50 @@
     <string name="lyrics_provider_ytmusic">YouTube Music</string>
     <string name="lyrics_provider_simpmusic">SimpMusic</string>
     <string name="lyrics_instrumental">Instrumental</string>
+
+    <!-- Appearance / Artwork Styles -->
+    <string name="player_artwork_style_title">Aparência</string>
+    <string name="player_artwork_style_fullartwork">Full Artwork</string>
+    <string name="player_artwork_style_normal">Normal</string>
+    <string name="player_artwork_style_animated">Capas animadas apenas com full artwork</string>
+    <string name="estilo_solido_material3">Sólido (Material 3)</string>
+
+    <!-- Album Screen Strings -->
+    <string name="soundtracks_category">Trilhas sonoras</string>
+    <string name="album_tracks_and_minutes">%1$d músicas, %2$d minutos</string>
+    <string name="music_videos_section">Vídeos musicais</string>
+    <string name="more_from_artist">Mais de %1$s</string>
+    <string name="appears_on_section">Aparece em</string>
+    <string name="error_loading_songs">Erro ao carregar músicas</string>
+    <string name="error_loading_songs_desc">Não foi possível carregar as músicas do álbum. Por favor, tire uma captura de tela deste erro para enviar ao desenvolvedor:</string>
+    <string name="copy_action">Copiar</string>
+    <string name="share_action">Compartilhar</string>
+    <string name="play_next">Tocar a seguir</string>
+    <string name="play_later">Tocar depois</string>
+    <string name="view_artist">Ver artista</string>
+    <string name="suggest_less">Sugerir menos</string>
+    <string name="fetching_songs_download">Obtendo músicas para baixar...</string>
+    <string name="no_tracks_found_download">Nenhuma faixa encontrada para baixar</string>
+    <string name="downloading_album_tracks">Baixando %1$d músicas do álbum...</string>
+    <string name="download_error">Erro ao baixar: %1$s</string>
+    <string name="suggest_less_toast">Menos conteúdo semelhante será sugerido</string>
+    <string name="added_songs_to_playlist">Músicas adicionadas a %1$s</string>
+    <string name="playlist_created_with_album_songs">Playlist criada com as músicas do álbum</string>
+    <string name="playlist_name_placeholder">Nome da playlist</string>
+    <string name="copied_to_clipboard">Copiado para a área de transferência</string>
+
+    <!-- Playlist Views Strings -->
+    <string name="playlist_already_saved">Playlist já salva</string>
+    <string name="playlist_saved">Playlist salva</string>
+    <string name="add_music">Adicionar música</string>
+    <string name="suggested_songs">Músicas sugeridas</string>
+    <string name="suggested_songs_desc">Ouça um trecho e adicione a faixa à playlist.</string>
+    <string name="search_artists_songs_placeholder">Artistas, músicas, letras e mais</string>
+    <string name="add_to_playlist_title">Adicionar a \"%1$s\"</string>
+    <string name="added_song_to_playlist_banner">1 música adicionada a \"%1$s\"</string>
+    <string name="no_results_found">Nenhum resultado encontrado</string>
+    <string name="song_dot_prefix">Música · %1$s</string>
+    <string name="album_dot_prefix">Álbum · %1$s</string>
+    <string name="downloads_title">Downloads</string>
+    <string name="recently_added_music">Músicas adicionadas recentemente</string>
 </resources>
