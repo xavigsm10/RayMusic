@@ -2217,19 +2217,19 @@ fun PlayerScreen(
 
 
 
-            val detailsOffsetXTarget = if (isOverlayActive) 124.dp else 24.dp
+            val detailsOffsetXTarget = if (isOverlayActive) 124.dp else 34.dp
 
             val detailsOffsetX by androidx.compose.animation.core.animateDpAsState(detailsOffsetXTarget)
 
 
 
-            val detailsWidthTarget = if (isOverlayActive) (maxWidth - 124.dp - 24.dp) else (maxWidth - 48.dp)
+            val detailsWidthTarget = if (isOverlayActive) (maxWidth - 124.dp - 24.dp) else (maxWidth - 68.dp)
 
             val detailsWidth by androidx.compose.animation.core.animateDpAsState(detailsWidthTarget)
 
 
 
-            val titleFontSizeTarget = if (isOverlayActive) 18f else 24f
+            val titleFontSizeTarget = if (isOverlayActive) 18f else 22f
 
             val titleFontSizeFloat by androidx.compose.animation.core.animateFloatAsState(titleFontSizeTarget)
 
@@ -2237,7 +2237,7 @@ fun PlayerScreen(
 
 
 
-            val artistFontSizeTarget = if (isOverlayActive) 15f else 18f
+            val artistFontSizeTarget = if (isOverlayActive) 15f else 17f
 
             val artistFontSizeFloat by androidx.compose.animation.core.animateFloatAsState(artistFontSizeTarget)
 
@@ -2448,8 +2448,8 @@ fun PlayerScreen(
                                 modifier = Modifier.fillMaxSize(),
                                 mildBlurRadiusX = 40.dp,
                                 mildBlurRadiusY = 14.dp,
-                                strongBlurRadiusX = 160.dp,
-                                strongBlurRadiusY = 16.dp,
+                                strongBlurRadiusX = 180.dp,
+                                strongBlurRadiusY = 55.dp,
                                 sliderThresholdDp = 50.dp,
                                 verticalScale = verticalScale,
                                 pivotY = 0f,
@@ -3576,51 +3576,48 @@ fun PlayerScreen(
                   ) {
 
                      Column(
+                          modifier = Modifier
+                              .fillMaxSize()
+                              .padding(horizontal = 34.dp)
+                              .padding(top = 0.dp)
+                              .padding(bottom = 0.dp)
+                      ) {
 
-                         modifier = Modifier
+                          Spacer(modifier = Modifier.height(72.dp)) 
 
-                             .fillMaxSize()
+                           AppleMusicSlider(
+                               value = progress, onValueChange = { onSeek((it * duration).toLong()) },
+                               modifier = Modifier
+                                   .fillMaxWidth()
+                                   .height(26.dp)
+                                   .onGloballyPositioned { coords ->
+                                       sliderCoordinates = coords
+                                   },
+                               activeColor = sliderActiveColor,
+                               inactiveColor = sliderInactiveColor,
+                               barHeightDp = 8.dp
+                           )
 
-                             .padding(horizontal = 24.dp)
+                           Row(
+                               modifier = Modifier.fillMaxWidth(),
+                               horizontalArrangement = Arrangement.SpaceBetween,
+                               verticalAlignment = Alignment.CenterVertically
+                           ) {
+                               Text(formatDuration(currentPosition), color = contentColor.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Normal)
+                               LosslessBadge(
+                                   contentColor = contentColor,
+                                   onClick = { AudioRoutingState.showAudioRoutingMenu = true }
+                               )
+                               Text("-${formatDuration((duration - currentPosition).coerceAtLeast(0L))}", color = contentColor.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Normal)
+                           }
 
-                             .padding(top = 0.dp)
+                           Spacer(modifier = Modifier.height(10.dp))
 
-                             .padding(bottom = 0.dp)
-
-                     ) {
-
-                         Spacer(modifier = Modifier.height(68.dp)) 
-
-                          AppleMusicSlider(
-                              value = progress, onValueChange = { onSeek((it * duration).toLong()) },
-                              modifier = Modifier
-                                  .fillMaxWidth()
-                                  .height(24.dp)
-                                  .onGloballyPositioned { coords ->
-                                      sliderCoordinates = coords
-                                  },
-                              activeColor = sliderActiveColor,
-                              inactiveColor = sliderInactiveColor,
-                              barHeightDp = 8.dp
-                          )
-
-                          Row(
-                              modifier = Modifier.fillMaxWidth(),
-                              horizontalArrangement = Arrangement.SpaceBetween,
-                              verticalAlignment = Alignment.CenterVertically
-                          ) {
-                              Text(formatDuration(currentPosition), color = contentColor.copy(alpha = 0.50f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                              Text("-${formatDuration(duration - currentPosition)}", color = contentColor.copy(alpha = 0.50f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                          }
-
-                          Spacer(modifier = Modifier.height(16.dp))
-
-                          Box(
-                              modifier = Modifier
-                                  .fillMaxWidth()
-                                  .weight(1f)
-                                  .padding(bottom = 32.dp)
-                          ) {
+                           Box(
+                               modifier = Modifier
+                                   .fillMaxWidth()
+                                   .weight(1f)
+                           ) {
                               PlayerBottomControls(
                                   progress = progress, currentPosition = currentPosition, duration = duration,
                                   isPlaying = isPlaying, contentColor = contentColor, volumePosition = volumePosition,
@@ -3736,13 +3733,14 @@ fun PlayerScreen(
 
                              )
 
-                             Spacer(modifier = Modifier.height(2.dp))
+                             Spacer(modifier = Modifier.height(3.dp))
 
                              var artistCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
                              Text(
                                  text = state?.artist ?: "",
-                                 color = contentColor.copy(alpha = 0.7f),
+                                 color = contentColor.copy(alpha = 0.72f),
                                  fontSize = artistFontSize,
+                                 fontWeight = FontWeight.Normal,
                                  maxLines = 1,
                                  overflow = TextOverflow.Ellipsis,
                                  modifier = Modifier
@@ -3833,8 +3831,8 @@ fun PlayerScreen(
                           contentAlignment = Alignment.Center
                       ) {
                           androidx.compose.foundation.Canvas(modifier = Modifier.size(moreIconSize)) {
-                              val r = 1.6.dp.toPx()
-                              val space = 4.dp.toPx()
+                              val r = 1.8.dp.toPx()
+                              val space = 3.5.dp.toPx()
                               val cx = size.width / 2f
                               val cy = size.height / 2f
                               drawCircle(contentColor, radius = r, center = Offset(cx - space - r * 2, cy))
@@ -4629,7 +4627,51 @@ fun PlayerScreen(
 }
 
 @Composable
+fun LosslessBadge(
+    contentColor: Color,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(contentColor.copy(alpha = 0.14f))
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onClick
+                    )
+                } else Modifier
+            )
+            .padding(horizontal = 7.dp, vertical = 2.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.apple_lossless_seeklogo),
+                contentDescription = "Lossless",
+                tint = contentColor.copy(alpha = 0.85f),
+                modifier = Modifier
+                    .height(8.5.dp)
+                    .width(14.dp)
+            )
+            Text(
+                text = "Lossless",
+                color = contentColor.copy(alpha = 0.85f),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                lineHeight = 11.sp
+            )
+        }
+    }
+}
 
+@Composable
 fun PlayerBottomControls(
     progress: Float, currentPosition: Long, duration: Long,
     isPlaying: Boolean, contentColor: Color, volumePosition: Float,
@@ -4655,7 +4697,7 @@ fun PlayerBottomControls(
         if (includeProgress) {
             AppleMusicSlider(
                 value = progress, onValueChange = { onSeek((it * duration).toLong()) },
-                modifier = Modifier.fillMaxWidth().height(24.dp),
+                modifier = Modifier.fillMaxWidth().height(26.dp),
                 activeColor = sliderActiveColor,
                 inactiveColor = sliderInactiveColor,
                 barHeightDp = 8.dp
@@ -4665,49 +4707,48 @@ fun PlayerBottomControls(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(formatDuration(currentPosition), color = contentColor.copy(alpha = 0.50f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                Text("-${formatDuration(duration - currentPosition)}", color = contentColor.copy(alpha = 0.50f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                Text(formatDuration(currentPosition), color = contentColor.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Normal)
+                LosslessBadge(
+                    contentColor = contentColor,
+                    onClick = { AudioRoutingState.showAudioRoutingMenu = true }
+                )
+                Text("-${formatDuration((duration - currentPosition).coerceAtLeast(0L))}", color = contentColor.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Normal)
             }
 
-            Spacer(modifier = Modifier.height(30.dp))
+            Spacer(modifier = Modifier.height(28.dp))
         }
 
         if (fillHeight) {
-            Spacer(modifier = Modifier.weight(0.65f))
+            Spacer(modifier = Modifier.weight(1f))
         }
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             AnimatedSkipButton(
                 iconId = R.drawable.previous,
                 contentDescription = "Previous",
                 contentColor = contentColor,
-                sizeDp = 84.dp,
-                iconSizeDp = 64.dp,
+                sizeDp = 74.dp,
+                iconSizeDp = 60.dp,
                 onClick = onSkipPrevious
             )
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(22.dp))
 
             val playPauseInteractionSource = remember { MutableInteractionSource() }
             val isPlayPausePressed by playPauseInteractionSource.collectIsPressedAsState()
 
             val playPauseBgColor by animateColorAsState(
-                targetValue = if (isPlayPausePressed) contentColor.copy(alpha = 0.12f) else Color.Transparent,
+                targetValue = if (isPlayPausePressed) contentColor.copy(alpha = 0.10f) else Color.Transparent,
                 label = "playPauseBg"
-            )
-
-            val playPauseRotation by animateFloatAsState(
-                targetValue = if (isPlaying) 180f else 0f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessLow
-                ),
-                label = "playPauseButtonRotation"
             )
 
             Box(
                 modifier = Modifier
-                    .size(96.dp)
+                    .size(84.dp)
                     .clip(CircleShape)
                     .background(playPauseBgColor)
                     .clickable(
@@ -4729,74 +4770,79 @@ fun PlayerBottomControls(
                         painter = painterResource(id = if (playing) R.drawable.pause else R.drawable.resume),
                         contentDescription = if (playing) "Pause" else "Play",
                         tint = contentColor,
-                        modifier = Modifier
-                            .size(76.dp)
-                            .graphicsLayer {
-                                rotationZ = playPauseRotation
-                            }
+                        modifier = Modifier.size(70.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(22.dp))
 
             AnimatedSkipButton(
                 iconId = R.drawable.forward,
                 contentDescription = "Next",
                 contentColor = contentColor,
-                sizeDp = 84.dp,
-                iconSizeDp = 64.dp,
+                sizeDp = 74.dp,
+                iconSizeDp = 60.dp,
                 onClick = onSkipNext
             )
         }
 
         if (fillHeight) {
-            Spacer(modifier = Modifier.weight(1.35f))
+            Spacer(modifier = Modifier.weight(1.1f))
         }
 
         if (includeVolumeAndIcons) {
             if (!fillHeight) {
-                Spacer(modifier = Modifier.height(70.dp))
+                Spacer(modifier = Modifier.height(30.dp))
             }
 
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Icon(
                     painter = painterResource(id = R.drawable.albumspeaker),
                     contentDescription = "Low volume",
-                    tint = contentColor.copy(alpha = 0.60f),
-                    modifier = Modifier.size(16.dp)
+                    tint = contentColor.copy(alpha = 0.55f),
+                    modifier = Modifier.size(15.dp)
                 )
 
-                Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
                 AppleMusicSlider(
                     value = volumePosition, onValueChange = { onVolumeChange(it) },
-                    modifier = Modifier.weight(1f).height(24.dp),
+                    modifier = Modifier.weight(1f).height(26.dp),
                     activeColor = sliderActiveColor,
                     inactiveColor = sliderInactiveColor,
                     barHeightDp = 8.dp
                 )
 
-                Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
                 Icon(
                     painter = painterResource(id = R.drawable.albumspeakerlarge),
                     contentDescription = "High volume",
-                    tint = contentColor.copy(alpha = 0.60f),
-                    modifier = Modifier.size(24.dp)
+                    tint = contentColor.copy(alpha = 0.55f),
+                    modifier = Modifier.size(20.dp)
                 )
             }
 
             if (!fillHeight) {
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(28.dp))
             } else {
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.weight(1f))
             }
 
-            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(60.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(48.dp)
                         .clip(CircleShape)
                         .background(if (showLyrics) contentColor else Color.Transparent)
                         .clickable { onToggleLyrics() },
@@ -4808,26 +4854,30 @@ fun PlayerBottomControls(
                         colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(
                             if (showLyrics) (if (isLightBackground) Color.White else Color(0xFF1A1A1A)) else contentColor.copy(alpha = 0.65f)
                         ),
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(26.dp)
                     )
                 }
 
-                AsyncImage(
-                    model = "file:///android_asset/img reproductor/parlante.png",
-                    contentDescription = "Format",
-                    colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(contentColor.copy(alpha = 0.65f)),
+                Box(
                     modifier = Modifier
-                        .height(20.dp)
-                        .padding(horizontal = 8.dp)
+                        .size(48.dp)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
-                        ) { AudioRoutingState.showAudioRoutingMenu = true }
-                )
+                        ) { AudioRoutingState.showAudioRoutingMenu = true },
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = "file:///android_asset/img reproductor/parlante.png",
+                        contentDescription = "Format",
+                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(contentColor.copy(alpha = 0.65f)),
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
 
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(48.dp)
                         .clip(CircleShape)
                         .background(if (showQueue) contentColor else Color.Transparent)
                         .clickable { onToggleQueue() },
@@ -4837,13 +4887,15 @@ fun PlayerBottomControls(
                         painter = painterResource(id = R.drawable.nextinfo),
                         contentDescription = "Next Info",
                         tint = if (showQueue) (if (isLightBackground) Color.White else Color(0xFF1A1A1A)) else contentColor.copy(alpha = 0.65f),
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(26.dp)
                     )
                 }
             }
 
             if (fillHeight) {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.weight(1.5f))
+            } else {
+                Spacer(modifier = Modifier.height(44.dp))
             }
         }
     }
@@ -4963,7 +5015,7 @@ fun AppleMusicSlider(
     modifier: Modifier = Modifier,
     activeColor: Color = Color(0xFFE5E5EA),
     inactiveColor: Color = Color.White.copy(alpha = 0.18f),
-    barHeightDp: androidx.compose.ui.unit.Dp = 8.dp
+    barHeightDp: androidx.compose.ui.unit.Dp = 7.dp
 ) {
 
     var isDragging by remember { mutableStateOf(false) }

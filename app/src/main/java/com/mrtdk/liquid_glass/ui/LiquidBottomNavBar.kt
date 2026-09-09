@@ -4,13 +4,10 @@ package com.mrtdk.liquid_glass.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.BoundsTransform
+import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -20,9 +17,12 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -239,30 +240,20 @@ fun LiquidBottomNavBar(
     }
 
     SharedTransitionLayout(modifier = modifier.fillMaxWidth()) {
-        val navBoundsTransform = remember {
-            BoundsTransform { _, _ ->
-                spring(
-                    dampingRatio = 0.88f,
-                    stiffness = 175f
-                )
-            }
-        }
-
         AnimatedContent(
             targetState = visualState,
-            transitionSpec = {
-                fadeIn(tween(360, easing = FastOutSlowInEasing)) togetherWith
-                    fadeOut(tween(240, easing = FastOutSlowInEasing))
-            },
+            transitionSpec = { fadeIn() togetherWith fadeOut() },
             contentAlignment = Alignment.BottomCenter,
             label = "navBarSharedMorphTransition"
         ) { targetVisual ->
             when (targetVisual) {
                 LiquidNavVisualState.INLINE -> {
-                    // ── INLINE ROW (Collapsed when scrolling down - Convx layout) ──────
+                    // ── INLINE ROW (Collapsed when scrolling down - Echo-Music layout) ──────
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .then(if (playerState == null) Modifier.wrapContentWidth() else Modifier)
+                            .height(IntrinsicSize.Max)
                             .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Auto },
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -275,7 +266,6 @@ fun LiquidBottomNavBar(
                                 .sharedElement(
                                     sharedContentState = rememberSharedContentState("tabGroup"),
                                     animatedVisibilityScope = this@AnimatedContent,
-                                    boundsTransform = navBoundsTransform,
                                     zIndexInOverlay = 1f
                                 )
                                 .skipToLookaheadSize()
@@ -301,7 +291,6 @@ fun LiquidBottomNavBar(
                                     modifier = Modifier.sharedElement(
                                         sharedContentState = rememberSharedContentState("tab#${currentTab.index}-icon"),
                                         animatedVisibilityScope = this@AnimatedContent,
-                                        boundsTransform = navBoundsTransform,
                                         zIndexInOverlay = 2f
                                     )
                                 ) {
@@ -320,11 +309,10 @@ fun LiquidBottomNavBar(
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(48.dp)
+                                    .fillMaxHeight()
                                     .sharedElement(
                                         sharedContentState = rememberSharedContentState("accessory"),
                                         animatedVisibilityScope = this@AnimatedContent,
-                                        boundsTransform = navBoundsTransform,
                                         zIndexInOverlay = 1f
                                     )
                                     .skipToLookaheadSize()
@@ -355,14 +343,13 @@ fun LiquidBottomNavBar(
 
                         Box(
                             modifier = Modifier
+                                .size(48.dp)
                                 .sharedElement(
                                     sharedContentState = rememberSharedContentState("standaloneTab"),
                                     animatedVisibilityScope = this@AnimatedContent,
-                                    boundsTransform = navBoundsTransform,
                                     zIndexInOverlay = 1f
                                 )
                                 .skipToLookaheadSize()
-                                .size(48.dp)
                                 .then(capsuleBackdropModifier)
                                 .clip(Capsule())
                                 .clickable(
@@ -380,7 +367,6 @@ fun LiquidBottomNavBar(
                                 modifier = Modifier.sharedElement(
                                     sharedContentState = rememberSharedContentState("searchIcon"),
                                     animatedVisibilityScope = this@AnimatedContent,
-                                    boundsTransform = navBoundsTransform,
                                     zIndexInOverlay = 2f
                                 )
                             ) {
@@ -412,7 +398,6 @@ fun LiquidBottomNavBar(
                                     .sharedElement(
                                         sharedContentState = rememberSharedContentState("accessory"),
                                         animatedVisibilityScope = this@AnimatedContent,
-                                        boundsTransform = navBoundsTransform,
                                         zIndexInOverlay = 1f
                                     )
                                     .skipToLookaheadSize()
@@ -448,7 +433,6 @@ fun LiquidBottomNavBar(
                                     .sharedElement(
                                         sharedContentState = rememberSharedContentState("tabGroup"),
                                         animatedVisibilityScope = this@AnimatedContent,
-                                        boundsTransform = navBoundsTransform,
                                         zIndexInOverlay = 1f
                                     )
                                     .skipToLookaheadSize()
@@ -464,7 +448,7 @@ fun LiquidBottomNavBar(
                                 ) {
                                     MainNavTabs.forEach { tabItem ->
                                         val isSelected = tabItem.index == selectedIndex
-                                        val isSharedIcon = tabItem.index == lastActiveMainTab || isSelected
+                                        val isSharedIcon = tabItem.index == (if (selectedIndex in 0..3) selectedIndex else lastActiveMainTab)
                                         val baseColor = if (isSelected) activeAccentColor else actualContentColor.copy(alpha = 0.65f)
 
                                         LiquidBottomTab(
@@ -476,7 +460,6 @@ fun LiquidBottomNavBar(
                                                         Modifier.sharedElement(
                                                             sharedContentState = rememberSharedContentState("tab#${tabItem.index}-icon"),
                                                             animatedVisibilityScope = this@AnimatedContent,
-                                                            boundsTransform = navBoundsTransform,
                                                             zIndexInOverlay = 2f
                                                         )
                                                     } else Modifier
@@ -513,7 +496,6 @@ fun LiquidBottomNavBar(
                                     .sharedElement(
                                         sharedContentState = rememberSharedContentState("standaloneTab"),
                                         animatedVisibilityScope = this@AnimatedContent,
-                                        boundsTransform = navBoundsTransform,
                                         zIndexInOverlay = 1f
                                     )
                                     .skipToLookaheadSize()
@@ -532,7 +514,6 @@ fun LiquidBottomNavBar(
                                     modifier = Modifier.sharedElement(
                                         sharedContentState = rememberSharedContentState("searchIcon"),
                                         animatedVisibilityScope = this@AnimatedContent,
-                                        boundsTransform = navBoundsTransform,
                                         zIndexInOverlay = 2f
                                     )
                                 ) {
@@ -565,7 +546,6 @@ fun LiquidBottomNavBar(
                                     .sharedElement(
                                         sharedContentState = rememberSharedContentState("accessory"),
                                         animatedVisibilityScope = this@AnimatedContent,
-                                        boundsTransform = navBoundsTransform,
                                         zIndexInOverlay = 1f
                                     )
                                     .skipToLookaheadSize()
@@ -602,7 +582,6 @@ fun LiquidBottomNavBar(
                                     .sharedElement(
                                         sharedContentState = rememberSharedContentState("tabGroup"),
                                         animatedVisibilityScope = this@AnimatedContent,
-                                        boundsTransform = navBoundsTransform,
                                         zIndexInOverlay = 1f
                                     )
                                     .skipToLookaheadSize()
@@ -621,7 +600,6 @@ fun LiquidBottomNavBar(
                                     modifier = Modifier.sharedElement(
                                         sharedContentState = rememberSharedContentState("tab#${previousTab.index}-icon"),
                                         animatedVisibilityScope = this@AnimatedContent,
-                                        boundsTransform = navBoundsTransform,
                                         zIndexInOverlay = 2f
                                     )
                                 ) {
@@ -644,7 +622,6 @@ fun LiquidBottomNavBar(
                                     .sharedElement(
                                         sharedContentState = rememberSharedContentState("standaloneTab"),
                                         animatedVisibilityScope = this@AnimatedContent,
-                                        boundsTransform = navBoundsTransform,
                                         zIndexInOverlay = 1f
                                     )
                                     .skipToLookaheadSize()
@@ -673,7 +650,6 @@ fun LiquidBottomNavBar(
                                         modifier = Modifier.sharedElement(
                                             sharedContentState = rememberSharedContentState("searchIcon"),
                                             animatedVisibilityScope = this@AnimatedContent,
-                                            boundsTransform = navBoundsTransform,
                                             zIndexInOverlay = 2f
                                         )
                                     ) {

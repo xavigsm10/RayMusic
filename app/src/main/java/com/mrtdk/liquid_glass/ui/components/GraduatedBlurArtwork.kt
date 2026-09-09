@@ -47,8 +47,8 @@ fun GraduatedBlurArtwork(
     modifier: Modifier = Modifier,
     mildBlurRadiusX: Dp = 40.dp,
     mildBlurRadiusY: Dp = 14.dp,
-    strongBlurRadiusX: Dp = 160.dp,
-    strongBlurRadiusY: Dp = 16.dp,
+    strongBlurRadiusX: Dp = 180.dp,
+    strongBlurRadiusY: Dp = 55.dp,
     sliderThresholdDp: Dp = 50.dp,
     verticalScale: Float = -4.0f,
     pivotY: Float = 0f,
@@ -108,7 +108,20 @@ fun GraduatedBlurArtwork(
             imageLoader = imageLoader
         )
 
-        // 2. Capa Superior: Difuminado fuerte en gradación suave hacia los controles
+        // 2. Capa Superior: Difuminado horizontal estilo Apple Music
+        val strongTransformModifier = Modifier.graphicsLayer {
+            scaleX = horizontalScale * 1.05f
+            scaleY = verticalScale
+            transformOrigin = androidx.compose.ui.graphics.TransformOrigin(
+                0.5f,
+                pivotY
+            )
+
+            if (isMirrored && containerHeightPx > 0) {
+                translationY = containerHeightPx * absVerticalScale
+            }
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -124,15 +137,35 @@ fun GraduatedBlurArtwork(
                         val startFrac = (tFrac * 0.60f).coerceIn(0f, 1f)
                         val midFrac = (tFrac * 1.05f).coerceIn(startFrac, 1f)
                         val endFrac = (tFrac * 1.50f).coerceIn(midFrac, 1f)
+
+                        // 1. Máscara alfa (DstIn): Cubre al 100% la capa base desde endFrac
+                        // para que la imagen invertida de la capa base NO se transparente
                         drawRect(
                             brush = Brush.verticalGradient(
-                                0.0f to Color.Transparent,
-                                startFrac to Color.Transparent,
-                                midFrac to Color.Black.copy(alpha = 0.55f),
-                                endFrac to Color.Black,
-                                1.0f to Color.Black
+                                colorStops = arrayOf(
+                                    0.0f to Color.Transparent,
+                                    startFrac to Color.Transparent,
+                                    midFrac to Color.Black.copy(alpha = 0.55f),
+                                    endFrac to Color.Black,
+                                    1.0f to Color.Black
+                                )
                             ),
                             blendMode = BlendMode.DstIn
+                        )
+
+                        // 2. Capa ambiental sutil: oscurecimiento suave y equilibrado hacia los controles
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                colorStops = arrayOf(
+                                    0.0f to Color.Transparent,
+                                    (startFrac * 0.7f).coerceAtLeast(0f) to Color.Transparent,
+                                    midFrac to Color.Black.copy(alpha = 0.12f),
+                                    endFrac to Color.Black.copy(alpha = 0.22f),
+                                    (endFrac + 0.15f).coerceAtMost(1f) to Color.Black.copy(alpha = 0.35f),
+                                    0.60f to Color.Black.copy(alpha = 0.48f),
+                                    1.0f to Color.Black.copy(alpha = 0.60f)
+                                )
+                            )
                         )
                     }
                 }
@@ -140,7 +173,7 @@ fun GraduatedBlurArtwork(
             StaticArtworkLayer(
                 imageUrl = imageUrl,
                 artworkAlignment = artworkAlignment,
-                transformModifier = transformModifier,
+                transformModifier = strongTransformModifier,
                 internalZoomModifier = internalZoomModifier,
                 blurRadiusX = strongBlurRadiusX,
                 blurRadiusY = strongBlurRadiusY,
