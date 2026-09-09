@@ -395,43 +395,25 @@ object ArtistSelectionState {
 
 
 @Composable
-
 fun BluetoothIcon(modifier: Modifier = Modifier, tint: Color = Color.White) {
-
+    val path = remember { Path() }
     Canvas(modifier = modifier.size(24.dp)) {
-
         val w = size.width
-
         val h = size.height
-
-        val path = Path().apply {
-
-            moveTo(w * 0.25f, h * 0.75f)
-
-            lineTo(w * 0.75f, h * 0.25f)
-
-            lineTo(w * 0.5f, h * 0.05f)
-
-            lineTo(w * 0.5f, h * 0.95f)
-
-            lineTo(w * 0.75f, h * 0.75f)
-
-            lineTo(w * 0.25f, h * 0.25f)
-
-        }
+        path.rewind()
+        path.moveTo(w * 0.25f, h * 0.75f)
+        path.lineTo(w * 0.75f, h * 0.25f)
+        path.lineTo(w * 0.5f, h * 0.05f)
+        path.lineTo(w * 0.5f, h * 0.95f)
+        path.lineTo(w * 0.75f, h * 0.75f)
+        path.lineTo(w * 0.25f, h * 0.25f)
 
         drawPath(
-
             path = path,
-
             color = tint,
-
             style = Stroke(width = 2.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round)
-
         )
-
     }
-
 }
 
 
@@ -1151,7 +1133,9 @@ fun PlayerScreen(
 
     isPlaying: Boolean,
 
-    currentPosition: Long,
+    currentPosition: Long = 0L,
+
+    musicPlayer: com.mrtdk.liquid_glass.playback.MusicPlayer? = null,
 
     duration: Long,
 
@@ -1217,6 +1201,13 @@ fun PlayerScreen(
     ) {
 
         if (playerState == null) return@AnimatedVisibility
+
+        val livePosition by if (isVisible && musicPlayer != null) {
+            musicPlayer.currentPosition.collectAsState()
+        } else {
+            androidx.compose.runtime.remember { androidx.compose.runtime.mutableLongStateOf(0L) }
+        }
+        val effectivePosition = if (musicPlayer != null) livePosition else currentPosition
 
 
 
@@ -1338,7 +1329,7 @@ fun PlayerScreen(
 
         }
 
-        val progress = if (duration > 0) currentPosition.toFloat() / duration.toFloat() else 0f
+        val progress = if (duration > 0) effectivePosition.toFloat() / duration.toFloat() else 0f
 
         val scope = rememberCoroutineScope()
 
@@ -1796,13 +1787,15 @@ fun PlayerScreen(
                             val skew = calculateDominantSkew(bitmap)
 
                             try {
-                                var r = 0L; var g = 0L; var b = 0L
-                                val yCoord = bitmap.height - 1
                                 val w = bitmap.width
+                                val h = bitmap.height
+                                val bottomPixels = IntArray(w)
+                                bitmap.getPixels(bottomPixels, 0, w, 0, h - 1, w, 1)
+                                var r = 0L; var g = 0L; var b = 0L
                                 val stepX = maxOf(1, w / 16)
                                 var countX = 0
                                 for (x in 0 until w step stepX) {
-                                    val pixel = bitmap.getPixel(x, yCoord)
+                                    val pixel = bottomPixels[x]
                                     r += android.graphics.Color.red(pixel)
                                     g += android.graphics.Color.green(pixel)
                                     b += android.graphics.Color.blue(pixel)
@@ -1810,13 +1803,13 @@ fun PlayerScreen(
                                 }
                                 val avgColor = Color((r / countX).toInt(), (g / countX).toInt(), (b / countX).toInt())
 
+                                val rightPixels = IntArray(h)
+                                bitmap.getPixels(rightPixels, 0, 1, w - 1, 0, 1, h)
                                 var rRight = 0L; var gRight = 0L; var bRight = 0L
-                                val xCoord = bitmap.width - 1
-                                val h = bitmap.height
                                 val stepY = maxOf(1, h / 16)
                                 var countY = 0
                                 for (y in 0 until h step stepY) {
-                                    val pixel = bitmap.getPixel(xCoord, y)
+                                    val pixel = rightPixels[y]
                                     rRight += android.graphics.Color.red(pixel)
                                     gRight += android.graphics.Color.green(pixel)
                                     bRight += android.graphics.Color.blue(pixel)
@@ -1889,7 +1882,9 @@ fun PlayerScreen(
 
         val savedItems by LibraryManager.savedItems.collectAsState()
 
-        val isSaved = savedItems.any { it.id == playerState?.videoId }
+        val isSaved = remember(savedItems, playerState?.videoId) {
+            savedItems.any { it.id == playerState?.videoId }
+        }
 
         val starTint by androidx.compose.animation.animateColorAsState(targetValue = if(isSaved) Color(0xFFFA243C) else contentColor, label="starTint")
 
@@ -1898,24 +1893,26 @@ fun PlayerScreen(
         val isOverlayActive = showLyrics || showQueue
         val density = androidx.compose.ui.platform.LocalDensity.current
         val screenHeightPx = remember(context) { context.resources.displayMetrics.heightPixels.toFloat() }
-        val dragProgressFraction = if (screenHeightPx > 0f) (dragOffsetY.value / screenHeightPx).coerceIn(0f, 1f) else 0f
-        val sheetCornerRadius = if (!isOverlayActive) {
-            androidx.compose.ui.unit.lerp(0.dp, 36.dp, (dragProgressFraction * 4f).coerceIn(0f, 1f))
-        } else 0.dp
-
         GlassContainer(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    translationY = dragOffsetY.value
+                    val currentDragY = dragOffsetY.value
+                    translationY = currentDragY
+                    val dragFraction = if (screenHeightPx > 0f) (currentDragY / screenHeightPx).coerceIn(0f, 1f) else 0f
+                    val cornerRadiusPx = if (!isOverlayActive) {
+                        val maxCorner = 36.dp.toPx()
+                        (dragFraction * 4f).coerceIn(0f, 1f) * maxCorner
+                    } else 0f
+
                     shape = RoundedCornerShape(
-                        topStart = sheetCornerRadius.toPx(),
-                        topEnd = sheetCornerRadius.toPx(),
+                        topStart = cornerRadiusPx,
+                        topEnd = cornerRadiusPx,
                         bottomStart = 0f,
                         bottomEnd = 0f
                     )
                     clip = true
-                    shadowElevation = if (dragProgressFraction > 0f) with(density) { 28.dp.toPx() } else 0f
+                    shadowElevation = if (dragFraction > 0f) 28.dp.toPx() else 0f
                 }
                 .pointerInput(showLyrics, showQueue) {
                     if (!showLyrics && !showQueue) {
@@ -1983,7 +1980,7 @@ fun PlayerScreen(
                     maxHeight = maxHeight,
                     playerState = playerState,
                     isPlaying = isPlaying,
-                    currentPosition = currentPosition,
+                    currentPosition = effectivePosition,
                     duration = duration,
                     upNextSongs = upNextSongs,
                     shuffleModeEnabled = shuffleModeEnabled,
@@ -2440,6 +2437,9 @@ fun PlayerScreen(
                             .offset(x = childOffsetX, y = 0.dp)
                             .width(childWidth)
                             .height(expandedHeight)
+                            .graphicsLayer {
+                                alpha = if (showLyrics || showQueue) 0f else 1f
+                            }
                     ) {
                             // Reflejo invertido con difuminado horizontal progresivo
                             com.mrtdk.liquid_glass.ui.components.GraduatedBlurArtwork(
@@ -2748,7 +2748,7 @@ fun PlayerScreen(
                                       val state = playerState
                                       items(
                                           count = state.queue.size,
-                                          key = { index -> "${state.queue[index].videoId ?: "q"}_${System.identityHashCode(state.queue[index])}" },
+                                          key = { index -> "${state.queue[index].videoId ?: "q"}_$index" },
                                           contentType = { "queue_item" }
                                       ) { index ->
                                            val qItem = state.queue[index]
@@ -2891,7 +2891,7 @@ fun PlayerScreen(
                                       val state = playerState
                                       itemsIndexed(
                                           items = upNextSongs,
-                                          key = { _, song -> "${song.id}_${System.identityHashCode(song)}" },
+                                          key = { _, song -> song.id },
                                           contentType = { _, _ -> "up_next_item" }
                                       ) { i, song ->
                                           val isCurrent = state != null && song.id == state.videoId
@@ -3104,7 +3104,7 @@ fun PlayerScreen(
 
                                        com.mrtdk.liquid_glass.ui.lyrics.RayMusicFlowLyrics(
                                            lyricsLines = currentLyricsLines,
-                                           currentPosition = currentPosition,
+                                           currentPosition = effectivePosition,
                                            lyricsOffset = lyricsOffset.toLong(),
                                            isAutoScrollEnabled = isAutoScrollEnabled,
                                            onAutoScrollChange = { isAutoScrollEnabled = it },
@@ -3369,8 +3369,8 @@ fun PlayerScreen(
                             .graphicsLayer {
                                 alpha = if (isVideoPlaying) 1f else 0f
                             },
-                        isPaused = !isPlaying,
-                        enableFrameCapture = (dragProgress == 0f),
+                        isPaused = !isPlaying || showLyrics || showQueue,
+                        enableFrameCapture = (dragProgress == 0f) && !showLyrics && !showQueue,
                         onPlayerCreated = { masterAnimatedPlayer = it },
                         onPlaybackStarted = { isVideoPlaying = true },
                         onFrameCaptured = { frameBitmap ->
@@ -3379,22 +3379,31 @@ fun PlayerScreen(
                             reflectionSkew = calculateDominantSkew(frameBitmap)
 
                             try {
-                                // Promedio de la fila inferior de píxeles
+                                // Promedio de la fila inferior de píxeles optimizado con muestreo por pasos
                                 var r = 0L; var g = 0L; var b = 0L
                                 val yCoord = frameBitmap.height - 1
                                 val w = frameBitmap.width
+                                val stepX = maxOf(1, w / 24)
+                                var countX = 0
 
-                                for (x in 0 until w) {
+                                for (x in 0 until w step stepX) {
                                     val pixel = frameBitmap.getPixel(x, yCoord)
-                                    r += android.graphics.Color.red(pixel)
-                                    g += android.graphics.Color.green(pixel)
-                                    b += android.graphics.Color.blue(pixel)
+                                    r += (pixel shr 16 and 0xFF)
+                                    g += (pixel shr 8 and 0xFF)
+                                    b += (pixel and 0xFF)
+                                    countX++
                                 }
 
-                                val avgColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
+                                val avgColor = Color((r / countX).toInt(), (g / countX).toInt(), (b / countX).toInt())
                                 bottomAverageColor = avgColor
-                                dominantColor = avgColor
-                                onDominantColorChanged(avgColor)
+                                val lastDom = dominantColor
+                                val dr = kotlin.math.abs(avgColor.red - lastDom.red)
+                                val dg = kotlin.math.abs(avgColor.green - lastDom.green)
+                                val db = kotlin.math.abs(avgColor.blue - lastDom.blue)
+                                if (dr > 0.05f || dg > 0.05f || db > 0.05f) {
+                                    dominantColor = avgColor
+                                    onDominantColorChanged(avgColor)
+                                }
                             } catch (e: Exception) { }
                         },
                         cornerRadius = if (isNormalArtwork) imgCorner else 0.dp,
@@ -3603,12 +3612,12 @@ fun PlayerScreen(
                                horizontalArrangement = Arrangement.SpaceBetween,
                                verticalAlignment = Alignment.CenterVertically
                            ) {
-                               Text(formatDuration(currentPosition), color = contentColor.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Normal)
+                               Text(formatDuration(effectivePosition), color = contentColor.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Normal)
                                LosslessBadge(
                                    contentColor = contentColor,
                                    onClick = { AudioRoutingState.showAudioRoutingMenu = true }
                                )
-                               Text("-${formatDuration((duration - currentPosition).coerceAtLeast(0L))}", color = contentColor.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Normal)
+                               Text("-${formatDuration((duration - effectivePosition).coerceAtLeast(0L))}", color = contentColor.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Normal)
                            }
 
                            Spacer(modifier = Modifier.height(10.dp))
@@ -3619,7 +3628,7 @@ fun PlayerScreen(
                                    .weight(1f)
                            ) {
                               PlayerBottomControls(
-                                  progress = progress, currentPosition = currentPosition, duration = duration,
+                                  progress = progress, currentPosition = effectivePosition, duration = duration,
                                   isPlaying = isPlaying, contentColor = contentColor, volumePosition = volumePosition,
                                   showLyrics = showLyrics, showQueue = showQueue,
                                   onSeek = onSeek, onTogglePlayPause = onTogglePlayPause, onVolumeChange = { v -> 
@@ -5647,9 +5656,9 @@ fun LandscapePlayerLayout(
 
                         },
 
-                    isPaused = false,
+                    isPaused = !isPlaying || showLyrics || showQueue,
 
-                    enableFrameCapture = true,
+                    enableFrameCapture = !showLyrics && !showQueue,
 
                     onPlaybackStarted = { onVideoPlayingChange(true) },
 
@@ -5658,57 +5667,56 @@ fun LandscapePlayerLayout(
                         onCoverBitmapChange(frameBitmap.asImageBitmap())
 
                         try {
-
                             var r = 0L; var g = 0L; var b = 0L
-
                             val yCoord = frameBitmap.height - 1
-
                             val w = frameBitmap.width
+                            val stepX = maxOf(1, w / 24)
+                            var countX = 0
 
-                            for (x in 0 until w) {
-
+                            for (x in 0 until w step stepX) {
                                 val pixel = frameBitmap.getPixel(x, yCoord)
-
-                                r += android.graphics.Color.red(pixel)
-
-                                g += android.graphics.Color.green(pixel)
-
-                                b += android.graphics.Color.blue(pixel)
-
+                                r += (pixel shr 16 and 0xFF)
+                                g += (pixel shr 8 and 0xFF)
+                                b += (pixel and 0xFF)
+                                countX++
                             }
 
-                            val avgColor = Color((r / w).toInt(), (g / w).toInt(), (b / w).toInt())
-
+                            val avgColor = Color((r / countX).toInt(), (g / countX).toInt(), (b / countX).toInt())
                             onBottomAverageColorChange(avgColor)
-
-                            onDominantColorChange(avgColor)
-
-
-
-                            // Promedio de la columna derecha de píxeles
-
-                            var rRight = 0L; var gRight = 0L; var bRight = 0L
-
-                            val xCoord = frameBitmap.width - 1
-
-                            val h = frameBitmap.height
-
-                            for (y in 0 until h) {
-
-                                val pixel = frameBitmap.getPixel(xCoord, y)
-
-                                rRight += android.graphics.Color.red(pixel)
-
-                                gRight += android.graphics.Color.green(pixel)
-
-                                bRight += android.graphics.Color.blue(pixel)
-
+                            val lastDom = dominantColor
+                            val dr = kotlin.math.abs(avgColor.red - lastDom.red)
+                            val dg = kotlin.math.abs(avgColor.green - lastDom.green)
+                            val db = kotlin.math.abs(avgColor.blue - lastDom.blue)
+                            if (dr > 0.05f || dg > 0.05f || db > 0.05f) {
+                                onDominantColorChange(avgColor)
                             }
 
-                            onRightSideAverageColorChange(Color((rRight / h).toInt(), (gRight / h).toInt(), (bRight / h).toInt()))
+                            // Promedio de la columna derecha de píxeles optimizado con muestreo por pasos
+                            var rRight = 0L; var gRight = 0L; var bRight = 0L
+                            val xCoord = frameBitmap.width - 1
+                            val h = frameBitmap.height
+                            val stepY = maxOf(1, h / 24)
+                            var countY = 0
 
+                            for (y in 0 until h step stepY) {
+                                val pixel = frameBitmap.getPixel(xCoord, y)
+                                rRight += (pixel shr 16 and 0xFF)
+                                gRight += (pixel shr 8 and 0xFF)
+                                bRight += (pixel and 0xFF)
+                                countY++
+                            }
+
+                            if (countY > 0) {
+                                val rightColor = Color((rRight / countY).toInt(), (gRight / countY).toInt(), (bRight / countY).toInt())
+                                val lastRight = rightSideAverageColor
+                                val drR = kotlin.math.abs(rightColor.red - lastRight.red)
+                                val dgR = kotlin.math.abs(rightColor.green - lastRight.green)
+                                val dbR = kotlin.math.abs(rightColor.blue - lastRight.blue)
+                                if (drR > 0.05f || dgR > 0.05f || dbR > 0.05f) {
+                                    onRightSideAverageColorChange(rightColor)
+                                }
+                            }
                         } catch (e: Exception) { }
-
                     }
 
                 )
@@ -7497,6 +7505,11 @@ private fun UpNextSongRow(
     }
 }
 
+private val skewLumCache1 = java.lang.ThreadLocal.withInitial { IntArray(256) }
+private val skewLumCache2 = java.lang.ThreadLocal.withInitial { IntArray(256) }
+private val skewPixelsCache1 = java.lang.ThreadLocal.withInitial { IntArray(256) }
+private val skewPixelsCache2 = java.lang.ThreadLocal.withInitial { IntArray(256) }
+
 private fun calculateDominantSkew(bitmap: android.graphics.Bitmap): Float {
     val w = bitmap.width
     val h = bitmap.height
@@ -7511,14 +7524,20 @@ private fun calculateDominantSkew(bitmap: android.graphics.Bitmap): Float {
     val range = 12 // test shifts from -12 to 12
     val margin = 15
 
-    // Cache luminance values for rows to make it super fast
-    val lum1 = IntArray(w)
-    val lum2 = IntArray(w)
+    // Cache luminance values for rows with zero-allocation buffers and single native bulk reads
+    val lum1 = if (w <= 256) skewLumCache1.get()!! else IntArray(w)
+    val lum2 = if (w <= 256) skewLumCache2.get()!! else IntArray(w)
+    val pix1 = if (w <= 256) skewPixelsCache1.get()!! else IntArray(w)
+    val pix2 = if (w <= 256) skewPixelsCache2.get()!! else IntArray(w)
+
+    bitmap.getPixels(pix1, 0, w, 0, y1, w, 1)
+    bitmap.getPixels(pix2, 0, w, 0, y2, w, 1)
+
     for (x in 0 until w) {
-        val p1 = bitmap.getPixel(x, y1)
+        val p1 = pix1[x]
         lum1[x] = ((p1 shr 16 and 0xFF) * 3 + (p1 shr 8 and 0xFF) * 6 + (p1 and 0xFF)) / 10
 
-        val p2 = bitmap.getPixel(x, y2)
+        val p2 = pix2[x]
         lum2[x] = ((p2 shr 16 and 0xFF) * 3 + (p2 shr 8 and 0xFF) * 6 + (p2 and 0xFF)) / 10
     }
 

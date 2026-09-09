@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -128,45 +129,58 @@ fun GraduatedBlurArtwork(
                 .graphicsLayer {
                     compositingStrategy = CompositingStrategy.Offscreen
                 }
-                .drawWithContent {
-                    drawContent()
-                    val thresholdPx = with(density) { sliderThresholdDp.toPx() }
+                .drawWithCache {
+                    val thresholdPx = sliderThresholdDp.toPx()
                     val h = size.height
-                    if (h > 0f) {
+                    val maskBrush = if (h > 0f) {
                         val tFrac = (thresholdPx / h).coerceIn(0.05f, 0.6f)
                         val startFrac = (tFrac * 0.60f).coerceIn(0f, 1f)
                         val midFrac = (tFrac * 1.05f).coerceIn(startFrac, 1f)
                         val endFrac = (tFrac * 1.50f).coerceIn(midFrac, 1f)
 
-                        // 1. Máscara alfa (DstIn): Cubre al 100% la capa base desde endFrac
-                        // para que la imagen invertida de la capa base NO se transparente
-                        drawRect(
-                            brush = Brush.verticalGradient(
-                                colorStops = arrayOf(
-                                    0.0f to Color.Transparent,
-                                    startFrac to Color.Transparent,
-                                    midFrac to Color.Black.copy(alpha = 0.55f),
-                                    endFrac to Color.Black,
-                                    1.0f to Color.Black
-                                )
-                            ),
-                            blendMode = BlendMode.DstIn
-                        )
-
-                        // 2. Capa ambiental sutil: oscurecimiento suave y equilibrado hacia los controles
-                        drawRect(
-                            brush = Brush.verticalGradient(
-                                colorStops = arrayOf(
-                                    0.0f to Color.Transparent,
-                                    (startFrac * 0.7f).coerceAtLeast(0f) to Color.Transparent,
-                                    midFrac to Color.Black.copy(alpha = 0.12f),
-                                    endFrac to Color.Black.copy(alpha = 0.22f),
-                                    (endFrac + 0.15f).coerceAtMost(1f) to Color.Black.copy(alpha = 0.35f),
-                                    0.60f to Color.Black.copy(alpha = 0.48f),
-                                    1.0f to Color.Black.copy(alpha = 0.60f)
-                                )
+                        Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0.0f to Color.Transparent,
+                                startFrac to Color.Transparent,
+                                midFrac to Color.Black.copy(alpha = 0.55f),
+                                endFrac to Color.Black,
+                                1.0f to Color.Black
                             )
                         )
+                    } else null
+
+                    val ambientBrush = if (h > 0f) {
+                        val tFrac = (thresholdPx / h).coerceIn(0.05f, 0.6f)
+                        val startFrac = (tFrac * 0.60f).coerceIn(0f, 1f)
+                        val midFrac = (tFrac * 1.05f).coerceIn(startFrac, 1f)
+                        val endFrac = (tFrac * 1.50f).coerceIn(midFrac, 1f)
+
+                        Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0.0f to Color.Transparent,
+                                (startFrac * 0.7f).coerceAtLeast(0f) to Color.Transparent,
+                                midFrac to Color.Black.copy(alpha = 0.12f),
+                                endFrac to Color.Black.copy(alpha = 0.22f),
+                                (endFrac + 0.15f).coerceAtMost(1f) to Color.Black.copy(alpha = 0.35f),
+                                0.60f to Color.Black.copy(alpha = 0.48f),
+                                1.0f to Color.Black.copy(alpha = 0.60f)
+                            )
+                        )
+                    } else null
+
+                    onDrawWithContent {
+                        drawContent()
+                        if (maskBrush != null) {
+                            drawRect(
+                                brush = maskBrush,
+                                blendMode = BlendMode.DstIn
+                            )
+                        }
+                        if (ambientBrush != null) {
+                            drawRect(
+                                brush = ambientBrush
+                            )
+                        }
                     }
                 }
         ) {

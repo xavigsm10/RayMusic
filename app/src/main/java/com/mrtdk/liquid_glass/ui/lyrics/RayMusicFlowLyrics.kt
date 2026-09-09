@@ -298,14 +298,7 @@ fun RayMusicFlowLyrics(
         }
     }
 
-    // Oscilador armónico para pausas instrumentales (Tacet)
-    val infiniteTransition = rememberInfiniteTransition(label = "tacetWave")
-    val tacetPhase by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(1300, easing = LinearEasing), RepeatMode.Restart),
-        label = "tacetPhase"
-    )
+
 
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
@@ -406,39 +399,7 @@ fun RayMusicFlowLyrics(
                             },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(24.dp))
-                                    .background(Color.White.copy(alpha = if (isItemActive) 0.12f else 0.06f))
-                                    .border(0.8.dp, Color.White.copy(alpha = if (isItemActive) 0.18f else 0.08f), RoundedCornerShape(24.dp))
-                                    .padding(horizontal = 14.dp, vertical = 7.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                listOf(0f, 0.33f, 0.66f).forEach { phaseOffset ->
-                                    val pulse = if (isItemActive) {
-                                        val shifted = (tacetPhase + phaseOffset) % 1f
-                                        (sin(shifted * Math.PI * 2).toFloat() * 0.5f + 0.5f)
-                                    } else 0f
-
-                                    Box(
-                                        modifier = Modifier
-                                            .size((5.5f + pulse * 4f).dp)
-                                            .background(
-                                                color = if (isItemActive) Color.White else Color.White.copy(alpha = 0.40f),
-                                                shape = CircleShape
-                                            )
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(3.dp))
-                                Text(
-                                    text = "♪",
-                                    color = if (isItemActive) Color.White else Color.White.copy(alpha = 0.40f),
-                                    fontSize = 14.sp,
-                                    fontFamily = SatoshiFontFamily,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
+                            TacetBreakDots(isItemActive = isItemActive)
                         }
                     }
 
@@ -721,5 +682,55 @@ fun RayMusicFlowLyrics(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun TacetBreakDots(isItemActive: Boolean) {
+    val tacetPhase by if (isItemActive) {
+        val infiniteTransition = rememberInfiniteTransition(label = "tacetWave")
+        infiniteTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(1300, easing = LinearEasing), RepeatMode.Restart),
+            label = "tacetPhase"
+        )
+    } else {
+        androidx.compose.runtime.remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    }
+
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(24.dp))
+            .background(Color.White.copy(alpha = if (isItemActive) 0.12f else 0.06f))
+            .border(0.8.dp, Color.White.copy(alpha = if (isItemActive) 0.18f else 0.08f), RoundedCornerShape(24.dp))
+            .padding(horizontal = 14.dp, vertical = 7.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val phaseOffsets = remember { floatArrayOf(0f, 0.33f, 0.66f) }
+        for (phaseOffset in phaseOffsets) {
+            val pulse = if (isItemActive) {
+                val shifted = (tacetPhase + phaseOffset) % 1f
+                (sin(shifted * Math.PI * 2).toFloat() * 0.5f + 0.5f)
+            } else 0f
+
+            Box(
+                modifier = Modifier
+                    .size((5.5f + pulse * 4f).dp)
+                    .background(
+                        color = if (isItemActive) Color.White else Color.White.copy(alpha = 0.40f),
+                        shape = CircleShape
+                    )
+            )
+        }
+        Spacer(modifier = Modifier.width(3.dp))
+        Text(
+            text = "♪",
+            color = if (isItemActive) Color.White else Color.White.copy(alpha = 0.40f),
+            fontSize = 14.sp,
+            fontFamily = SatoshiFontFamily,
+            fontWeight = FontWeight.Bold
+        )
     }
 }

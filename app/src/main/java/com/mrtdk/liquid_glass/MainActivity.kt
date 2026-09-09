@@ -137,20 +137,23 @@ class MainActivity : ComponentActivity() {
             } catch (e: Exception) { }
         }
 
-        // Configure global Coil ImageLoader with memory and disk caches
+        // Configure global Coil ImageLoader with adaptive memory and disk caches
+        val activityManager = getSystemService(android.content.Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
+        val isLowRam = activityManager?.isLowRamDevice == true
+        val memoryPercent = if (isLowRam) 0.15 else 0.25
         val globalImageLoader = coil.ImageLoader.Builder(this)
             .memoryCache {
                 coil.memory.MemoryCache.Builder(this)
-                    .maxSizePercent(0.25)
+                    .maxSizePercent(memoryPercent)
                     .build()
             }
             .diskCache {
                 coil.disk.DiskCache.Builder()
                     .directory(cacheDir.resolve("image_cache"))
-                    .maxSizePercent(0.05)
+                    .maxSizeBytes(150L * 1024 * 1024)
                     .build()
             }
-            .allowHardware(true)
+            .allowHardware(!isLowRam)
             .crossfade(true)
             .components {
                 if (android.os.Build.VERSION.SDK_INT >= 28) {
@@ -415,7 +418,6 @@ class MainActivity : ComponentActivity() {
 
                     val isPlaying by musicPlayer!!.isPlaying.collectAsState()
                     val playbackError by musicPlayer!!.playbackError.collectAsState()
-                    val currentPosition by musicPlayer!!.currentPosition.collectAsState()
                     val duration by musicPlayer!!.duration.collectAsState()
                     val shuffleModeEnabled by musicPlayer!!.shuffleModeEnabled.collectAsState()
                     val repeatMode by musicPlayer!!.repeatMode.collectAsState()
@@ -882,7 +884,7 @@ class MainActivity : ComponentActivity() {
                                                     tabPosition = tabPositionProvider,
                                                     playerState = playerState,
                                                     isPlaying = isPlaying,
-                                                    playbackProgress = { if (duration > 0) (currentPosition.toFloat() / duration).coerceIn(0f, 1f) else 0f },
+                                                    playbackProgress = { if (duration > 0) ((musicPlayer?.currentPosition?.value ?: 0L).toFloat() / duration).coerceIn(0f, 1f) else 0f },
                                                     onSeek = { frac -> if (duration > 0) musicPlayer?.seekTo((frac * duration).toLong()) },
                                                     onTogglePlayPause = { 
                                                         if (listenTogetherManager.isInRoom && !listenTogetherManager.isHost) {
@@ -975,9 +977,9 @@ class MainActivity : ComponentActivity() {
                                     globalDominantColor = color
                                 },
                                 isPlaying = isPlaying,
-                                currentPosition = currentPosition,
+                                musicPlayer = musicPlayer,
                                 duration = duration,
-                                isBottomBarCollapsed = floatingNavBarScrollConnection.isInline,
+                                isBottomBarCollapsed = if (showPlayer) floatingNavBarScrollConnection.isInline else false,
                                 upNextSongs = upNextSongs,
                                 onUpNextSongsChange = { 
                                     upNextSongs = it 
@@ -1050,6 +1052,16 @@ class MainActivity : ComponentActivity() {
                     
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        musicPlayer?.isAppInForeground = true
+    }
+
+    override fun onStop() {
+        super.onStop()
+        musicPlayer?.isAppInForeground = false
     }
 
     override fun onDestroy() {

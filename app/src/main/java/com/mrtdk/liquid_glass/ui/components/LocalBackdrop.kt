@@ -396,7 +396,7 @@ fun SharedElementTransitionContainer(
                             translationY = curTop
                             clip = false
                         }
-                        compositingStrategy = CompositingStrategy.Offscreen
+                        compositingStrategy = if (p < 0.999f && shrinkToTarget) CompositingStrategy.Offscreen else CompositingStrategy.Auto
                     }
             ) {
                 val contentProgress = if (staticContainer || shrinkToTarget) progress.value else 1f

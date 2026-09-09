@@ -53,6 +53,15 @@ class MusicPlayer(private val context: Context) {
     private var retryAttempts = 0
     private val MAX_RETRY_ATTEMPTS = 3
 
+    var isAppInForeground: Boolean = true
+        set(value) {
+            val changed = field != value
+            field = value
+            if (changed && _isPlaying.value) {
+                startPolling()
+            }
+        }
+
     init {
         val sessionToken = SessionToken(context, ComponentName(context, MusicService::class.java))
         controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
@@ -166,7 +175,8 @@ class MusicPlayer(private val context: Context) {
         pollingJob = scope.launch {
             while (true) {
                 _currentPosition.value = controller?.currentPosition ?: 0L
-                delay(50)
+                val interval = if (isAppInForeground) 150L else 1000L
+                delay(interval)
             }
         }
     }

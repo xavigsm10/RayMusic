@@ -137,6 +137,47 @@ fun RayMusicFluidBackground(
     )
     val pulseFactor = if (isPlaying) (1f + 0.04f * pulseT) else 1f
 
+    val path1 = remember { Path() }
+    val path2 = remember { Path() }
+    val path3 = remember { Path() }
+    val path4 = remember { Path() }
+
+    val colorsRibbon1 = remember(animPrimary, animHighlight, animSecondary) {
+        listOf(
+            animPrimary.copy(alpha = 0.65f),
+            animHighlight.copy(alpha = 0.55f),
+            animSecondary.copy(alpha = 0.40f)
+        )
+    }
+    val colorsRibbon2 = remember(animSecondary, animPrimary, animAccent) {
+        listOf(
+            animSecondary.copy(alpha = 0.60f),
+            animPrimary.copy(alpha = 0.50f),
+            animAccent.copy(alpha = 0.40f)
+        )
+    }
+    val colorsRibbon3 = remember(animAccent, animSecondary, animHighlight) {
+        listOf(
+            animAccent.copy(alpha = 0.55f),
+            animSecondary.copy(alpha = 0.45f),
+            animHighlight.copy(alpha = 0.35f)
+        )
+    }
+    val colorsRibbon4 = remember(animHighlight, animPrimary, animAccent) {
+        listOf(
+            animHighlight.copy(alpha = 0.50f),
+            animPrimary.copy(alpha = 0.45f),
+            animAccent.copy(alpha = 0.40f)
+        )
+    }
+    val colorsOrb = remember(animHighlight, animSecondary) {
+        listOf(
+            animHighlight.copy(alpha = 0.40f),
+            animSecondary.copy(alpha = 0.22f),
+            Color.Transparent
+        )
+    }
+
     Box(modifier = modifier) {
         // Capa 1: Base oscura atmosférica (Negro cósmico profundo con gradiente ambiental)
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -150,11 +191,11 @@ fun RayMusicFluidBackground(
             )
         }
 
-        // Capa 2: Malla de cintas sinuosas fluidas (Domain Warping) con desenfoque profundo
+        // Capa 2: Malla de cintas sinuosas fluidas (Domain Warping) con desenfoque optimizado
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
-                .blur(64.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+                .blur(48.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
         ) {
             val w = size.width
             val h = size.height
@@ -172,18 +213,13 @@ fun RayMusicFluidBackground(
             val p1x1 = w * 1.20f
             val p1y1 = h * (0.20f + 0.12f * sin((t4 * 0.90f).toDouble()).toFloat())
 
-            val path1 = Path().apply {
-                moveTo(p1x0, p1y0)
-                cubicTo(p1c1x, p1c1y, p1c2x, p1c2y, p1x1, p1y1)
-            }
+            path1.rewind()
+            path1.moveTo(p1x0, p1y0)
+            path1.cubicTo(p1c1x, p1c1y, p1c2x, p1c2y, p1x1, p1y1)
             drawPath(
                 path = path1,
                 brush = Brush.linearGradient(
-                    colors = listOf(
-                        animPrimary.copy(alpha = 0.65f),
-                        animHighlight.copy(alpha = 0.55f),
-                        animSecondary.copy(alpha = 0.40f)
-                    ),
+                    colors = colorsRibbon1,
                     start = Offset(p1x0, p1y0),
                     end = Offset(p1x1, p1y1)
                 ),
@@ -200,18 +236,13 @@ fun RayMusicFluidBackground(
             val p2x1 = -w * 0.20f
             val p2y1 = h * (0.46f + 0.11f * cos((t1 * 0.75f).toDouble()).toFloat())
 
-            val path2 = Path().apply {
-                moveTo(p2x0, p2y0)
-                cubicTo(p2c1x, p2c1y, p2c2x, p2c2y, p2x1, p2y1)
-            }
+            path2.rewind()
+            path2.moveTo(p2x0, p2y0)
+            path2.cubicTo(p2c1x, p2c1y, p2c2x, p2c2y, p2x1, p2y1)
             drawPath(
                 path = path2,
                 brush = Brush.linearGradient(
-                    colors = listOf(
-                        animSecondary.copy(alpha = 0.60f),
-                        animPrimary.copy(alpha = 0.50f),
-                        animAccent.copy(alpha = 0.40f)
-                    ),
+                    colors = colorsRibbon2,
                     start = Offset(p2x0, p2y0),
                     end = Offset(p2x1, p2y1)
                 ),
@@ -228,18 +259,13 @@ fun RayMusicFluidBackground(
             val p3x1 = w * 1.20f
             val p3y1 = h * (0.82f + 0.10f * sin((t2 * 0.85f).toDouble()).toFloat())
 
-            val path3 = Path().apply {
-                moveTo(p3x0, p3y0)
-                cubicTo(p3c1x, p3c1y, p3c2x, p3c2y, p3x1, p3y1)
-            }
+            path3.rewind()
+            path3.moveTo(p3x0, p3y0)
+            path3.cubicTo(p3c1x, p3c1y, p3c2x, p3c2y, p3x1, p3y1)
             drawPath(
                 path = path3,
                 brush = Brush.linearGradient(
-                    colors = listOf(
-                        animAccent.copy(alpha = 0.55f),
-                        animSecondary.copy(alpha = 0.45f),
-                        animHighlight.copy(alpha = 0.35f)
-                    ),
+                    colors = colorsRibbon3,
                     start = Offset(p3x0, p3y0),
                     end = Offset(p3x1, p3y1)
                 ),
@@ -256,18 +282,13 @@ fun RayMusicFluidBackground(
             val p4x1 = w * (0.50f + 0.20f * cos(t2.toDouble()).toFloat())
             val p4y1 = h * 1.10f
 
-            val path4 = Path().apply {
-                moveTo(p4x0, p4y0)
-                cubicTo(p4c1x, p4c1y, p4c2x, p4c2y, p4x1, p4y1)
-            }
+            path4.rewind()
+            path4.moveTo(p4x0, p4y0)
+            path4.cubicTo(p4c1x, p4c1y, p4c2x, p4c2y, p4x1, p4y1)
             drawPath(
                 path = path4,
                 brush = Brush.linearGradient(
-                    colors = listOf(
-                        animHighlight.copy(alpha = 0.50f),
-                        animPrimary.copy(alpha = 0.45f),
-                        animAccent.copy(alpha = 0.40f)
-                    ),
+                    colors = colorsRibbon4,
                     start = Offset(p4x0, p4y0),
                     end = Offset(p4x1, p4y1)
                 ),
@@ -279,11 +300,7 @@ fun RayMusicFluidBackground(
             val orbCenterY = h * (0.50f + 0.14f * sin((t5 * 0.85f).toDouble()).toFloat())
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(
-                        animHighlight.copy(alpha = 0.40f),
-                        animSecondary.copy(alpha = 0.22f),
-                        Color.Transparent
-                    ),
+                    colors = colorsOrb,
                     center = Offset(orbCenterX, orbCenterY),
                     radius = w * 0.60f * pulseFactor
                 ),
