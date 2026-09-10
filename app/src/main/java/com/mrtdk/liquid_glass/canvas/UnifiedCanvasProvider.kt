@@ -97,6 +97,28 @@ object UnifiedCanvasProvider {
             } catch (_: Exception) {}
         }
 
+        // 5. Album motion fallback if song search did not yield direct motion video
+        if (candidateArtwork == null && requestedAlbum.isNotBlank()) {
+            val albumCandidates = linkedSetOf(requestedAlbum, normalizeCanvasSongTitle(requestedAlbum))
+            for (alb in albumCandidates.filter { it.isNotBlank() }) {
+                try {
+                    val amAlb = AppleMusicCanvasProvider.getByAlbumArtist(alb, rawArtist, storefront)
+                    if (!amAlb?.preferredAnimationUrl.isNullOrBlank()) {
+                        candidateArtwork = amAlb
+                        break
+                    }
+                } catch (_: Exception) {}
+
+                try {
+                    val tidalAlb = TidalCanvasProvider.getByAlbumArtist(alb, rawArtist)
+                    if (!tidalAlb?.preferredAnimationUrl.isNullOrBlank()) {
+                        candidateArtwork = tidalAlb
+                        break
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+
         // Strict Echo-Music validation algorithm
         val validated = candidateArtwork?.let { artwork ->
             val localArtists = splitAndNormalizeArtists(rawArtist)
@@ -110,7 +132,7 @@ object UnifiedCanvasProvider {
             val canvasSongName = artwork.name
 
             val titleMatches = when {
-                // If the motion artwork belongs to an album, the song's album MUST match that album
+                // If the motion artwork belongs to an album, and song's album is provided, verify match
                 canvasAlbumName != null && requestedAlbum.isNotBlank() -> {
                     val normCanvasAlb = normalizeCanvasSongTitle(canvasAlbumName)
                     val normReqAlb = normalizeCanvasSongTitle(requestedAlbum)
@@ -119,6 +141,8 @@ object UnifiedCanvasProvider {
                             normCanvasAlb.contains(normReqAlb, ignoreCase = true) ||
                             normReqAlb.contains(normCanvasAlb, ignoreCase = true)
                 }
+                // When played individually from search/home (requestedAlbum is blank)
+                canvasAlbumName != null && requestedAlbum.isBlank() -> true
                 canvasSongName != null && rawTitle.isNotBlank() -> {
                     val normCanvasSong = normalizeCanvasSongTitle(canvasSongName)
                     val normReqTitle = normalizeCanvasSongTitle(rawTitle)

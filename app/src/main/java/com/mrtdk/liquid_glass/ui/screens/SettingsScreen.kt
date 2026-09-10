@@ -159,7 +159,7 @@ fun MainSettingsMenu(
             }
             Text(
                 text = stringResource(R.string.ajustes),
-                color = Color.White,
+                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(start = 8.dp)
@@ -222,7 +222,7 @@ fun MainSettingsMenu(
             if (showThemeDialog) {
                 AlertDialog(
                     onDismissRequest = { showThemeDialog = false },
-                    title = { Text(stringResource(R.string.theme_app_title), color = Color.White, fontWeight = FontWeight.Bold) },
+                    title = { Text(stringResource(R.string.theme_app_title), color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontWeight = FontWeight.Bold) },
                     text = {
                         Column {
                             Row(
@@ -243,7 +243,7 @@ fun MainSettingsMenu(
                                     }
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(stringResource(R.string.theme_dark_mode_default), color = Color.White)
+                                Text(stringResource(R.string.theme_dark_mode_default), color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor)
                             }
                             Row(
                                 modifier = Modifier
@@ -263,7 +263,7 @@ fun MainSettingsMenu(
                                     }
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(stringResource(R.string.theme_light_mode), color = Color.White)
+                                Text(stringResource(R.string.theme_light_mode), color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor)
                             }
                         }
                     },
@@ -412,7 +412,7 @@ fun LyricsSettingsScreen(onBack: () -> Unit) {
             }
             Text(
                 text = stringResource(R.string.settings_lyrics),
-                color = Color.White,
+                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(start = 8.dp)
@@ -768,7 +768,7 @@ fun PlayerSettingsScreen(
             }
             Text(
                 text = stringResource(R.string.settings_player_sound),
-                color = Color.White,
+                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(start = 8.dp)
@@ -790,9 +790,9 @@ fun PlayerSettingsScreen(
                         description = {
                             Text(
                                 when (audioQuality) {
-                                    "low" -> "Baja (48 kbps AAC / 50 kbps Opus)"
-                                    "high" -> "Alta (160 kbps Opus / 128 kbps AAC)"
-                                    else -> "Automático (160 kbps Opus)"
+                                    "low" -> stringResource(R.string.player_quality_low_desc)
+                                    "high" -> stringResource(R.string.player_quality_high_desc)
+                                    else -> stringResource(R.string.player_quality_auto)
                                 }
                             )
                         },
@@ -883,9 +883,9 @@ fun PlayerSettingsScreen(
         SingleChoiceDialog(
             title = stringResource(R.string.player_quality_title),
             options = listOf(
-                "auto" to "Automático (Recomendado - 160 kbps)",
-                "high" to "Alta (160 kbps Opus / 128 kbps AAC)",
-                "low" to "Baja (48 kbps AAC / 50 kbps Opus)"
+                "auto" to stringResource(R.string.player_quality_auto),
+                "high" to stringResource(R.string.player_quality_high_desc),
+                "low" to stringResource(R.string.player_quality_low_desc)
             ),
             selectedValue = audioQuality,
             onDismiss = { showQualityDialog = false },
@@ -951,7 +951,7 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
             }
             Text(
                 text = stringResource(R.string.settings_listen_together),
-                color = Color.White,
+                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(start = 8.dp)
@@ -1417,7 +1417,7 @@ fun ContentSettingsScreen(onBack: () -> Unit) {
             }
             Text(
                 text = stringResource(R.string.settings_content),
-                color = Color.White,
+                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(start = 8.dp)
@@ -1651,7 +1651,7 @@ fun PrivacySettingsScreen(
             }
             Text(
                 text = stringResource(R.string.settings_privacy),
-                color = Color.White,
+                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(start = 8.dp)
@@ -1821,7 +1821,7 @@ fun AboutSettingsScreen(
             }
             Text(
                 text = stringResource(R.string.acerca_de),
-                color = Color.White,
+                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(start = 8.dp)
@@ -1866,7 +1866,7 @@ fun AboutSettingsScreen(
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = "RayMusic",
-                color = Color.White,
+                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -1933,7 +1933,7 @@ fun SingleChoiceDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(text = title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold) },
+        title = { Text(text = title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 20.sp, fontWeight = FontWeight.Bold) },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 options.forEach { option ->
@@ -1960,7 +1960,7 @@ fun SingleChoiceDialog(
                         )
                         Text(
                             text = option.second,
-                            color = Color.White,
+                            color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                             fontSize = 16.sp,
                             modifier = Modifier.padding(start = 12.dp)
                         )
@@ -1971,10 +1971,10 @@ fun SingleChoiceDialog(
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar", color = Color(0xFFFA243C))
+                Text(stringResource(R.string.cancelar), color = Color(0xFFFA243C))
             }
         },
-        containerColor = Color(0xFF1C1C1E),
+        containerColor = com.mrtdk.liquid_glass.ui.theme.ThemeManager.surfaceColor,
         shape = RoundedCornerShape(20.dp)
     )
 }
@@ -1993,7 +1993,7 @@ fun SliderDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(text = title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold) },
+        title = { Text(text = title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 20.sp, fontWeight = FontWeight.Bold) },
         text = {
             Column(
                 modifier = Modifier
@@ -2003,7 +2003,7 @@ fun SliderDialog(
             ) {
                 Text(
                     text = if (isFloat) String.format("%.2f", tempValue) else tempValue.roundToInt().toString(),
-                    color = Color.White,
+                    color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                     fontSize = 32.sp,
                     fontWeight = FontWeight.ExtraBold
                 )
@@ -2014,7 +2014,7 @@ fun SliderDialog(
                     valueRange = valueRange,
                     steps = steps,
                     colors = SliderDefaults.colors(
-                        thumbColor = Color.White,
+                        thumbColor = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                         activeTrackColor = Color(0xFFFA243C),
                         inactiveTrackColor = Color.DarkGray
                     )
@@ -2026,15 +2026,15 @@ fun SliderDialog(
                 onSave(tempValue)
                 onDismiss()
             }) {
-                Text("Guardar", color = Color(0xFFFA243C))
+                Text(stringResource(R.string.guardar), color = Color(0xFFFA243C))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar", color = Color.Gray)
+                Text(stringResource(R.string.cancelar), color = Color.Gray)
             }
         },
-        containerColor = Color(0xFF1C1C1E),
+        containerColor = com.mrtdk.liquid_glass.ui.theme.ThemeManager.surfaceColor,
         shape = RoundedCornerShape(20.dp)
     )
 }
@@ -2051,7 +2051,7 @@ fun InputDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(text = title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold) },
+        title = { Text(text = title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 20.sp, fontWeight = FontWeight.Bold) },
         text = {
             OutlinedTextField(
                 value = textState,
@@ -2061,8 +2061,8 @@ fun InputDialog(
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFFFA243C),
                     unfocusedBorderColor = Color.Gray,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White
+                    focusedTextColor = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
+                    unfocusedTextColor = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -2072,15 +2072,15 @@ fun InputDialog(
                 onSave(textState.trim())
                 onDismiss()
             }) {
-                Text("Aceptar", color = Color(0xFFFA243C))
+                Text(stringResource(R.string.guardar), color = Color(0xFFFA243C))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar", color = Color.Gray)
+                Text(stringResource(R.string.cancelar), color = Color.Gray)
             }
         },
-        containerColor = Color(0xFF1C1C1E),
+        containerColor = com.mrtdk.liquid_glass.ui.theme.ThemeManager.surfaceColor,
         shape = RoundedCornerShape(20.dp)
     )
 }
@@ -2094,8 +2094,8 @@ fun ConfirmDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(text = title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold) },
-        text = { Text(message, color = Color.Gray, fontSize = 16.sp) },
+        title = { Text(text = title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 20.sp, fontWeight = FontWeight.Bold) },
+        text = { Text(message, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 16.sp) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
                 Text("Confirmar", color = Color(0xFFFA243C))
@@ -2103,10 +2103,10 @@ fun ConfirmDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancelar", color = Color.Gray)
+                Text(stringResource(R.string.cancelar), color = Color.Gray)
             }
         },
-        containerColor = Color(0xFF1C1C1E),
+        containerColor = com.mrtdk.liquid_glass.ui.theme.ThemeManager.surfaceColor,
         shape = RoundedCornerShape(20.dp)
     )
 }
@@ -2158,7 +2158,7 @@ fun SpotifySettingsScreen(onBack: () -> Unit) {
             }
             Text(
                 text = "Spotify",
-                color = Color.White,
+                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(start = 8.dp)

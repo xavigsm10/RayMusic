@@ -345,6 +345,7 @@
     <string name="lyrics_statusbar_desc">Oynatıcı açıldığında üst durum çubuğunu gizle</string>
 
     <string name="player_quality_title">Ses kalitesi</string>
+    <string name="player_quality_auto">Otomatik (Önerilen - 160 kbps)</string>
     <string name="player_quality_low">Düşük (Veri tasarrufu)</string>
     <string name="player_quality_high">Yüksek (Önerilen)</string>
     <string name="player_quality_low_desc">Düşük (48 kbps AAC / 50 kbps Opus)</string>

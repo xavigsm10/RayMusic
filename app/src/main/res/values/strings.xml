@@ -345,6 +345,7 @@
     <string name="lyrics_statusbar_desc">Ocultar la barra de estado superior al abrir el reproductor</string>
 
     <string name="player_quality_title">Calidad de audio</string>
+    <string name="player_quality_auto">Automático (Recomendado - 160 kbps)</string>
     <string name="player_quality_low">Baja (Ahorro de datos)</string>
     <string name="player_quality_high">Alta (Recomendada)</string>
     <string name="player_quality_low_desc">Baja (48 kbps AAC / 50 kbps Opus)</string>

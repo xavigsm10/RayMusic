@@ -26,6 +26,53 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.mrtdk.liquid_glass.R
 
+object CanvasVideoCache {
+    @Volatile
+    private var cache: androidx.media3.datasource.cache.SimpleCache? = null
+    @Volatile
+    private var cacheDataSourceFactory: androidx.media3.datasource.cache.CacheDataSource.Factory? = null
+
+    @Synchronized
+    fun getCacheDataSourceFactory(context: android.content.Context): androidx.media3.datasource.cache.CacheDataSource.Factory {
+        cacheDataSourceFactory?.let { return it }
+
+        val appContext = context.applicationContext
+        val cacheDir = appContext.cacheDir.resolve("canvas_video_cache")
+        val evictor = androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor(100 * 1024 * 1024L) // 100 MB max for motion covers
+        val databaseProvider = androidx.media3.database.StandaloneDatabaseProvider(appContext)
+
+        val simpleCache = try {
+            androidx.media3.datasource.cache.SimpleCache(cacheDir, evictor, databaseProvider)
+        } catch (_: Exception) {
+            try {
+                cacheDir.deleteRecursively()
+                androidx.media3.datasource.cache.SimpleCache(cacheDir, evictor, databaseProvider)
+            } catch (_: Exception) {
+                null
+            }
+        }
+        cache = simpleCache
+
+        val upstreamFactory = androidx.media3.datasource.DefaultHttpDataSource.Factory()
+            .setConnectTimeoutMs(15_000)
+            .setReadTimeoutMs(20_000)
+            .setUserAgent("RayMusic/1.0")
+
+        val factory = if (simpleCache != null) {
+            androidx.media3.datasource.cache.CacheDataSource.Factory()
+                .setCache(simpleCache)
+                .setUpstreamDataSourceFactory(upstreamFactory)
+                .setFlags(androidx.media3.datasource.cache.CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+        } else {
+            androidx.media3.datasource.cache.CacheDataSource.Factory()
+                .setUpstreamDataSourceFactory(upstreamFactory)
+        }
+
+        cacheDataSourceFactory = factory
+        return factory
+    }
+}
+
 object AnimatedArtworkCache {
     private val memoryCache = java.util.concurrent.ConcurrentHashMap<String, String>()
 
@@ -50,6 +97,14 @@ object AnimatedArtworkCache {
         return null
     }
 
+    fun getForSong(artist: String, title: String, album: String? = null): String? {
+        get(artist, title)?.let { return it }
+        if (!album.isNullOrBlank()) {
+            get(artist, album)?.let { return it }
+        }
+        return null
+    }
+
     fun put(artist: String, albumOrTitle: String, url: String) {
         if (url.isBlank() || url.contains("m8tec.top")) return
         val cleanArtist = com.mrtdk.liquid_glass.canvas.UnifiedCanvasProvider.normalizeCanvasArtistName(artist)
@@ -57,6 +112,13 @@ object AnimatedArtworkCache {
         val key = "echo_motion_v3_${cleanArtist}_${cleanTitle}".lowercase().trim().replace(Regex("[^a-zA-Z0-9_]"), "_")
         memoryCache[key] = url
         com.mrtdk.liquid_glass.data.LibraryManager.saveString(key, url)
+    }
+
+    fun putForSong(artist: String, title: String, album: String? = null, url: String) {
+        put(artist, title, url)
+        if (!album.isNullOrBlank()) {
+            put(artist, album, url)
+        }
     }
 }
 
@@ -77,7 +139,7 @@ fun AnimatedArtworkPlayer(
     val context = LocalContext.current
     var isFirstFrameRendered by remember(videoUrl) { mutableStateOf(false) }
 
-    // Initialize ExoPlayer inside remember to keep instance alive
+    // Initialize ExoPlayer with disk-cached media source to eliminate runaway data usage
     val exoPlayer = remember {
         val trackSelector = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(context).apply {
             setParameters(
@@ -86,7 +148,11 @@ fun AnimatedArtworkPlayer(
                     .setMaxVideoFrameRate(60)
             )
         }
+        val mediaSourceFactory = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(
+            CanvasVideoCache.getCacheDataSourceFactory(context)
+        )
         ExoPlayer.Builder(context)
+            .setMediaSourceFactory(mediaSourceFactory)
             .setTrackSelector(trackSelector)
             .build().apply {
                 trackSelectionParameters = trackSelectionParameters.buildUpon()
@@ -102,7 +168,7 @@ fun AnimatedArtworkPlayer(
         onPlayerCreated(exoPlayer)
     }
 
-    // Handle synchronization if syncWithPlayer is provided
+    // Handle smooth synchronization without decoder stalls
     LaunchedEffect(syncWithPlayer, exoPlayer) {
         val master = syncWithPlayer ?: return@LaunchedEffect
         
@@ -110,7 +176,7 @@ fun AnimatedArtworkPlayer(
         exoPlayer.playWhenReady = master.playWhenReady
         if (master.playbackState == Player.STATE_READY || master.playbackState == Player.STATE_BUFFERING) {
             val drift = kotlin.math.abs(exoPlayer.currentPosition - master.currentPosition)
-            if (drift > 20) {
+            if (drift > 1000) {
                 exoPlayer.seekTo(master.currentPosition)
             }
         }
@@ -127,7 +193,7 @@ fun AnimatedArtworkPlayer(
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 exoPlayer.playWhenReady = isPlaying
                 val drift = kotlin.math.abs(exoPlayer.currentPosition - master.currentPosition)
-                if (drift > 20) {
+                if (drift > 1000) {
                     exoPlayer.seekTo(master.currentPosition)
                 }
             }
@@ -136,7 +202,7 @@ fun AnimatedArtworkPlayer(
                 if (playbackState == Player.STATE_READY) {
                     exoPlayer.playWhenReady = master.playWhenReady
                     val drift = kotlin.math.abs(exoPlayer.currentPosition - master.currentPosition)
-                    if (drift > 20) {
+                    if (drift > 1000) {
                         exoPlayer.seekTo(master.currentPosition)
                     }
                 }
@@ -144,16 +210,16 @@ fun AnimatedArtworkPlayer(
         }
         master.addListener(syncListener)
 
-        // Continuous fine-grained synchronization
+        // Low-overhead drift correction (checks once every 1.5s instead of aggressive 20ms seek loop)
         try {
             while (true) {
-                if (master.isPlaying) {
+                if (master.isPlaying && !isPaused) {
                     val drift = kotlin.math.abs(exoPlayer.currentPosition - master.currentPosition)
-                    if (drift > 20) {
+                    if (drift > 1500) {
                         exoPlayer.seekTo(master.currentPosition)
                     }
                 }
-                kotlinx.coroutines.delay(20)
+                kotlinx.coroutines.delay(1500)
             }
         } finally {
             master.removeListener(syncListener)
@@ -191,8 +257,8 @@ fun AnimatedArtworkPlayer(
 
     var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
 
-    LaunchedEffect(playerViewRef, videoUrl, enableFrameCapture, onFrameCaptured) {
-        if (!enableFrameCapture || onFrameCaptured == null) return@LaunchedEffect
+    LaunchedEffect(playerViewRef, videoUrl, enableFrameCapture, onFrameCaptured, isPaused) {
+        if (!enableFrameCapture || onFrameCaptured == null || isPaused) return@LaunchedEffect
         val pView = playerViewRef ?: return@LaunchedEffect
         // Wait for player to be ready and playing
         while (exoPlayer.playbackState != Player.STATE_READY) {
@@ -217,12 +283,12 @@ fun AnimatedArtworkPlayer(
             if (initialBmp != null) {
                 onFrameCaptured(initialBmp)
             }
-        } catch (e: Exception) { }
+        } catch (_: Exception) { }
 
         // Periodically capture the frame of the TextureView
         val reusableBmp = android.graphics.Bitmap.createBitmap(120, 160, android.graphics.Bitmap.Config.ARGB_8888)
         while (true) {
-            if (exoPlayer.isPlaying && enableFrameCapture && tv.isAvailable) {
+            if (exoPlayer.isPlaying && enableFrameCapture && !isPaused && tv.isAvailable) {
                 try {
                     val bmp = tv.getBitmap(reusableBmp)
                     if (bmp != null) {
@@ -231,15 +297,15 @@ fun AnimatedArtworkPlayer(
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
-                kotlinx.coroutines.delay(90) // Optimal ~11fps live reflection updates for max smoothness with 65% less GPU/CPU load
+                kotlinx.coroutines.delay(90) // Optimal live reflection updates with minimal GPU/CPU load
             } else {
-                kotlinx.coroutines.delay(150) // Low power sleep when paused or frame capture disabled
+                kotlinx.coroutines.delay(200) // Sleep when paused or frame capture disabled
             }
         }
     }
 
     val animatedAlpha by animateFloatAsState(
-        targetValue = if (isFirstFrameRendered) 1f else 0f,
+        targetValue = if (isFirstFrameRendered && !isPaused) 1f else 0f,
         animationSpec = tween(250),
         label = "animatedArtworkAlpha"
     )
@@ -247,13 +313,10 @@ fun AnimatedArtworkPlayer(
     val density = LocalDensity.current
     val cornerRadiusPx = with(density) { cornerRadius.toPx() }
 
-    val applyClipping: (android.view.View) -> Unit = { view ->
+    // Reusable outline provider that does not allocate per-frame
+    val outlineProvider = remember(cornerRadiusPx, clipToBounds) {
         if (clipToBounds || cornerRadiusPx > 0f) {
-            view.clipToOutline = true
-            if (view is ViewGroup) {
-                view.clipChildren = true
-            }
-            val provider = object : android.view.ViewOutlineProvider() {
+            object : android.view.ViewOutlineProvider() {
                 override fun getOutline(v: android.view.View, outline: android.graphics.Outline) {
                     if (cornerRadiusPx > 0f) {
                         outline.setRoundRect(0, 0, v.width, v.height, cornerRadiusPx)
@@ -262,37 +325,7 @@ fun AnimatedArtworkPlayer(
                     }
                 }
             }
-            view.outlineProvider = provider
-            view.invalidateOutline()
-
-            if (view is ViewGroup) {
-                for (i in 0 until view.childCount) {
-                    val child = view.getChildAt(i)
-                    child.clipToOutline = true
-                    child.outlineProvider = provider
-                    child.invalidateOutline()
-                    if (child is ViewGroup) {
-                        child.clipChildren = true
-                        for (j in 0 until child.childCount) {
-                            val grandChild = child.getChildAt(j)
-                            grandChild.clipToOutline = true
-                            grandChild.outlineProvider = provider
-                            grandChild.invalidateOutline()
-                        }
-                    }
-                }
-            }
-        } else {
-            view.clipToOutline = false
-            view.outlineProvider = null
-            if (view is ViewGroup) {
-                for (i in 0 until view.childCount) {
-                    val child = view.getChildAt(i)
-                    child.clipToOutline = false
-                    child.outlineProvider = null
-                }
-            }
-        }
+        } else null
     }
 
     // Render using AndroidView without consuming touch gestures, hidden until first frame is rendered
@@ -303,11 +336,9 @@ fun AnimatedArtworkPlayer(
                 view.isClickable = false
                 view.isFocusable = false
                 view.setOnTouchListener { _, _ -> false }
-                applyClipping(view)
-                view.addOnLayoutChangeListener { v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
-                    if (left != oldLeft || top != oldTop || right != oldRight || bottom != oldBottom) {
-                        applyClipping(v)
-                    }
+                if (outlineProvider != null) {
+                    view.clipToOutline = true
+                    view.outlineProvider = outlineProvider
                 }
                 playerViewRef = view
             }
@@ -317,7 +348,13 @@ fun AnimatedArtworkPlayer(
             view.isClickable = false
             view.isFocusable = false
             view.setOnTouchListener { _, _ -> false }
-            applyClipping(view)
+            if (outlineProvider != null) {
+                view.clipToOutline = true
+                view.outlineProvider = outlineProvider
+            } else {
+                view.clipToOutline = false
+                view.outlineProvider = null
+            }
             playerViewRef = view
         },
         modifier = modifier

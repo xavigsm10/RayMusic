@@ -302,8 +302,10 @@ fun GlassBoxScope.AppleMusicSongMenu(
                                 icon = Icons.Default.Radio,
                                 label = stringResource(R.string.menu_iniciar_radio),
                                 onClick = {
-                                    onSongSelected(
-                                        PlayerState(
+                                    startRadioStation(
+                                        scope = scope,
+                                        context = context,
+                                        targetState = PlayerState(
                                             title = song.title,
                                             artist = song.artist,
                                             artUrl = song.thumbnail,
@@ -311,7 +313,8 @@ fun GlassBoxScope.AppleMusicSongMenu(
                                             queue = emptyList(),
                                             isExclusiveQueue = false,
                                             album = song.album
-                                        )
+                                        ),
+                                        onSongSelected = onSongSelected
                                     )
                                     handleDismiss()
                                 }
@@ -2031,6 +2034,7 @@ fun GlassBoxScope.AppleMusicArtistMenu(
     topSongs: List<com.echo.innertube.models.SongItem>
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var visible by remember { mutableStateOf(false) }
 
     val savedItems by LibraryManager.savedItems.collectAsState()
@@ -2160,14 +2164,19 @@ fun GlassBoxScope.AppleMusicArtistMenu(
                 ) {
                     val firstSong = topSongs.firstOrNull()
                     if (firstSong != null) {
-                        onSongSelected(PlayerState(
-                            title = firstSong.title,
-                            artist = firstSong.artists.joinToString { it.name },
-                            artUrl = firstSong.thumbnail,
-                            videoId = firstSong.id,
-                            isExclusiveQueue = false,
-                            queue = emptyList()
-                        ))
+                        startRadioStation(
+                            scope = scope,
+                            context = context,
+                            targetState = PlayerState(
+                                title = firstSong.title,
+                                artist = firstSong.artists.joinToString { it.name },
+                                artUrl = firstSong.thumbnail,
+                                videoId = firstSong.id,
+                                isExclusiveQueue = false,
+                                queue = emptyList()
+                            ),
+                            onSongSelected = onSongSelected
+                        )
                     } else {
                         Toast.makeText(context, "No hay canciones populares para crear emisora", Toast.LENGTH_SHORT).show()
                     }
@@ -2825,18 +2834,12 @@ fun GlassBoxScope.PlayerOptionsMenu(
                         label = stringResource(R.string.player_menu_create_station)
                     ) {
                         if (playerState != null) {
-                            onSongSelected(
-                                PlayerState(
-                                    title = playerState.title,
-                                    artist = playerState.artist,
-                                    artUrl = playerState.artUrl,
-                                    videoId = playerState.videoId,
-                                    queue = emptyList(),
-                                    isExclusiveQueue = false,
-                                    album = playerState.album
-                                )
+                            startRadioStation(
+                                scope = scope,
+                                context = context,
+                                targetState = playerState,
+                                onSongSelected = onSongSelected
                             )
-                            Toast.makeText(context, context.getString(R.string.toast_starting_station, playerState.title), Toast.LENGTH_SHORT).show()
                         }
                         handleDismiss()
                     }
@@ -3773,6 +3776,53 @@ fun GlassBoxScope.ArtistOptionsMenu(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+private fun startRadioStation(
+    scope: kotlinx.coroutines.CoroutineScope,
+    context: android.content.Context,
+    targetState: PlayerState,
+    onSongSelected: (PlayerState) -> Unit
+) {
+    val vid = targetState.videoId ?: return
+    onSongSelected(
+        PlayerState(
+            title = targetState.title,
+            artist = targetState.artist,
+            artUrl = targetState.artUrl,
+            videoId = vid,
+            queue = emptyList(),
+            isExclusiveQueue = false,
+            album = targetState.album,
+            albumId = targetState.albumId
+        )
+    )
+    Toast.makeText(context, context.getString(R.string.toast_starting_station, targetState.title), Toast.LENGTH_SHORT).show()
+
+    scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+        val endpoint = com.echo.innertube.models.WatchEndpoint(videoId = vid, playlistId = "RDAMVM$vid")
+        var result = com.echo.innertube.YouTube.next(endpoint).getOrNull()
+        if (result == null || result.items.isEmpty()) {
+            val fallbackEndpoint = com.echo.innertube.models.WatchEndpoint(videoId = vid)
+            result = com.echo.innertube.YouTube.next(fallbackEndpoint).getOrNull()
+        }
+        if (result != null) {
+            val ep = result.endpoint
+            val cont = result.continuation
+            val nonVideoItems = result.items.filterNot { it.isVideoSong }
+            val finalItems = nonVideoItems.ifEmpty { result.items }
+            val nextItems = if (finalItems.isNotEmpty() && finalItems.first().id == vid) finalItems.drop(1) else finalItems
+
+            withContext(kotlinx.coroutines.Dispatchers.Main) {
+                com.mrtdk.liquid_glass.playback.PlaybackQueue.queueEndpoint = ep
+                com.mrtdk.liquid_glass.playback.PlaybackQueue.queueContinuation = cont
+                com.mrtdk.liquid_glass.playback.PlaybackQueue.queue = emptyList()
+                com.mrtdk.liquid_glass.playback.PlaybackQueue.upNextSongs = nextItems
+                com.mrtdk.liquid_glass.playback.PlaybackQueue.isExclusiveQueue = false
+                com.mrtdk.liquid_glass.playback.PlaybackQueue.onQueueChanged?.invoke()
             }
         }
     }

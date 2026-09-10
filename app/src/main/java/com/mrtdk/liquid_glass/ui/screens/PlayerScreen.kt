@@ -1709,11 +1709,12 @@ fun PlayerScreen(
 
 
 
-        var animatedArtworkUrl by remember(playerState?.artist, playerState?.title) {
+        var animatedArtworkUrl by remember(playerState?.artist, playerState?.title, playerState?.album) {
             val artist = playerState?.artist
             val title = playerState?.title
+            val album = playerState?.album
             val cached = if (!artist.isNullOrBlank() && !title.isNullOrBlank()) {
-                com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.get(artist, title)
+                com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.getForSong(artist, title, album)
             } else null
             mutableStateOf(cached)
         }
@@ -1746,7 +1747,7 @@ fun PlayerScreen(
                 if (foundUrl != null) {
                     withContext(Dispatchers.Main) {
                         animatedArtworkUrl = foundUrl
-                        com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.put(artist, title, foundUrl)
+                        com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.putForSong(artist, title, album, foundUrl)
                     }
                 }
             }
@@ -3367,7 +3368,7 @@ fun PlayerScreen(
                                 }
                             )
                             .graphicsLayer {
-                                alpha = if (isVideoPlaying) 1f else 0f
+                                alpha = if (isVideoPlaying && !showLyrics && !showQueue) 1f else 0f
                             },
                         isPaused = !isPlaying || showLyrics || showQueue,
                         enableFrameCapture = (dragProgress == 0f) && !showLyrics && !showQueue,
@@ -5624,7 +5625,7 @@ fun LandscapePlayerLayout(
 
                         .graphicsLayer { 
 
-                            alpha = if (isVideoPlaying) 1f else 0f 
+                            alpha = if (isVideoPlaying && !showLyrics && !showQueue) 1f else 0f 
 
                             compositingStrategy = CompositingStrategy.Offscreen
 
