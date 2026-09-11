@@ -22,8 +22,14 @@ class CustomReflectionView @JvmOverloads constructor(
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         isFilterBitmap = true // Enable bilinear filtering for smooth scaling
     }
+    private val maskPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
+    }
+    private var cachedH = 0f
     private var bottomEdgeBitmap: Bitmap? = null
-    
+    private var vertices = FloatArray(0)
+    private val bgExecutor = java.util.concurrent.Executors.newSingleThreadExecutor()
+
     // Wave animation phase for liquid movement
     private var wavePhase = 0f
     private val waveAnimator = ValueAnimator.ofFloat(0f, 2f * Math.PI.toFloat()).apply {
@@ -37,8 +43,14 @@ class CustomReflectionView @JvmOverloads constructor(
     }
 
     init {
-        // Start the wave animation for continuous liquid distortion
         waveAnimator.start()
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        if (!waveAnimator.isRunning) {
+            waveAnimator.start()
+        }
     }
 
     override fun onDetachedFromWindow() {
@@ -46,12 +58,21 @@ class CustomReflectionView @JvmOverloads constructor(
         super.onDetachedFromWindow()
     }
 
+    override fun onVisibilityChanged(changedView: View, visibility: Int) {
+        super.onVisibilityChanged(changedView, visibility)
+        if (visibility == VISIBLE) {
+            if (!waveAnimator.isRunning) waveAnimator.start()
+        } else {
+            if (waveAnimator.isRunning) waveAnimator.pause()
+        }
+    }
+
     /**
      * Extracts a thin band from the bottom edge of the album cover, rescales it
      * horizontally to a smaller size to smooth out noise, and triggers redraw.
      */
     fun setAlbumArt(bitmap: Bitmap) {
-        Thread {
+        bgExecutor.execute {
             try {
                 val width = bitmap.width
                 val height = bitmap.height
@@ -60,7 +81,6 @@ class CustomReflectionView @JvmOverloads constructor(
                 val sampleHeight = (height * 0.02f).toInt().coerceIn(5, 25)
                 val srcRect = Rect(0, height - sampleHeight, width, height)
                 
-                // Create a low-res horizontal slice (e.g. 128x8) representing the 1D color bar
                 val sliceWidth = 128
                 val sliceHeight = 8
                 val sliceBmp = Bitmap.createBitmap(sliceWidth, sliceHeight, Bitmap.Config.ARGB_8888)
@@ -80,17 +100,19 @@ class CustomReflectionView @JvmOverloads constructor(
             } catch (e: Exception) {
                 e.printStackTrace()
             }
-        }.start()
+        }
     }
 
     /**
-     * Hardware-accelerated blur effect for Android 12+.
+     * Hardware-accelerated blur effect for Android 12+ adapted to device performance tier.
      */
     private fun setupBlurEffect() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val perfConfig = com.mrtdk.liquid_glass.utils.PerformanceProfileManager.getConfig()
+            val blurRadius = perfConfig.reflectionBlurRadius
             val blurEffect = RenderEffect.createBlurEffect(
-                95f,
-                95f,
+                blurRadius,
+                blurRadius,
                 Shader.TileMode.MIRROR
             )
             setRenderEffect(blurEffect)
@@ -109,12 +131,15 @@ class CustomReflectionView @JvmOverloads constructor(
         // 1. Save Layer for alpha blending (PorterDuff mask)
         val saveCount = canvas.saveLayer(0f, 0f, w, h, null)
 
-        // 2. Generate liquid mesh grid vertices
-        // Warping the stretched columns of color horizontally as they flow downwards
-        val meshWidth = 12
-        val meshHeight = 12
+        // 2. Generate liquid mesh grid vertices with pre-allocated zero-allocation buffer
+        val perfConfig = com.mrtdk.liquid_glass.utils.PerformanceProfileManager.getConfig()
+        val meshWidth = perfConfig.reflectionMeshSize
+        val meshHeight = perfConfig.reflectionMeshSize
         val count = (meshWidth + 1) * (meshHeight + 1)
-        val vertices = FloatArray(count * 2)
+        val neededSize = count * 2
+        if (vertices.size != neededSize) {
+            vertices = FloatArray(neededSize)
+        }
 
         var index = 0
         for (y in 0..meshHeight) {
@@ -122,7 +147,6 @@ class CustomReflectionView @JvmOverloads constructor(
             val py = fy * h
             
             // Sine-wave horizontal offset that intensifies in the middle/lower part
-            // to simulate fluid distortion, then decays to zero at the bottom
             val waveOffset = (Math.sin((fy.toDouble() * 3.0) + wavePhase).toFloat() * 35f * (1f - fy)) +
                              (Math.cos((fy.toDouble() * 1.5) - wavePhase).toFloat() * 15f * (1f - fy))
             
@@ -136,19 +160,18 @@ class CustomReflectionView @JvmOverloads constructor(
         }
 
         // 3. Draw the distorted bitmap using drawBitmapMesh
-        // This stretches the 8px height slice to the full height of the view,
-        // and deforms it horizontally according to the liquid mesh.
         canvas.drawBitmapMesh(slice, meshWidth, meshHeight, vertices, 0, null, 0, paint)
 
-        // 4. Draw vertical gradient mask to fade to transparent at the bottom
-        val maskPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-        maskPaint.shader = LinearGradient(
-            0f, 0f, 0f, h,
-            Color.WHITE,
-            Color.TRANSPARENT,
-            Shader.TileMode.CLAMP
-        )
-        maskPaint.xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
+        // 4. Draw vertical gradient mask to fade to transparent at the bottom (cached Shader)
+        if (cachedH != h) {
+            cachedH = h
+            maskPaint.shader = LinearGradient(
+                0f, 0f, 0f, h,
+                Color.WHITE,
+                Color.TRANSPARENT,
+                Shader.TileMode.CLAMP
+            )
+        }
         canvas.drawRect(0f, 0f, w, h, maskPaint)
 
         canvas.restoreToCount(saveCount)

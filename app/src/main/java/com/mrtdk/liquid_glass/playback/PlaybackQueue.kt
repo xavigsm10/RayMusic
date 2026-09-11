@@ -19,6 +19,14 @@ object PlaybackQueue {
 
     val songHistory = mutableListOf<PlayerState>()
 
+    private fun addToHistory(state: PlayerState) {
+        songHistory.add(state)
+        val maxSize = com.mrtdk.liquid_glass.utils.PerformanceProfileManager.getConfig().maxHistorySize
+        while (songHistory.size > maxSize) {
+            songHistory.removeAt(0)
+        }
+    }
+
     @Volatile
     var queueSeedVideoId: String? = null
 
@@ -39,7 +47,7 @@ object PlaybackQueue {
         val current = currentSong ?: return null
         if (queue.isNotEmpty()) {
             val next = queue.first()
-            songHistory.add(current)
+            addToHistory(current)
             
             val nextState = PlayerState(
                 title = next.title,
@@ -69,7 +77,7 @@ object PlaybackQueue {
             return nextState
         } else if (!isExclusiveQueue && upNextSongs.isNotEmpty()) {
             val next = upNextSongs.first()
-            songHistory.add(current)
+            addToHistory(current)
             
             val upgradedArt = next.thumbnail?.let {
                 com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(it) ?: it

@@ -109,6 +109,7 @@ import com.mrtdk.liquid_glass.ui.screens.PlayerState
 import com.mrtdk.liquid_glass.data.MadeForYouRepository
 import com.mrtdk.liquid_glass.ui.components.MadeForYouCardContent
 
+@androidx.compose.runtime.Immutable
 data class AlbumState(
     val id: String,        // browseId
     val playlistId: String,

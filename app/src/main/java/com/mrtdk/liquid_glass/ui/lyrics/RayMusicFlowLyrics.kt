@@ -339,11 +339,12 @@ fun RayMusicFlowLyrics(
                     else -> 0.84f
                 }
 
-                val targetBlur = if (!isItemActive && isSynced) {
+                val perfConfig = com.mrtdk.liquid_glass.utils.PerformanceProfileManager.getConfig()
+                val targetBlur = if (!isItemActive && isSynced && perfConfig.lyricsBlurEnabled) {
                     when (distance) {
                         1 -> 2.5.dp
-                        2 -> 5.dp
-                        else -> 9.dp
+                        2 -> 4.5.dp
+                        else -> 7.dp
                     }
                 } else 0.dp
 
@@ -479,18 +480,34 @@ fun RayMusicFlowLyrics(
                                 else -> Alignment.Start
                             }
                         ) {
-                            @OptIn(ExperimentalLayoutApi::class)
-                            FlowRow(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = when (lyricsTextPosition) {
-                                    "center" -> Arrangement.Center
-                                    "right" -> Arrangement.End
-                                    "left" -> Arrangement.Start
-                                    else -> Arrangement.Start
-                                },
-                                verticalArrangement = Arrangement.spacedBy(2.dp)
-                            ) {
-                                wordData.forEach { (wordText, startRel, endRel) ->
+                            if (!isItemActive) {
+                                Text(
+                                    text = line.text,
+                                    fontFamily = SatoshiBold,
+                                    fontSize = lyricsTextSize.sp,
+                                    letterSpacing = (-0.035).sp,
+                                    lineHeight = (lyricsTextSize * lyricsLineSpacing).sp,
+                                    color = contentColor.copy(alpha = 0.85f),
+                                    textAlign = when (lyricsTextPosition) {
+                                        "center" -> androidx.compose.ui.text.style.TextAlign.Center
+                                        "right" -> androidx.compose.ui.text.style.TextAlign.End
+                                        else -> androidx.compose.ui.text.style.TextAlign.Start
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            } else {
+                                @OptIn(ExperimentalLayoutApi::class)
+                                FlowRow(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = when (lyricsTextPosition) {
+                                        "center" -> Arrangement.Center
+                                        "right" -> Arrangement.End
+                                        "left" -> Arrangement.Start
+                                        else -> Arrangement.Start
+                                    },
+                                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                                ) {
+                                    wordData.forEach { (wordText, startRel, endRel) ->
                                     val wordDur = (endRel - startRel).coerceAtLeast(1L)
                                     val isCurrentWord = isItemActive && isLineStarted && lineRelTime >= 0L && lineRelTime in startRel..endRel
                                     val isPastWord = (isItemActive && isLineStarted && lineRelTime > endRel) || isPast
@@ -599,11 +616,12 @@ fun RayMusicFlowLyrics(
                                                             }
                                                         }
                                                     }
-                                            )
+                                             )
                                         }
                                     }
                                 }
                             }
+                        }
 
                             // Letra traducida o romanizada si existe
                             val translation = line.translationText

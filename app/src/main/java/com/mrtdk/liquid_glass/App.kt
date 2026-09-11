@@ -23,6 +23,7 @@ class App : Application() {
         context = applicationContext
         
         LibraryManager.init(this)
+        com.mrtdk.liquid_glass.utils.PerformanceProfileManager.init(this)
         YouTubeExtractor.cacheDir = cacheDir
         
         appScope.launch {

@@ -12,8 +12,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import com.mrtdk.liquid_glass.utils.PerformanceProfileManager
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.blur
@@ -135,7 +137,7 @@ fun RayMusicFluidBackground(
         animationSpec = infiniteRepeatable(tween(2400, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "fluid_pulse"
     )
-    val pulseFactor = if (isPlaying) (1f + 0.04f * pulseT) else 1f
+    val perfConfig by PerformanceProfileManager.config.collectAsState()
 
     val path1 = remember { Path() }
     val path2 = remember { Path() }
@@ -191,16 +193,18 @@ fun RayMusicFluidBackground(
             )
         }
 
-        // Capa 2: Malla de cintas sinuosas fluidas (Domain Warping) con desenfoque optimizado
+        // Capa 2: Malla de cintas sinuosas fluidas (Domain Warping) con desenfoque profundo original
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
-                .blur(48.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+                .blur(64.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
         ) {
             val w = size.width
             val h = size.height
             if (w <= 0f || h <= 0f) return@Canvas
 
+            // Read pulseT in DrawScope to prevent whole-function recomposition at 60/120Hz
+            val pulseFactor = if (isPlaying) (1f + 0.04f * pulseT) else 1f
             val strokeRibbon = w * 0.54f * pulseFactor
 
             // Cinta 1: Flujo superior sinuoso oblicuo (Primary -> Highlight -> Secondary)

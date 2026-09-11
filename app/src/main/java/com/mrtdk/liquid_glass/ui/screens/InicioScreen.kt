@@ -910,7 +910,7 @@ fun InicioScreen(
                                 }
                         ) {
                             AsyncImage(
-                                model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                                model = ImageRequest.Builder(context).data(hdThumb).size(320).crossfade(true).build(),
                                 contentDescription = item.title,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
@@ -989,7 +989,7 @@ fun InicioScreen(
                                 }
                         ) {
                             AsyncImage(
-                                model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                                model = ImageRequest.Builder(context).data(hdThumb).size(320).crossfade(true).build(),
                                 contentDescription = album.title,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
@@ -1084,7 +1084,7 @@ fun InicioScreen(
                                 }
                         ) {
                             AsyncImage(
-                                model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                                model = ImageRequest.Builder(context).data(hdThumb).size(320).crossfade(true).build(),
                                 contentDescription = pl.title,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
@@ -1241,7 +1241,7 @@ fun InicioScreen(
                                 }
                         ) {
                             AsyncImage(
-                                model = ImageRequest.Builder(context).data(thumb).crossfade(true).build(),
+                                model = ImageRequest.Builder(context).data(thumb).size(320).crossfade(true).build(),
                                 contentDescription = title,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
@@ -1487,7 +1487,7 @@ fun InicioScreen(
                                 )
                             } else {
                                 AsyncImage(
-                                    model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                                    model = ImageRequest.Builder(context).data(hdThumb).size(320).crossfade(true).build(),
                                     contentDescription = title,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier
@@ -1568,7 +1568,7 @@ fun InicioScreen(
                                         .background(Color(0xFF1C1C1E))
                                 ) {
                                     AsyncImage(
-                                        model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                                        model = ImageRequest.Builder(context).data(hdThumb).size(320).crossfade(true).build(),
                                         contentDescription = song.title,
                                         contentScale = ContentScale.Crop,
                                         modifier = Modifier
@@ -1635,7 +1635,7 @@ fun InicioScreen(
                                     .background(Color(0xFF1C1C1E))
                             ) {
                                 AsyncImage(
-                                    model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                                    model = ImageRequest.Builder(context).data(hdThumb).size(320).crossfade(true).build(),
                                     contentDescription = song.title,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier
@@ -1852,7 +1852,7 @@ fun InicioScreen(
                                     )
                                 } else {
                                     AsyncImage(
-                                        model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(),
+                                        model = ImageRequest.Builder(context).data(hdThumb).size(320).crossfade(false).build(),
                                         contentDescription = title,
                                         contentScale = ContentScale.Crop,
                                         modifier = Modifier.fillMaxSize()
@@ -1972,7 +1972,7 @@ fun InicioScreen(
                                     .background(Color(0xFF1C1C1E))
                             ) {
                                 AsyncImage(
-                                    model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(),
+                                    model = ImageRequest.Builder(context).data(hdThumb).size(320).crossfade(false).build(),
                                     contentDescription = item.title,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize()
@@ -2077,7 +2077,7 @@ fun InicioScreen(
                                     .background(Color(0xFF1C1C1E))
                             ) {
                                 AsyncImage(
-                                    model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(),
+                                    model = ImageRequest.Builder(context).data(hdThumb).size(320).crossfade(false).build(),
                                     contentDescription = item.title,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize()
@@ -2181,7 +2181,7 @@ fun InicioScreen(
                                     .background(Color(0xFF1C1C1E))
                             ) {
                                 AsyncImage(
-                                    model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(),
+                                    model = ImageRequest.Builder(context).data(hdThumb).size(320).crossfade(false).build(),
                                     contentDescription = item.title,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize()

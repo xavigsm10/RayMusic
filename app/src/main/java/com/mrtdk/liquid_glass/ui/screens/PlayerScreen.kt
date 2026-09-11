@@ -1202,15 +1202,6 @@ fun PlayerScreen(
 
         if (playerState == null) return@AnimatedVisibility
 
-        val livePosition by if (isVisible && musicPlayer != null) {
-            musicPlayer.currentPosition.collectAsState()
-        } else {
-            androidx.compose.runtime.remember { androidx.compose.runtime.mutableLongStateOf(0L) }
-        }
-        val effectivePosition = if (musicPlayer != null) livePosition else currentPosition
-
-
-
         val context = LocalContext.current
 
         val localBackdrop = rememberLayerBackdrop()
@@ -1328,8 +1319,6 @@ fun PlayerScreen(
             mutableFloatStateOf(audioManager.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) / maxVolume)
 
         }
-
-        val progress = if (duration > 0) effectivePosition.toFloat() / duration.toFloat() else 0f
 
         val scope = rememberCoroutineScope()
 
@@ -1976,12 +1965,17 @@ fun PlayerScreen(
 
 
             if (isLandscape) {
+                val landscapePosition by if (musicPlayer != null) {
+                    musicPlayer.currentPosition.collectAsState()
+                } else {
+                    androidx.compose.runtime.remember { androidx.compose.runtime.mutableLongStateOf(currentPosition) }
+                }
                 LandscapePlayerLayout(
                     maxWidth = maxWidth,
                     maxHeight = maxHeight,
                     playerState = playerState,
                     isPlaying = isPlaying,
-                    currentPosition = effectivePosition,
+                    currentPosition = landscapePosition,
                     duration = duration,
                     upNextSongs = upNextSongs,
                     shuffleModeEnabled = shuffleModeEnabled,
@@ -3103,9 +3097,10 @@ fun PlayerScreen(
                                        val lyricsClickChange = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_click_change", "true") == "true"
                                        val lyricsAutoScroll = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_auto_scroll", "true") == "true"
 
-                                       com.mrtdk.liquid_glass.ui.lyrics.RayMusicFlowLyrics(
+                                       IsolatedLyricsContent(
+                                           musicPlayer = musicPlayer,
+                                           fallbackPosition = currentPosition,
                                            lyricsLines = currentLyricsLines,
-                                           currentPosition = effectivePosition,
                                            lyricsOffset = lyricsOffset.toLong(),
                                            isAutoScrollEnabled = isAutoScrollEnabled,
                                            onAutoScrollChange = { isAutoScrollEnabled = it },
@@ -3595,41 +3590,28 @@ fun PlayerScreen(
 
                           Spacer(modifier = Modifier.height(72.dp)) 
 
-                           AppleMusicSlider(
-                               value = progress, onValueChange = { onSeek((it * duration).toLong()) },
-                               modifier = Modifier
-                                   .fillMaxWidth()
-                                   .height(26.dp)
-                                   .onGloballyPositioned { coords ->
-                                       sliderCoordinates = coords
-                                   },
-                               activeColor = sliderActiveColor,
-                               inactiveColor = sliderInactiveColor,
-                               barHeightDp = 8.dp
-                           )
+                          IsolatedPlayerSeekbar(
+                              musicPlayer = musicPlayer,
+                              duration = duration,
+                              fallbackPosition = currentPosition,
+                              sliderActiveColor = sliderActiveColor,
+                              sliderInactiveColor = sliderInactiveColor,
+                              contentColor = contentColor,
+                              onSeek = onSeek,
+                              onPositioned = { coords ->
+                                  sliderCoordinates = coords
+                              }
+                          )
 
-                           Row(
-                               modifier = Modifier.fillMaxWidth(),
-                               horizontalArrangement = Arrangement.SpaceBetween,
-                               verticalAlignment = Alignment.CenterVertically
-                           ) {
-                               Text(formatDuration(effectivePosition), color = contentColor.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Normal)
-                               LosslessBadge(
-                                   contentColor = contentColor,
-                                   onClick = { AudioRoutingState.showAudioRoutingMenu = true }
-                               )
-                               Text("-${formatDuration((duration - effectivePosition).coerceAtLeast(0L))}", color = contentColor.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Normal)
-                           }
+                          Spacer(modifier = Modifier.height(10.dp))
 
-                           Spacer(modifier = Modifier.height(10.dp))
-
-                           Box(
-                               modifier = Modifier
-                                   .fillMaxWidth()
-                                   .weight(1f)
-                           ) {
+                          Box(
+                              modifier = Modifier
+                                  .fillMaxWidth()
+                                  .weight(1f)
+                          ) {
                               PlayerBottomControls(
-                                  progress = progress, currentPosition = effectivePosition, duration = duration,
+                                  progress = 0f, currentPosition = 0L, duration = duration,
                                   isPlaying = isPlaying, contentColor = contentColor, volumePosition = volumePosition,
                                   showLyrics = showLyrics, showQueue = showQueue,
                                   onSeek = onSeek, onTogglePlayPause = onTogglePlayPause, onVolumeChange = { v -> 
@@ -4679,6 +4661,108 @@ fun LosslessBadge(
             )
         }
     }
+}
+
+@Composable
+private fun IsolatedPlayerSeekbar(
+    musicPlayer: com.mrtdk.liquid_glass.playback.MusicPlayer?,
+    duration: Long,
+    fallbackPosition: Long,
+    sliderActiveColor: Color,
+    sliderInactiveColor: Color,
+    contentColor: Color,
+    onSeek: (Long) -> Unit,
+    onPositioned: (androidx.compose.ui.layout.LayoutCoordinates) -> Unit
+) {
+    val livePosition by if (musicPlayer != null) {
+        musicPlayer.currentPosition.collectAsState()
+    } else {
+        androidx.compose.runtime.remember { androidx.compose.runtime.mutableLongStateOf(fallbackPosition) }
+    }
+    val effectivePos = if (musicPlayer != null) livePosition else fallbackPosition
+    val progress = if (duration > 0) effectivePos.toFloat() / duration.toFloat() else 0f
+
+    AppleMusicSlider(
+        value = progress,
+        onValueChange = { onSeek((it * duration).toLong()) },
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(26.dp)
+            .onGloballyPositioned { coords ->
+                onPositioned(coords)
+            },
+        activeColor = sliderActiveColor,
+        inactiveColor = sliderInactiveColor,
+        barHeightDp = 8.dp
+    )
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(formatDuration(effectivePos), color = contentColor.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Normal)
+        LosslessBadge(
+            contentColor = contentColor,
+            onClick = { AudioRoutingState.showAudioRoutingMenu = true }
+        )
+        Text("-${formatDuration((duration - effectivePos).coerceAtLeast(0L))}", color = contentColor.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Normal)
+    }
+}
+
+@Composable
+private fun IsolatedLyricsContent(
+    musicPlayer: com.mrtdk.liquid_glass.playback.MusicPlayer?,
+    fallbackPosition: Long,
+    lyricsLines: List<ISyncedLine>,
+    lyricsOffset: Long,
+    isAutoScrollEnabled: Boolean,
+    onAutoScrollChange: (Boolean) -> Unit,
+    scrollToCurrentTrigger: Int,
+    lyricsTextSize: Float,
+    lyricsLineSpacing: Float,
+    lyricsGlowEffect: Boolean,
+    lyricsTextPosition: String,
+    lyricsClickChange: Boolean,
+    lyricsAutoScroll: Boolean,
+    contentColor: Color,
+    currentLyricsProviderName: String,
+    currentLyricsSyncType: String,
+    onSeek: (Long) -> Unit,
+    onShowLyricsMenu: () -> Unit,
+    onShowDistributorsMenu: () -> Unit,
+    lyricsListState: androidx.compose.foundation.lazy.LazyListState,
+    modifier: Modifier = Modifier
+) {
+    val livePosition by if (musicPlayer != null) {
+        musicPlayer.currentPosition.collectAsState()
+    } else {
+        androidx.compose.runtime.remember { androidx.compose.runtime.mutableLongStateOf(fallbackPosition) }
+    }
+    val effectivePos = if (musicPlayer != null) livePosition else fallbackPosition
+
+    com.mrtdk.liquid_glass.ui.lyrics.RayMusicFlowLyrics(
+        lyricsLines = lyricsLines,
+        currentPosition = effectivePos,
+        lyricsOffset = lyricsOffset,
+        isAutoScrollEnabled = isAutoScrollEnabled,
+        onAutoScrollChange = onAutoScrollChange,
+        scrollToCurrentTrigger = scrollToCurrentTrigger,
+        lyricsTextSize = lyricsTextSize,
+        lyricsLineSpacing = lyricsLineSpacing,
+        lyricsGlowEffect = lyricsGlowEffect,
+        lyricsTextPosition = lyricsTextPosition,
+        lyricsClickChange = lyricsClickChange,
+        lyricsAutoScroll = lyricsAutoScroll,
+        contentColor = contentColor,
+        currentLyricsProviderName = currentLyricsProviderName,
+        currentLyricsSyncType = currentLyricsSyncType,
+        onSeek = onSeek,
+        onShowLyricsMenu = onShowLyricsMenu,
+        onShowDistributorsMenu = onShowDistributorsMenu,
+        lyricsListState = lyricsListState,
+        modifier = modifier
+    )
 }
 
 @Composable
@@ -6990,6 +7074,12 @@ private fun AnimatedLiquidMeshBackground(
         )
     }
 
+    val path1 = remember { Path() }
+    val path2 = remember { Path() }
+    val path3 = remember { Path() }
+    val path4 = remember { Path() }
+    val perfConfig = com.mrtdk.liquid_glass.utils.PerformanceProfileManager.getConfig()
+
     Box(modifier = modifier) {
         // 1. Fondo base degradado con los tonos reales luminosos del artwork
         androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
@@ -7024,10 +7114,9 @@ private fun AnimatedLiquidMeshBackground(
             val p1x1 = w * 1.15f
             val p1y1 = h * (0.22f + 0.11f * kotlin.math.sin((t4 * 0.9f).toDouble()).toFloat())
 
-            val path1 = Path().apply {
-                moveTo(p1x0, p1y0)
-                cubicTo(p1c1x, p1c1y, p1c2x, p1c2y, p1x1, p1y1)
-            }
+            path1.rewind()
+            path1.moveTo(p1x0, p1y0)
+            path1.cubicTo(p1c1x, p1c1y, p1c2x, p1c2y, p1x1, p1y1)
             drawPath(
                 path = path1,
                 brush = Brush.linearGradient(
@@ -7052,10 +7141,9 @@ private fun AnimatedLiquidMeshBackground(
             val p2x1 = -w * 0.15f
             val p2y1 = h * (0.48f + 0.10f * kotlin.math.cos((t1 * 0.7f).toDouble()).toFloat())
 
-            val path2 = Path().apply {
-                moveTo(p2x0, p2y0)
-                cubicTo(p2c1x, p2c1y, p2c2x, p2c2y, p2x1, p2y1)
-            }
+            path2.rewind()
+            path2.moveTo(p2x0, p2y0)
+            path2.cubicTo(p2c1x, p2c1y, p2c2x, p2c2y, p2x1, p2y1)
             drawPath(
                 path = path2,
                 brush = Brush.linearGradient(
@@ -7080,10 +7168,9 @@ private fun AnimatedLiquidMeshBackground(
             val p3x1 = w * 1.15f
             val p3y1 = h * (0.80f + 0.09f * kotlin.math.sin((t2 * 0.8f).toDouble()).toFloat())
 
-            val path3 = Path().apply {
-                moveTo(p3x0, p3y0)
-                cubicTo(p3c1x, p3c1y, p3c2x, p3c2y, p3x1, p3y1)
-            }
+            path3.rewind()
+            path3.moveTo(p3x0, p3y0)
+            path3.cubicTo(p3c1x, p3c1y, p3c2x, p3c2y, p3x1, p3y1)
             drawPath(
                 path = path3,
                 brush = Brush.linearGradient(
@@ -7108,10 +7195,9 @@ private fun AnimatedLiquidMeshBackground(
             val p4x1 = w * (0.50f + 0.20f * kotlin.math.cos(t2.toDouble()).toFloat())
             val p4y1 = h * 1.08f
 
-            val path4 = Path().apply {
-                moveTo(p4x0, p4y0)
-                cubicTo(p4c1x, p4c1y, p4c2x, p4c2y, p4x1, p4y1)
-            }
+            path4.rewind()
+            path4.moveTo(p4x0, p4y0)
+            path4.cubicTo(p4c1x, p4c1y, p4c2x, p4c2y, p4x1, p4y1)
             drawPath(
                 path = path4,
                 brush = Brush.linearGradient(

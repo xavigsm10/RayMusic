@@ -297,9 +297,10 @@ fun AnimatedArtworkPlayer(
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
-                kotlinx.coroutines.delay(90) // Optimal live reflection updates with minimal GPU/CPU load
+                val intervalMs = com.mrtdk.liquid_glass.utils.PerformanceProfileManager.getConfig().motionCoverIntervalMs
+                kotlinx.coroutines.delay(intervalMs)
             } else {
-                kotlinx.coroutines.delay(200) // Sleep when paused or frame capture disabled
+                kotlinx.coroutines.delay(300) // Sleep when paused or frame capture disabled
             }
         }
     }

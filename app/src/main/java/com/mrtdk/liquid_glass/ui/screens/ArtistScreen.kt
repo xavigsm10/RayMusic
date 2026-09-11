@@ -113,12 +113,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 
+@androidx.compose.runtime.Immutable
 data class ArtistState(
     val id: String,
     val name: String,
     val thumbnail: String?
 )
 
+@androidx.compose.runtime.Immutable
 data class LatestReleaseInfo(
     val title: String,
     val dateText: String,
