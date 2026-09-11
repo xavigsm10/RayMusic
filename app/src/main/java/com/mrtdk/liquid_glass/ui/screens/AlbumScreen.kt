@@ -73,8 +73,8 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.mrtdk.liquid_glass.R
@@ -478,7 +478,7 @@ fun AlbumScreen(
                     .graphicsLayer {
                         alpha = contentAlpha
                         translationY = translationYVal
-                        compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen
+                        compositingStrategy = if (progress < 0.999f) androidx.compose.ui.graphics.CompositingStrategy.Offscreen else androidx.compose.ui.graphics.CompositingStrategy.Auto
                     },
                 useShader = true,
                 content = {
@@ -490,10 +490,9 @@ fun AlbumScreen(
                             (firstIndex * 400 + firstOffset).toFloat()
                         }
                     }
-                    val blurRadiusDp by remember {
+                    val isHeroOffscreen by remember {
                         derivedStateOf {
-                            val raw = (scrollOffsetPx / 6f).coerceIn(0f, 32f)
-                            (kotlin.math.round(raw / 2f) * 2f).dp
+                            scrollOffsetPx > 900f || firstIndex > 1
                         }
                     }
                     val heroAlpha by remember {
@@ -522,12 +521,17 @@ fun AlbumScreen(
                                     .graphicsLayer {
                                         translationY = heroParallaxY
                                         alpha = if (progress < 0.99f) 0f else heroAlpha
+                                        if (android.os.Build.VERSION.SDK_INT >= 31) {
+                                            val rPx = (scrollOffsetPx / 6f).coerceIn(0f, 32f) * density.density
+                                            renderEffect = if (rPx > 1f && !isHeroOffscreen) {
+                                                android.graphics.RenderEffect.createBlurEffect(
+                                                    rPx,
+                                                    rPx,
+                                                    android.graphics.Shader.TileMode.CLAMP
+                                                ).asComposeRenderEffect()
+                                            } else null
+                                        }
                                     }
-                                    .then(
-                                        if (blurRadiusDp > 0.5.dp && android.os.Build.VERSION.SDK_INT >= 31) {
-                                            Modifier.blur(blurRadiusDp)
-                                        } else Modifier
-                                    )
                             ) {
                                 // Base sharp album cover
                                 if (customMadeForYou != null) {
@@ -556,7 +560,7 @@ fun AlbumScreen(
                                         com.mrtdk.liquid_glass.ui.components.AnimatedArtworkPlayer(
                                             videoUrl = currentAnimatedUrl,
                                             modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (isVideoPlaying) 1f else 0f },
-                                            isPaused = isPaused || progress < 0.85f,
+                                            isPaused = isPaused || progress < 0.85f || isHeroOffscreen,
                                             onPlaybackStarted = { isVideoPlaying = true }
                                         )
                                     }

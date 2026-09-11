@@ -8,6 +8,7 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -252,7 +253,9 @@ fun LiquidBottomNavBar(
     SharedTransitionLayout(modifier = modifier.fillMaxWidth()) {
         AnimatedContent(
             targetState = visualState,
-            transitionSpec = { fadeIn() togetherWith fadeOut() },
+            transitionSpec = {
+                fadeIn(animationSpec = tween(180)) togetherWith fadeOut(animationSpec = tween(140))
+            },
             contentAlignment = Alignment.BottomCenter,
             label = "navBarSharedMorphTransition"
         ) { targetVisual ->
@@ -263,7 +266,7 @@ fun LiquidBottomNavBar(
                         modifier = Modifier
                             .fillMaxWidth()
                             .then(if (playerState == null) Modifier.wrapContentWidth() else Modifier)
-                            .height(IntrinsicSize.Max)
+                            .height(48.dp)
                             .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Auto },
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically

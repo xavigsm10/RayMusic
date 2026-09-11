@@ -325,7 +325,7 @@ fun NovedadesScreen(
                             }
                     ) {
                         AsyncImage(
-                            model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(),
+                            model = ImageRequest.Builder(context).data(hdThumb).size(600).crossfade(false).build(),
                             contentDescription = album.title, contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize()
                         )
@@ -424,7 +424,7 @@ fun NovedadesScreen(
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(Color.DarkGray)
                                     ) {
-                                        AsyncImage(model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(), contentDescription = album.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                        AsyncImage(model = ImageRequest.Builder(context).data(hdThumb).size(360).crossfade(false).build(), contentDescription = album.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                                     }
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(album.title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -510,7 +510,7 @@ fun NovedadesScreen(
                                     .background(Color(0xFF1C1C1E))
                             ) {
                                 AsyncImage(
-                                    model = ImageRequest.Builder(context).data(songThumb).crossfade(false).build(),
+                                    model = ImageRequest.Builder(context).data(songThumb).size(360).crossfade(false).build(),
                                     contentDescription = s.title,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize()
@@ -558,7 +558,7 @@ private fun SongRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(modifier = Modifier.size(48.dp).clip(RoundedCornerShape(6.dp)).background(Color(0xFF1C1C1E))) {
-            AsyncImage(model = ImageRequest.Builder(context).data(songThumb).crossfade(false).build(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            AsyncImage(model = ImageRequest.Builder(context).data(songThumb).size(150).crossfade(false).build(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
         }
         Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {

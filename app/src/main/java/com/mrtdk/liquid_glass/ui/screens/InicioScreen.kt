@@ -2645,34 +2645,29 @@ private fun FeaturedSuggestionCard(
             )
         }
 
-        // Capa 3: Portada Principal con fundido a transparente en la parte inferior
+        // Capa 3: Portada Principal con sutil transición inferior hacia el color dominante
         Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .size(width = 280.dp, height = 270.dp)
                 .onGloballyPositioned { imageCoords = it }
-                .graphicsLayer {
-                    compositingStrategy = CompositingStrategy.Offscreen
-                }
-                .drawWithContent {
-                    drawContent()
-                    drawRect(
-                        brush = Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0f to Color.Black,
-                                0.95f to Color.Black,
-                                1f to Color.Transparent
-                            )
-                        ),
-                        blendMode = BlendMode.DstIn
-                    )
-                }
         ) {
             AsyncImage(
-                model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                model = ImageRequest.Builder(context).data(hdThumb).size(560).crossfade(true).build(),
                 contentDescription = titleStr,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(24.dp)
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color.Transparent, dominantColor)
+                        )
+                    )
             )
         }
 

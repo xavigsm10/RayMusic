@@ -248,11 +248,19 @@ class FloatingTabBarScrollConnection(
     }
 
     override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+        return Offset.Zero
+    }
+
+    override fun onPostScroll(
+        consumed: Offset,
+        available: Offset,
+        source: NestedScrollSource
+    ): Offset {
         if (inlineBehavior == FloatingTabBarInlineBehavior.Never) {
             return Offset.Zero
         }
 
-        val scrollDelta = available.y
+        val scrollDelta = consumed.y + available.y
 
         if ((accumulatedScroll > 0 && scrollDelta < 0) || (accumulatedScroll < 0 && scrollDelta > 0)) {
             accumulatedScroll = 0f

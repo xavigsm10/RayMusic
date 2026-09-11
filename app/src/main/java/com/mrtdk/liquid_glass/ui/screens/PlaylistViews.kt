@@ -997,7 +997,7 @@ fun PlaylistDetailScreen(
                         .graphicsLayer {
                             alpha = contentAlpha
                             translationY = translationYVal
-                            compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen
+                            compositingStrategy = if (progress < 0.999f) androidx.compose.ui.graphics.CompositingStrategy.Offscreen else androidx.compose.ui.graphics.CompositingStrategy.Auto
                         },
                     useShader = true,
                     content = {

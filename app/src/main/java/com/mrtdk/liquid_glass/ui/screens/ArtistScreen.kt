@@ -8,6 +8,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -166,7 +168,7 @@ fun ArtistScreen(
     // Persistent cache for prefetched continuation items to show full lists immediately
     val prefetchedSections = remember { mutableStateMapOf<String, List<YTItem>>() }
     // Persistent scroll states for carousels to prevent them from resetting to 0 when scrolled or overlaid
-    val carouselScrollStates = remember { mutableStateMapOf<String, ScrollState>() }
+    val carouselLazyListStates = remember { mutableStateMapOf<String, LazyListState>() }
 
     // Prefetch all sections containing a moreEndpoint in the background
     LaunchedEffect(artistPage) {
@@ -486,6 +488,11 @@ fun ArtistScreen(
             listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 50
         }
     }
+    val isHeroOffscreen by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex > 0
+        }
+    }
 
     val finalBackgroundColor = remember(dominantColor, artistState.name) {
         if (artistState.name.lowercase().contains("billie")) {
@@ -547,49 +554,21 @@ fun ArtistScreen(
                                 videoUrl = artistMotionVideoUrl!!,
                                 modifier = Modifier.fillMaxSize(),
                                 enableFrameCapture = false,
-                                isPaused = false
+                                isPaused = isHeroOffscreen || showAllAlbumsOverlay || showAllSongsOverlay || showAllSectionOverlay
                             )
                         }
 
-                        // 2. Soft bottom blur transition
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                                .drawWithContent {
-                                    drawContent()
-                                    drawRect(
-                                        brush = Brush.verticalGradient(
-                                            0.0f to Color.Transparent,
-                                            0.60f to Color.Transparent,
-                                            0.82f to Color.Black.copy(alpha = 0.75f),
-                                            1.0f to Color.Black
-                                        ),
-                                        blendMode = BlendMode.DstIn
-                                    )
-                                }
-                        ) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(),
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                alignment = Alignment.TopCenter,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .blur(20.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
-                            )
-                        }
-
-                        // 3. Smooth uniform gradient fade into finalBackgroundColor at the bottom
+                        // 2. Smooth uniform gradient fade into finalBackgroundColor at the bottom
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(
                                     Brush.verticalGradient(
                                         0.0f to Color.Transparent,
-                                        0.55f to Color.Transparent,
-                                        0.75f to finalBackgroundColor.copy(alpha = 0.40f),
-                                        0.90f to finalBackgroundColor.copy(alpha = 0.85f),
+                                        0.45f to Color.Transparent,
+                                        0.65f to finalBackgroundColor.copy(alpha = 0.25f),
+                                        0.78f to finalBackgroundColor.copy(alpha = 0.60f),
+                                        0.88f to finalBackgroundColor.copy(alpha = 0.88f),
                                         1.0f to finalBackgroundColor
                                     )
                                 )
@@ -1071,7 +1050,7 @@ fun ArtistScreen(
             // ── ALBUMS ─────────────────────────────────────
             if (albumsSection != null) {
                 val albumItems = albumsSection.items.filterIsInstance<AlbumItem>()
-                val scrollState = carouselScrollStates.getOrPut(albumsSection.title) { ScrollState(0) }
+                val lazyRowState = carouselLazyListStates.getOrPut(albumsSection.title) { LazyListState() }
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     val isClickable = albumItems.size > 4 || albumsSection.moreEndpoint != null
@@ -1113,19 +1092,15 @@ fun ArtistScreen(
                             )
                         }
                     }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(scrollState)
+                    LazyRow(
+                        state = lazyRowState,
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Spacer(modifier = Modifier.width(20.dp))
-                        albumItems.take(8).forEachIndexed { index, item ->
+                        items(albumItems.take(8)) { item ->
                             ItemCard(context, item, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, scrollState = listState)
-                            if (index < albumItems.take(8).lastIndex) {
-                                Spacer(modifier = Modifier.width(12.dp))
-                            }
                         }
-                        Spacer(modifier = Modifier.width(20.dp))
                     }
                 }
             }
@@ -1133,7 +1108,7 @@ fun ArtistScreen(
             // ── SINGLES Y EP ───────────────────────────────
             if (singlesSection != null) {
                 val singleItems = singlesSection.items.filterIsInstance<AlbumItem>()
-                val scrollState = carouselScrollStates.getOrPut(singlesSection.title) { ScrollState(0) }
+                val lazyRowState = carouselLazyListStates.getOrPut(singlesSection.title) { LazyListState() }
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     val isClickable = singleItems.size > 4 || singlesSection.moreEndpoint != null
@@ -1176,19 +1151,15 @@ fun ArtistScreen(
                             )
                         }
                     }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(scrollState)
+                    LazyRow(
+                        state = lazyRowState,
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Spacer(modifier = Modifier.width(20.dp))
-                        singleItems.take(8).forEachIndexed { index, item ->
+                        items(singleItems.take(8)) { item ->
                             ItemCard(context, item, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, scrollState = listState)
-                            if (index < singleItems.take(8).lastIndex) {
-                                Spacer(modifier = Modifier.width(12.dp))
-                            }
                         }
-                        Spacer(modifier = Modifier.width(20.dp))
                     }
                 }
             }
@@ -1196,7 +1167,7 @@ fun ArtistScreen(
             // ── VIDEOS ─────────────────────────────────────
             if (videosSection != null) {
                 val videoItems = videosSection.items.filterIsInstance<SongItem>()
-                val scrollState = carouselScrollStates.getOrPut(videosSection.title) { ScrollState(0) }
+                val lazyRowState = carouselLazyListStates.getOrPut(videosSection.title) { LazyListState() }
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     val isClickable = videoItems.size > 4 || videosSection.moreEndpoint != null
@@ -1239,42 +1210,34 @@ fun ArtistScreen(
                             )
                         }
                     }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(scrollState)
+                    LazyRow(
+                        state = lazyRowState,
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Spacer(modifier = Modifier.width(20.dp))
-                        videoItems.forEachIndexed { index, item ->
+                        items(videoItems) { item ->
                             ItemCard(context, item, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, onVideoSelected = onVideoSelected, isVideo = true, scrollState = listState)
-                            if (index < videoItems.lastIndex) {
-                                Spacer(modifier = Modifier.width(12.dp))
-                            }
                         }
-                        Spacer(modifier = Modifier.width(20.dp))
                     }
                 }
             }
 
             // ── DESTACADO EN ───────────────────────────────
             if (featuredSection != null && featuredSection.items.isNotEmpty()) {
-                val scrollState = carouselScrollStates.getOrPut(featuredSection.title) { ScrollState(0) }
+                val lazyRowState = carouselLazyListStates.getOrPut(featuredSection.title) { LazyListState() }
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(stringResource(R.string.destacado_en), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(scrollState)
+                    LazyRow(
+                        state = lazyRowState,
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Spacer(modifier = Modifier.width(20.dp))
-                        featuredSection.items.forEachIndexed { index, item ->
+                        items(featuredSection.items) { item ->
                             ItemCard(context, item, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, scrollState = listState)
-                            if (index < featuredSection.items.lastIndex) {
-                                Spacer(modifier = Modifier.width(12.dp))
-                            }
                         }
-                        Spacer(modifier = Modifier.width(20.dp))
                     }
                 }
             }
@@ -1282,7 +1245,7 @@ fun ArtistScreen(
             // ── PLAYLISTS ──────────────────────────────────
             if (playlistsSection != null) {
                 val plItems = playlistsSection.items.filterIsInstance<PlaylistItem>()
-                val scrollState = carouselScrollStates.getOrPut(playlistsSection.title) { ScrollState(0) }
+                val lazyRowState = carouselLazyListStates.getOrPut(playlistsSection.title) { LazyListState() }
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     val isClickable = plItems.size > 4 || playlistsSection.moreEndpoint != null
@@ -1325,19 +1288,15 @@ fun ArtistScreen(
                             )
                         }
                     }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(scrollState)
+                    LazyRow(
+                        state = lazyRowState,
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Spacer(modifier = Modifier.width(20.dp))
-                        plItems.take(8).forEachIndexed { index, item ->
+                        items(plItems.take(8)) { item ->
                             ItemCard(context, item, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, scrollState = listState)
-                            if (index < plItems.take(8).lastIndex) {
-                                Spacer(modifier = Modifier.width(12.dp))
-                            }
                         }
-                        Spacer(modifier = Modifier.width(20.dp))
                     }
                 }
             }
@@ -1369,7 +1328,7 @@ fun ArtistScreen(
             // Also show any remaining sections not matched above
             sections.filter { it != topSongsSection && it != albumsSection && it != singlesSection && it != videosSection && it != featuredSection && it != playlistsSection && it != fansSection }.forEach { section ->
                 val isVideoSection = section.title.contains("video", true) || section.title.contains("vídeo", true) || section.title.contains("presentacion", true) || section.title.contains("live", true) || section.title.contains("vivo", true) || section.title.contains("concierto", true)
-                val scrollState = carouselScrollStates.getOrPut(section.title) { ScrollState(0) }
+                val lazyRowState = carouselLazyListStates.getOrPut(section.title) { LazyListState() }
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
                     val isClickable = section.items.size > 4 || section.moreEndpoint != null
@@ -1412,19 +1371,15 @@ fun ArtistScreen(
                             )
                         }
                     }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(scrollState)
+                    LazyRow(
+                        state = lazyRowState,
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Spacer(modifier = Modifier.width(20.dp))
-                        section.items.forEachIndexed { index, item ->
+                        items(section.items) { item ->
                             ItemCard(context, item, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, onVideoSelected = onVideoSelected, isVideo = isVideoSection, scrollState = listState)
-                            if (index < section.items.lastIndex) {
-                                Spacer(modifier = Modifier.width(12.dp))
-                            }
                         }
-                        Spacer(modifier = Modifier.width(20.dp))
                     }
                 }
             }
@@ -1463,36 +1418,7 @@ fun ArtistScreen(
                                 modifier = Modifier.fillMaxSize()
                             )
 
-                            // 2. Soft bottom blur transition (player technique)
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                                    .drawWithContent {
-                                        drawContent()
-                                        drawRect(
-                                            brush = Brush.verticalGradient(
-                                                0.0f to Color.Transparent,
-                                                0.68f to Color.Transparent,
-                                                0.86f to Color.Black.copy(alpha = 0.75f),
-                                                1.0f to Color.Black
-                                            ),
-                                            blendMode = BlendMode.DstIn
-                                        )
-                                    }
-                            ) {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(),
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    alignment = Alignment.TopCenter,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .blur(16.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
-                                )
-                            }
-
-                            // 3. Smooth uniform gradient fade into finalBackgroundColor at the bottom
+                            // 2. Smooth uniform gradient fade into finalBackgroundColor at the bottom
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -2026,7 +1952,7 @@ private fun ItemCard(
                     .let { if (!fillWidth) it.sharedTransitionElement(item.id) else it }
                 ) {
                     AsyncImage(
-                        model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                        model = ImageRequest.Builder(context).data(hdThumb).size(360).crossfade(true).build(),
                         contentDescription = item.title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize().graphicsLayer {
@@ -2063,7 +1989,7 @@ private fun ItemCard(
                     .background(Color.DarkGray)
                 ) {
                     AsyncImage(
-                        model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                        model = ImageRequest.Builder(context).data(hdThumb).size(360).crossfade(true).build(),
                         contentDescription = item.title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize().graphicsLayer {
@@ -2102,7 +2028,7 @@ private fun ItemCard(
                     .let { if (!fillWidth) it.sharedTransitionElement(item.id) else it }
                 ) {
                     AsyncImage(
-                        model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                        model = ImageRequest.Builder(context).data(hdThumb).size(360).crossfade(true).build(),
                         contentDescription = item.title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize().graphicsLayer {
@@ -2120,7 +2046,7 @@ private fun ItemCard(
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = cardMod.clickable { 
                 onArtistSelected(ArtistState(item.id, item.title, hdThumb)) 
             }) {
-                AsyncImage(model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(), contentDescription = item.title, contentScale = ContentScale.Crop, modifier = Modifier.size(if (fillWidth) 160.dp else 120.dp).clip(CircleShape).background(Color.DarkGray))
+                AsyncImage(model = ImageRequest.Builder(context).data(hdThumb).size(300).crossfade(true).build(), contentDescription = item.title, contentScale = ContentScale.Crop, modifier = Modifier.size(if (fillWidth) 160.dp else 120.dp).clip(CircleShape).background(Color.DarkGray))
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(item.title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }

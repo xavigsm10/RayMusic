@@ -141,19 +141,35 @@ fun AnimatedArtworkPlayer(
 
     // Initialize ExoPlayer with disk-cached media source to eliminate runaway data usage
     val exoPlayer = remember {
+        val tier = com.mrtdk.liquid_glass.utils.PerformanceProfileManager.getConfig().tier
+        val (maxW, maxH, maxFps) = when (tier) {
+            com.mrtdk.liquid_glass.utils.PerformanceTier.LOW_END -> Triple(720, 1280, 30)
+            com.mrtdk.liquid_glass.utils.PerformanceTier.MID_RANGE -> Triple(1080, 1920, 60)
+            com.mrtdk.liquid_glass.utils.PerformanceTier.HIGH_END -> Triple(1080, 1920, 60)
+        }
         val trackSelector = androidx.media3.exoplayer.trackselection.DefaultTrackSelector(context).apply {
             setParameters(
                 buildUponParameters()
-                    .setMaxVideoSize(1080, 1920)
-                    .setMaxVideoFrameRate(60)
+                    .setMaxVideoSize(maxW, maxH)
+                    .setMaxVideoFrameRate(maxFps)
             )
         }
+        val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
+            .setBufferDurationsMs(
+                /* minBufferMs = */ 2_500,
+                /* maxBufferMs = */ 5_000,
+                /* bufferForPlaybackMs = */ 500,
+                /* bufferForPlaybackAfterRebufferMs = */ 1_000
+            )
+            .setPrioritizeTimeOverSizeThresholds(true)
+            .build()
         val mediaSourceFactory = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(
             CanvasVideoCache.getCacheDataSourceFactory(context)
         )
         ExoPlayer.Builder(context)
             .setMediaSourceFactory(mediaSourceFactory)
             .setTrackSelector(trackSelector)
+            .setLoadControl(loadControl)
             .build().apply {
                 trackSelectionParameters = trackSelectionParameters.buildUpon()
                     .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_AUDIO, true)

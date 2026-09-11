@@ -37,7 +37,7 @@ object SharedTransitionState {
     var lastClickBounds: Rect? = null
     var lastOpenedId: String? = null
     var isDetailOpen: Boolean by mutableStateOf(false)
-    val carouselItemBounds = mutableStateMapOf<String, Rect>()
+    val carouselItemBounds = java.util.concurrent.ConcurrentHashMap<String, Rect>()
     val animatingItemIds = mutableStateListOf<String>()
 }
 
