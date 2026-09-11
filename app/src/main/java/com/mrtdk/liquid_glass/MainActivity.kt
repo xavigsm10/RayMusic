@@ -879,7 +879,7 @@ class MainActivity : ComponentActivity() {
                                                 LiquidBottomNavBar(
                                                     selectedIndex = selectedIndex,
                                                     tintColor = Color.Unspecified,
-                                                    contentColor = contentTintColor,
+                                                    contentColor = Color.Unspecified,
                                                     scrollConnection = floatingNavBarScrollConnection,
                                                     tabPosition = tabPositionProvider,
                                                     playerState = playerState,

@@ -147,13 +147,23 @@ fun LiquidBottomNavBar(
     val backdrop = LocalBackdrop.current
 
     val activeAccentColor = Color(0xFFFA243C)
-    val tabTextColor = if (isDarkMode) Color.White else Color.Black
+    val tabTextColor = if (isDarkMode) Color.White else Color(0xFF505054)
+    val navUnselectedColor = if (isDarkMode) Color.White.copy(alpha = 0.65f) else Color(0xFF505054)
 
     val actualTintColor = if (tintColor != Color.Unspecified) tintColor
     else if (!isDarkMode) Color(0xFFFAFAFA).copy(alpha = 0.55f) else Color(0xFF161618).copy(alpha = 0.55f)
 
-    val actualContentColor = if (contentColor != Color.Unspecified) contentColor
-    else tabTextColor
+    val actualContentColor = if (contentColor != Color.Unspecified) {
+        if (!isDarkMode && contentColor == Color.White) Color(0xFF505054) else contentColor
+    } else {
+        tabTextColor
+    }
+
+    val miniPlayerContentColor = if (contentColor != Color.Unspecified) {
+        if (!isDarkMode && contentColor == Color.White) Color(0xFF3C3C40) else contentColor
+    } else {
+        if (isDarkMode) Color.White else Color(0xFF3C3C40)
+    }
 
     val glassStyle = com.mrtdk.glass.LocalGlassStyle.current
     val isSolid = glassStyle == "solid"
@@ -297,7 +307,7 @@ fun LiquidBottomNavBar(
                                     Icon(
                                         painter = painterResource(currentTab.iconRes),
                                         contentDescription = stringResource(currentTab.titleRes),
-                                        tint = if (selectedIndex in 0..3) activeAccentColor else actualContentColor,
+                                        tint = if (selectedIndex in 0..3) activeAccentColor else navUnselectedColor,
                                         modifier = Modifier.size(24.dp)
                                     )
                                 }
@@ -325,7 +335,7 @@ fun LiquidBottomNavBar(
                                     onClick = onMiniPlayerClick,
                                     onNext = onNext,
                                     onPrevious = onPrevious,
-                                    contentColor = actualContentColor,
+                                    contentColor = miniPlayerContentColor,
                                     playbackProgress = playbackProgress,
                                     onSeek = onSeek,
                                     modifier = Modifier
@@ -339,7 +349,7 @@ fun LiquidBottomNavBar(
 
                         // 3. Standalone Search Circle (sharedElement morph with standaloneTab - 48dp)
                         val isSearchSelected = selectedIndex == 4
-                        val searchColor = if (isSearchSelected) activeAccentColor else actualContentColor.copy(alpha = 0.65f)
+                        val searchColor = if (isSearchSelected) activeAccentColor else navUnselectedColor
 
                         Box(
                             modifier = Modifier
@@ -410,7 +420,7 @@ fun LiquidBottomNavBar(
                                     onClick = onMiniPlayerClick,
                                     onNext = onNext,
                                     onPrevious = onPrevious,
-                                    contentColor = actualContentColor,
+                                    contentColor = miniPlayerContentColor,
                                     playbackProgress = playbackProgress,
                                     onSeek = onSeek,
                                     modifier = Modifier
@@ -449,7 +459,7 @@ fun LiquidBottomNavBar(
                                     MainNavTabs.forEach { tabItem ->
                                         val isSelected = tabItem.index == selectedIndex
                                         val isSharedIcon = tabItem.index == (if (selectedIndex in 0..3) selectedIndex else lastActiveMainTab)
-                                        val baseColor = if (isSelected) activeAccentColor else actualContentColor.copy(alpha = 0.65f)
+                                        val baseColor = if (isSelected) activeAccentColor else navUnselectedColor
 
                                         LiquidBottomTab(
                                             onClick = { onTabSelected(tabItem.index) }
@@ -489,7 +499,7 @@ fun LiquidBottomNavBar(
 
                             // Pill 2: Standalone Search Pill (sharedElement with standaloneTab - 64dp)
                             val isSearchSelected = selectedIndex == 4
-                            val searchColor = if (isSearchSelected) activeAccentColor else actualContentColor.copy(alpha = 0.65f)
+                            val searchColor = if (isSearchSelected) activeAccentColor else navUnselectedColor
 
                             Box(
                                 modifier = Modifier
@@ -558,7 +568,7 @@ fun LiquidBottomNavBar(
                                     onClick = onMiniPlayerClick,
                                     onNext = onNext,
                                     onPrevious = onPrevious,
-                                    contentColor = actualContentColor,
+                                    contentColor = miniPlayerContentColor,
                                     playbackProgress = playbackProgress,
                                     onSeek = onSeek,
                                     modifier = Modifier
@@ -607,7 +617,7 @@ fun LiquidBottomNavBar(
                                         Icon(
                                             painter = painterResource(previousTab.iconRes),
                                             contentDescription = stringResource(previousTab.titleRes),
-                                            tint = actualContentColor.copy(alpha = 0.85f),
+                                            tint = navUnselectedColor,
                                             modifier = Modifier.size(24.dp)
                                         )
                                     }
@@ -671,7 +681,7 @@ fun LiquidBottomNavBar(
                                         if (searchQuery.isEmpty()) {
                                             Text(
                                                 text = stringResource(R.string.search_placeholder),
-                                                color = actualContentColor.copy(alpha = 0.45f),
+                                                color = if (isDarkMode) Color.White.copy(alpha = 0.45f) else Color(0xFF8E8E93),
                                                 fontSize = 14.sp,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
@@ -682,7 +692,7 @@ fun LiquidBottomNavBar(
                                             onValueChange = onSearchQueryChange,
                                             singleLine = true,
                                             textStyle = TextStyle(
-                                                color = actualContentColor,
+                                                color = if (isDarkMode) Color.White else Color(0xFF1C1C1E),
                                                 fontSize = 14.sp,
                                                 fontWeight = FontWeight.Medium
                                             ),
@@ -719,7 +729,7 @@ fun LiquidBottomNavBar(
                                             Icon(
                                                 imageVector = Icons.Default.Close,
                                                 contentDescription = stringResource(R.string.close_action),
-                                                tint = actualContentColor.copy(alpha = 0.7f),
+                                                tint = if (isDarkMode) Color.White.copy(alpha = 0.7f) else Color(0xFF505054),
                                                 modifier = Modifier.size(16.dp)
                                             )
                                         }

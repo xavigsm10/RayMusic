@@ -26,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.res.painterResource
 import com.mrtdk.liquid_glass.R
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -66,10 +67,29 @@ fun MiniPlayer(
     modifier: Modifier = Modifier,
     hideImage: Boolean = false,
     tintColor: Color = Color.White.copy(alpha = 0.15f),
-    contentColor: Color = Color.White,
+    contentColor: Color = Color.Unspecified,
     collapseProgress: Float = 0f
 ) {
     if (playerState == null) return
+
+    val isDarkMode by com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState()
+    val effectiveTitleColor = if (contentColor != Color.Unspecified) {
+        if (!isDarkMode && contentColor == Color.White) Color(0xFF2C2C2E) else contentColor
+    } else {
+        if (isDarkMode) Color.White else Color(0xFF2C2C2E)
+    }
+
+    val effectiveSubtextColor = if (contentColor != Color.Unspecified) {
+        if (!isDarkMode && contentColor == Color.White) Color(0xFF636366) else contentColor.copy(alpha = 0.7f)
+    } else {
+        if (isDarkMode) Color.White.copy(alpha = 0.7f) else Color(0xFF636366)
+    }
+
+    val effectiveIconColor = if (contentColor != Color.Unspecified) {
+        if (!isDarkMode && contentColor == Color.White) Color(0xFF3C3C40) else contentColor
+    } else {
+        if (isDarkMode) Color.White else Color(0xFF3C3C40)
+    }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -218,14 +238,14 @@ fun MiniPlayer(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = playerState.title,
-                    color = contentColor,
+                    color = effectiveTitleColor,
                     fontSize = 14.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = playerState.artist,
-                    color = contentColor.copy(alpha = 0.7f),
+                    color = effectiveSubtextColor,
                     fontSize = 11.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -236,7 +256,7 @@ fun MiniPlayer(
             val isPlayPausePressed by playPauseInteractionSource.collectIsPressedAsState()
 
             val playPauseBgColor by animateColorAsState(
-                targetValue = if (isPlayPausePressed) contentColor.copy(alpha = 0.12f) else Color.Transparent,
+                targetValue = if (isPlayPausePressed) effectiveIconColor.copy(alpha = 0.12f) else Color.Transparent,
                 label = "miniPlayPauseBg"
             )
 
@@ -272,7 +292,7 @@ fun MiniPlayer(
                     Icon(
                         painter = painterResource(id = if (playing) R.drawable.pause else R.drawable.resume),
                         contentDescription = if (playing) "Pause" else "Play",
-                        tint = contentColor,
+                        tint = effectiveIconColor,
                         modifier = Modifier
                             .size(24.dp)
                             .graphicsLayer {
@@ -287,7 +307,7 @@ fun MiniPlayer(
                 Icon(
                     painter = painterResource(id = R.drawable.forward),
                     contentDescription = "Next",
-                    tint = contentColor,
+                    tint = effectiveIconColor,
                     modifier = Modifier.size(24.dp)
                 )
             }

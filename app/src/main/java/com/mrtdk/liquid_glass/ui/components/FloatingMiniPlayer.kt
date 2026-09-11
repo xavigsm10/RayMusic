@@ -35,6 +35,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -83,12 +84,32 @@ fun FloatingMiniPlayer(
     onClick: () -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
-    contentColor: Color,
+    contentColor: Color = Color.Unspecified,
     modifier: Modifier = Modifier,
     playbackProgress: () -> Float = { 0f },
     onSeek: (Float) -> Unit = {},
 ) {
     if (playerState == null) return
+
+    val isDarkMode by com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState()
+
+    val effectiveTitleColor = if (contentColor != Color.Unspecified) {
+        if (!isDarkMode && contentColor == Color.White) Color(0xFF2C2C2E) else contentColor
+    } else {
+        if (isDarkMode) Color.White else Color(0xFF2C2C2E)
+    }
+
+    val effectiveSubtextColor = if (contentColor != Color.Unspecified) {
+        if (!isDarkMode && contentColor == Color.White) Color(0xFF636366) else contentColor.copy(alpha = 0.7f)
+    } else {
+        if (isDarkMode) Color.White.copy(alpha = 0.7f) else Color(0xFF636366)
+    }
+
+    val effectiveIconColor = if (contentColor != Color.Unspecified) {
+        if (!isDarkMode && contentColor == Color.White) Color(0xFF3C3C40) else contentColor
+    } else {
+        if (isDarkMode) Color.White else Color(0xFF3C3C40)
+    }
 
     val coroutineScope = rememberCoroutineScope()
     val density = LocalDensity.current
@@ -220,7 +241,7 @@ fun FloatingMiniPlayer(
                         fontSize = if (isInline) 13.sp else 14.sp,
                         fontWeight = FontWeight.SemiBold
                     ),
-                    color = contentColor,
+                    color = effectiveTitleColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -229,7 +250,7 @@ fun FloatingMiniPlayer(
                     style = MaterialTheme.typography.bodySmall.copy(
                         fontSize = if (isInline) 10.sp else 11.sp
                     ),
-                    color = contentColor.copy(alpha = 0.7f),
+                    color = effectiveSubtextColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -250,7 +271,7 @@ fun FloatingMiniPlayer(
                     Icon(
                         painter = painterResource(id = if (playing) R.drawable.pause else R.drawable.resume),
                         contentDescription = if (playing) "Pause" else "Play",
-                        tint = contentColor,
+                        tint = effectiveIconColor,
                         modifier = Modifier
                             .size(if (isInline) 22.dp else 24.dp)
                             .graphicsLayer {
@@ -269,7 +290,7 @@ fun FloatingMiniPlayer(
                     Icon(
                         painter = painterResource(id = R.drawable.forward),
                         contentDescription = "Next",
-                        tint = contentColor,
+                        tint = effectiveIconColor,
                         modifier = Modifier.size(22.dp)
                     )
                 }
