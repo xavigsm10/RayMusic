@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Build
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.layout.positionInRoot
@@ -799,8 +800,7 @@ fun GlassBoxScope.AudioRoutingMenu(
     val dominantColor by LibraryManager.currentDominantColor.collectAsState()
 
     val tintColor = remember(dominantColor) { dominantColor.copy(alpha = 0.35f) }
-
-
+    val isLightweight = com.mrtdk.glass.LocalLightweightGlass.current
 
     Box(
 
@@ -857,13 +857,13 @@ fun GlassBoxScope.AudioRoutingMenu(
                     shape = { RoundedCornerShape(cornerRadius.dp) },
 
                     effects = {
-
-                        vibrancy()
-
-                        blur(8f.dp.toPx())
-
-                        lens(24f.dp.toPx(), 24f.dp.toPx())
-
+                        if (!isLightweight) {
+                            vibrancy()
+                            blur(8f.dp.toPx())
+                            lens(24f.dp.toPx(), 24f.dp.toPx())
+                        } else {
+                            blur(2f.dp.toPx())
+                        }
                     },
 
                     onDrawSurface = {
@@ -1710,9 +1710,12 @@ fun PlayerScreen(
 
         var isVideoPlaying by remember { mutableStateOf(false) }
         var coverBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+        var accordBackdropBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+        var hasGeneratedMotionBackdrop by remember(playerState?.artist, playerState?.title) { mutableStateOf(false) }
         var frameToken by remember { mutableStateOf(0L) }
         var reflectionSkew by remember { mutableStateOf(0.12f) }
         var masterAnimatedPlayer by remember { mutableStateOf<androidx.media3.exoplayer.ExoPlayer?>(null) }
+        val fullArtworkBackdropStyle by LibraryManager.fullArtworkBackdropStyle.collectAsState()
 
         LaunchedEffect(playerState?.artist, playerState?.title, playerState?.album) {
             val artist = playerState?.artist
@@ -1720,6 +1723,8 @@ fun PlayerScreen(
             val album = playerState?.album
             isVideoPlaying = false
             coverBitmap = null
+            accordBackdropBitmap = null
+            hasGeneratedMotionBackdrop = false
             frameToken++
 
             if (artist.isNullOrBlank() || title.isNullOrBlank()) return@LaunchedEffect
@@ -1746,6 +1751,7 @@ fun PlayerScreen(
 
         LaunchedEffect(hdArtUrl, playerState?.title, playerState?.artist) {
             coverBitmap = null
+            accordBackdropBitmap = null
             frameToken++
             reflectionSkew = 0.12f
 
@@ -1821,7 +1827,7 @@ fun PlayerScreen(
                                 }
 
                                 withContext(Dispatchers.Main) {
-                                    if (!isVideoPlaying && animatedArtworkUrl.isNullOrBlank()) {
+                                    if ((!isVideoPlaying && animatedArtworkUrl.isNullOrBlank()) || fullArtworkBackdropStyle == "accord") {
                                         coverBitmap = asComposeBmp
                                         frameToken++
                                     }
@@ -2141,6 +2147,57 @@ fun PlayerScreen(
             
 
             val playerArtworkStyle by LibraryManager.playerArtworkStyle.collectAsState()
+
+            val screenWidthPx = with(density) { maxWidth.roundToPx() }
+            val screenHeightPx = with(density) { maxHeight.roundToPx() }
+
+            LaunchedEffect(hdArtUrl, playerState?.artUrl, playerState?.title, playerState?.artist, fullArtworkBackdropStyle, screenWidthPx, screenHeightPx, animatedArtworkUrl) {
+                if (fullArtworkBackdropStyle == "accord" && screenWidthPx > 0 && screenHeightPx > 0) {
+                    val artModel = hdArtUrl ?: playerState?.artUrl
+                    if (artModel != null) {
+                        withContext(Dispatchers.IO) {
+                            try {
+                                val loader = coil.Coil.imageLoader(context)
+                                val req = ImageRequest.Builder(context)
+                                    .data(artModel)
+                                    .allowHardware(false)
+                                    .build()
+                                val result = (loader.execute(req) as? coil.request.SuccessResult)?.drawable
+                                val bmp = (result as? android.graphics.drawable.BitmapDrawable)?.bitmap ?: run {
+                                    if (result != null) {
+                                        val b = android.graphics.Bitmap.createBitmap(
+                                            result.intrinsicWidth.coerceAtLeast(1),
+                                            result.intrinsicHeight.coerceAtLeast(1),
+                                            android.graphics.Bitmap.Config.ARGB_8888
+                                        )
+                                        val c = android.graphics.Canvas(b)
+                                        result.setBounds(0, 0, c.width, c.height)
+                                        result.draw(c)
+                                        b
+                                    } else null
+                                }
+                                if (bmp != null && !bmp.isRecycled) {
+                                    val hasMotion = !animatedArtworkUrl.isNullOrBlank()
+                                    val generated = com.mrtdk.liquid_glass.ui.components.AccordBackdropGenerator.generateAccordBackdrop(
+                                        source = bmp,
+                                        width = screenWidthPx,
+                                        height = screenHeightPx,
+                                        includeCover = !hasMotion
+                                    )
+                                    withContext(Dispatchers.Main) {
+                                        accordBackdropBitmap = generated
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
+                    }
+                } else if (fullArtworkBackdropStyle != "accord") {
+                    accordBackdropBitmap = null
+                }
+            }
+
             val hasAnimatedCover = !animatedArtworkUrl.isNullOrBlank() || isVideoPlaying
             val isNormalArtwork = when (playerArtworkStyle) {
                 "normal" -> true
@@ -2207,13 +2264,11 @@ fun PlayerScreen(
 
             val detailsOffsetY by androidx.compose.animation.core.animateDpAsState(detailsOffsetYTarget)
 
-
+            val isAccordActive = fullArtworkBackdropStyle == "accord" && !isNormalArtwork
 
             val detailsOffsetXTarget = if (isOverlayActive) 124.dp else 34.dp
 
             val detailsOffsetX by androidx.compose.animation.core.animateDpAsState(detailsOffsetXTarget)
-
-
 
             val detailsWidthTarget = if (isOverlayActive) (maxWidth - 124.dp - 24.dp) else (maxWidth - 68.dp)
 
@@ -2376,6 +2431,17 @@ fun PlayerScreen(
                                     normalMidColor,
                                     normalBottomColor
                                 )
+                            } else if (fullArtworkBackdropStyle == "accord") {
+                                listOf(
+                                    dominantColor.copy(alpha = 1.0f),
+                                    bottomAverageColor.copy(alpha = 0.95f),
+                                    Color(
+                                        red = (bottomAverageColor.red * 0.70f + dominantColor.red * 0.30f).coerceIn(0f, 1f),
+                                        green = (bottomAverageColor.green * 0.70f + dominantColor.green * 0.30f).coerceIn(0f, 1f),
+                                        blue = (bottomAverageColor.blue * 0.70f + dominantColor.blue * 0.30f).coerceIn(0f, 1f),
+                                        alpha = 1.0f
+                                    )
+                                )
                             } else {
                                 listOf(
                                     dominantColor.copy(alpha = 1.0f),
@@ -2390,9 +2456,52 @@ fun PlayerScreen(
                     }
             ) {
 
-            // Capa 4: Reflejo invertido estilo Apple Music (solo para fullartwork)
+            // Capa Fondo Accord 2.0 (Lienzo completo de pantalla con carátula en el 70% superior y difusión suave inferior)
+            if (fullArtworkBackdropStyle == "accord" && !isNormalArtwork) {
+                val accordBmp = accordBackdropBitmap
+                val backdropAlpha by animateFloatAsState(
+                    targetValue = if (accordBmp != null) 1f else 0f,
+                    animationSpec = tween(220),
+                    label = "accordBackdropAlpha"
+                )
+                if (backdropAlpha > 0f) {
+                    androidx.compose.animation.Crossfade(
+                        targetState = accordBmp,
+                        animationSpec = tween(350),
+                        label = "accordCrossfade"
+                    ) { currentBmp ->
+                        if (currentBmp != null) {
+                            Image(
+                                bitmap = currentBmp,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer {
+                                        alpha = backdropAlpha
+                                    }
+                            )
+                        }
+                    }
+
+                    // Capa Contrast Scrim adaptativa de Accord 2.0 para oscurecer fondos claros (asegura texto y controles nítidos)
+                    val contrastAlpha = com.mrtdk.liquid_glass.ui.components.AccordBackdropGenerator.lastContrastScrimAlpha
+                    if (contrastAlpha > 0f) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer {
+                                    alpha = contrastAlpha * backdropAlpha
+                                }
+                                .background(Color.Black)
+                        )
+                    }
+                }
+            }
+
+            // Capa 4: Reflejo invertido estilo Apple Music (solo para fullartwork y cuando NO es modo Accord)
             val mirrorArtModel = hdArtUrl ?: playerState?.artUrl
-            if (!isNormalArtwork && (coverBitmap != null || mirrorArtModel != null) && dragProgress < 1f && !showLyrics && !showQueue) {
+            if (!isNormalArtwork && (coverBitmap != null || mirrorArtModel != null) && dragProgress < 1f && !showLyrics && !showQueue && fullArtworkBackdropStyle != "accord") {
                 val reflectionWidth = maxWidth
                 val reflectionX = 0.dp
                 val childWidth = expandedWidth
@@ -2427,15 +2536,15 @@ fun PlayerScreen(
                         mirrorArtModel ?: currentBitmap
                     }
 
-                    Box(
-                        modifier = Modifier
-                            .offset(x = childOffsetX, y = 0.dp)
-                            .width(childWidth)
-                            .height(expandedHeight)
-                            .graphicsLayer {
-                                alpha = if (showLyrics || showQueue) 0f else 1f
-                            }
-                    ) {
+                        Box(
+                            modifier = Modifier
+                                .offset(x = childOffsetX, y = 0.dp)
+                                .width(childWidth)
+                                .height(expandedHeight)
+                                .graphicsLayer {
+                                    alpha = if (showLyrics || showQueue) 0f else 1f
+                                }
+                        ) {
                             // Reflejo invertido con difuminado horizontal progresivo
                             com.mrtdk.liquid_glass.ui.components.GraduatedBlurArtwork(
                                 imageUrl = currentBitmap ?: mirrorModel,
@@ -2453,9 +2562,9 @@ fun PlayerScreen(
                                 syncWithPlayer = masterAnimatedPlayer,
                                 imageLoader = animatedImageLoader
                             )
+                        }
                     }
                 }
-            }
 
 
             // LYRICS / QUEUE OVERLAY
@@ -2490,13 +2599,15 @@ fun PlayerScreen(
                      val fluidSecondary = if (isNormalArtwork) normalMidColor else secCol
                      val fluidAccent = if (isNormalArtwork) normalBottomColor else bottomAverageColor
 
-                     com.mrtdk.liquid_glass.ui.components.RayMusicFluidBackground(
-                         primaryColor = fluidPrimary,
-                         secondaryColor = fluidSecondary,
-                         accentColor = fluidAccent,
-                         isPlaying = isPlaying,
-                         modifier = Modifier.fillMaxSize()
-                     )
+                     if (fullArtworkBackdropStyle != "accord") {
+                         com.mrtdk.liquid_glass.ui.components.RayMusicFluidBackground(
+                             primaryColor = fluidPrimary,
+                             secondaryColor = fluidSecondary,
+                             accentColor = fluidAccent,
+                             isPlaying = isPlaying,
+                             modifier = Modifier.fillMaxSize()
+                         )
+                     }
                  }
 
                       // Height of the content area = exactly the cover image height (player controls start below)
@@ -3257,6 +3368,14 @@ fun PlayerScreen(
                 label = "playPauseScale"
             )
 
+            val isAccordStaticOnly = isAccordActive && animatedArtworkUrl.isNullOrBlank()
+            val targetFgAlpha = if (isAccordStaticOnly && !isOverlayActive) 0f else 1f
+            val fgArtworkAlpha by animateFloatAsState(
+                targetValue = targetFgAlpha,
+                animationSpec = tween(200),
+                label = "fgArtworkAlpha"
+            )
+
             Box(
                 modifier = Modifier
                     .offset(x = imgOffsetX, y = imgOffsetY)
@@ -3275,6 +3394,7 @@ fun PlayerScreen(
                         scaleX = playPauseScale
                         scaleY = playPauseScale
                         transformOrigin = androidx.compose.ui.graphics.TransformOrigin.Center
+                        alpha = fgArtworkAlpha
                     }
                     .then(
                         if (isNormalArtwork && !isOverlayActive && dragProgress == 0f) {
@@ -3312,23 +3432,41 @@ fun PlayerScreen(
                         drawContent()
                         if (!isOverlayActive && !isNormalArtwork) {
                             val h = size.height
-                            val fadePx = with(density) { 32.dp.toPx() }
-                            if (h > fadePx) {
-                                val startFrac = (h - fadePx) / h
+                            if (fullArtworkBackdropStyle == "accord") {
+                                val startFrac = 0.55f
                                 drawRect(
                                     brush = Brush.verticalGradient(
-                                        0.0f to Color.Black,
+                                        0.00f to Color.Black,
                                         startFrac to Color.Black,
-                                        1.0f to Color.Transparent
+                                        startFrac + (1f - startFrac) * 0.20f to Color.Black.copy(alpha = 0.95f),
+                                        startFrac + (1f - startFrac) * 0.40f to Color.Black.copy(alpha = 0.78f),
+                                        startFrac + (1f - startFrac) * 0.60f to Color.Black.copy(alpha = 0.50f),
+                                        startFrac + (1f - startFrac) * 0.80f to Color.Black.copy(alpha = 0.22f),
+                                        1.00f to Color.Transparent
                                     ),
                                     blendMode = BlendMode.DstIn
                                 )
+                            } else {
+                                val fadePx = with(density) { 32.dp.toPx() }
+                                if (h > fadePx) {
+                                    val startFrac = (h - fadePx) / h
+                                    drawRect(
+                                        brush = Brush.verticalGradient(
+                                            0.0f to Color.Black,
+                                            startFrac to Color.Black,
+                                            1.0f to Color.Transparent
+                                        ),
+                                        blendMode = BlendMode.DstIn
+                                    )
+                                }
                             }
                         }
                     }
             ) {
 
                 val artworkBiasAlignment = Alignment.TopCenter
+
+                val currentAnimatedUrl = animatedArtworkUrl
 
                 // Base sharp album cover (always drawn in background during drag or before playback starts)
                 AsyncImage(
@@ -3340,10 +3478,12 @@ fun PlayerScreen(
                     contentDescription = "Album Art",
                     contentScale = ContentScale.Crop,
                     alignment = artworkBiasAlignment,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            alpha = if (!currentAnimatedUrl.isNullOrBlank() && isVideoPlaying && !isOverlayActive) 0f else 1f
+                        }
                 )
-
-                val currentAnimatedUrl = animatedArtworkUrl
 
                 if (!currentAnimatedUrl.isNullOrBlank()) {
                     DisposableEffect(Unit) {
@@ -3365,7 +3505,7 @@ fun PlayerScreen(
                             .graphicsLayer {
                                 alpha = if (isVideoPlaying && !showLyrics && !showQueue) 1f else 0f
                             },
-                        isPaused = !isPlaying || showLyrics || showQueue,
+                        isPaused = showLyrics || showQueue,
                         enableFrameCapture = (dragProgress == 0f) && !showLyrics && !showQueue,
                         onPlayerCreated = { masterAnimatedPlayer = it },
                         onPlaybackStarted = { isVideoPlaying = true },
@@ -3375,30 +3515,80 @@ fun PlayerScreen(
                             reflectionSkew = calculateDominantSkew(frameBitmap)
 
                             try {
-                                // Promedio de la fila inferior de píxeles optimizado con muestreo por pasos
-                                var r = 0L; var g = 0L; var b = 0L
-                                val yCoord = frameBitmap.height - 1
                                 val w = frameBitmap.width
-                                val stepX = maxOf(1, w / 24)
-                                var countX = 0
+                                val h = frameBitmap.height
 
-                                for (x in 0 until w step stepX) {
-                                    val pixel = frameBitmap.getPixel(x, yCoord)
-                                    r += (pixel shr 16 and 0xFF)
-                                    g += (pixel shr 8 and 0xFF)
-                                    b += (pixel and 0xFF)
-                                    countX++
+                                // 1. Muestreo de la franja inferior (75% al 95%) para bottomAverageColor
+                                val startY = (h * 0.75f).toInt().coerceIn(0, h - 1)
+                                val endY = (h * 0.95f).toInt().coerceIn(startY + 1, h)
+                                var rBottom = 0L; var gBottom = 0L; var bBottom = 0L
+                                var countBottom = 0
+                                val stepX = maxOf(1, w / 16)
+                                val stepY = maxOf(1, (endY - startY) / 4)
+                                for (y in startY until endY step stepY) {
+                                    for (x in 0 until w step stepX) {
+                                        val pixel = frameBitmap.getPixel(x, y)
+                                        rBottom += (pixel shr 16 and 0xFF)
+                                        gBottom += (pixel shr 8 and 0xFF)
+                                        bBottom += (pixel and 0xFF)
+                                        countBottom++
+                                    }
+                                }
+                                if (countBottom > 0) {
+                                    bottomAverageColor = Color((rBottom / countBottom).toInt(), (gBottom / countBottom).toInt(), (bBottom / countBottom).toInt())
                                 }
 
-                                val avgColor = Color((r / countX).toInt(), (g / countX).toInt(), (b / countX).toInt())
-                                bottomAverageColor = avgColor
-                                val lastDom = dominantColor
-                                val dr = kotlin.math.abs(avgColor.red - lastDom.red)
-                                val dg = kotlin.math.abs(avgColor.green - lastDom.green)
-                                val db = kotlin.math.abs(avgColor.blue - lastDom.blue)
-                                if (dr > 0.05f || dg > 0.05f || db > 0.05f) {
-                                    dominantColor = avgColor
-                                    onDominantColorChanged(avgColor)
+                                // 2. Muestreo de la zona central (20% al 70%) para dominantColor del video
+                                val domStartY = (h * 0.20f).toInt().coerceIn(0, h - 1)
+                                val domEndY = (h * 0.70f).toInt().coerceIn(domStartY + 1, h)
+                                var rDom = 0L; var gDom = 0L; var bDom = 0L
+                                var countDom = 0
+                                val stepDomY = maxOf(1, (domEndY - domStartY) / 5)
+                                for (y in domStartY until domEndY step stepDomY) {
+                                    for (x in 0 until w step stepX) {
+                                        val pixel = frameBitmap.getPixel(x, y)
+                                        rDom += (pixel shr 16 and 0xFF)
+                                        gDom += (pixel shr 8 and 0xFF)
+                                        bDom += (pixel and 0xFF)
+                                        countDom++
+                                    }
+                                }
+                                if (countDom > 0) {
+                                    val newDom = Color((rDom / countDom).toInt(), (gDom / countDom).toInt(), (bDom / countDom).toInt())
+                                    val dr = kotlin.math.abs(newDom.red - dominantColor.red)
+                                    val dg = kotlin.math.abs(newDom.green - dominantColor.green)
+                                    val db = kotlin.math.abs(newDom.blue - dominantColor.blue)
+                                    if (dr > 0.05f || dg > 0.05f || db > 0.05f) {
+                                        dominantColor = newDom
+                                        onDominantColorChanged(newDom)
+                                    }
+                                }
+
+                                // 3. Generar el fondo Accord difuminado con los colores del video en movimiento
+                                if (fullArtworkBackdropStyle == "accord" && !hasGeneratedMotionBackdrop) {
+                                    hasGeneratedMotionBackdrop = true
+                                    val bmpCopy = try {
+                                        frameBitmap.copy(android.graphics.Bitmap.Config.ARGB_8888, false)
+                                    } catch (_: Exception) { null }
+                                    if (bmpCopy != null) {
+                                        val screenW = with(density) { maxWidth.roundToPx() }.coerceAtLeast(1)
+                                        val screenH = with(density) { maxHeight.roundToPx() }.coerceAtLeast(1)
+                                        scope.launch(Dispatchers.Default) {
+                                            try {
+                                                val motionBackdrop = com.mrtdk.liquid_glass.ui.components.AccordBackdropGenerator.generateAccordBackdrop(
+                                                    source = bmpCopy,
+                                                    width = screenW,
+                                                    height = screenH,
+                                                    includeCover = false
+                                                )
+                                                withContext(Dispatchers.Main) {
+                                                    accordBackdropBitmap = motionBackdrop
+                                                }
+                                            } catch (e: Exception) {
+                                                e.printStackTrace()
+                                            }
+                                        }
+                                    }
                                 }
                             } catch (e: Exception) { }
                         },
@@ -3408,7 +3598,7 @@ fun PlayerScreen(
                 }
 
                 // Capa de desenfoque soft blur en la curva de la parte inferior de la carátula
-                if (!isOverlayActive && !isNormalArtwork) {
+                if (!isOverlayActive && !isNormalArtwork && fullArtworkBackdropStyle != "accord") {
                     val blurRadiusPx = with(density) { 18.dp.toPx() }
                     val maskBitmapCache = remember { arrayOfNulls<androidx.compose.ui.graphics.ImageBitmap>(1) }
                     Box(

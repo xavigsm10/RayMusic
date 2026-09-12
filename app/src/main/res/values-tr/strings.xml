@@ -599,6 +599,9 @@
     <string name="player_artwork_style_fullartwork">Tam Albüm Kapağı</string>
     <string name="player_artwork_style_normal">Normal</string>
     <string name="player_artwork_style_animated">Yalnızca hareketli kapaklarda tam kapak</string>
+    <string name="full_artwork_backdrop_style_title">Tam Kapak Arka Plan Efekti</string>
+    <string name="full_artwork_backdrop_style_apple_music">Apple Music (Orijinal bulanıklık)</string>
+    <string name="full_artwork_backdrop_style_accord">Yumuşak degrade (Düşük donanım)</string>
     <string name="estilo_solido_material3">Katı (Material 3)</string>
 
     <!-- Album Screen Strings -->

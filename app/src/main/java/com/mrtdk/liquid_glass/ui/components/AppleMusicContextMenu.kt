@@ -1399,6 +1399,7 @@ fun GlassBoxScope.AppleMusicPlaylistMenu(
         animationSpec = tween(durationMillis = 180),
         label = "menuContentBlur"
     )
+    val isLightweight = com.mrtdk.glass.LocalLightweightGlass.current
 
     fun handleDismiss() {
         visible = false
@@ -1438,12 +1439,16 @@ fun GlassBoxScope.AppleMusicPlaylistMenu(
                     backdrop = backdrop,
                     shape = { RoundedCornerShape(cornerRadius.dp) },
                     effects = {
-                        vibrancy()
-                        blur(12f.dp.toPx())
-                        lens(16f.dp.toPx(), 24f.dp.toPx())
+                        if (!isLightweight) {
+                            vibrancy()
+                            blur(12f.dp.toPx())
+                            lens(16f.dp.toPx(), 24f.dp.toPx())
+                        } else {
+                            blur(2f.dp.toPx())
+                        }
                     },
                     onDrawSurface = {
-                        drawRect(dominantColor.copy(alpha = 0.35f))
+                        drawRect(if (isLightweight) Color(0xFF202022).copy(alpha = 0.88f) else dominantColor.copy(alpha = 0.35f))
                     }
                 )
                 .clip(RoundedCornerShape(cornerRadius.dp))
@@ -1451,7 +1456,7 @@ fun GlassBoxScope.AppleMusicPlaylistMenu(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .let { if (blurPx > 0.1f) it.blur(blurPx.dp) else it }
+                    .let { if (blurPx > 0.1f && !com.mrtdk.glass.LocalLightweightGlass.current) it.blur(blurPx.dp) else it }
                     .padding(vertical = 8.dp)
             ) {
                 AnimatedContent(
@@ -2064,6 +2069,7 @@ fun GlassBoxScope.AppleMusicArtistMenu(
         animationSpec = tween(durationMillis = 180),
         label = "menuContentBlur"
     )
+    val isLightweight = com.mrtdk.glass.LocalLightweightGlass.current
 
     fun handleDismiss() {
         visible = false
@@ -2103,12 +2109,16 @@ fun GlassBoxScope.AppleMusicArtistMenu(
                     backdrop = backdrop,
                     shape = { RoundedCornerShape(cornerRadius.dp) },
                     effects = {
-                        vibrancy()
-                        blur(12f.dp.toPx())
-                        lens(16f.dp.toPx(), 24f.dp.toPx())
+                        if (!isLightweight) {
+                            vibrancy()
+                            blur(12f.dp.toPx())
+                            lens(16f.dp.toPx(), 24f.dp.toPx())
+                        } else {
+                            blur(2f.dp.toPx())
+                        }
                     },
                     onDrawSurface = {
-                        drawRect(dominantColor.copy(alpha = 0.35f))
+                        drawRect(if (isLightweight) Color(0xFF202022).copy(alpha = 0.88f) else dominantColor.copy(alpha = 0.35f))
                     }
                 )
                 .clip(RoundedCornerShape(cornerRadius.dp))
@@ -2116,7 +2126,7 @@ fun GlassBoxScope.AppleMusicArtistMenu(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .let { if (blurPx > 0.1f) it.blur(blurPx.dp) else it }
+                    .let { if (blurPx > 0.1f && !com.mrtdk.glass.LocalLightweightGlass.current) it.blur(blurPx.dp) else it }
                     .padding(vertical = 8.dp)
             ) {
                 // Horizontal actions: Favorito & Compartir
@@ -2239,6 +2249,7 @@ fun GlassBoxScope.AppleMusicCreateMenu(
         animationSpec = tween(durationMillis = 180),
         label = "menuContentBlur"
     )
+    val isLightweight = com.mrtdk.glass.LocalLightweightGlass.current
 
     fun handleDismiss() {
         visible = false
@@ -2278,12 +2289,16 @@ fun GlassBoxScope.AppleMusicCreateMenu(
                     backdrop = backdrop,
                     shape = { RoundedCornerShape(cornerRadius.dp) },
                     effects = {
-                        vibrancy()
-                        blur(8f.dp.toPx())
-                        lens(24f.dp.toPx(), 24f.dp.toPx())
+                        if (!isLightweight) {
+                            vibrancy()
+                            blur(8f.dp.toPx())
+                            lens(24f.dp.toPx(), 24f.dp.toPx())
+                        } else {
+                            blur(2f.dp.toPx())
+                        }
                     },
                     onDrawSurface = {
-                        drawRect(tintColor)
+                        drawRect(if (isLightweight) Color(0xFF202022).copy(alpha = 0.88f) else tintColor)
                     }
                 )
                 .clip(RoundedCornerShape(cornerRadius.dp))
@@ -2291,7 +2306,7 @@ fun GlassBoxScope.AppleMusicCreateMenu(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .let { if (blurPx > 0.1f) it.blur(blurPx.dp) else it }
+                    .let { if (blurPx > 0.1f && !com.mrtdk.glass.LocalLightweightGlass.current) it.blur(blurPx.dp) else it }
                     .padding(vertical = 8.dp)
             ) {
                 VerticalMenuActionItem(
@@ -2354,6 +2369,7 @@ fun GlassBoxScope.PlaylistsPageMoreMenu(
         animationSpec = tween(durationMillis = 180),
         label = "menuContentBlur"
     )
+    val isLightweight = com.mrtdk.glass.LocalLightweightGlass.current
 
     fun handleDismiss() {
         visible = false
@@ -2393,12 +2409,16 @@ fun GlassBoxScope.PlaylistsPageMoreMenu(
                     backdrop = backdrop,
                     shape = { RoundedCornerShape(cornerRadius.dp) },
                     effects = {
-                        vibrancy()
-                        blur(8f.dp.toPx())
-                        lens(24f.dp.toPx(), 24f.dp.toPx())
+                        if (!isLightweight) {
+                            vibrancy()
+                            blur(8f.dp.toPx())
+                            lens(24f.dp.toPx(), 24f.dp.toPx())
+                        } else {
+                            blur(2f.dp.toPx())
+                        }
                     },
                     onDrawSurface = {
-                        drawRect(tintColor)
+                        drawRect(if (isLightweight) Color(0xFF202022).copy(alpha = 0.88f) else tintColor)
                     }
                 )
                 .clip(RoundedCornerShape(cornerRadius.dp))
@@ -2406,7 +2426,7 @@ fun GlassBoxScope.PlaylistsPageMoreMenu(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .let { if (blurPx > 0.1f) it.blur(blurPx.dp) else it }
+                    .let { if (blurPx > 0.1f && !com.mrtdk.glass.LocalLightweightGlass.current) it.blur(blurPx.dp) else it }
                     .padding(vertical = 8.dp)
             ) {
                 // View Mode
@@ -2524,6 +2544,7 @@ fun GlassBoxScope.PlaylistsPageSortMenu(
         animationSpec = tween(durationMillis = 180),
         label = "menuContentBlur"
     )
+    val isLightweight = com.mrtdk.glass.LocalLightweightGlass.current
 
     fun handleDismiss() {
         visible = false
@@ -2563,12 +2584,16 @@ fun GlassBoxScope.PlaylistsPageSortMenu(
                     backdrop = backdrop,
                     shape = { RoundedCornerShape(cornerRadius.dp) },
                     effects = {
-                        vibrancy()
-                        blur(8f.dp.toPx())
-                        lens(24f.dp.toPx(), 24f.dp.toPx())
+                        if (!isLightweight) {
+                            vibrancy()
+                            blur(8f.dp.toPx())
+                            lens(24f.dp.toPx(), 24f.dp.toPx())
+                        } else {
+                            blur(2f.dp.toPx())
+                        }
                     },
                     onDrawSurface = {
-                        drawRect(tintColor)
+                        drawRect(if (isLightweight) Color(0xFF202022).copy(alpha = 0.88f) else tintColor)
                     }
                 )
                 .clip(RoundedCornerShape(cornerRadius.dp))
@@ -2576,7 +2601,7 @@ fun GlassBoxScope.PlaylistsPageSortMenu(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .let { if (blurPx > 0.1f) it.blur(blurPx.dp) else it }
+                    .let { if (blurPx > 0.1f && !com.mrtdk.glass.LocalLightweightGlass.current) it.blur(blurPx.dp) else it }
                     .padding(vertical = 8.dp)
             ) {
                 val sortOptions = listOf(
@@ -2715,7 +2740,7 @@ fun GlassBoxScope.PlayerOptionsMenu(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .let { if (blurPx > 0.1f) it.blur(blurPx.dp) else it }
+                    .let { if (blurPx > 0.1f && !com.mrtdk.glass.LocalLightweightGlass.current) it.blur(blurPx.dp) else it }
                     .padding(vertical = 12.dp)
             ) {
                 // Horizontal row of action buttons
@@ -3137,7 +3162,7 @@ fun GlassBoxScope.LyricsOptionsMenu(
                 modifier = Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .let { if (blurPx > 0.1f) it.blur(blurPx.dp) else it }
+                    .let { if (blurPx > 0.1f && !com.mrtdk.glass.LocalLightweightGlass.current) it.blur(blurPx.dp) else it }
                     .padding(vertical = 12.dp)
             ) {
                 if (showProviderSelection) {
@@ -3742,7 +3767,7 @@ fun GlassBoxScope.ArtistOptionsMenu(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .let { if (blurPx > 0.1f) it.blur(blurPx.dp) else it }
+                    .let { if (blurPx > 0.1f && !com.mrtdk.glass.LocalLightweightGlass.current) it.blur(blurPx.dp) else it }
                     .padding(vertical = 12.dp)
             ) {
                 // Header Title

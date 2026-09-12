@@ -129,6 +129,7 @@ fun MiniPlayer(
     val swipeOffsetX = remember { Animatable(0f) }
     val backdrop = LocalBackdrop.current
     val isCollapsing = collapseProgress > 0.001f && collapseProgress < 0.999f
+    val isLightweight = com.mrtdk.glass.LocalLightweightGlass.current
 
     Box(
         modifier = modifier
@@ -144,9 +145,13 @@ fun MiniPlayer(
                 shape = { Capsule() },
                 effects = {
                     if (!isCollapsing) {
-                        vibrancy()
-                        blur(8f.dp.toPx())
-                        lens(24f.dp.toPx(), 24f.dp.toPx())
+                        if (!isLightweight) {
+                            vibrancy()
+                            blur(8f.dp.toPx())
+                            lens(24f.dp.toPx(), 24f.dp.toPx())
+                        } else {
+                            blur(3f.dp.toPx())
+                        }
                     }
                 },
                 onDrawSurface = { drawRect(tintColor) }

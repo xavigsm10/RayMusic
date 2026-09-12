@@ -52,15 +52,21 @@ fun LiquidButton(
         )
     }
 
+    val isLightweight = com.mrtdk.glass.LocalLightweightGlass.current
+
     Row(
         modifier
             .drawBackdrop(
                 backdrop = backdrop,
                 shape = { Capsule() },
                 effects = {
-                    vibrancy()
-                    blur(2f.dp.toPx())
-                    lens(12f.dp.toPx(), 24f.dp.toPx())
+                    if (!isLightweight) {
+                        vibrancy()
+                        blur(2f.dp.toPx())
+                        lens(12f.dp.toPx(), 24f.dp.toPx())
+                    } else {
+                        blur(1.5f.dp.toPx())
+                    }
                 },
                 layerBlock = if (isInteractive) {
                     {

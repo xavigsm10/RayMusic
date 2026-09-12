@@ -599,6 +599,9 @@
     <string name="player_artwork_style_fullartwork">Full Artwork</string>
     <string name="player_artwork_style_normal">Normal</string>
     <string name="player_artwork_style_animated">Capas animadas apenas com full artwork</string>
+    <string name="full_artwork_backdrop_style_title">Efeito de fundo Fullartwork</string>
+    <string name="full_artwork_backdrop_style_apple_music">Apple Music (Desfoque original)</string>
+    <string name="full_artwork_backdrop_style_accord">Gradiente suave (Linha básica)</string>
     <string name="estilo_solido_material3">Sólido (Material 3)</string>
 
     <!-- Album Screen Strings -->

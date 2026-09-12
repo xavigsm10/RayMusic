@@ -133,6 +133,8 @@ fun MainSettingsMenu(
     var showGlassStyleDialog by remember { mutableStateOf(false) }
     var showArtworkStyleDialog by remember { mutableStateOf(false) }
     val currentArtworkStyle by LibraryManager.playerArtworkStyle.collectAsState()
+    var showBackdropStyleDialog by remember { mutableStateOf(false) }
+    val currentBackdropStyle by LibraryManager.fullArtworkBackdropStyle.collectAsState()
 
     val isDarkMode by com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState()
     var showThemeDialog by remember { mutableStateOf(false) }
@@ -215,6 +217,18 @@ fun MainSettingsMenu(
                             Text(currentStyleName)
                         },
                         onClick = { showArtworkStyleDialog = true }
+                    ),
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.Tune),
+                        title = { Text(stringResource(R.string.full_artwork_backdrop_style_title)) },
+                        description = {
+                            val currentBackdropName = when (currentBackdropStyle) {
+                                "accord" -> stringResource(R.string.full_artwork_backdrop_style_accord)
+                                else -> stringResource(R.string.full_artwork_backdrop_style_apple_music)
+                            }
+                            Text(currentBackdropName)
+                        },
+                        onClick = { showBackdropStyleDialog = true }
                     )
                 )
             )
@@ -363,6 +377,21 @@ fun MainSettingsMenu(
             onDismiss = { showArtworkStyleDialog = false },
             onSelect = {
                 LibraryManager.savePlayerArtworkStyle(it)
+            }
+        )
+    }
+
+    if (showBackdropStyleDialog) {
+        SingleChoiceDialog(
+            title = stringResource(R.string.full_artwork_backdrop_style_title),
+            options = listOf(
+                "apple_music" to stringResource(R.string.full_artwork_backdrop_style_apple_music),
+                "accord" to stringResource(R.string.full_artwork_backdrop_style_accord)
+            ),
+            selectedValue = currentBackdropStyle,
+            onDismiss = { showBackdropStyleDialog = false },
+            onSelect = {
+                LibraryManager.saveFullArtworkBackdropStyle(it)
             }
         )
     }

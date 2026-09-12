@@ -40,6 +40,7 @@ import org.intellij.lang.annotations.Language
 import kotlin.random.Random
 
 val LocalGlassStyle = staticCompositionLocalOf { "transparent" }
+val LocalLightweightGlass = staticCompositionLocalOf { false }
 
 internal data class GlassElement(
     val id: String,
@@ -143,8 +144,9 @@ fun GlassBoxScope.GlassBox(
         }
     }
 
+    val isLightweight = LocalLightweightGlass.current
     val scopeImpl = (this as? GlassBoxScopeImpl)?.glassScope as? GlassScopeImpl
-    if (scopeImpl != null && !isSolid) {
+    if (scopeImpl != null && !isSolid && !isLightweight) {
         val elementId = "glass_$id"
         DisposableEffect(elementId) {
             onDispose {
@@ -367,8 +369,9 @@ fun GlassContainer(
     content: @Composable () -> Unit,
     glassContent: @Composable GlassBoxScope.() -> Unit,
 ) {
-    // Check if AGSL is supported (Android 13+) and shader is enabled
-    if (useShader && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+    val isLightweight = LocalLightweightGlass.current
+    // Check if AGSL is supported (Android 13+) and shader is enabled, and not in lightweight mode
+    if (!isLightweight && useShader && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         GlassContainerWithShader(modifier, content, glassContent)
     } else {
         GlassContainerFallback(modifier, content, glassContent)

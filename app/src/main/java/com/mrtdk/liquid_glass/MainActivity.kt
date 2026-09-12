@@ -175,7 +175,8 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            LiquidglassuicomponentTheme {
+            val isDarkMode by com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState()
+            LiquidglassuicomponentTheme(darkTheme = isDarkMode) {
                 val context = LocalContext.current
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -244,6 +245,8 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 var glassStyle by remember { mutableStateOf(LibraryManager.getGlassStyle()) }
+                val currentBackdropStyle by LibraryManager.fullArtworkBackdropStyle.collectAsState()
+                val isLightweightGlass = currentBackdropStyle == "accord"
                 val lastSavedState = remember { com.mrtdk.liquid_glass.data.LibraryManager.getLastPlayerState() }
                 var playerState by remember { mutableStateOf<PlayerState?>(lastSavedState) }
                 var isFirstStateLoad by remember { mutableStateOf(true) }
@@ -632,7 +635,10 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    CompositionLocalProvider(com.mrtdk.glass.LocalGlassStyle provides glassStyle) {
+                    CompositionLocalProvider(
+                        com.mrtdk.glass.LocalGlassStyle provides glassStyle,
+                        com.mrtdk.glass.LocalLightweightGlass provides isLightweightGlass
+                    ) {
                         Scaffold(
                             modifier = Modifier.fillMaxSize(),
                             containerColor = Color.Black

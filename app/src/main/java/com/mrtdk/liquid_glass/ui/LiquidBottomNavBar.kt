@@ -167,6 +167,7 @@ fun LiquidBottomNavBar(
     }
 
     val glassStyle = com.mrtdk.glass.LocalGlassStyle.current
+    val isLightweight = com.mrtdk.glass.LocalLightweightGlass.current
     val isSolid = glassStyle == "solid"
     val solidBgColor = if (isDarkMode) Color(0xFF242428) else Color(0xFFE8E8EC)
 
@@ -201,7 +202,7 @@ fun LiquidBottomNavBar(
         }
     }
 
-    val capsuleBackdropModifier = remember(isSolid, backdrop, solidBgColor, actualTintColor) {
+    val capsuleBackdropModifier = remember(isSolid, isLightweight, backdrop, solidBgColor, actualTintColor) {
         if (isSolid) {
             Modifier
                 .clip(Capsule())
@@ -211,9 +212,13 @@ fun LiquidBottomNavBar(
                 backdrop = backdrop,
                 shape = { Capsule() },
                 effects = {
-                    vibrancy()
-                    blur(8.dp.toPx())
-                    lens(24.dp.toPx(), 24.dp.toPx())
+                    if (!isLightweight) {
+                        vibrancy()
+                        blur(8.dp.toPx())
+                        lens(24.dp.toPx(), 24.dp.toPx())
+                    } else {
+                        blur(3.dp.toPx())
+                    }
                 },
                 highlight = { Highlight.Default.copy(alpha = 0.35f) },
                 shadow = { Shadow.Default },
@@ -222,7 +227,7 @@ fun LiquidBottomNavBar(
         }
     }
 
-    val miniPlayerBackdropModifier = remember(isSolid, backdrop, solidBgColor, actualTintColor) {
+    val miniPlayerBackdropModifier = remember(isSolid, isLightweight, backdrop, solidBgColor, actualTintColor) {
         if (isSolid) {
             Modifier
                 .clip(MiniPlayerShape)
@@ -232,15 +237,19 @@ fun LiquidBottomNavBar(
                 backdrop = backdrop,
                 shape = { MiniPlayerShape },
                 effects = {
-                    vibrancy()
-                    blur(6.dp.toPx())
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                        lens(
-                            refractionHeight = 16.dp.toPx(),
-                            refractionAmount = 24.dp.toPx(),
-                            depthEffect = true,
-                            chromaticAberration = false
-                        )
+                    if (!isLightweight) {
+                        vibrancy()
+                        blur(6.dp.toPx())
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                            lens(
+                                refractionHeight = 16.dp.toPx(),
+                                refractionAmount = 24.dp.toPx(),
+                                depthEffect = true,
+                                chromaticAberration = false
+                            )
+                        }
+                    } else {
+                        blur(3.dp.toPx())
                     }
                 },
                 highlight = { Highlight.Default.copy(alpha = 0.25f) },

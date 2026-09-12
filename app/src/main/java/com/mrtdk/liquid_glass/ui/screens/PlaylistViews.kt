@@ -147,6 +147,7 @@ fun PlaylistsListScreen(
     var contextMenuPlaylist by remember { mutableStateOf<Playlist?>(null) }
     var showMoreMenu by remember { mutableStateOf(false) }
     var showSortMenu by remember { mutableStateOf(false) }
+    val isLightweight = com.mrtdk.glass.LocalLightweightGlass.current
 
     val localBackdrop = rememberLayerBackdrop()
     val pillBackdrop = rememberLayerBackdrop()
@@ -219,9 +220,13 @@ fun PlaylistsListScreen(
                                             backdrop = pillBackdrop,
                                             shape = { Capsule() },
                                             effects = {
-                                                vibrancy()
-                                                blur(2f.dp.toPx())
-                                                lens(12f.dp.toPx(), 24f.dp.toPx())
+                                                if (!isLightweight) {
+                                                    vibrancy()
+                                                    blur(2f.dp.toPx())
+                                                    lens(12f.dp.toPx(), 24f.dp.toPx())
+                                                } else {
+                                                    blur(1.5f.dp.toPx())
+                                                }
                                             },
                                             onDrawSurface = {
                                                 drawRect(Color(0xFF1C1C1E).copy(alpha = 0.35f))
@@ -403,9 +408,13 @@ fun PlaylistsListScreen(
                                             backdrop = pillBackdrop,
                                             shape = { Capsule() },
                                             effects = {
-                                                vibrancy()
-                                                blur(2f.dp.toPx())
-                                                lens(12f.dp.toPx(), 24f.dp.toPx())
+                                                if (!isLightweight) {
+                                                    vibrancy()
+                                                    blur(2f.dp.toPx())
+                                                    lens(12f.dp.toPx(), 24f.dp.toPx())
+                                                } else {
+                                                    blur(1.5f.dp.toPx())
+                                                }
                                             },
                                             onDrawSurface = {
                                                 drawRect(Color(0xFF1C1C1E).copy(alpha = 0.35f))

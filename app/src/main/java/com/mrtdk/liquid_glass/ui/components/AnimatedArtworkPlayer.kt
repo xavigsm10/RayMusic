@@ -322,7 +322,7 @@ fun AnimatedArtworkPlayer(
     }
 
     val animatedAlpha by animateFloatAsState(
-        targetValue = if (isFirstFrameRendered && !isPaused) 1f else 0f,
+        targetValue = if (isFirstFrameRendered) 1f else 0f,
         animationSpec = tween(250),
         label = "animatedArtworkAlpha"
     )

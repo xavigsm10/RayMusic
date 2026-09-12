@@ -70,7 +70,12 @@ object PerformanceProfileManager {
     private val _config = MutableStateFlow(MID_CONFIG)
     val config: StateFlow<PerformanceConfig> = _config.asStateFlow()
 
-    fun getConfig(): PerformanceConfig = _config.value
+    fun getConfig(): PerformanceConfig {
+        if (LibraryManager.getFullArtworkBackdropStyle() == "accord") {
+            return LOW_CONFIG
+        }
+        return _config.value
+    }
 
     fun init(context: Context) {
         val savedTier = LibraryManager.getString("performance_tier_preference", "auto")
@@ -80,7 +85,11 @@ object PerformanceProfileManager {
             "high" -> PerformanceTier.HIGH_END
             else -> detectTier(context)
         }
-        setTier(resolvedTier)
+        if (LibraryManager.getFullArtworkBackdropStyle() == "accord") {
+            setTier(PerformanceTier.LOW_END)
+        } else {
+            setTier(resolvedTier)
+        }
     }
 
     fun setTier(tier: PerformanceTier) {

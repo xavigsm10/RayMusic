@@ -72,6 +72,9 @@ object LibraryManager {
     private val _playerArtworkStyle = MutableStateFlow("fullartwork")
     val playerArtworkStyle: StateFlow<String> = _playerArtworkStyle
 
+    private val _fullArtworkBackdropStyle = MutableStateFlow("apple_music")
+    val fullArtworkBackdropStyle: StateFlow<String> = _fullArtworkBackdropStyle
+
     private fun parseItemType(value: String): ItemType? {
         return try {
             ItemType.valueOf(value)
@@ -86,6 +89,7 @@ object LibraryManager {
         this.context = context.applicationContext
         prefs = this.context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         dbHelper = LibraryDatabaseHelper(this.context)
+        isInitialized = true
 
         // Perform library items migration if not already migrated
         val isLibraryMigrated = dbHelper.getSetting("migrated_to_db") == "true" || prefs.getBoolean("migrated_to_db", false)
@@ -109,11 +113,10 @@ object LibraryManager {
         _recentSearches.value = loadRecentSearchesFromDb()
         _glassStyle.value = getGlassStyle()
         _playerArtworkStyle.value = getPlayerArtworkStyle()
+        _fullArtworkBackdropStyle.value = getFullArtworkBackdropStyle()
 
         com.mrtdk.liquid_glass.spotify.SpotifySession.init()
         com.mrtdk.liquid_glass.ui.theme.ThemeManager.init()
-
-        isInitialized = true
 
         if (com.mrtdk.liquid_glass.spotify.SpotifySession.isLoggedIn.value) {
             kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
@@ -233,6 +236,7 @@ object LibraryManager {
                         "app_language",
                         "glass_style",
                         "player_artwork_style",
+                        "full_artwork_backdrop_style",
                         "audio_quality",
                         "last_player_state",
                         "cache_featured_suggestions",
@@ -533,42 +537,64 @@ object LibraryManager {
     fun saveString(key: String, value: String?) {
         if (!isInitialized) return
         dbHelper.saveSetting(key, value)
+        try {
+            if (value == null) {
+                prefs.edit().remove(key).commit()
+            } else {
+                prefs.edit().putString(key, value).commit()
+            }
+        } catch (_: Exception) {}
     }
 
     fun getString(key: String, defaultValue: String? = null): String? {
         if (!isInitialized) return defaultValue
-        return dbHelper.getSetting(key, defaultValue)
+        val fromDb = dbHelper.getSetting(key, null)
+        if (fromDb != null) return fromDb
+        val fromPrefs = try { prefs.getString(key, null) } catch (_: Exception) { null }
+        return fromPrefs ?: defaultValue
     }
 
     fun saveInt(key: String, value: Int) {
         if (!isInitialized) return
         dbHelper.saveSettingInt(key, value)
+        try {
+            prefs.edit().putInt(key, value).commit()
+        } catch (_: Exception) {}
     }
 
     fun getInt(key: String, defaultValue: Int = 0): Int {
         if (!isInitialized) return defaultValue
-        return dbHelper.getSettingInt(key, defaultValue)
+        val fromDb = dbHelper.getSetting(key, null)?.toIntOrNull()
+        if (fromDb != null) return fromDb
+        return try { prefs.getInt(key, defaultValue) } catch (_: Exception) { defaultValue }
     }
 
     fun saveLastTab(index: Int) {
         if (!isInitialized) return
         dbHelper.saveSettingInt("last_tab_index", index)
+        try {
+            prefs.edit().putInt("last_tab_index", index).commit()
+        } catch (_: Exception) {}
     }
 
     fun getLastTab(): Int {
         if (!isInitialized) return 0
-        return dbHelper.getSettingInt("last_tab_index", 0)
+        return getInt("last_tab_index", 0)
     }
 
     fun getGlassStyle(): String {
         if (!isInitialized) return "transparent"
-        val style = dbHelper.getSetting("glass_style", "transparent") ?: "transparent"
+        val fromDb = dbHelper.getSetting("glass_style", null)
+        val style = fromDb ?: try { prefs.getString("glass_style", null) } catch (_: Exception) { null } ?: "transparent"
         return if (style == "semitransparent" || style == "semitransparente") "solid" else style
     }
 
     fun saveGlassStyle(style: String) {
         if (!isInitialized) return
         dbHelper.saveSetting("glass_style", style)
+        try {
+            prefs.edit().putString("glass_style", style).commit()
+        } catch (_: Exception) {}
         _glassStyle.value = style
     }
 
@@ -588,6 +614,24 @@ object LibraryManager {
             prefs.edit().putString("player_artwork_style", style).commit()
         } catch (_: Exception) {}
         _playerArtworkStyle.value = style
+    }
+
+    fun getFullArtworkBackdropStyle(): String {
+        if (!isInitialized) return "apple_music"
+        val fromDb = dbHelper.getSetting("full_artwork_backdrop_style", null)
+        if (fromDb != null) return fromDb
+        val fromPrefs = try { prefs.getString("full_artwork_backdrop_style", null) } catch (_: Exception) { null }
+        if (fromPrefs != null) return fromPrefs
+        return "apple_music"
+    }
+
+    fun saveFullArtworkBackdropStyle(style: String) {
+        if (!isInitialized) return
+        dbHelper.saveSetting("full_artwork_backdrop_style", style)
+        try {
+            prefs.edit().putString("full_artwork_backdrop_style", style).commit()
+        } catch (_: Exception) {}
+        _fullArtworkBackdropStyle.value = style
     }
 
     fun getDownloadedSongsForAlbum(albumName: String): List<LibraryItem> {

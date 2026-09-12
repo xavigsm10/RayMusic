@@ -911,6 +911,7 @@ private fun SharedTransitionScope.ExpandedTabs(
     }
 
     var hasSyncedSelection by remember(tabsCount) { mutableStateOf(false) }
+    val isLightweight = com.mrtdk.glass.LocalLightweightGlass.current
 
     if (tabPosition != null) {
         LaunchedEffect(dampedDragAnimation, tabPosition) {
@@ -1043,12 +1044,16 @@ private fun SharedTransitionScope.ExpandedTabs(
                         shape = { shapes.tabBarShape },
                         effects = {
                             val progress = dampedDragAnimation.pressProgress
-                            vibrancy()
-                            blur(8f.dp.toPx())
-                            lens(
-                                15f.dp.toPx() * progress,
-                                18f.dp.toPx() * progress
-                            )
+                            if (!isLightweight) {
+                                vibrancy()
+                                blur(8f.dp.toPx())
+                                lens(
+                                    15f.dp.toPx() * progress,
+                                    18f.dp.toPx() * progress
+                                )
+                            } else {
+                                blur(3f.dp.toPx())
+                            }
                         },
                         highlight = {
                             val progress = dampedDragAnimation.pressProgress
@@ -1101,11 +1106,13 @@ private fun SharedTransitionScope.ExpandedTabs(
                             effects = {
                                 val progress = dampedDragAnimation.pressProgress
                                 blur(3f.dp.toPx() * (1f - progress))
-                                lens(
-                                    lerp(0f.dp.toPx(), 10f.dp.toPx(), progress),
-                                    lerp(0f.dp.toPx(), 12f.dp.toPx(), progress),
-                                    chromaticAberration = progress > 0.01f
-                                )
+                                if (!isLightweight) {
+                                    lens(
+                                        lerp(0f.dp.toPx(), 10f.dp.toPx(), progress),
+                                        lerp(0f.dp.toPx(), 12f.dp.toPx(), progress),
+                                        chromaticAberration = progress > 0.01f
+                                    )
+                                }
                             },
                             highlight = {
                                 val progress = dampedDragAnimation.pressProgress
