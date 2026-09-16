@@ -1400,6 +1400,8 @@ fun GlassBoxScope.AppleMusicPlaylistMenu(
         label = "menuContentBlur"
     )
     val isLightweight = com.mrtdk.glass.LocalLightweightGlass.current
+    val glassStyle = com.mrtdk.glass.LocalGlassStyle.current
+    val isSolid = glassStyle == "solid" || com.mrtdk.liquid_glass.data.LibraryManager.isUltraPerformanceMode()
 
     fun handleDismiss() {
         visible = false
@@ -1435,22 +1437,28 @@ fun GlassBoxScope.AppleMusicPlaylistMenu(
                 }
                 .width(260.dp)
                 .wrapContentHeight()
-                .drawBackdrop(
-                    backdrop = backdrop,
-                    shape = { RoundedCornerShape(cornerRadius.dp) },
-                    effects = {
-                        if (!isLightweight) {
-                            vibrancy()
-                            blur(12f.dp.toPx())
-                            lens(16f.dp.toPx(), 24f.dp.toPx())
-                        } else {
-                            blur(2f.dp.toPx())
-                        }
-                    },
-                    onDrawSurface = {
-                        drawRect(if (isLightweight) Color(0xFF202022).copy(alpha = 0.88f) else dominantColor.copy(alpha = 0.35f))
+                .let {
+                    if (isSolid) {
+                        it.background(Color(0xFF202022).copy(alpha = 0.95f), RoundedCornerShape(cornerRadius.dp))
+                    } else {
+                        it.drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { RoundedCornerShape(cornerRadius.dp) },
+                            effects = {
+                                if (!isLightweight) {
+                                    vibrancy()
+                                    blur(12f.dp.toPx())
+                                    lens(16f.dp.toPx(), 24f.dp.toPx())
+                                } else {
+                                    blur(2f.dp.toPx())
+                                }
+                            },
+                            onDrawSurface = {
+                                drawRect(if (isLightweight) Color(0xFF202022).copy(alpha = 0.88f) else dominantColor.copy(alpha = 0.35f))
+                            }
+                        )
                     }
-                )
+                }
                 .clip(RoundedCornerShape(cornerRadius.dp))
         ) {
             Column(
@@ -2070,6 +2078,8 @@ fun GlassBoxScope.AppleMusicArtistMenu(
         label = "menuContentBlur"
     )
     val isLightweight = com.mrtdk.glass.LocalLightweightGlass.current
+    val glassStyle = com.mrtdk.glass.LocalGlassStyle.current
+    val isSolid = glassStyle == "solid" || com.mrtdk.liquid_glass.data.LibraryManager.isUltraPerformanceMode()
 
     fun handleDismiss() {
         visible = false
@@ -2105,22 +2115,28 @@ fun GlassBoxScope.AppleMusicArtistMenu(
                 }
                 .width(260.dp)
                 .wrapContentHeight()
-                .drawBackdrop(
-                    backdrop = backdrop,
-                    shape = { RoundedCornerShape(cornerRadius.dp) },
-                    effects = {
-                        if (!isLightweight) {
-                            vibrancy()
-                            blur(12f.dp.toPx())
-                            lens(16f.dp.toPx(), 24f.dp.toPx())
-                        } else {
-                            blur(2f.dp.toPx())
-                        }
-                    },
-                    onDrawSurface = {
-                        drawRect(if (isLightweight) Color(0xFF202022).copy(alpha = 0.88f) else dominantColor.copy(alpha = 0.35f))
+                .let {
+                    if (isSolid) {
+                        it.background(Color(0xFF202022).copy(alpha = 0.95f), RoundedCornerShape(cornerRadius.dp))
+                    } else {
+                        it.drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { RoundedCornerShape(cornerRadius.dp) },
+                            effects = {
+                                if (!isLightweight) {
+                                    vibrancy()
+                                    blur(12f.dp.toPx())
+                                    lens(16f.dp.toPx(), 24f.dp.toPx())
+                                } else {
+                                    blur(2f.dp.toPx())
+                                }
+                            },
+                            onDrawSurface = {
+                                drawRect(if (isLightweight) Color(0xFF202022).copy(alpha = 0.88f) else dominantColor.copy(alpha = 0.35f))
+                            }
+                        )
                     }
-                )
+                }
                 .clip(RoundedCornerShape(cornerRadius.dp))
         ) {
             Column(
@@ -2250,6 +2266,8 @@ fun GlassBoxScope.AppleMusicCreateMenu(
         label = "menuContentBlur"
     )
     val isLightweight = com.mrtdk.glass.LocalLightweightGlass.current
+    val glassStyle = com.mrtdk.glass.LocalGlassStyle.current
+    val isSolid = glassStyle == "solid" || com.mrtdk.liquid_glass.data.LibraryManager.isUltraPerformanceMode()
 
     fun handleDismiss() {
         visible = false
@@ -2285,22 +2303,28 @@ fun GlassBoxScope.AppleMusicCreateMenu(
                 }
                 .width(260.dp)
                 .wrapContentHeight()
-                .drawBackdrop(
-                    backdrop = backdrop,
-                    shape = { RoundedCornerShape(cornerRadius.dp) },
-                    effects = {
-                        if (!isLightweight) {
-                            vibrancy()
-                            blur(8f.dp.toPx())
-                            lens(24f.dp.toPx(), 24f.dp.toPx())
-                        } else {
-                            blur(2f.dp.toPx())
-                        }
-                    },
-                    onDrawSurface = {
-                        drawRect(if (isLightweight) Color(0xFF202022).copy(alpha = 0.88f) else tintColor)
+                .let {
+                    if (isSolid) {
+                        it.background(Color(0xFF202022).copy(alpha = 0.95f), RoundedCornerShape(cornerRadius.dp))
+                    } else {
+                        it.drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { RoundedCornerShape(cornerRadius.dp) },
+                            effects = {
+                                if (!isLightweight) {
+                                    vibrancy()
+                                    blur(8f.dp.toPx())
+                                    lens(24f.dp.toPx(), 24f.dp.toPx())
+                                } else {
+                                    blur(2f.dp.toPx())
+                                }
+                            },
+                            onDrawSurface = {
+                                drawRect(if (isLightweight) Color(0xFF202022).copy(alpha = 0.88f) else tintColor)
+                            }
+                        )
                     }
-                )
+                }
                 .clip(RoundedCornerShape(cornerRadius.dp))
         ) {
             Column(
@@ -2370,6 +2394,8 @@ fun GlassBoxScope.PlaylistsPageMoreMenu(
         label = "menuContentBlur"
     )
     val isLightweight = com.mrtdk.glass.LocalLightweightGlass.current
+    val glassStyle = com.mrtdk.glass.LocalGlassStyle.current
+    val isSolid = glassStyle == "solid" || com.mrtdk.liquid_glass.data.LibraryManager.isUltraPerformanceMode()
 
     fun handleDismiss() {
         visible = false
@@ -2405,22 +2431,28 @@ fun GlassBoxScope.PlaylistsPageMoreMenu(
                 }
                 .width(260.dp)
                 .wrapContentHeight()
-                .drawBackdrop(
-                    backdrop = backdrop,
-                    shape = { RoundedCornerShape(cornerRadius.dp) },
-                    effects = {
-                        if (!isLightweight) {
-                            vibrancy()
-                            blur(8f.dp.toPx())
-                            lens(24f.dp.toPx(), 24f.dp.toPx())
-                        } else {
-                            blur(2f.dp.toPx())
-                        }
-                    },
-                    onDrawSurface = {
-                        drawRect(if (isLightweight) Color(0xFF202022).copy(alpha = 0.88f) else tintColor)
+                .let {
+                    if (isSolid) {
+                        it.background(Color(0xFF202022).copy(alpha = 0.95f), RoundedCornerShape(cornerRadius.dp))
+                    } else {
+                        it.drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { RoundedCornerShape(cornerRadius.dp) },
+                            effects = {
+                                if (!isLightweight) {
+                                    vibrancy()
+                                    blur(8f.dp.toPx())
+                                    lens(24f.dp.toPx(), 24f.dp.toPx())
+                                } else {
+                                    blur(2f.dp.toPx())
+                                }
+                            },
+                            onDrawSurface = {
+                                drawRect(if (isLightweight) Color(0xFF202022).copy(alpha = 0.88f) else tintColor)
+                            }
+                        )
                     }
-                )
+                }
                 .clip(RoundedCornerShape(cornerRadius.dp))
         ) {
             Column(
@@ -2545,6 +2577,8 @@ fun GlassBoxScope.PlaylistsPageSortMenu(
         label = "menuContentBlur"
     )
     val isLightweight = com.mrtdk.glass.LocalLightweightGlass.current
+    val glassStyle = com.mrtdk.glass.LocalGlassStyle.current
+    val isSolid = glassStyle == "solid" || com.mrtdk.liquid_glass.data.LibraryManager.isUltraPerformanceMode()
 
     fun handleDismiss() {
         visible = false
@@ -2580,22 +2614,28 @@ fun GlassBoxScope.PlaylistsPageSortMenu(
                 }
                 .width(260.dp)
                 .wrapContentHeight()
-                .drawBackdrop(
-                    backdrop = backdrop,
-                    shape = { RoundedCornerShape(cornerRadius.dp) },
-                    effects = {
-                        if (!isLightweight) {
-                            vibrancy()
-                            blur(8f.dp.toPx())
-                            lens(24f.dp.toPx(), 24f.dp.toPx())
-                        } else {
-                            blur(2f.dp.toPx())
-                        }
-                    },
-                    onDrawSurface = {
-                        drawRect(if (isLightweight) Color(0xFF202022).copy(alpha = 0.88f) else tintColor)
+                .let {
+                    if (isSolid) {
+                        it.background(Color(0xFF202022).copy(alpha = 0.95f), RoundedCornerShape(cornerRadius.dp))
+                    } else {
+                        it.drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { RoundedCornerShape(cornerRadius.dp) },
+                            effects = {
+                                if (!isLightweight) {
+                                    vibrancy()
+                                    blur(8f.dp.toPx())
+                                    lens(24f.dp.toPx(), 24f.dp.toPx())
+                                } else {
+                                    blur(2f.dp.toPx())
+                                }
+                            },
+                            onDrawSurface = {
+                                drawRect(if (isLightweight) Color(0xFF202022).copy(alpha = 0.88f) else tintColor)
+                            }
+                        )
                     }
-                )
+                }
                 .clip(RoundedCornerShape(cornerRadius.dp))
         ) {
             Column(

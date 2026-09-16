@@ -168,7 +168,8 @@ fun LiquidBottomNavBar(
 
     val glassStyle = com.mrtdk.glass.LocalGlassStyle.current
     val isLightweight = com.mrtdk.glass.LocalLightweightGlass.current
-    val isSolid = glassStyle == "solid"
+    val isUltraPerf by com.mrtdk.liquid_glass.data.LibraryManager.ultraPerformanceMode.collectAsState()
+    val isSolid = glassStyle == "solid" || isUltraPerf
     val solidBgColor = if (isDarkMode) Color(0xFF242428) else Color(0xFFE8E8EC)
 
     var lastActiveMainTab by remember { mutableIntStateOf(0) }
@@ -259,11 +260,19 @@ fun LiquidBottomNavBar(
         }
     }
 
+    val glassSpringFloat = androidx.compose.animation.core.spring<Float>(dampingRatio = 0.72f, stiffness = 320f)
+    val glassSpringIntSize = androidx.compose.animation.core.spring<androidx.compose.ui.unit.IntSize>(dampingRatio = 0.72f, stiffness = 320f)
+
     SharedTransitionLayout(modifier = modifier.fillMaxWidth()) {
         AnimatedContent(
             targetState = visualState,
             transitionSpec = {
-                fadeIn(animationSpec = tween(180)) togetherWith fadeOut(animationSpec = tween(140))
+                (fadeIn(animationSpec = glassSpringFloat))
+                    .togetherWith(
+                        fadeOut(animationSpec = glassSpringFloat)
+                    ).using(
+                        androidx.compose.animation.SizeTransform(clip = false, sizeAnimationSpec = { _, _ -> glassSpringIntSize })
+                    )
             },
             contentAlignment = Alignment.BottomCenter,
             label = "navBarSharedMorphTransition"

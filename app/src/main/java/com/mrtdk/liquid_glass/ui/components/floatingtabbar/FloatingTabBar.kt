@@ -2,6 +2,8 @@
 
 package com.mrtdk.liquid_glass.ui.components.floatingtabbar
 
+import androidx.compose.ui.unit.Velocity
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.EnterExitState
@@ -230,43 +232,62 @@ class FloatingTabBarScrollConnection(
     initialIsInline: Boolean = false,
     private val scrollThresholdPx: Float,
     private val expandThresholdPx: Float = scrollThresholdPx,
-    private val inlineBehavior: FloatingTabBarInlineBehavior = FloatingTabBarInlineBehavior.OnScrollDown
+    private val inlineBehavior: FloatingTabBarInlineBehavior = FloatingTabBarInlineBehavior.OnScrollHideUntilIdle,
+    private val coroutineScope: kotlinx.coroutines.CoroutineScope? = null,
+    private val idleTimeoutMs: Long = 280L
 ) : NestedScrollConnection {
     var isInline by mutableStateOf(initialIsInline)
         private set
 
     private var accumulatedScroll = 0f
+    private var idleJob: kotlinx.coroutines.Job? = null
 
     fun expand() {
         isInline = false
         accumulatedScroll = 0f
+        idleJob?.cancel()
     }
 
     fun inline() {
         isInline = true
         accumulatedScroll = 0f
+        idleJob?.cancel()
     }
 
-    override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-        return Offset.Zero
-    }
+    private fun handleScrollDelta(delta: Float) {
+        if (inlineBehavior == FloatingTabBarInlineBehavior.Never) return
+        if (kotlin.math.abs(delta) < 0.5f) return
 
-    override fun onPostScroll(
-        consumed: Offset,
-        available: Offset,
-        source: NestedScrollSource
-    ): Offset {
-        if (inlineBehavior == FloatingTabBarInlineBehavior.Never) {
-            return Offset.Zero
+        if (inlineBehavior == FloatingTabBarInlineBehavior.OnScrollHideUntilIdle) {
+            if (delta < 0) {
+                // Scrolling down (navigating into content): always hide immediately
+                idleJob?.cancel()
+                accumulatedScroll += kotlin.math.abs(delta)
+                if (accumulatedScroll >= scrollThresholdPx) {
+                    isInline = true
+                    accumulatedScroll = 0f
+                }
+            } else if (delta > 0) {
+                // Scrolling up (navigating towards top): keep hidden while moving, reveal only after motion stops
+                accumulatedScroll = 0f
+                idleJob?.cancel()
+                if (isInline) {
+                    coroutineScope?.let { scope ->
+                        idleJob = scope.launch {
+                            kotlinx.coroutines.delay(idleTimeoutMs)
+                            isInline = false
+                        }
+                    }
+                }
+            }
+            return
         }
 
-        val scrollDelta = consumed.y + available.y
-
-        if ((accumulatedScroll > 0 && scrollDelta < 0) || (accumulatedScroll < 0 && scrollDelta > 0)) {
+        if ((accumulatedScroll > 0 && delta < 0) || (accumulatedScroll < 0 && delta > 0)) {
             accumulatedScroll = 0f
         }
 
-        accumulatedScroll += scrollDelta
+        accumulatedScroll += delta
 
         when (inlineBehavior) {
             FloatingTabBarInlineBehavior.OnScrollDown -> {
@@ -287,28 +308,66 @@ class FloatingTabBarScrollConnection(
                     accumulatedScroll = 0f
                 }
             }
-            FloatingTabBarInlineBehavior.Never -> {}
+            else -> {}
         }
+    }
 
+    override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+        if (source == NestedScrollSource.UserInput) {
+            handleScrollDelta(available.y)
+        }
         return Offset.Zero
+    }
+
+    override fun onPostScroll(
+        consumed: Offset,
+        available: Offset,
+        source: NestedScrollSource
+    ): Offset {
+        if (source == NestedScrollSource.UserInput) {
+            handleScrollDelta(consumed.y + available.y)
+        }
+        return Offset.Zero
+    }
+
+    override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+        if (inlineBehavior == FloatingTabBarInlineBehavior.OnScrollHideUntilIdle) {
+            if (consumed.y < 0f || available.y < 0f) {
+                idleJob?.cancel()
+                isInline = true
+            } else if (consumed.y > 0f || available.y > 0f) {
+                idleJob?.cancel()
+                coroutineScope?.let { scope ->
+                    idleJob = scope.launch {
+                        kotlinx.coroutines.delay(idleTimeoutMs)
+                        isInline = false
+                    }
+                }
+            }
+        }
+        return Velocity.Zero
     }
 }
 
 @Composable
 fun rememberFloatingTabBarScrollConnection(
     initialIsInline: Boolean = false,
-    scrollThreshold: Dp = 50.dp,
+    scrollThreshold: Dp = 18.dp,
     expandThreshold: Dp = 40.dp,
-    inlineBehavior: FloatingTabBarInlineBehavior = FloatingTabBarInlineBehavior.OnScrollDown
+    inlineBehavior: FloatingTabBarInlineBehavior = FloatingTabBarInlineBehavior.OnScrollHideUntilIdle,
+    idleTimeoutMs: Long = 320L
 ): FloatingTabBarScrollConnection = with(LocalDensity.current) {
     val scrollThresholdPx = scrollThreshold.toPx()
     val expandThresholdPx = expandThreshold.toPx()
-    remember(scrollThresholdPx, expandThresholdPx, inlineBehavior, initialIsInline) {
+    val scope = rememberCoroutineScope()
+    remember(scrollThresholdPx, expandThresholdPx, inlineBehavior, initialIsInline, scope) {
         FloatingTabBarScrollConnection(
-            initialIsInline,
-            scrollThresholdPx,
-            expandThresholdPx,
-            inlineBehavior,
+            initialIsInline = initialIsInline,
+            scrollThresholdPx = scrollThresholdPx,
+            expandThresholdPx = expandThresholdPx,
+            inlineBehavior = inlineBehavior,
+            coroutineScope = scope,
+            idleTimeoutMs = idleTimeoutMs
         )
     }
 }
@@ -316,7 +375,8 @@ fun rememberFloatingTabBarScrollConnection(
 enum class FloatingTabBarInlineBehavior {
     Never,
     OnScrollDown,
-    OnScrollUp
+    OnScrollUp,
+    OnScrollHideUntilIdle
 }
 
 interface FloatingTabBarScope {

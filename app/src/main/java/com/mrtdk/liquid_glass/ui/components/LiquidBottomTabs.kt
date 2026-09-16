@@ -74,7 +74,8 @@ fun LiquidBottomTabs(
     val isLightTheme = !isDarkMode
     val glassStyle = com.mrtdk.glass.LocalGlassStyle.current
     val isLightweight = com.mrtdk.glass.LocalLightweightGlass.current
-    val isSolid = glassStyle == "solid"
+    val isUltraPerf by com.mrtdk.liquid_glass.data.LibraryManager.ultraPerformanceMode.collectAsState()
+    val isSolid = glassStyle == "solid" || isUltraPerf
     val solidBgColor = if (isDarkMode) Color(0xFF242428) else Color(0xFFE8E8EC)
 
     // In Material 3 mode ("solid"): solid color and NO bubble effect

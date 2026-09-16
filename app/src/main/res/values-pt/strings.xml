@@ -603,6 +603,8 @@
     <string name="full_artwork_backdrop_style_apple_music">Apple Music (Desfoque original)</string>
     <string name="full_artwork_backdrop_style_accord">Gradiente suave (Linha básica)</string>
     <string name="estilo_solido_material3">Sólido (Material 3)</string>
+    <string name="ultra_performance_mode_title">Modo Ultra Desempenho (Linha Básica)</string>
+    <string name="ultra_performance_mode_desc">Otimiza o aplicativo para dispositivos modestos desativando desfoques pesados e efeitos de vidro líquido</string>
 
     <!-- Album Screen Strings -->
     <string name="soundtracks_category">Trilhas sonoras</string>

@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -130,6 +131,32 @@ fun MiniPlayer(
     val backdrop = LocalBackdrop.current
     val isCollapsing = collapseProgress > 0.001f && collapseProgress < 0.999f
     val isLightweight = com.mrtdk.glass.LocalLightweightGlass.current
+    val glassStyle = com.mrtdk.glass.LocalGlassStyle.current
+    val isSolid = glassStyle == "solid" || com.mrtdk.liquid_glass.data.LibraryManager.isUltraPerformanceMode()
+
+    val backdropModifier = if (isSolid) {
+        Modifier.background(
+            if (tintColor.isSpecified && tintColor.alpha > 0f) tintColor else Color(0xFF1E1E1E),
+            Capsule()
+        )
+    } else {
+        Modifier.drawBackdrop(
+            backdrop = backdrop,
+            shape = { Capsule() },
+            effects = {
+                if (!isCollapsing) {
+                    if (!isLightweight) {
+                        vibrancy()
+                        blur(8f.dp.toPx())
+                        lens(24f.dp.toPx(), 24f.dp.toPx())
+                    } else {
+                        blur(3f.dp.toPx())
+                    }
+                }
+            },
+            onDrawSurface = { drawRect(tintColor) }
+        )
+    }
 
     Box(
         modifier = modifier
@@ -140,22 +167,7 @@ fun MiniPlayer(
                 scaleX = landingScale.value
                 scaleY = landingScale.value
             }
-            .drawBackdrop(
-                backdrop = backdrop,
-                shape = { Capsule() },
-                effects = {
-                    if (!isCollapsing) {
-                        if (!isLightweight) {
-                            vibrancy()
-                            blur(8f.dp.toPx())
-                            lens(24f.dp.toPx(), 24f.dp.toPx())
-                        } else {
-                            blur(3f.dp.toPx())
-                        }
-                    }
-                },
-                onDrawSurface = { drawRect(tintColor) }
-            )
+            .then(backdropModifier)
             .clip(Capsule())
             .clickable { onClick() }
             .pointerInput(Unit) {

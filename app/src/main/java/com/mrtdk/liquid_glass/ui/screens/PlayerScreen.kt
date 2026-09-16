@@ -1473,7 +1473,15 @@ fun PlayerScreen(
 
 
 
+        val livePosition by if (musicPlayer != null) {
+            musicPlayer.currentPosition.collectAsState()
+        } else {
+            androidx.compose.runtime.remember(currentPosition) { androidx.compose.runtime.mutableLongStateOf(currentPosition) }
+        }
+        val effectivePosition = if (musicPlayer != null) livePosition else currentPosition
+
         var lyricsLines by remember { mutableStateOf<List<com.mocharealm.accompanist.lyrics.core.model.ISyncedLine>?>(null) }
+        var bitChordLyrics by remember { mutableStateOf<List<com.mrtdk.liquid_glass.data.lyrics.LyricLine>?>(null) }
         var isLyricsLoading by remember { mutableStateOf(false) }
         var isLyricsNotFound by remember { mutableStateOf(false) }
 
@@ -1502,151 +1510,38 @@ fun PlayerScreen(
             isAutoScrollEnabled = true
         }
 
-        LaunchedEffect(playerState?.title, playerState?.artist, selectedLyricsProvider, isRomajiEnabled, lyricsReloadTrigger) {
+        LaunchedEffect(playerState?.title, playerState?.artist, selectedLyricsProvider, lyricsReloadTrigger) {
             val videoId = playerState?.videoId ?: ""
             val songTitle = playerState?.title
             val songArtist = playerState?.artist
 
             if (playerState != null && songTitle != null && songArtist != null) {
-                // 1. Instant Cache Display (0ms, sin esperar a la red si ya está en memoria)
-                val cachedResult = com.mrtdk.liquid_glass.utils.LyricsProvider.getCachedLyrics(songArtist, songTitle)
-                if (lyricsReloadTrigger == 0 && cachedResult != null && cachedResult.lyrics != null && (selectedLyricsProvider.isEmpty() || selectedLyricsProvider == "Auto")) {
-                    currentLyricsProviderName = cachedResult.providerName
-                    currentLyricsSyncType = cachedResult.syncType
-                    val processed = if (isRomajiEnabled) {
-                        val prefs = com.mrtdk.liquid_glass.utils.LyricsRomanizationPreferences(true, true, true, true, true)
-                        com.mrtdk.liquid_glass.utils.LyricsUtils.romanizeSyncedLyrics(cachedResult.lyrics, prefs)
-                    } else {
-                        cachedResult.lyrics
-                    }
-                    lyricsLines = processed?.lines
-                    isLyricsLoading = false
-                    isLyricsNotFound = false
-                } else {
-                    lyricsLines = null
-                    isLyricsLoading = true
-                    isLyricsNotFound = false
-                    if (lyricsReloadTrigger != 0) {
-                        currentLyricsProviderName = ""
-                        currentLyricsSyncType = "line"
-                    }
-                }
+                bitChordLyrics = null
+                lyricsLines = null
+                isLyricsLoading = true
+                isLyricsNotFound = false
 
-                launch {
-                    val customLyricsKey = "custom_lyrics_$videoId"
-                    val customLyricsText = com.mrtdk.liquid_glass.data.LibraryManager.getString(customLyricsKey)
-                    val durSec = (duration / 1000).toInt()
-
-                    if (!customLyricsText.isNullOrBlank()) {
-                        val parsed = com.mrtdk.liquid_glass.utils.LyricsProvider.parseSyncedLyrics(customLyricsText)
-                        if (parsed != null) {
-                            val customRes = com.mrtdk.liquid_glass.utils.LyricsFetchResult(parsed, "Personalizado", "line")
-                            availableLyricsProviders = listOf(customRes)
-                            currentLyricsProviderIndex = 0
-                            lyricsLines = parsed.lines
-                            currentLyricsProviderName = "Personalizado"
-                            currentLyricsSyncType = "line"
+                launch(kotlinx.coroutines.Dispatchers.IO) {
+                    val durMs = if (duration > 0) duration else (playerState.duration ?: 0L)
+                    val result = com.mrtdk.liquid_glass.data.lyrics.LyricsRepository.lyrics(
+                        videoId = videoId,
+                        title = songTitle,
+                        artist = songArtist,
+                        durationMs = durMs,
+                        album = playerState.album,
+                        prioritizeSyllableSync = true
+                    )
+                    withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        if (result != null && result.lines.isNotEmpty()) {
+                            bitChordLyrics = result.lines
+                            lyricsLines = result.lines.map { com.mocharealm.accompanist.lyrics.core.model.synced.SyncedLine(it.text, null, it.timeMs.toInt(), (it.timeMs + 5000L).toInt()) }
+                            currentLyricsProviderName = result.source.name
+                            currentLyricsSyncType = if (result.lines.any { it.isWordSynced }) "syllable" else "line"
                             isLyricsLoading = false
                             isLyricsNotFound = false
-                            return@launch
-                        }
-                    }
-
-                    // 2. Carga automática ultrarrápida paralela con visualización instantánea (BetterLyrics / Unison / LRCLIB)
-                    if (lyricsLines == null || selectedLyricsProvider == "Auto" || selectedLyricsProvider.isEmpty()) {
-                        val autoResult = com.mrtdk.liquid_glass.utils.LyricsProvider.fetchAutoLyrics(
-                            videoId, songTitle, songArtist, durSec, playerState.album
-                        ) { firstRes ->
-                            if (lyricsLines == null && firstRes.lyrics != null) {
-                                val lines = firstRes.lyrics
-                                val processedLines = if (isRomajiEnabled) {
-                                    val prefs = com.mrtdk.liquid_glass.utils.LyricsRomanizationPreferences(true, true, true, true, true)
-                                    com.mrtdk.liquid_glass.utils.LyricsUtils.romanizeSyncedLyrics(lines, prefs)
-                                } else {
-                                    lines
-                                }
-                                lyricsLines = processedLines.lines
-                                currentLyricsProviderName = firstRes.providerName
-                                currentLyricsSyncType = firstRes.syncType
-                                isLyricsLoading = false
-                                isLyricsNotFound = false
-                            }
-                        }
-                        if (autoResult?.lyrics != null && lyricsLines == null) {
-                            val lines = autoResult.lyrics
-                            val processedLines = if (isRomajiEnabled) {
-                                val prefs = com.mrtdk.liquid_glass.utils.LyricsRomanizationPreferences(true, true, true, true, true)
-                                com.mrtdk.liquid_glass.utils.LyricsUtils.romanizeSyncedLyrics(lines, prefs)
-                            } else {
-                                lines
-                            }
-                            lyricsLines = processedLines.lines
-                            currentLyricsProviderName = autoResult.providerName
-                            currentLyricsSyncType = autoResult.syncType
-                            isLyricsLoading = false
-                            isLyricsNotFound = false
-                        }
-                    }
-
-                    // 3. Población concurrente y progresiva de todos los distribuidores disponibles para el menú flotante
-                    try {
-                        val allProviders = com.mrtdk.liquid_glass.utils.LyricsProvider.fetchAllAvailableProviders(
-                            videoId,
-                            songTitle,
-                            songArtist,
-                            durSec,
-                            playerState.album
-                        ) { newProv ->
-                            val current = availableLyricsProviders.toMutableList()
-                            val exists = current.any { it.providerName.equals(newProv.providerName, ignoreCase = true) && it.syncType == newProv.syncType }
-                            if (!exists) {
-                                current.add(newProv)
-                                availableLyricsProviders = current
-                                if (currentLyricsProviderName.isEmpty()) {
-                                    currentLyricsProviderName = newProv.providerName
-                                    currentLyricsSyncType = newProv.syncType
-                                    currentLyricsProviderIndex = 0
-                                    if (lyricsLines == null && newProv.lyrics != null) {
-                                        lyricsLines = newProv.lyrics.lines
-                                        isLyricsLoading = false
-                                        isLyricsNotFound = false
-                                    }
-                                }
-                            }
-                        }
-
-                        if (allProviders.isNotEmpty()) {
-                            availableLyricsProviders = allProviders
-                            val targetIndex = if (selectedLyricsProvider.isNotEmpty() && selectedLyricsProvider != "Auto") {
-                                allProviders.indexOfFirst { it.providerName.equals(selectedLyricsProvider, ignoreCase = true) }.coerceAtLeast(0)
-                            } else {
-                                val foundIdx = allProviders.indexOfFirst { it.providerName.equals(currentLyricsProviderName, ignoreCase = true) }
-                                if (foundIdx >= 0) foundIdx else 0
-                            }
-                            currentLyricsProviderIndex = targetIndex
-                            val activeResult = allProviders[targetIndex]
-                            currentLyricsProviderName = activeResult.providerName
-                            currentLyricsSyncType = activeResult.syncType
-
-                            if (lyricsLines == null || (selectedLyricsProvider.isNotEmpty() && selectedLyricsProvider != "Auto")) {
-                                val lines = activeResult.lyrics
-                                val processedLines = if (isRomajiEnabled && lines != null) {
-                                    val prefs = com.mrtdk.liquid_glass.utils.LyricsRomanizationPreferences(true, true, true, true, true)
-                                    com.mrtdk.liquid_glass.utils.LyricsUtils.romanizeSyncedLyrics(lines, prefs)
-                                } else {
-                                    lines
-                                }
-                                lyricsLines = processedLines?.lines
-                                isLyricsLoading = false
-                                isLyricsNotFound = false
-                            }
-                        } else if (lyricsLines == null) {
-                            isLyricsLoading = false
-                            isLyricsNotFound = true
-                        }
-                    } catch (e: Throwable) {
-                        android.util.Log.e("PlayerScreen", "Error loading lyrics providers", e)
-                        if (lyricsLines == null) {
+                        } else {
+                            bitChordLyrics = emptyList()
+                            lyricsLines = emptyList()
                             isLyricsLoading = false
                             isLyricsNotFound = true
                         }
@@ -1716,13 +1611,16 @@ fun PlayerScreen(
         var reflectionSkew by remember { mutableStateOf(0.12f) }
         var masterAnimatedPlayer by remember { mutableStateOf<androidx.media3.exoplayer.ExoPlayer?>(null) }
         val fullArtworkBackdropStyle by LibraryManager.fullArtworkBackdropStyle.collectAsState()
+        val isUltraPerformance by LibraryManager.ultraPerformanceMode.collectAsState()
 
         LaunchedEffect(playerState?.artist, playerState?.title, playerState?.album) {
             val artist = playerState?.artist
             val title = playerState?.title
             val album = playerState?.album
             isVideoPlaying = false
-            coverBitmap = null
+            if (!isUltraPerformance) {
+                coverBitmap = null
+            }
             accordBackdropBitmap = null
             hasGeneratedMotionBackdrop = false
             frameToken++
@@ -1750,7 +1648,9 @@ fun PlayerScreen(
 
 
         LaunchedEffect(hdArtUrl, playerState?.title, playerState?.artist) {
-            coverBitmap = null
+            if (!isUltraPerformance) {
+                coverBitmap = null
+            }
             accordBackdropBitmap = null
             frameToken++
             reflectionSkew = 0.12f
@@ -1956,7 +1856,7 @@ fun PlayerScreen(
 
                         .onGloballyPositioned { parentCoordinates = it }
 
-                        .layerBackdrop(localBackdrop)
+                        .let { if (!isUltraPerformance) it.layerBackdrop(localBackdrop) else it }
 
                 ) {
 
@@ -1991,6 +1891,8 @@ fun PlayerScreen(
                     volumePosition = volumePosition,
                     coverBitmap = coverBitmap,
                     hdArtUrl = hdArtUrl,
+                    bitChordLyrics = bitChordLyrics,
+                    isLyricsLoading = isLyricsLoading,
                     lyricsLines = lyricsLines,
                     isRomajiEnabled = isRomajiEnabled,
                     isSaved = isSaved,
@@ -2151,8 +2053,8 @@ fun PlayerScreen(
             val screenWidthPx = with(density) { maxWidth.roundToPx() }
             val screenHeightPx = with(density) { maxHeight.roundToPx() }
 
-            LaunchedEffect(hdArtUrl, playerState?.artUrl, playerState?.title, playerState?.artist, fullArtworkBackdropStyle, screenWidthPx, screenHeightPx, animatedArtworkUrl) {
-                if (fullArtworkBackdropStyle == "accord" && screenWidthPx > 0 && screenHeightPx > 0) {
+            LaunchedEffect(hdArtUrl, playerState?.artUrl, playerState?.title, playerState?.artist, fullArtworkBackdropStyle, screenWidthPx, screenHeightPx, animatedArtworkUrl, isUltraPerformance) {
+                if (!isUltraPerformance && fullArtworkBackdropStyle == "accord" && screenWidthPx > 0 && screenHeightPx > 0) {
                     val artModel = hdArtUrl ?: playerState?.artUrl
                     if (artModel != null) {
                         withContext(Dispatchers.IO) {
@@ -2456,8 +2358,22 @@ fun PlayerScreen(
                     }
             ) {
 
-            // Capa Fondo Accord 2.0 (Lienzo completo de pantalla con carátula en el 70% superior y difusión suave inferior)
-            if (fullArtworkBackdropStyle == "accord" && !isNormalArtwork) {
+            // Capa Fondo Ultra Rendimiento (Gradiente nativo por hardware directo, 0ms CPU / 0ms GPU)
+            if (isUltraPerformance && !isNormalArtwork) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    dominantColor.copy(alpha = 0.82f),
+                                    dominantColor.copy(alpha = 0.45f),
+                                    Color.Black
+                                )
+                            )
+                        )
+                )
+            } else if (fullArtworkBackdropStyle == "accord" && !isNormalArtwork) {
                 val accordBmp = accordBackdropBitmap
                 val backdropAlpha by animateFloatAsState(
                     targetValue = if (accordBmp != null) 1f else 0f,
@@ -2499,9 +2415,9 @@ fun PlayerScreen(
                 }
             }
 
-            // Capa 4: Reflejo invertido estilo Apple Music (solo para fullartwork y cuando NO es modo Accord)
+            // Capa 4: Reflejo invertido estilo Apple Music (solo para fullartwork y cuando NO es modo Accord NI Ultra Rendimiento)
             val mirrorArtModel = hdArtUrl ?: playerState?.artUrl
-            if (!isNormalArtwork && (coverBitmap != null || mirrorArtModel != null) && dragProgress < 1f && !showLyrics && !showQueue && fullArtworkBackdropStyle != "accord") {
+            if (!isUltraPerformance && !isNormalArtwork && (coverBitmap != null || mirrorArtModel != null) && dragProgress < 1f && !showLyrics && !showQueue && fullArtworkBackdropStyle != "accord") {
                 val reflectionWidth = maxWidth
                 val reflectionX = 0.dp
                 val childWidth = expandedWidth
@@ -2599,13 +2515,26 @@ fun PlayerScreen(
                      val fluidSecondary = if (isNormalArtwork) normalMidColor else secCol
                      val fluidAccent = if (isNormalArtwork) normalBottomColor else bottomAverageColor
 
-                     if (fullArtworkBackdropStyle != "accord") {
+                     if (!isUltraPerformance && fullArtworkBackdropStyle != "accord") {
                          com.mrtdk.liquid_glass.ui.components.RayMusicFluidBackground(
                              primaryColor = fluidPrimary,
                              secondaryColor = fluidSecondary,
                              accentColor = fluidAccent,
                              isPlaying = isPlaying,
                              modifier = Modifier.fillMaxSize()
+                         )
+                     } else if (isUltraPerformance) {
+                         Box(
+                             modifier = Modifier
+                                 .fillMaxSize()
+                                 .background(
+                                     Brush.verticalGradient(
+                                         listOf(
+                                             fluidPrimary.copy(alpha = 0.85f),
+                                             Color.Black
+                                         )
+                                     )
+                                 )
                          )
                      }
                  }
@@ -3198,44 +3127,38 @@ fun PlayerScreen(
                                           }
                                       }
                               ) {
-                                  val currentLyricsLines = lyricsLines
+                                  val currentLyrics = bitChordLyrics
 
-                                  if (currentLyricsLines != null && currentLyricsLines.isNotEmpty()) {
-                                       val lyricsTextSize = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_text_size", "28")?.toFloatOrNull() ?: 28f
-                                       val lyricsLineSpacing = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_line_spacing", "1.35")?.toFloatOrNull() ?: 1.35f
-                                       val lyricsGlowEffect = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_glow_effect", "true") != "false"
-                                       val lyricsTextPosition = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_text_position", "left") ?: "left"
-                                       val lyricsClickChange = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_click_change", "true") == "true"
-                                       val lyricsAutoScroll = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_auto_scroll", "true") == "true"
-
-                                       IsolatedLyricsContent(
-                                           musicPlayer = musicPlayer,
-                                           fallbackPosition = currentPosition,
-                                           lyricsLines = currentLyricsLines,
-                                           lyricsOffset = lyricsOffset.toLong(),
-                                           isAutoScrollEnabled = isAutoScrollEnabled,
-                                           onAutoScrollChange = { isAutoScrollEnabled = it },
-                                           scrollToCurrentTrigger = scrollToCurrentTrigger,
-                                           lyricsTextSize = lyricsTextSize,
-                                           lyricsLineSpacing = lyricsLineSpacing,
-                                           lyricsGlowEffect = lyricsGlowEffect,
-                                           lyricsTextPosition = lyricsTextPosition,
-                                           lyricsClickChange = lyricsClickChange,
-                                           lyricsAutoScroll = lyricsAutoScroll,
-                                           contentColor = contentColor,
-                                           currentLyricsProviderName = currentLyricsProviderName,
-                                           currentLyricsSyncType = currentLyricsSyncType,
-                                           onSeek = { seekPos ->
-                                               onSeek(seekPos)
-                                               showLyricsControls = true
-                                               lyricsControlsHideTrigger++
-                                           },
-                                           onShowLyricsMenu = { openDirectlyInProvidersView = false; showLyricsOptionsMenu = true },
-                                           onShowDistributorsMenu = { openDirectlyInProvidersView = true; showLyricsOptionsMenu = true },
-                                           lyricsListState = lyricsListState,
-                                           modifier = Modifier.fillMaxSize()
-                                       )
-                                   } else {
+                                  if (currentLyrics != null && currentLyrics.isNotEmpty()) {
+                                      com.mrtdk.liquid_glass.ui.lyrics.BitChordLyricsView(
+                                          lines = currentLyrics,
+                                          positionMs = (effectivePosition + lyricsOffset).coerceAtLeast(0L),
+                                          isPlaying = isPlaying,
+                                          looking = isLyricsLoading,
+                                          onSeekToLine = { seekPos ->
+                                              onSeek(seekPos)
+                                              showLyricsControls = true
+                                              lyricsControlsHideTrigger++
+                                          },
+                                          controlsOpen = showLyricsControls,
+                                          onRevealControls = {
+                                              showLyricsControls = true
+                                              lyricsControlsHideTrigger++
+                                          },
+                                          onHideControls = {
+                                              showLyricsControls = false
+                                          },
+                                          modifier = Modifier.fillMaxSize()
+                                      )
+                                  } else if (isLyricsLoading) {
+                                      com.mrtdk.liquid_glass.ui.lyrics.BitChordLyricsView(
+                                          lines = emptyList(),
+                                          positionMs = effectivePosition,
+                                          isPlaying = isPlaying,
+                                          looking = true,
+                                          modifier = Modifier.fillMaxSize()
+                                      )
+                                  } else {
                                       Box(
                                           modifier = Modifier
                                               .fillMaxSize()
@@ -4672,11 +4595,13 @@ fun PlayerScreen(
                         currentLyricsSyncType = activeResult.syncType
                         val lines = activeResult.lyrics
                         lyricsLines = lines?.lines
+                        bitChordLyrics = lines?.lines?.map { com.mrtdk.liquid_glass.data.lyrics.LyricLine(it.timeMs, it.text) }
                         if (isRomajiEnabled && lines != null) {
                             lyricsMenuScope.launch {
                                 val prefs = com.mrtdk.liquid_glass.utils.LyricsRomanizationPreferences(true, true, true, true, true)
                                 val processed = com.mrtdk.liquid_glass.utils.LyricsUtils.romanizeSyncedLyrics(lines, prefs)
                                 lyricsLines = processed.lines
+                                bitChordLyrics = processed.lines.map { com.mrtdk.liquid_glass.data.lyrics.LyricLine(it.timeMs, it.text) }
                             }
                         }
                     }
@@ -4900,60 +4825,6 @@ private fun IsolatedPlayerSeekbar(
     }
 }
 
-@Composable
-private fun IsolatedLyricsContent(
-    musicPlayer: com.mrtdk.liquid_glass.playback.MusicPlayer?,
-    fallbackPosition: Long,
-    lyricsLines: List<ISyncedLine>,
-    lyricsOffset: Long,
-    isAutoScrollEnabled: Boolean,
-    onAutoScrollChange: (Boolean) -> Unit,
-    scrollToCurrentTrigger: Int,
-    lyricsTextSize: Float,
-    lyricsLineSpacing: Float,
-    lyricsGlowEffect: Boolean,
-    lyricsTextPosition: String,
-    lyricsClickChange: Boolean,
-    lyricsAutoScroll: Boolean,
-    contentColor: Color,
-    currentLyricsProviderName: String,
-    currentLyricsSyncType: String,
-    onSeek: (Long) -> Unit,
-    onShowLyricsMenu: () -> Unit,
-    onShowDistributorsMenu: () -> Unit,
-    lyricsListState: androidx.compose.foundation.lazy.LazyListState,
-    modifier: Modifier = Modifier
-) {
-    val livePosition by if (musicPlayer != null) {
-        musicPlayer.currentPosition.collectAsState()
-    } else {
-        androidx.compose.runtime.remember { androidx.compose.runtime.mutableLongStateOf(fallbackPosition) }
-    }
-    val effectivePos = if (musicPlayer != null) livePosition else fallbackPosition
-
-    com.mrtdk.liquid_glass.ui.lyrics.RayMusicFlowLyrics(
-        lyricsLines = lyricsLines,
-        currentPosition = effectivePos,
-        lyricsOffset = lyricsOffset,
-        isAutoScrollEnabled = isAutoScrollEnabled,
-        onAutoScrollChange = onAutoScrollChange,
-        scrollToCurrentTrigger = scrollToCurrentTrigger,
-        lyricsTextSize = lyricsTextSize,
-        lyricsLineSpacing = lyricsLineSpacing,
-        lyricsGlowEffect = lyricsGlowEffect,
-        lyricsTextPosition = lyricsTextPosition,
-        lyricsClickChange = lyricsClickChange,
-        lyricsAutoScroll = lyricsAutoScroll,
-        contentColor = contentColor,
-        currentLyricsProviderName = currentLyricsProviderName,
-        currentLyricsSyncType = currentLyricsSyncType,
-        onSeek = onSeek,
-        onShowLyricsMenu = onShowLyricsMenu,
-        onShowDistributorsMenu = onShowDistributorsMenu,
-        lyricsListState = lyricsListState,
-        modifier = modifier
-    )
-}
 
 @Composable
 fun PlayerBottomControls(
@@ -5568,7 +5439,9 @@ fun LandscapePlayerLayout(
     volumePosition: Float,
     coverBitmap: ImageBitmap?,
     hdArtUrl: Any?,
-    lyricsLines: List<com.mocharealm.accompanist.lyrics.core.model.ISyncedLine>?,
+    bitChordLyrics: List<com.mrtdk.liquid_glass.data.lyrics.LyricLine>? = null,
+    isLyricsLoading: Boolean = false,
+    lyricsLines: List<com.mocharealm.accompanist.lyrics.core.model.ISyncedLine>? = null,
     isRomajiEnabled: Boolean,
     isSaved: Boolean,
     animatedArtworkUrl: String?,
@@ -6320,12 +6193,11 @@ fun LandscapePlayerLayout(
                 Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                     if (showLyrics) {
                         LandscapeLyricsView(
-                            lyricsLines = lyricsLines,
+                            lyrics = bitChordLyrics,
+                            isLoading = isLyricsLoading,
+                            isPlaying = isPlaying,
                             currentPosition = currentPosition,
                             lyricsOffset = lyricsOffset,
-                            isAutoScrollEnabled = isAutoScrollEnabled,
-                            onAutoScrollChange = onAutoScrollChange,
-                            scrollToCurrentTrigger = scrollToCurrentTrigger,
                             contentColor = contentColor,
                             onSeek = onSeek
                         )
@@ -6490,42 +6362,39 @@ fun LandscapePlayerLayout(
 
 @Composable
 private fun LandscapeLyricsView(
-    lyricsLines: List<com.mocharealm.accompanist.lyrics.core.model.ISyncedLine>?,
+    lyrics: List<com.mrtdk.liquid_glass.data.lyrics.LyricLine>?,
+    isLoading: Boolean,
+    isPlaying: Boolean,
     currentPosition: Long,
     lyricsOffset: Int,
-    isAutoScrollEnabled: Boolean,
-    onAutoScrollChange: (Boolean) -> Unit,
-    scrollToCurrentTrigger: Int,
     contentColor: Color,
     onSeek: (Long) -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
-        val lyricsListState = rememberLazyListState()
-        val currentLyricsLines = lyricsLines
-        if (currentLyricsLines != null && currentLyricsLines.isNotEmpty()) {
-            val lyricsTextSize = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_text_size", "24")?.toFloatOrNull() ?: 24f
-            val lyricsLineSpacing = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_line_spacing", "1.35")?.toFloatOrNull() ?: 1.35f
-            val lyricsGlowEffect = com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_glow_effect", "true") != "false"
-
-            com.mrtdk.liquid_glass.ui.lyrics.RayMusicFlowLyrics(
-                lyricsLines = currentLyricsLines,
-                currentPosition = currentPosition,
-                lyricsOffset = lyricsOffset.toLong(),
-                isAutoScrollEnabled = isAutoScrollEnabled,
-                onAutoScrollChange = onAutoScrollChange,
-                scrollToCurrentTrigger = scrollToCurrentTrigger,
-                lyricsTextSize = lyricsTextSize,
-                lyricsLineSpacing = lyricsLineSpacing,
-                lyricsGlowEffect = lyricsGlowEffect,
-                lyricsTextPosition = "left",
-                contentColor = contentColor,
-                onSeek = onSeek,
-                lyricsListState = lyricsListState,
+        val currentLyrics = lyrics
+        if (currentLyrics != null && currentLyrics.isNotEmpty()) {
+            com.mrtdk.liquid_glass.ui.lyrics.BitChordLyricsView(
+                lines = currentLyrics,
+                positionMs = (currentPosition + lyricsOffset).coerceAtLeast(0L),
+                isPlaying = isPlaying,
+                looking = isLoading,
+                onSeekToLine = onSeek,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else if (isLoading) {
+            com.mrtdk.liquid_glass.ui.lyrics.BitChordLyricsView(
+                lines = emptyList(),
+                positionMs = currentPosition,
+                isPlaying = isPlaying,
+                looking = true,
                 modifier = Modifier.fillMaxSize()
             )
         } else {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = contentColor)
+                Text(
+                    text = "No se encontraron letras",
+                    color = contentColor.copy(alpha = 0.6f)
+                )
             }
         }
     }

@@ -103,12 +103,21 @@ class CustomReflectionView @JvmOverloads constructor(
         }
     }
 
+    private var meshWidth = 8
+    private var meshHeight = 8
+
     /**
      * Hardware-accelerated blur effect for Android 12+ adapted to device performance tier.
      */
     private fun setupBlurEffect() {
+        val perfConfig = com.mrtdk.liquid_glass.utils.PerformanceProfileManager.getConfig()
+        meshWidth = perfConfig.reflectionMeshSize
+        meshHeight = perfConfig.reflectionMeshSize
+        val neededSize = (meshWidth + 1) * (meshHeight + 1) * 2
+        if (vertices.size != neededSize) {
+            vertices = FloatArray(neededSize)
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val perfConfig = com.mrtdk.liquid_glass.utils.PerformanceProfileManager.getConfig()
             val blurRadius = perfConfig.reflectionBlurRadius
             val blurEffect = RenderEffect.createBlurEffect(
                 blurRadius,
@@ -132,11 +141,7 @@ class CustomReflectionView @JvmOverloads constructor(
         val saveCount = canvas.saveLayer(0f, 0f, w, h, null)
 
         // 2. Generate liquid mesh grid vertices with pre-allocated zero-allocation buffer
-        val perfConfig = com.mrtdk.liquid_glass.utils.PerformanceProfileManager.getConfig()
-        val meshWidth = perfConfig.reflectionMeshSize
-        val meshHeight = perfConfig.reflectionMeshSize
-        val count = (meshWidth + 1) * (meshHeight + 1)
-        val neededSize = count * 2
+        val neededSize = (meshWidth + 1) * (meshHeight + 1) * 2
         if (vertices.size != neededSize) {
             vertices = FloatArray(neededSize)
         }

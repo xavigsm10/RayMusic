@@ -1,7 +1,9 @@
 package com.mrtdk.liquid_glass.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -38,10 +40,10 @@ fun LiquidButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     backdrop: Backdrop = LocalBackdrop.current,
-    isInteractive: Boolean = true,
     tint: Color = Color.Unspecified,
     surfaceColor: Color = Color.Unspecified,
-    contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp),
+    contentPadding: PaddingValues = PaddingValues(16f.dp, 0f.dp),
+    isInteractive: Boolean = true,
     content: @Composable RowScope.() -> Unit
 ) {
     val animationScope = rememberCoroutineScope()
@@ -53,8 +55,21 @@ fun LiquidButton(
     }
 
     val isLightweight = com.mrtdk.glass.LocalLightweightGlass.current
+    val glassStyle = com.mrtdk.glass.LocalGlassStyle.current
+    val isSolid = glassStyle == "solid" || com.mrtdk.liquid_glass.data.LibraryManager.isUltraPerformanceMode()
 
-    Row(
+    val baseModifier = if (isSolid) {
+        modifier
+            .background(
+                when {
+                    surfaceColor.isSpecified -> surfaceColor
+                    tint.isSpecified -> tint.copy(alpha = 0.35f)
+                    else -> Color.White.copy(alpha = 0.12f)
+                },
+                Capsule()
+            )
+            .clip(Capsule())
+    } else {
         modifier
             .drawBackdrop(
                 backdrop = backdrop,
@@ -106,6 +121,10 @@ fun LiquidButton(
                     }
                 }
             )
+    }
+
+    Row(
+        baseModifier
             .clickable(
                 interactionSource = null,
                 indication = if (isInteractive) null else LocalIndication.current,

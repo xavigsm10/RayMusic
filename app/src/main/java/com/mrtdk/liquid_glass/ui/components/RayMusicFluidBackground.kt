@@ -10,7 +10,11 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -193,12 +197,23 @@ fun RayMusicFluidBackground(
             )
         }
 
-        // Capa 2: Malla de cintas sinuosas fluidas (Domain Warping) con desenfoque profundo original
-        Canvas(
-            modifier = Modifier
-                .fillMaxSize()
-                .blur(64.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
-        ) {
+        // Capa 2: Malla de cintas sinuosas fluidas (Domain Warping) con submuestreo adaptativo y desenfoque profundo
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val scale = perfConfig.fluidScale.coerceIn(0.30f, 0.75f)
+            val subWidth = maxWidth * scale
+            val subHeight = maxHeight * scale
+            val blurRadius = perfConfig.fluidBlurDp.dp
+
+            Canvas(
+                modifier = Modifier
+                    .requiredSize(subWidth, subHeight)
+                    .graphicsLayer {
+                        scaleX = 1f / scale
+                        scaleY = 1f / scale
+                        transformOrigin = TransformOrigin(0f, 0f)
+                    }
+                    .blur(blurRadius, edgeTreatment = BlurredEdgeTreatment.Unbounded)
+            ) {
             val w = size.width
             val h = size.height
             if (w <= 0f || h <= 0f) return@Canvas
@@ -312,6 +327,7 @@ fun RayMusicFluidBackground(
                 radius = w * 0.60f * pulseFactor
             )
         }
+    }
 
         // Capa 3: Viñeta de contraste sutil superior e inferior
         Canvas(modifier = Modifier.fillMaxSize()) {

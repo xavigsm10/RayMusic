@@ -603,6 +603,8 @@
     <string name="full_artwork_backdrop_style_apple_music">Apple Music (Original blur)</string>
     <string name="full_artwork_backdrop_style_accord">Smooth fade (Low-end)</string>
     <string name="estilo_solido_material3">Solid (Material 3)</string>
+    <string name="ultra_performance_mode_title">Ultra Performance Mode (Low-End)</string>
+    <string name="ultra_performance_mode_desc">Optimizes the app for modest devices by disabling heavy blurs and liquid glass backdrops</string>
 
     <!-- Album Screen Strings -->
     <string name="soundtracks_category">Soundtracks</string>

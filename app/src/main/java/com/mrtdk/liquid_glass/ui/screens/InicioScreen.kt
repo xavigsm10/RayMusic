@@ -266,14 +266,18 @@ fun InicioScreen(
                         if (quickPicksTemp.isNotEmpty()) state.quickPickSongs = quickPicksTemp
                         if (playlistList.isNotEmpty()) state.featuredPlaylists = playlistList.distinctBy { it.id }
                         state.isLoaded = true
+                    }
 
-                        // Cache the loaded data
-                        if (state.featuredSuggestions.isNotEmpty()) LibraryManager.saveString("cache_featured_suggestions", serializeYTItemList(state.featuredSuggestions))
-                        if (state.quickPickSongs.isNotEmpty()) LibraryManager.saveString("cache_quick_picks", serializeYTItemList(state.quickPickSongs))
-                        if (state.seleccionesParaTi.isNotEmpty()) LibraryManager.saveString("cache_selecciones", serializeYTItemList(state.seleccionesParaTi))
-                        if (state.featuredPlaylists.isNotEmpty()) LibraryManager.saveString("cache_playlists", serializeYTItemList(state.featuredPlaylists))
-                        if (state.similarSections.isNotEmpty()) LibraryManager.saveString("cache_similar_sections", serializeSimilarSections(state.similarSections))
-                        if (!state.seleccionesTitle.isNullOrBlank()) LibraryManager.saveString("cache_selecciones_title", state.seleccionesTitle)
+                    // Cache the loaded data in background thread
+                    try {
+                        if (suggestionsList.isNotEmpty()) LibraryManager.saveString("cache_featured_suggestions", serializeYTItemList(suggestionsList))
+                        if (quickPicksTemp.isNotEmpty()) LibraryManager.saveString("cache_quick_picks", serializeYTItemList(quickPicksTemp))
+                        if (seleccionesListTemp.isNotEmpty()) LibraryManager.saveString("cache_selecciones", serializeYTItemList(seleccionesListTemp))
+                        if (playlistList.isNotEmpty()) LibraryManager.saveString("cache_playlists", serializeYTItemList(playlistList.distinctBy { it.id }))
+                        if (similarList.isNotEmpty()) LibraryManager.saveString("cache_similar_sections", serializeSimilarSections(similarList.take(2)))
+                        if (!seleccionesTitleTemp.isNullOrBlank()) LibraryManager.saveString("cache_selecciones_title", seleccionesTitleTemp)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                     }
                 } else {
                     withContext(Dispatchers.Main) {
@@ -2557,7 +2561,8 @@ private fun FeaturedSuggestionCard(
     ) {
         // Capa 1: Reflejo Líquido Estirado 1D
         val currentCoverBitmap = coverBitmap
-        if (currentCoverBitmap != null) {
+        val isUltraPerf = LibraryManager.isUltraPerformanceMode()
+        if (currentCoverBitmap != null && !isUltraPerf) {
             val overlapDp = 20.dp
             Box(
                 modifier = Modifier

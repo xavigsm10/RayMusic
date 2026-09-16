@@ -135,6 +135,7 @@ fun MainSettingsMenu(
     val currentArtworkStyle by LibraryManager.playerArtworkStyle.collectAsState()
     var showBackdropStyleDialog by remember { mutableStateOf(false) }
     val currentBackdropStyle by LibraryManager.fullArtworkBackdropStyle.collectAsState()
+    val isUltraPerformance by LibraryManager.ultraPerformanceMode.collectAsState()
 
     val isDarkMode by com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState()
     var showThemeDialog by remember { mutableStateOf(false) }
@@ -229,6 +230,23 @@ fun MainSettingsMenu(
                             Text(currentBackdropName)
                         },
                         onClick = { showBackdropStyleDialog = true }
+                    ),
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.Bolt),
+                        title = { Text(stringResource(R.string.ultra_performance_mode_title)) },
+                        description = { Text(stringResource(R.string.ultra_performance_mode_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = isUltraPerformance,
+                                onCheckedChange = { value ->
+                                    LibraryManager.saveUltraPerformanceMode(value)
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFFA243C))
+                            )
+                        },
+                        onClick = {
+                            LibraryManager.saveUltraPerformanceMode(!isUltraPerformance)
+                        }
                     )
                 )
             )

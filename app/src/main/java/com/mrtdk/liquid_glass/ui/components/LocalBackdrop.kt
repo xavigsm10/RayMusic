@@ -47,6 +47,7 @@ fun Modifier.wiggleOnScroll(
     lazyListState: androidx.compose.foundation.lazy.LazyListState? = null,
     customScrollState: androidx.compose.foundation.ScrollState? = null
 ): Modifier {
+    if (com.mrtdk.liquid_glass.data.LibraryManager.isUltraPerformanceMode()) return this
     if (SharedTransitionState.lastOpenedId == null || itemId != SharedTransitionState.lastOpenedId) return this
     return composed {
         val lastOpenedId = SharedTransitionState.lastOpenedId
@@ -137,9 +138,11 @@ fun Modifier.sharedTransitionElement(itemId: String): Modifier = composed {
     
     this
         .onGloballyPositioned { coords ->
-            val bounds = coords.unclippedBoundsInRoot()
-            if (bounds.width > 0f && bounds.height > 0f) {
-                SharedTransitionState.carouselItemBounds[itemId] = bounds
+            if (!SharedTransitionState.isDetailOpen) {
+                val bounds = coords.unclippedBoundsInRoot()
+                if (bounds.width > 0f && bounds.height > 0f) {
+                    SharedTransitionState.carouselItemBounds[itemId] = bounds
+                }
             }
         }
         .graphicsLayer {

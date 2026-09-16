@@ -293,18 +293,21 @@ fun AnimatedArtworkPlayer(
             kotlinx.coroutines.delay(50)
         }
 
-        // Immediately capture first frame without waiting
-        try {
-            val initialBmp = tv.getBitmap(120, 160)
-            if (initialBmp != null) {
-                onFrameCaptured(initialBmp)
-            }
-        } catch (_: Exception) { }
+        val isUltraPerf = com.mrtdk.liquid_glass.data.LibraryManager.isUltraPerformanceMode()
+        if (!isUltraPerf) {
+            try {
+                val initialBmp = tv.getBitmap(120, 160)
+                if (initialBmp != null) {
+                    onFrameCaptured(initialBmp)
+                }
+            } catch (_: Exception) { }
+        }
 
         // Periodically capture the frame of the TextureView
         val reusableBmp = android.graphics.Bitmap.createBitmap(120, 160, android.graphics.Bitmap.Config.ARGB_8888)
         while (true) {
-            if (exoPlayer.isPlaying && enableFrameCapture && !isPaused && tv.isAvailable) {
+            val isCurrentUltraPerf = com.mrtdk.liquid_glass.data.LibraryManager.isUltraPerformanceMode()
+            if (!isCurrentUltraPerf && exoPlayer.isPlaying && enableFrameCapture && !isPaused && tv.isAvailable) {
                 try {
                     val bmp = tv.getBitmap(reusableBmp)
                     if (bmp != null) {
@@ -316,7 +319,7 @@ fun AnimatedArtworkPlayer(
                 val intervalMs = com.mrtdk.liquid_glass.utils.PerformanceProfileManager.getConfig().motionCoverIntervalMs
                 kotlinx.coroutines.delay(intervalMs)
             } else {
-                kotlinx.coroutines.delay(300) // Sleep when paused or frame capture disabled
+                kotlinx.coroutines.delay(500) // Sleep when paused or frame capture disabled
             }
         }
     }

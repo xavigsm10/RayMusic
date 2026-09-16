@@ -603,6 +603,8 @@
     <string name="full_artwork_backdrop_style_apple_music">Apple Music (Orijinal bulanıklık)</string>
     <string name="full_artwork_backdrop_style_accord">Yumuşak degrade (Düşük donanım)</string>
     <string name="estilo_solido_material3">Katı (Material 3)</string>
+    <string name="ultra_performance_mode_title">Ultra Performans Modu (Düşük Donanım)</string>
+    <string name="ultra_performance_mode_desc">Ağır bulanıklıkları ve sıvı cam arka planlarını devre dışı bırakarak uygulamayı optimize eder</string>
 
     <!-- Album Screen Strings -->
     <string name="soundtracks_category">Film Müzikleri</string>

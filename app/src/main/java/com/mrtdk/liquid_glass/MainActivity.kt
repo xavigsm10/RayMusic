@@ -109,8 +109,9 @@ class MainActivity : ComponentActivity() {
             window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
         }
         
-        // Request highest refresh rate (90Hz/120Hz+) if supported by display
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        // Request highest refresh rate (90Hz/120Hz+) only on HIGH_END devices to preserve frame budget on mid/low-end
+        val detectedTier = com.mrtdk.liquid_glass.utils.PerformanceProfileManager.detectTier(this)
+        if (detectedTier == com.mrtdk.liquid_glass.utils.PerformanceTier.HIGH_END && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             try {
                 val disp = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                     display ?: (getSystemService(android.hardware.display.DisplayManager::class.java))?.getDisplay(android.view.Display.DEFAULT_DISPLAY)
@@ -246,7 +247,8 @@ class MainActivity : ComponentActivity() {
                 }
                 var glassStyle by remember { mutableStateOf(LibraryManager.getGlassStyle()) }
                 val currentBackdropStyle by LibraryManager.fullArtworkBackdropStyle.collectAsState()
-                val isLightweightGlass = currentBackdropStyle == "accord"
+                val isUltraPerformance by LibraryManager.ultraPerformanceMode.collectAsState()
+                val isLightweightGlass = currentBackdropStyle == "accord" || isUltraPerformance
                 val lastSavedState = remember { com.mrtdk.liquid_glass.data.LibraryManager.getLastPlayerState() }
                 var playerState by remember { mutableStateOf<PlayerState?>(lastSavedState) }
                 var isFirstStateLoad by remember { mutableStateOf(true) }
@@ -635,8 +637,18 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
+                    val effectiveGlassStyle = if (isUltraPerformance) "solid" else glassStyle
+                    val onArtistSelectedAction: (ArtistState) -> Unit = remember { { artistDetail = it } }
+                    val onAlbumSelectedAction: (AlbumState) -> Unit = remember { { albumDetail = it } }
+                    val onVideoSelectedAction: (String) -> Unit = remember(musicPlayer) { { videoId ->
+                        musicPlayer?.pause()
+                        videoDetail = videoId
+                    } }
+                    val onReplaySelectedAction: () -> Unit = remember { { showReplay = true } }
+                    val onListenTogetherSelectedAction: () -> Unit = remember { { showListenTogether = true } }
+
                     CompositionLocalProvider(
-                        com.mrtdk.glass.LocalGlassStyle provides glassStyle,
+                        com.mrtdk.glass.LocalGlassStyle provides effectiveGlassStyle,
                         com.mrtdk.glass.LocalLightweightGlass provides isLightweightGlass
                     ) {
                         Scaffold(
@@ -649,7 +661,7 @@ class MainActivity : ComponentActivity() {
                                     modifier = Modifier.fillMaxSize().background(Color.Black),
                                     useShader = false,
                                     content = {
-                                    Box(modifier = Modifier.fillMaxSize().layerBackdrop(mainBackdrop)) {
+                                    Box(modifier = Modifier.fillMaxSize().let { if (!isUltraPerformance && effectiveGlassStyle != "solid") it.layerBackdrop(mainBackdrop) else it }) {
                                         // Pager for main tabs (0: Inicio, 1: Novedades, 2: Radio, 3: Biblioteca)
                                         // Search (4) is rendered as an overlay on top
                                         androidx.compose.foundation.pager.HorizontalPager(
@@ -664,24 +676,18 @@ class MainActivity : ComponentActivity() {
                                                     state = inicioState,
                                                     onSongSelected = playSong,
                                                     onStationSelected = playSongMiniPlayer,
-                                                    onArtistSelected = { artistDetail = it },
-                                                    onAlbumSelected = { albumDetail = it },
-                                                    onVideoSelected = { videoId ->
-                                                        musicPlayer?.pause()
-                                                        videoDetail = videoId
-                                                    },
-                                                    onReplaySelected = { showReplay = true },
-                                                    onListenTogetherSelected = { showListenTogether = true }
+                                                    onArtistSelected = onArtistSelectedAction,
+                                                    onAlbumSelected = onAlbumSelectedAction,
+                                                    onVideoSelected = onVideoSelectedAction,
+                                                    onReplaySelected = onReplaySelectedAction,
+                                                    onListenTogetherSelected = onListenTogetherSelectedAction
                                                 )
                                                 1 -> NovedadesScreen(
                                                     innerPadding = innerPadding,
                                                     state = novedadesState,
                                                     onSongSelected = playSong,
-                                                    onAlbumSelected = { albumDetail = it },
-                                                    onVideoSelected = { videoId ->
-                                                        musicPlayer?.pause()
-                                                        videoDetail = videoId
-                                                    }
+                                                    onAlbumSelected = onAlbumSelectedAction,
+                                                    onVideoSelected = onVideoSelectedAction
                                                 )
                                                 2 -> com.mrtdk.liquid_glass.ui.screens.RadioScreen(
                                                     innerPadding = innerPadding,
