@@ -127,8 +127,6 @@ fun BusquedaScreen(
     )
 
     val recentSearches by LibraryManager.recentSearches.collectAsState()
-    val savedLibraryItems by LibraryManager.savedItems.collectAsState()
-    val downloadedLibraryItems by LibraryManager.downloadedSongs.collectAsState()
 
     // If query is empty or changed, reset full results mode if user types new characters
     var previousQuery by remember { mutableStateOf(query) }
@@ -313,6 +311,8 @@ fun BusquedaScreen(
 
                 if (state.searchSource == 1) {
                     // BIBLIOTECA SEARCH MODE
+                    val savedLibraryItems by LibraryManager.savedItems.collectAsState()
+                    val downloadedLibraryItems by LibraryManager.downloadedSongs.collectAsState()
                     val filteredLocal = remember(query, savedLibraryItems, downloadedLibraryItems) {
                         val combined = (savedLibraryItems + downloadedLibraryItems).distinctBy { it.id }
                         if (query.isBlank()) combined
@@ -354,7 +354,7 @@ fun BusquedaScreen(
                                 }
                             }
                         } else {
-                            items(filteredLocal, key = { it.id }) { item ->
+                            items(filteredLocal, key = { it.id }, contentType = { "library_search_item" }) { item ->
                                 LibrarySearchResultRow(
                                     item = item,
                                     onClick = {
@@ -589,7 +589,11 @@ fun BusquedaScreen(
                     ) {
                         // Autocompletion text suggestions
                         if (state.suggestions.isNotEmpty()) {
-                            items(state.suggestions) { suggestion ->
+                            items(
+                                items = state.suggestions,
+                                key = { it },
+                                contentType = { "search_suggestion" }
+                            ) { suggestion ->
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()

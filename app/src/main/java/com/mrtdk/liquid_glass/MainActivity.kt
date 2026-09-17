@@ -668,6 +668,7 @@ class MainActivity : ComponentActivity() {
                                             state = pagerState,
                                             modifier = Modifier.fillMaxSize().background(Color.Black),
                                             userScrollEnabled = false,
+                                            beyondViewportPageCount = 1,
                                         ) { page ->
                                             when (page) {
                                                 0 -> InicioScreen(

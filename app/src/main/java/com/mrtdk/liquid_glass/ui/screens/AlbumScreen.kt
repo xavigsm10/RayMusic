@@ -139,8 +139,11 @@ fun AlbumScreen(
     var albumError by remember { mutableStateOf<String?>(null) }
     var artistPageData by remember(albumState.artist, albumState.id) { mutableStateOf<com.echo.innertube.pages.ArtistPage?>(null) }
     var albumDescription by remember(albumState.id) { mutableStateOf<String?>(null) }
-    val savedItems by LibraryManager.savedItems.collectAsState()
-    val isSaved = savedItems.any { it.id == albumState.id }
+    val isSaved by androidx.compose.runtime.produceState(initialValue = false, albumState.id) {
+        LibraryManager.savedItems.collect { list ->
+            value = list.any { it.id == albumState.id }
+        }
+    }
 
     val isMichaelAlbum = albumState.title.equals("Michael: Songs From the Motion Picture", ignoreCase = true)
     val isThrillerAlbum = albumState.title.equals("Thriller", ignoreCase = true) || 
@@ -293,7 +296,7 @@ fun AlbumScreen(
                 }
             } else if (albumState.id.startsWith("replay_album_")) {
                 val albumTitle = albumState.title
-                val history = LibraryManager.getPlaybackHistory()
+                val history = withContext(Dispatchers.IO) { LibraryManager.getPlaybackHistory() }
                 val albumSongs = history
                     .filter { it.album != null && it.album.equals(albumTitle, ignoreCase = true) }
                     .groupBy { it.songId }
@@ -1136,7 +1139,7 @@ fun AlbumScreen(
                                                 contentPadding = PaddingValues(horizontal = 20.dp),
                                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                                             ) {
-                                                items(videoItems.size) { idx ->
+                                                items(videoItems.size, key = { idx -> "album_vid_${videoItems[idx].id}" }, contentType = { "album_vid" }) { idx ->
                                                     val v = videoItems[idx]
                                                     val vThumb = v.thumbnail.replace("=w226-h226", "=w800-h800").replace("=w120-h120", "=w800-h800")
                                                     Column(
@@ -1223,7 +1226,7 @@ fun AlbumScreen(
                                             contentPadding = PaddingValues(horizontal = 20.dp),
                                             horizontalArrangement = Arrangement.spacedBy(14.dp)
                                         ) {
-                                            items(albumsList.size) { idx ->
+                                            items(albumsList.size, key = { idx -> "album_disc_${albumsList[idx].browseId}" }, contentType = { "album_disc" }) { idx ->
                                                 val a = albumsList[idx]
                                                 val aThumb = a.thumbnail.replace("=w226-h226", "=w600-h600").replace("=w120-h120", "=w600-h600")
                                                 Column(
@@ -1312,7 +1315,12 @@ fun AlbumScreen(
                                             contentPadding = PaddingValues(horizontal = 20.dp),
                                             horizontalArrangement = Arrangement.spacedBy(14.dp)
                                         ) {
-                                            items(appearsList.size) { idx ->
+                                            items(appearsList.size, key = { idx ->
+                                                val itm = appearsList[idx]
+                                                if (itm is com.echo.innertube.models.PlaylistItem) "alb_app_pl_${itm.id}"
+                                                else if (itm is com.echo.innertube.models.AlbumItem) "alb_app_al_${itm.id}"
+                                                else "alb_app_$idx"
+                                            }, contentType = { "alb_app" }) { idx ->
                                                 val item = appearsList[idx]
                                                 val title = when (item) {
                                                     is com.echo.innertube.models.PlaylistItem -> item.title
@@ -1915,8 +1923,11 @@ fun AlbumTopRightMorphingPill(
         }
     }
 
-    val savedItems by LibraryManager.savedItems.collectAsState()
-    val isSaved = savedItems.any { it.id == albumState.id }
+    val isSaved by androidx.compose.runtime.produceState(initialValue = false, albumState.id) {
+        LibraryManager.savedItems.collect { list ->
+            value = list.any { it.id == albumState.id }
+        }
+    }
     var isFavorite by remember(albumState.id) { mutableStateOf(false) }
 
     val morphProgress by animateFloatAsState(

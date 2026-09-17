@@ -1,0 +1,18 @@
+/*
+ * Copyright 2025 Kyant (https://github.com/Kyant0/AndroidLiquidGlass)
+ * Licensed under the Apache License, Version 2.0. See THIRD_PARTY_NOTICES.md.
+ *
+ * Vendored into expo-android-glass-view. Changes from upstream: package relocated
+ * from com.kyant.backdrop, Kotlin Multiplatform expect/actual merged into Android-only
+ * code, dependency on io.github.kyant0:shapes removed, Kotlin 2.1 compatible syntax.
+ */
+package expo.modules.androidglassview.backdrop
+
+import android.os.Build
+import androidx.annotation.ChecksSdkIntAtLeast
+
+@ChecksSdkIntAtLeast(Build.VERSION_CODES.S)
+fun isRenderEffectSupported(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+
+@ChecksSdkIntAtLeast(Build.VERSION_CODES.TIRAMISU)
+fun isRuntimeShaderSupported(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU

@@ -146,7 +146,11 @@ fun ArtistScreen(
     var artistPage by remember { mutableStateOf<ArtistPage?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var artistError by remember { mutableStateOf<String?>(null) }
-    val savedItems by LibraryManager.savedItems.collectAsState()
+    val isSaved by androidx.compose.runtime.produceState(initialValue = false, artistState.id) {
+        LibraryManager.savedItems.collect { list ->
+            value = list.any { it.id == artistState.id }
+        }
+    }
     var dominantColor by remember { mutableStateOf(Color(0xFF111111)) }
     // "Show all albums" overlay state
     var showAllAlbumsOverlay by remember { mutableStateOf(false) }
@@ -639,8 +643,6 @@ fun ArtistScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        val isSaved = savedItems.any { it.id == artistState.id }
-
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(20.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -1098,7 +1100,7 @@ fun ArtistScreen(
                         contentPadding = PaddingValues(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(albumItems.take(8)) { item ->
+                        items(albumItems.take(8), key = { "artist_album_${it.id}" }) { item ->
                             ItemCard(context, item, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, scrollState = listState)
                         }
                     }
@@ -1157,7 +1159,7 @@ fun ArtistScreen(
                         contentPadding = PaddingValues(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(singleItems.take(8)) { item ->
+                        items(singleItems.take(8), key = { "artist_single_${it.id}" }) { item ->
                             ItemCard(context, item, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, scrollState = listState)
                         }
                     }
@@ -1216,7 +1218,7 @@ fun ArtistScreen(
                         contentPadding = PaddingValues(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(videoItems) { item ->
+                        items(videoItems, key = { "artist_video_${it.id}" }) { item ->
                             ItemCard(context, item, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, onVideoSelected = onVideoSelected, isVideo = true, scrollState = listState)
                         }
                     }
@@ -1235,7 +1237,7 @@ fun ArtistScreen(
                         contentPadding = PaddingValues(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(featuredSection.items) { item ->
+                        items(featuredSection.items, key = { "artist_featured_${it.id}" }) { item ->
                             ItemCard(context, item, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, scrollState = listState)
                         }
                     }
@@ -1294,7 +1296,7 @@ fun ArtistScreen(
                         contentPadding = PaddingValues(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(plItems.take(8)) { item ->
+                        items(plItems.take(8), key = { "artist_pl_${it.id}" }) { item ->
                             ItemCard(context, item, artistState.name, onAlbumSelected, onSongSelected, onArtistSelected, scrollState = listState)
                         }
                     }
@@ -1309,7 +1311,7 @@ fun ArtistScreen(
                         Spacer(modifier = Modifier.height(24.dp))
                         Text(stringResource(R.string.puede_gustar), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
                         LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            items(relatedArtists.size) { idx ->
+                            items(relatedArtists.size, key = { idx -> "artist_rel_${relatedArtists[idx].id}" }) { idx ->
                                 val ra = relatedArtists[idx]
                                 val raThumb = ra.thumbnail?.replace("=w226-h226", "=w400-h400")?.replace("=w120-h120", "=w400-h400")
                                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(120.dp).clickable {

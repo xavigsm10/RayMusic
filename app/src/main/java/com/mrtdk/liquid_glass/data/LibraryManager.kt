@@ -109,16 +109,25 @@ object LibraryManager {
             migrateSettingsFromSharedPrefs()
         }
 
-        // Load data from DB into Flows
-        _savedItems.value = dbHelper.getSavedItems()
-        _playlists.value = dbHelper.getPlaylists()
-        _recentlyPlayed.value = dbHelper.getRecentlyPlayed()
-        _downloadedSongs.value = dbHelper.getDownloadedSongs()
-        _recentSearches.value = loadRecentSearchesFromDb()
+        // Load UI appearance settings immediately (fast key-value reads)
         _glassStyle.value = getGlassStyle()
         _playerArtworkStyle.value = getPlayerArtworkStyle()
         _fullArtworkBackdropStyle.value = getFullArtworkBackdropStyle()
         _ultraPerformanceMode.value = isUltraPerformanceMode()
+
+        // Load heavy data collections asynchronously on Dispatchers.IO to avoid blocking main thread at startup
+        CoroutineScope(Dispatchers.IO).launch {
+            val saved = dbHelper.getSavedItems()
+            val pl = dbHelper.getPlaylists()
+            val recent = dbHelper.getRecentlyPlayed()
+            val downloaded = dbHelper.getDownloadedSongs()
+            val searches = loadRecentSearchesFromDb()
+            _savedItems.value = saved
+            _playlists.value = pl
+            _recentlyPlayed.value = recent
+            _downloadedSongs.value = downloaded
+            _recentSearches.value = searches
+        }
 
         com.mrtdk.liquid_glass.spotify.SpotifySession.init()
         com.mrtdk.liquid_glass.ui.theme.ThemeManager.init()

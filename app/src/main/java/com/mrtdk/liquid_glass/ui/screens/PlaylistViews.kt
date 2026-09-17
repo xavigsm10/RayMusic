@@ -128,8 +128,11 @@ fun PlaylistsListScreen(
     }
 
     val playlists by LibraryManager.playlists.collectAsState()
-    val savedItems by LibraryManager.savedItems.collectAsState()
-    val favSongsCount = remember(savedItems) { savedItems.count { it.type == ItemType.SONG } }
+    val favSongsCount by androidx.compose.runtime.produceState(initialValue = 0) {
+        LibraryManager.savedItems.collect { list ->
+            value = list.count { it.type == ItemType.SONG }
+        }
+    }
 
     val viewMode = remember { mutableStateOf(LibraryManager.getString("playlist_view_mode", "list") ?: "list") }
     val sortBy = remember { mutableStateOf(LibraryManager.getString("playlist_sort_by", "date_added") ?: "date_added") }
@@ -1551,7 +1554,11 @@ fun PlaylistDetailScreen(
                     }
                 }
             } else {
-                itemsIndexed(sortedItems) { trackIndex, track ->
+                itemsIndexed(
+                    items = sortedItems,
+                    key = { trackIndex, track -> "pl_track_${track.id}_$trackIndex" },
+                    contentType = { _, track -> track.type.name }
+                ) { trackIndex, track ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1975,7 +1982,7 @@ fun FavoriteSongsScreen(
 ) {
     val context = LocalContext.current
     val favoriteSongs by LibraryManager.savedItems.collectAsState()
-    val songs = favoriteSongs.filter { it.type == com.mrtdk.liquid_glass.data.ItemType.SONG }
+    val songs = remember(favoriteSongs) { favoriteSongs.filter { it.type == com.mrtdk.liquid_glass.data.ItemType.SONG } }
     val playerArtworkStyle by LibraryManager.playerArtworkStyle.collectAsState()
     val isNormalArtwork = playerArtworkStyle != "fullartwork"
 
@@ -2514,7 +2521,11 @@ fun FavoriteSongsScreen(
                     }
 
                     // Songs list
-                    itemsIndexed(songs) { trackIndex, track ->
+                    itemsIndexed(
+                        items = songs,
+                        key = { trackIndex, track -> "fav_track_${track.id}_$trackIndex" },
+                        contentType = { _, _ -> "fav_track" }
+                    ) { trackIndex, track ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -3124,7 +3135,11 @@ fun AddMusicContent(
                     }
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        items(nestedSongs.size) { idx ->
+                        items(
+                            count = nestedSongs.size,
+                            key = { idx -> "nested_song_${nestedSongs[idx].id}" },
+                            contentType = { "nested_song" }
+                        ) { idx ->
                             val song = nestedSongs[idx]
                             val isAlreadyAdded = song.id in playlistSongIds
                             val hdThumb = song.thumbnail.let {
@@ -3216,7 +3231,11 @@ fun AddMusicContent(
                         Triple(R.string.recently_added_music, Icons.Default.Schedule, Color(0xFFFA243C))
                     )
 
-                    items(directories.size) { idx ->
+                    items(
+                        count = directories.size,
+                        key = { idx -> "dir_${directories[idx].first}" },
+                        contentType = { "directory_item" }
+                    ) { idx ->
                         val (titleRes, icon, tint) = directories[idx]
                         Row(
                             modifier = Modifier
@@ -3249,7 +3268,11 @@ fun AddMusicContent(
                     }
 
                     val availableSuggestions = suggestedClassicalSongs.filter { it.id !in playlistSongIds }
-                    items(availableSuggestions.size) { idx ->
+                    items(
+                        count = availableSuggestions.size,
+                        key = { idx -> "sug_song_${availableSuggestions[idx].id}" },
+                        contentType = { "suggestion_song" }
+                    ) { idx ->
                         val song = availableSuggestions[idx]
                         Row(
                             modifier = Modifier
@@ -3303,7 +3326,18 @@ fun AddMusicContent(
                     }
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        items(searchResults.size) { idx ->
+                        items(
+                            count = searchResults.size,
+                            key = { idx ->
+                                when (val itm = searchResults[idx]) {
+                                    is com.echo.innertube.models.SongItem -> "pl_search_song_${itm.id}"
+                                    is com.echo.innertube.models.AlbumItem -> "pl_search_album_${itm.id}"
+                                    is com.echo.innertube.models.ArtistItem -> "pl_search_artist_${itm.id}"
+                                    else -> "pl_search_$idx"
+                                }
+                            },
+                            contentType = { "pl_search_result" }
+                        ) { idx ->
                             val item = searchResults[idx]
                             
                             when (item) {

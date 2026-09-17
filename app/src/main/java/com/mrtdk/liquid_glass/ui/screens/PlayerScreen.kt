@@ -7,6 +7,7 @@ import android.os.Build
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.layout.positionInRoot
@@ -1598,10 +1599,12 @@ fun PlayerScreen(
 
         var isVideoPlaying by remember { mutableStateOf(false) }
         var coverBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+        var motionCoverBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
         var accordBackdropBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
         var lyricsBackdropBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
         var hasGeneratedMotionBackdrop by remember(playerState?.artist, playerState?.title) { mutableStateOf(false) }
         var frameToken by remember { mutableStateOf(0L) }
+        var lastColorSampleTime by remember { mutableLongStateOf(0L) }
         var reflectionSkew by remember { mutableStateOf(0.12f) }
         var masterAnimatedPlayer by remember { mutableStateOf<androidx.media3.exoplayer.ExoPlayer?>(null) }
         val fullArtworkBackdropStyle by LibraryManager.fullArtworkBackdropStyle.collectAsState()
@@ -1612,6 +1615,7 @@ fun PlayerScreen(
             val title = playerState?.title
             val album = playerState?.album
             isVideoPlaying = false
+            motionCoverBitmap = null
             if (!isUltraPerformance) {
                 coverBitmap = null
             }
@@ -1641,6 +1645,7 @@ fun PlayerScreen(
 
 
         LaunchedEffect(hdArtUrl, playerState?.title, playerState?.artist) {
+            motionCoverBitmap = null
             if (!isUltraPerformance) {
                 coverBitmap = null
             }
@@ -1799,13 +1804,11 @@ fun PlayerScreen(
 
 
 
-        val savedItems by LibraryManager.savedItems.collectAsState()
-
-        val isSaved = remember(savedItems, playerState?.videoId) {
-            savedItems.any { it.id == playerState?.videoId }
+        val isSaved by androidx.compose.runtime.produceState(initialValue = false, playerState?.videoId) {
+            LibraryManager.savedItems.collect { list ->
+                value = list.any { it.id == playerState?.videoId }
+            }
         }
-
-        val starTint by androidx.compose.animation.animateColorAsState(targetValue = if(isSaved) Color(0xFFFA243C) else contentColor, label="starTint")
 
 
 
@@ -1982,7 +1985,7 @@ fun PlayerScreen(
                     }
                 )
             } else {
-                val lyricsImageSize = 84.dp
+                val lyricsImageSize = 60.dp
 
             val isOverlayActive = showLyrics || showQueue
 
@@ -2141,13 +2144,15 @@ fun PlayerScreen(
             val expandedY = if (isNormalArtwork) normalY else 0.dp
             val defaultCorner = if (isNormalArtwork) 22.dp else 12.dp
 
+            val p = dragProgress.coerceIn(0f, 1f)
+            val contentAlpha = if (isOverlayActive) (1f - p * 2.2f).coerceIn(0f, 1f) else 1f
+            val overlayAlpha = (1f - p * 2.2f).coerceIn(0f, 1f)
+
             val startWidth = if (isOverlayActive) lyricsImageSize else expandedWidth
             val startHeight = if (isOverlayActive) lyricsImageSize else expandedHeight
             val startOffsetX = if (isOverlayActive) 24.dp else expandedX
             val startOffsetY = if (isOverlayActive) 64.dp else expandedY
-            val startCorner = if (isOverlayActive) 8.dp else defaultCorner
-
-            val p = dragProgress.coerceIn(0f, 1f)
+            val startCorner = if (isOverlayActive) 12.dp else defaultCorner
 
             val imgWidthTarget: androidx.compose.ui.unit.Dp
             val imgHeightTarget: androidx.compose.ui.unit.Dp
@@ -2169,14 +2174,47 @@ fun PlayerScreen(
                 imageCornerTarget = startCorner
             }
 
-            val contentAlpha = if (isOverlayActive) (1f - p * 2.2f).coerceIn(0f, 1f) else 1f
-            val overlayAlpha = (1f - p * 2.2f).coerceIn(0f, 1f)
+            val appleOverlaySpringFloat = spring<Float>(
+                dampingRatio = 0.85f,
+                stiffness = Spring.StiffnessMediumLow
+            )
 
-            val animatedImgWidth by androidx.compose.animation.core.animateDpAsState(imgWidthTarget)
-            val animatedImgHeight by androidx.compose.animation.core.animateDpAsState(imgHeightTarget)
-            val animatedImgOffsetX by androidx.compose.animation.core.animateDpAsState(imgOffsetXTarget)
-            val animatedImgOffsetY by androidx.compose.animation.core.animateDpAsState(imgOffsetYTarget)
-            val animatedImgCorner by androidx.compose.animation.core.animateDpAsState(imageCornerTarget)
+            val overlayTransitionProgress by androidx.compose.animation.core.animateFloatAsState(
+                targetValue = if (isOverlayActive) 1f else 0f,
+                animationSpec = appleOverlaySpringFloat,
+                label = "overlayTransitionProgress"
+            )
+
+            val appleCardSpringDp = spring<androidx.compose.ui.unit.Dp>(
+                dampingRatio = 0.85f,
+                stiffness = Spring.StiffnessMediumLow
+            )
+
+            val animatedImgWidth by androidx.compose.animation.core.animateDpAsState(
+                targetValue = imgWidthTarget,
+                animationSpec = appleCardSpringDp,
+                label = "imgWidth"
+            )
+            val animatedImgHeight by androidx.compose.animation.core.animateDpAsState(
+                targetValue = imgHeightTarget,
+                animationSpec = appleCardSpringDp,
+                label = "imgHeight"
+            )
+            val animatedImgOffsetX by androidx.compose.animation.core.animateDpAsState(
+                targetValue = imgOffsetXTarget,
+                animationSpec = appleCardSpringDp,
+                label = "imgOffsetX"
+            )
+            val animatedImgOffsetY by androidx.compose.animation.core.animateDpAsState(
+                targetValue = imgOffsetYTarget,
+                animationSpec = appleCardSpringDp,
+                label = "imgOffsetY"
+            )
+            val animatedImgCorner by androidx.compose.animation.core.animateDpAsState(
+                targetValue = imageCornerTarget,
+                animationSpec = appleCardSpringDp,
+                label = "imgCorner"
+            )
 
             val imgWidth = if (dragProgress > 0f) imgWidthTarget else animatedImgWidth
             val imgHeight = if (dragProgress > 0f) imgHeightTarget else animatedImgHeight
@@ -2184,47 +2222,64 @@ fun PlayerScreen(
             val imgOffsetY = if (dragProgress > 0f) imgOffsetYTarget else animatedImgOffsetY
             val imgCorner = if (dragProgress > 0f) imageCornerTarget else animatedImgCorner
 
-            val detailsOffsetYTarget = if (isOverlayActive) 64.dp else (controlsBaseY - 8.dp)
+            val detailsOffsetYTarget = if (isOverlayActive) {
+                if (p > 0f) androidx.compose.ui.unit.lerp(startOffsetY + 6.dp, targetOffsetY, p) else (startOffsetY + 6.dp)
+            } else {
+                if (p > 0f) androidx.compose.ui.unit.lerp(controlsBaseY - 8.dp, targetOffsetY + 4.dp, p) else (controlsBaseY - 8.dp)
+            }
 
-            val detailsOffsetY by androidx.compose.animation.core.animateDpAsState(detailsOffsetYTarget)
+            val animatedDetailsOffsetY by androidx.compose.animation.core.animateDpAsState(
+                targetValue = detailsOffsetYTarget,
+                animationSpec = appleCardSpringDp,
+                label = "detailsOffsetY"
+            )
+            val detailsOffsetY = if (dragProgress > 0f) detailsOffsetYTarget else animatedDetailsOffsetY
 
             val isAccordActive = fullArtworkBackdropStyle == "accord" && !isNormalArtwork
 
-            val detailsOffsetXTarget = if (isOverlayActive) 124.dp else 34.dp
+            val detailsOffsetXTarget = if (isOverlayActive) {
+                if (p > 0f) androidx.compose.ui.unit.lerp(startOffsetX + lyricsImageSize + 14.dp, targetOffsetX + 48.dp, p) else (startOffsetX + lyricsImageSize + 14.dp)
+            } else {
+                if (p > 0f) androidx.compose.ui.unit.lerp(34.dp, targetOffsetX + 48.dp, p) else 34.dp
+            }
 
-            val detailsOffsetX by androidx.compose.animation.core.animateDpAsState(detailsOffsetXTarget)
+            val animatedDetailsOffsetX by androidx.compose.animation.core.animateDpAsState(
+                targetValue = detailsOffsetXTarget,
+                animationSpec = appleCardSpringDp,
+                label = "detailsOffsetX"
+            )
+            val detailsOffsetX = if (dragProgress > 0f) detailsOffsetXTarget else animatedDetailsOffsetX
 
-            val detailsWidthTarget = if (isOverlayActive) (maxWidth - 124.dp - 24.dp) else (maxWidth - 68.dp)
+            val detailsWidthTarget = if (isOverlayActive) (maxWidth - (startOffsetX + lyricsImageSize + 14.dp) - 20.dp) else (maxWidth - 68.dp)
 
-            val detailsWidth by androidx.compose.animation.core.animateDpAsState(detailsWidthTarget)
+            val animatedDetailsWidth by androidx.compose.animation.core.animateDpAsState(
+                targetValue = detailsWidthTarget,
+                animationSpec = appleCardSpringDp,
+                label = "detailsWidth"
+            )
+            val detailsWidth = if (dragProgress > 0f) detailsWidthTarget else animatedDetailsWidth
 
-
-
-            val titleFontSizeTarget = if (isOverlayActive) 18f else 22f
-
-            val titleFontSizeFloat by androidx.compose.animation.core.animateFloatAsState(titleFontSizeTarget)
-
+            val titleFontSizeTarget = if (isOverlayActive) 17f else 21f
+            val titleFontSizeFloat by androidx.compose.animation.core.animateFloatAsState(
+                targetValue = titleFontSizeTarget,
+                animationSpec = spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessMediumLow),
+                label = "titleFontSize"
+            )
             val titleFontSize = titleFontSizeFloat.sp
 
-
-
-            val artistFontSizeTarget = if (isOverlayActive) 15f else 17f
-
-            val artistFontSizeFloat by androidx.compose.animation.core.animateFloatAsState(artistFontSizeTarget)
-
+            val artistFontSizeTarget = if (isOverlayActive) 14f else 16f
+            val artistFontSizeFloat by androidx.compose.animation.core.animateFloatAsState(
+                targetValue = artistFontSizeTarget,
+                animationSpec = spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessMediumLow),
+                label = "artistFontSize"
+            )
             val artistFontSize = artistFontSizeFloat.sp
 
+            val starIconSizeTarget = if (isOverlayActive) 20.dp else 22.dp
+            val starIconSize by androidx.compose.animation.core.animateDpAsState(starIconSizeTarget, label = "starIconSize")
 
-
-            val starIconSizeTarget = if (isOverlayActive) 20.dp else 18.dp
-
-            val starIconSize by androidx.compose.animation.core.animateDpAsState(starIconSizeTarget)
-
-
-
-            val moreIconSizeTarget = if (isOverlayActive) 24.dp else 18.dp
-
-            val moreIconSize by androidx.compose.animation.core.animateDpAsState(moreIconSizeTarget)
+            val moreIconSizeTarget = if (isOverlayActive) 18.dp else 18.dp
+            val moreIconSize by androidx.compose.animation.core.animateDpAsState(moreIconSizeTarget, label = "moreIconSize")
 
 
 
@@ -2439,7 +2494,7 @@ fun PlayerScreen(
 
             // Capa 4: Reflejo invertido estilo Apple Music (solo para fullartwork y cuando NO es modo Accord NI Ultra Rendimiento)
             val mirrorArtModel = hdArtUrl ?: playerState?.artUrl
-            if (!isUltraPerformance && !isNormalArtwork && (coverBitmap != null || mirrorArtModel != null) && dragProgress < 1f && !showLyrics && !showQueue && fullArtworkBackdropStyle != "accord") {
+            if (!isUltraPerformance && !isNormalArtwork && (coverBitmap != null || mirrorArtModel != null) && dragProgress < 1f && overlayTransitionProgress < 0.99f && fullArtworkBackdropStyle != "accord") {
                 val reflectionWidth = maxWidth
                 val reflectionX = 0.dp
                 val childWidth = expandedWidth
@@ -2476,7 +2531,7 @@ fun PlayerScreen(
                                 .width(childWidth)
                                 .height(expandedHeight)
                                 .graphicsLayer {
-                                    alpha = if (showLyrics || showQueue) 0f else 1f
+                                    alpha = (1f - overlayTransitionProgress)
                                 }
                         ) {
                             // Reflejo invertido con difuminado horizontal progresivo
@@ -2501,17 +2556,14 @@ fun PlayerScreen(
                 }
 
 
-            // LYRICS / QUEUE OVERLAY
-            AnimatedVisibility(
-                visible = showLyrics || showQueue,
-                enter = fadeIn(animationSpec = tween(220, easing = FastOutSlowInEasing)),
-                exit = fadeOut(animationSpec = tween(180, easing = FastOutSlowInEasing))
-            ) {
+            // LYRICS / QUEUE OVERLAY (Synchronized with artwork card spring)
+            if (showLyrics || showQueue || overlayTransitionProgress > 0.005f) {
                  Box(
                      modifier = Modifier
                          .fillMaxSize()
                          .graphicsLayer {
-                             alpha = overlayAlpha
+                             alpha = (overlayAlpha * overlayTransitionProgress).coerceIn(0f, 1f)
+                             translationY = with(density) { (80.dp * (1f - overlayTransitionProgress)).toPx() }
                              compositingStrategy = CompositingStrategy.ModulateAlpha
                          }
                  ) {
@@ -2524,53 +2576,47 @@ fun PlayerScreen(
                      val fluidSecondary = if (isNormalArtwork) normalMidColor else secCol
                      val fluidAccent = if (isNormalArtwork) normalBottomColor else bottomAverageColor
 
-                     // Capa de fondo fluido estático con formas orgánicas difuminadas extraídas de la carátula
-                     com.mrtdk.liquid_glass.ui.components.RayMusicStaticFluidBackground(
-                         primaryColor = fluidPrimary,
-                         secondaryColor = fluidSecondary,
-                         accentColor = fluidAccent,
-                         modifier = Modifier.fillMaxSize()
-                     )
-
-                     // Scrim oscuro suave para contraste y nitidez total de letras y cola (estilo Apple Music)
-                     Box(
-                         modifier = Modifier
-                             .fillMaxSize()
-                             .background(
-                                 Brush.verticalGradient(
-                                     listOf(
-                                         Color.Black.copy(alpha = 0.22f),
-                                         Color.Black.copy(alpha = 0.35f),
-                                         Color.Black.copy(alpha = 0.58f)
+                     // Fondo dinámico en movimiento con los colores exactos de la carátula (RayMusic Fluid Shader)
+                     if (!isUltraPerformance && fullArtworkBackdropStyle != "accord") {
+                         com.mrtdk.liquid_glass.ui.components.RayMusicFluidBackground(
+                             primaryColor = fluidPrimary,
+                             secondaryColor = fluidSecondary,
+                             accentColor = fluidAccent,
+                             isPlaying = isPlaying,
+                             modifier = Modifier.fillMaxSize()
+                         )
+                     } else if (isUltraPerformance) {
+                         Box(
+                             modifier = Modifier
+                                 .fillMaxSize()
+                                 .background(
+                                     Brush.verticalGradient(
+                                         listOf(
+                                             fluidPrimary.copy(alpha = 0.85f),
+                                             Color.Black
+                                         )
                                      )
                                  )
-                             )
-                     )
+                         )
+                     }
                  }
 
-                      // Height of the content area = exactly the cover image height (player controls start below)
-
-                      // For lyrics immersive mode (controls hidden) animate up to full screen height
-
-                      val overlayContentHeight by animateDpAsState(
-                          targetValue = if (showLyrics && !showLyricsControls) maxHeight else (controlsBaseY + 68.dp),
-                          animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
-                          label = "overlayContentHeight"
+                      // Height of the content area: terminates ~5px (6dp) right above the seekbar
+                      val seekbarTopFromBottom = (maxHeight - (controlsBaseY + 72.dp)).coerceAtLeast(140.dp)
+                      val overlayBottomPadding by animateDpAsState(
+                          targetValue = if (showLyrics && !showLyricsControls) 0.dp else (seekbarTopFromBottom + 6.dp),
+                          animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
+                          label = "overlayBottomPadding"
                       )
 
                        Column(
                            modifier = Modifier
-                               .fillMaxWidth()
-                               .height(overlayContentHeight)
+                               .fillMaxSize()
+                               .padding(bottom = overlayBottomPadding.coerceAtLeast(0.dp))
                                .clipToBounds()
                        ) {
 
-                       if (showQueue) {
-                           Spacer(modifier = Modifier.height(148.dp))
-                       } else {
-                           // Lyrics: slightly lower start so lyrics appear above the player controls
-                           Spacer(modifier = Modifier.height(120.dp))
-                       }
+                       Spacer(modifier = Modifier.height(148.dp))
                        
                        if (showQueue) {
                             Spacer(modifier = Modifier.height(6.dp))
@@ -2776,6 +2822,24 @@ fun PlayerScreen(
                                    modifier = Modifier
                                        .weight(1f)
                                        .fillMaxWidth()
+                                       .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                                       .drawWithContent {
+                                           drawContent()
+                                           val bottomFadePx = with(density) { 16.dp.toPx() }
+                                           val h = size.height
+                                           val bottomFadeStart = if (h > bottomFadePx) (h - bottomFadePx) / h else 0.96f
+                                           drawRect(
+                                               brush = Brush.verticalGradient(
+                                                   colorStops = arrayOf(
+                                                       0.0f to Color.Transparent,
+                                                       0.03f to Color.Black,
+                                                       bottomFadeStart to Color.Black,
+                                                       1.0f to Color.Transparent
+                                                   )
+                                               ),
+                                               blendMode = BlendMode.DstIn
+                                           )
+                                       }
                                        .onGloballyPositioned { coordinates ->
                                            queueViewportHeightPx = coordinates.size.height.toFloat()
                                        }
@@ -3086,15 +3150,15 @@ fun PlayerScreen(
                                           .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                                       .drawWithContent {
                                           drawContent()
-                                          // Fade the lyrics at top and bottom for immersive depth
+                                          val bottomFadePx = with(density) { 16.dp.toPx() }
+                                          val h = size.height
+                                          val bottomFadeStart = if (h > bottomFadePx) (h - bottomFadePx) / h else 0.96f
                                           drawRect(
                                               brush = Brush.verticalGradient(
                                                   colorStops = arrayOf(
                                                       0.0f to Color.Transparent,
-                                                      0.04f to Color.Black.copy(alpha = 0.7f),
-                                                      0.08f to Color.Black,
-                                                      0.90f to Color.Black,
-                                                      0.96f to Color.Black.copy(alpha = 0.3f),
+                                                      0.03f to Color.Black,
+                                                      bottomFadeStart to Color.Black,
                                                       1.0f to Color.Transparent
                                                   )
                                               ),
@@ -3320,12 +3384,13 @@ fun PlayerScreen(
                     .offset(x = imgOffsetX, y = imgOffsetY)
                     .size(width = imgWidth, height = imgHeight)
                     .then(
-                        if (showLyrics) {
+                        if (isOverlayActive) {
                             Modifier.clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null
                             ) {
                                 showLyrics = false
+                                showQueue = false
                             }
                         } else Modifier
                     )
@@ -3408,249 +3473,312 @@ fun PlayerScreen(
                 val currentAnimatedUrl = animatedArtworkUrl
 
                 // Base sharp album cover (always drawn in background during drag or before playback starts)
+                // In lyrics and queue views, it strictly displays the original static image!
                 AsyncImage(
                     model = ImageRequest.Builder(context)
-                        .data(hdArtUrl ?: playerState?.artUrl)
+                        .data(playerState?.artUrl ?: hdArtUrl)
                         .crossfade(true)
                         .build(),
                     imageLoader = animatedImageLoader,
                     contentDescription = "Album Art",
                     contentScale = ContentScale.Crop,
                     alignment = artworkBiasAlignment,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            alpha = if (!currentAnimatedUrl.isNullOrBlank() && isVideoPlaying && !isOverlayActive) 0f else 1f
-                        }
+                    modifier = Modifier.fillMaxSize()
                 )
 
                 if (!currentAnimatedUrl.isNullOrBlank()) {
-                    DisposableEffect(Unit) {
+                    DisposableEffect(currentAnimatedUrl) {
                         onDispose {
                             isVideoPlaying = false
+                            motionCoverBitmap = null
                         }
+                    }
+                    val videoOverlayAlpha = if (isOverlayActive) {
+                        (1f - (overlayTransitionProgress - 0.85f).coerceAtLeast(0f) / 0.15f).coerceIn(0f, 1f)
+                    } else {
+                        (1f - overlayTransitionProgress).coerceIn(0f, 1f)
                     }
                     com.mrtdk.liquid_glass.ui.components.AnimatedArtworkPlayer(
                         videoUrl = currentAnimatedUrl,
                         modifier = Modifier
                             .fillMaxSize()
                             .then(
-                                if (isNormalArtwork) {
+                                if (isNormalArtwork || isOverlayActive || overlayTransitionProgress > 0f) {
                                     Modifier.clip(RoundedCornerShape(imgCorner))
                                 } else {
                                     Modifier
                                 }
                             )
                             .graphicsLayer {
-                                alpha = if (isVideoPlaying && !showLyrics && !showQueue) 1f else 0f
+                                alpha = if (isVideoPlaying) videoOverlayAlpha else 0f
                             },
-                        isPaused = showLyrics || showQueue,
-                        enableFrameCapture = (dragProgress == 0f) && !showLyrics && !showQueue,
+                        isPaused = isOverlayActive && overlayTransitionProgress >= 0.98f,
+                        enableFrameCapture = (dragProgress == 0f) && !isOverlayActive && overlayTransitionProgress == 0f,
                         onPlayerCreated = { masterAnimatedPlayer = it },
                         onPlaybackStarted = { isVideoPlaying = true },
-                        onFrameCaptured = { frameBitmap ->
-                            coverBitmap = frameBitmap.asImageBitmap()
-                            frameToken++
-                            reflectionSkew = calculateDominantSkew(frameBitmap)
+                            onFrameCaptured = { frameBitmap ->
+                                val bmp = frameBitmap.asImageBitmap()
+                                coverBitmap = bmp
+                                motionCoverBitmap = bmp
+                                frameToken++
 
-                            try {
-                                val w = frameBitmap.width
-                                val h = frameBitmap.height
+                                val now = android.os.SystemClock.uptimeMillis()
+                                if (now - lastColorSampleTime >= 250L) {
+                                    lastColorSampleTime = now
+                                    reflectionSkew = calculateDominantSkew(frameBitmap)
 
-                                // 1. Muestreo de la franja inferior (75% al 95%) para bottomAverageColor
-                                val startY = (h * 0.75f).toInt().coerceIn(0, h - 1)
-                                val endY = (h * 0.95f).toInt().coerceIn(startY + 1, h)
-                                var rBottom = 0L; var gBottom = 0L; var bBottom = 0L
-                                var countBottom = 0
-                                val stepX = maxOf(1, w / 16)
-                                val stepY = maxOf(1, (endY - startY) / 4)
-                                for (y in startY until endY step stepY) {
-                                    for (x in 0 until w step stepX) {
-                                        val pixel = frameBitmap.getPixel(x, y)
-                                        rBottom += (pixel shr 16 and 0xFF)
-                                        gBottom += (pixel shr 8 and 0xFF)
-                                        bBottom += (pixel and 0xFF)
-                                        countBottom++
-                                    }
-                                }
-                                if (countBottom > 0) {
-                                    bottomAverageColor = Color((rBottom / countBottom).toInt(), (gBottom / countBottom).toInt(), (bBottom / countBottom).toInt())
-                                }
+                                    try {
+                                        val w = frameBitmap.width
+                                        val h = frameBitmap.height
 
-                                // 2. Muestreo de la zona central (20% al 70%) para dominantColor del video
-                                val domStartY = (h * 0.20f).toInt().coerceIn(0, h - 1)
-                                val domEndY = (h * 0.70f).toInt().coerceIn(domStartY + 1, h)
-                                var rDom = 0L; var gDom = 0L; var bDom = 0L
-                                var countDom = 0
-                                val stepDomY = maxOf(1, (domEndY - domStartY) / 5)
-                                for (y in domStartY until domEndY step stepDomY) {
-                                    for (x in 0 until w step stepX) {
-                                        val pixel = frameBitmap.getPixel(x, y)
-                                        rDom += (pixel shr 16 and 0xFF)
-                                        gDom += (pixel shr 8 and 0xFF)
-                                        bDom += (pixel and 0xFF)
-                                        countDom++
-                                    }
-                                }
-                                if (countDom > 0) {
-                                    val newDom = Color((rDom / countDom).toInt(), (gDom / countDom).toInt(), (bDom / countDom).toInt())
-                                    val dr = kotlin.math.abs(newDom.red - dominantColor.red)
-                                    val dg = kotlin.math.abs(newDom.green - dominantColor.green)
-                                    val db = kotlin.math.abs(newDom.blue - dominantColor.blue)
-                                    if (dr > 0.05f || dg > 0.05f || db > 0.05f) {
-                                        dominantColor = newDom
-                                        onDominantColorChanged(newDom)
-                                    }
-                                }
-
-                                // 3. Generar el fondo Accord difuminado con los colores del video en movimiento
-                                if (fullArtworkBackdropStyle == "accord" && !hasGeneratedMotionBackdrop) {
-                                    hasGeneratedMotionBackdrop = true
-                                    val bmpCopy = try {
-                                        frameBitmap.copy(android.graphics.Bitmap.Config.ARGB_8888, false)
-                                    } catch (_: Exception) { null }
-                                    if (bmpCopy != null) {
-                                        val screenW = with(density) { maxWidth.roundToPx() }.coerceAtLeast(1)
-                                        val screenH = with(density) { maxHeight.roundToPx() }.coerceAtLeast(1)
-                                        scope.launch(Dispatchers.Default) {
-                                            try {
-                                                val motionBackdrop = com.mrtdk.liquid_glass.ui.components.AccordBackdropGenerator.generateAccordBackdrop(
-                                                    source = bmpCopy,
-                                                    width = screenW,
-                                                    height = screenH,
-                                                    includeCover = false
-                                                )
-                                                withContext(Dispatchers.Main) {
-                                                    accordBackdropBitmap = motionBackdrop
-                                                }
-                                            } catch (e: Exception) {
-                                                e.printStackTrace()
+                                        // 1. Muestreo de la franja inferior (75% al 95%) para bottomAverageColor
+                                        val startY = (h * 0.75f).toInt().coerceIn(0, h - 1)
+                                        val endY = (h * 0.95f).toInt().coerceIn(startY + 1, h)
+                                        var rBottom = 0L; var gBottom = 0L; var bBottom = 0L
+                                        var countBottom = 0
+                                        val stepX = maxOf(1, w / 16)
+                                        val stepY = maxOf(1, (endY - startY) / 4)
+                                        for (y in startY until endY step stepY) {
+                                            for (x in 0 until w step stepX) {
+                                                val pixel = frameBitmap.getPixel(x, y)
+                                                rBottom += (pixel shr 16 and 0xFF)
+                                                gBottom += (pixel shr 8 and 0xFF)
+                                                bBottom += (pixel and 0xFF)
+                                                countBottom++
                                             }
                                         }
-                                    }
-                                }
-                            } catch (e: Exception) { }
-                        },
-                        cornerRadius = if (isNormalArtwork) imgCorner else 0.dp,
-                        clipToBounds = isNormalArtwork
-                    )
-                }
-
-                // Capa de desenfoque soft blur en la curva de la parte inferior de la carátula
-                if (!isOverlayActive && !isNormalArtwork && fullArtworkBackdropStyle != "accord") {
-                    val blurRadiusPx = with(density) { 18.dp.toPx() }
-                    val maskBitmapCache = remember { arrayOfNulls<androidx.compose.ui.graphics.ImageBitmap>(1) }
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .graphicsLayer {
-                                compositingStrategy = CompositingStrategy.Offscreen
-                            }
-                            .drawWithContent {
-                                drawContent()
-
-                                val w = size.width
-                                val h = size.height
-                                val width = w.roundToInt()
-                                val height = h.roundToInt()
-
-                                if (width > 0 && height > 0) {
-                                    val currentBmp = maskBitmapCache[0]
-                                    if (currentBmp == null || currentBmp.width != width || currentBmp.height != height) {
-                                        val bmp = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
-                                        val canvas = android.graphics.Canvas(bmp)
-
-                                        val paint = android.graphics.Paint().apply {
-                                            isAntiAlias = true
-                                            color = android.graphics.Color.BLACK
-                                            style = android.graphics.Paint.Style.FILL
-                                            maskFilter = android.graphics.BlurMaskFilter(blurRadiusPx, android.graphics.BlurMaskFilter.Blur.NORMAL)
+                                        if (countBottom > 0) {
+                                            bottomAverageColor = Color((rBottom / countBottom).toInt(), (gBottom / countBottom).toInt(), (bBottom / countBottom).toInt())
                                         }
 
-                                        val path = android.graphics.Path().apply {
-                                            val lY = height - with(density) { 125.dp.toPx() }
-                                            val rY = height - with(density) { 105.dp.toPx() }
-                                            val mY = height - with(density) { 38.dp.toPx() }
-                                            val ext = blurRadiusPx
-
-                                            moveTo(-ext, lY)
-                                            lineTo(0f, lY)
-                                            cubicTo(
-                                                width * 0.28f, mY + with(density) { 6.dp.toPx() },
-                                                width * 0.65f, mY + with(density) { 8.dp.toPx() },
-                                                width.toFloat(), rY
-                                            )
-                                            lineTo(width + ext, rY)
-                                            lineTo(width + ext, height + ext)
-                                            lineTo(-ext, height + ext)
-                                            close()
+                                        // 2. Muestreo de la zona central (20% al 70%) para dominantColor del video
+                                        val domStartY = (h * 0.20f).toInt().coerceIn(0, h - 1)
+                                        val domEndY = (h * 0.70f).toInt().coerceIn(domStartY + 1, h)
+                                        var rDom = 0L; var gDom = 0L; var bDom = 0L
+                                        var countDom = 0
+                                        val stepDomY = maxOf(1, (domEndY - domStartY) / 5)
+                                        for (y in domStartY until domEndY step stepDomY) {
+                                            for (x in 0 until w step stepX) {
+                                                val pixel = frameBitmap.getPixel(x, y)
+                                                rDom += (pixel shr 16 and 0xFF)
+                                                gDom += (pixel shr 8 and 0xFF)
+                                                bDom += (pixel and 0xFF)
+                                                countDom++
+                                            }
+                                        }
+                                        if (countDom > 0) {
+                                            val newDom = Color((rDom / countDom).toInt(), (gDom / countDom).toInt(), (bDom / countDom).toInt())
+                                            val dr = kotlin.math.abs(newDom.red - dominantColor.red)
+                                            val dg = kotlin.math.abs(newDom.green - dominantColor.green)
+                                            val db = kotlin.math.abs(newDom.blue - dominantColor.blue)
+                                            if (dr > 0.05f || dg > 0.05f || db > 0.05f) {
+                                                dominantColor = newDom
+                                                onDominantColorChanged(newDom)
+                                            }
                                         }
 
-                                        canvas.drawPath(path, paint)
-                                        maskBitmapCache[0] = bmp.asImageBitmap()
+                                        // 3. Generar el fondo Accord difuminado con los colores del video en movimiento
+                                        if (fullArtworkBackdropStyle == "accord" && !hasGeneratedMotionBackdrop) {
+                                            hasGeneratedMotionBackdrop = true
+                                            val bmpCopy = try {
+                                                frameBitmap.copy(android.graphics.Bitmap.Config.ARGB_8888, false)
+                                            } catch (_: Exception) { null }
+                                            if (bmpCopy != null) {
+                                                val screenW = with(density) { maxWidth.roundToPx() }.coerceAtLeast(1)
+                                                val screenH = with(density) { maxHeight.roundToPx() }.coerceAtLeast(1)
+                                                scope.launch(Dispatchers.Default) {
+                                                    try {
+                                                        val motionBackdrop = com.mrtdk.liquid_glass.ui.components.AccordBackdropGenerator.generateAccordBackdrop(
+                                                            source = bmpCopy,
+                                                            width = screenW,
+                                                            height = screenH,
+                                                            includeCover = false
+                                                        )
+                                                        withContext(Dispatchers.Main) {
+                                                            accordBackdropBitmap = motionBackdrop
+                                                        }
+                                                    } catch (e: Exception) {
+                                                        e.printStackTrace()
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    } catch (_: Exception) { }
+                                }
+                            },
+                            cornerRadius = if (isNormalArtwork || isOverlayActive || overlayTransitionProgress > 0f) imgCorner else 0.dp,
+                            clipToBounds = isNormalArtwork || isOverlayActive || overlayTransitionProgress > 0f
+                        )
+                    }
+
+
+                // Capa de desenfoque GPU sobre la curva inferior de la carátula
+                // key(artUrl) → recomposición total al cambiar canción — sin imagen anterior stale
+                // DstIn bezier recorta solo la franja inferior, alineada con la portada principal
+                val blurArtKey = playerState?.artUrl ?: hdArtUrl
+                if (!isNormalArtwork && fullArtworkBackdropStyle != "accord") {
+                    val blurLayerAlpha = (1f - overlayTransitionProgress).coerceIn(0f, 1f)
+                    val blurRadiusMaskPx = with(density) { 18.dp.toPx() }
+
+                    key(blurArtKey) {
+                        val maskBitmapCacheBlur = remember { arrayOfNulls<androidx.compose.ui.graphics.ImageBitmap>(1) }
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer {
+                                    alpha = blurLayerAlpha
+                                    compositingStrategy = CompositingStrategy.Offscreen
+                                }
+                                .drawWithContent {
+                                    drawContent()
+
+                                    val width = size.width.roundToInt()
+                                    val height = size.height.roundToInt()
+
+                                    if (width > 0 && height > 0) {
+                                        val currentBmp = maskBitmapCacheBlur[0]
+                                        if (currentBmp == null || currentBmp.width != width || currentBmp.height != height) {
+                                            val bmp = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
+                                            val canvas = android.graphics.Canvas(bmp)
+
+                                            val paint = android.graphics.Paint().apply {
+                                                isAntiAlias = true
+                                                color = android.graphics.Color.BLACK
+                                                style = android.graphics.Paint.Style.FILL
+                                                maskFilter = android.graphics.BlurMaskFilter(blurRadiusMaskPx, android.graphics.BlurMaskFilter.Blur.NORMAL)
+                                            }
+
+                                            val path = android.graphics.Path().apply {
+                                                val lY = height - with(density) { 125.dp.toPx() }
+                                                val rY = height - with(density) { 105.dp.toPx() }
+                                                val mY = height - with(density) { 38.dp.toPx() }
+                                                val ext = blurRadiusMaskPx
+
+                                                moveTo(-ext, lY)
+                                                lineTo(0f, lY)
+                                                cubicTo(
+                                                    width * 0.28f, mY + with(density) { 6.dp.toPx() },
+                                                    width * 0.65f, mY + with(density) { 8.dp.toPx() },
+                                                    width.toFloat(), rY
+                                                )
+                                                lineTo(width + ext, rY)
+                                                lineTo(width + ext, height + ext)
+                                                lineTo(-ext, height + ext)
+                                                close()
+                                            }
+
+                                            canvas.drawPath(path, paint)
+                                            maskBitmapCacheBlur[0] = bmp.asImageBitmap()
+                                        }
+                                    }
+
+                                    maskBitmapCacheBlur[0]?.let { bmp ->
+                                        drawImage(image = bmp, blendMode = BlendMode.DstIn)
                                     }
                                 }
-
-                                maskBitmapCache[0]?.let { bmp ->
-                                    drawImage(
-                                        image = bmp,
-                                        blendMode = BlendMode.DstIn
-                                    )
-                                }
-                            }
-                    ) {
-                        val currentBitmap = coverBitmap
-                        if (currentBitmap != null) {
-                            Canvas(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .blur(14.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
-                            ) {
+                        ) {
+                            if (isVideoPlaying) {
+                                val currentMotionBmp = motionCoverBitmap
                                 val token = frameToken
-                                val cW = currentBitmap.width.toFloat()
-                                val cH = currentBitmap.height.toFloat()
-                                if (cW > 0f && cH > 0f && size.width > 0f && size.height > 0f) {
-                                    val scale = maxOf(size.width / cW, size.height / cH)
-                                    val scaledW = cW * scale
-                                    val scaledH = cH * scale
-                                    val srcX = ((scaledW - size.width) / 2f) / scale
-                                    val srcY = 0f
-                                    val srcW = size.width / scale
-                                    val srcH = size.height / scale
+                                if (currentMotionBmp != null) {
+                                    Canvas(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .graphicsLayer {
+                                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                                                    renderEffect = android.graphics.RenderEffect
+                                                        .createBlurEffect(20f, 20f, android.graphics.Shader.TileMode.MIRROR)
+                                                        .asComposeRenderEffect()
+                                                }
+                                            }
+                                            .then(
+                                                if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) {
+                                                    Modifier.blur(14.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
+                                                } else Modifier
+                                            )
+                                    ) {
+                                        val _t = token
+                                        val cW = currentMotionBmp.width.toFloat()
+                                        val cH = currentMotionBmp.height.toFloat()
+                                        if (cW > 0f && cH > 0f && size.width > 0f && size.height > 0f) {
+                                            val scale = maxOf(size.width / cW, size.height / cH)
+                                            val scaledW = cW * scale
+                                            val scaledH = cH * scale
+                                            val srcX = ((scaledW - size.width) / 2f) / scale
+                                            val srcY = 0f
+                                            val srcW = size.width / scale
+                                            val srcH = size.height / scale
 
-                                    drawImage(
-                                        image = currentBitmap,
-                                        srcOffset = androidx.compose.ui.unit.IntOffset(
-                                            srcX.roundToInt().coerceIn(0, currentBitmap.width - 1),
-                                            srcY.roundToInt().coerceIn(0, currentBitmap.height - 1)
-                                        ),
-                                        srcSize = androidx.compose.ui.unit.IntSize(
-                                            srcW.roundToInt().coerceIn(1, currentBitmap.width),
-                                            srcH.roundToInt().coerceIn(1, currentBitmap.height)
-                                        ),
-                                        dstOffset = androidx.compose.ui.unit.IntOffset.Zero,
-                                        dstSize = androidx.compose.ui.unit.IntSize(size.width.roundToInt(), size.height.roundToInt()),
-                                        filterQuality = FilterQuality.Low
+                                            drawImage(
+                                                image = currentMotionBmp,
+                                                srcOffset = androidx.compose.ui.unit.IntOffset(
+                                                    srcX.roundToInt().coerceIn(0, currentMotionBmp.width - 1),
+                                                    srcY.roundToInt().coerceIn(0, currentMotionBmp.height - 1)
+                                                ),
+                                                srcSize = androidx.compose.ui.unit.IntSize(
+                                                    srcW.roundToInt().coerceIn(1, currentMotionBmp.width),
+                                                    srcH.roundToInt().coerceIn(1, currentMotionBmp.height)
+                                                ),
+                                                dstOffset = androidx.compose.ui.unit.IntOffset.Zero,
+                                                dstSize = androidx.compose.ui.unit.IntSize(size.width.roundToInt(), size.height.roundToInt())
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(
+                                                Brush.verticalGradient(
+                                                    colors = listOf(
+                                                        Color.Transparent,
+                                                        bottomAverageColor.copy(alpha = 0.45f),
+                                                        dominantColor.copy(alpha = 0.65f)
+                                                    )
+                                                )
+                                            )
+                                    )
+                                }
+                            } else {
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(context)
+                                            .data(blurArtKey)
+                                            .crossfade(false)
+                                            .build(),
+                                        imageLoader = animatedImageLoader,
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        alignment = artworkBiasAlignment,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .graphicsLayer {
+                                                renderEffect = android.graphics.RenderEffect
+                                                    .createBlurEffect(20f, 20f, android.graphics.Shader.TileMode.MIRROR)
+                                                    .asComposeRenderEffect()
+                                            }
+                                    )
+                                } else {
+                                    // API < 31: gradiente como fallback
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(
+                                                Brush.verticalGradient(
+                                                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.45f)),
+                                                    startY = 0f,
+                                                    endY = Float.POSITIVE_INFINITY
+                                                )
+                                            )
                                     )
                                 }
                             }
-                        } else {
-                            AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(hdArtUrl)
-                                    .crossfade(true)
-                                    .build(),
-                                imageLoader = animatedImageLoader,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                alignment = artworkBiasAlignment,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .blur(14.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
-                            )
                         }
                     }
                 }
+
+
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -3685,285 +3813,230 @@ fun PlayerScreen(
             }
 
             // GLOBAL PLAYBACK CONTROLS (Unified bottom controls with fixed height relative to cover image)
+            AnimatedVisibility(
+                visible = (!showLyrics || showLyricsControls),
+                modifier = Modifier.align(Alignment.BottomCenter),
+                enter = fadeIn(animationSpec = tween(220)) + slideInVertically(animationSpec = tween(240)) { it / 2 },
+                exit = fadeOut(animationSpec = tween(180)) + slideOutVertically(animationSpec = tween(200)) { it / 2 }
+            ) {
+                val currentControlsBaseY = maxWidth * 1.23f
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height((maxHeight - currentControlsBaseY).coerceAtLeast(0.dp))
+                        .graphicsLayer {
+                            alpha = contentAlpha
+                        }
+                        .pointerInput(Unit) {} // Consume all pointer inputs so clicks don't fall through to the lists underneath
+                        .background(Color.Transparent)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 34.dp)
+                            .padding(top = 0.dp)
+                            .padding(bottom = 0.dp)
+                    ) {
+                        Spacer(modifier = Modifier.height(72.dp))
 
-             AnimatedVisibility(
+                        IsolatedPlayerSeekbar(
+                            musicPlayer = musicPlayer,
+                            duration = duration,
+                            fallbackPosition = currentPosition,
+                            sliderActiveColor = sliderActiveColor,
+                            sliderInactiveColor = sliderInactiveColor,
+                            contentColor = contentColor,
+                            onSeek = onSeek,
+                            onPositioned = { coords ->
+                                sliderCoordinates = coords
+                            }
+                        )
 
-                 visible = (!showLyrics || showLyricsControls),
+                        Spacer(modifier = Modifier.height(10.dp))
 
-                 modifier = Modifier.align(Alignment.BottomCenter),
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                        ) {
+                            PlayerBottomControls(
+                                progress = 0f, currentPosition = 0L, duration = duration,
+                                isPlaying = isPlaying, contentColor = contentColor, volumePosition = volumePosition,
+                                showLyrics = showLyrics, showQueue = showQueue,
+                                onSeek = onSeek, onTogglePlayPause = onTogglePlayPause, onVolumeChange = { v -> 
+                                    volumePosition = v
+                                    audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, (v * maxVolume).toInt(), 0)
+                                    onVolumeChange(v) 
+                                },
+                                onToggleLyrics = { showLyrics = !showLyrics; showQueue = false }, onToggleQueue = { showQueue = !showQueue; showLyrics = false },
+                                includeVolumeAndIcons = true,
+                                includeProgress = false,
+                                onSkipNext = { swipeDirection = 1; onSkipNext() },
+                                onSkipPrevious = { swipeDirection = -1; onSkipPrevious() },
+                                fillHeight = true,
+                                sliderActiveColor = sliderActiveColor,
+                                sliderInactiveColor = sliderInactiveColor
+                            )
+                        }
+                    }
+                }
+            }
 
-                 enter = fadeIn(animationSpec = tween(220)) + slideInVertically(animationSpec = tween(240)) { it / 2 },
+            // UNIFIED SONG DETAILS HEADER (Placed AFTER controls in Z-order so star/3-dots are clickable in main view)
+            val isLightBackground = contentColor != Color.White
+            Row(
+                modifier = Modifier
+                    .offset(x = detailsOffsetX, y = detailsOffsetY)
+                    .width(detailsWidth)
+                    .heightIn(min = 48.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                var dragAccumulator by remember { mutableStateOf(0f) }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .pointerInput(playerState) {
+                            detectHorizontalDragGestures(
+                                onDragEnd = {
+                                    if (dragAccumulator < -60f) { swipeDirection = 1; onSkipNext() }
+                                    else if (dragAccumulator > 60f) { swipeDirection = -1; onSkipPrevious() }
+                                    dragAccumulator = 0f
+                                },
+                                onHorizontalDrag = { change, dragAmount ->
+                                    dragAccumulator += dragAmount
+                                    change.consume()
+                                }
+                            )
+                        }
+                ) {
+                    val dir = swipeDirection
+                    androidx.compose.animation.AnimatedContent(
+                        targetState = playerState,
+                        transitionSpec = {
+                            (androidx.compose.animation.slideInHorizontally { width -> dir * width } + fadeIn()).togetherWith(
+                                androidx.compose.animation.slideOutHorizontally { width -> dir * -width } + fadeOut()
+                            )
+                        }, label = "textSlide"
+                    ) { state ->
+                        Column(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = state?.title ?: "",
+                                color = contentColor,
+                                fontSize = titleFontSize,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.height(3.dp))
+                            var artistCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
+                            Text(
+                                text = state?.artist ?: "",
+                                color = contentColor.copy(alpha = 0.72f),
+                                fontSize = artistFontSize,
+                                fontWeight = FontWeight.Normal,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier
+                                    .onGloballyPositioned { artistCoords = it }
+                                    .clickable {
+                                        if (state?.artist != null) {
+                                            val artistList = state.artist.split(", ").filter { it.isNotEmpty() }
+                                            if (artistList.isNotEmpty()) {
+                                                val parentCoords = parentCoordinates
+                                                if (parentCoords != null && artistCoords != null && parentCoords.isAttached && artistCoords!!.isAttached) {
+                                                    val localOffset = parentCoords.localPositionOf(artistCoords!!, Offset.Zero)
+                                                    val size = artistCoords!!.size
+                                                    artistPivotBounds = androidx.compose.ui.geometry.Rect(localOffset, androidx.compose.ui.geometry.Size(size.width.toFloat(), size.height.toFloat()))
+                                                } else {
+                                                    artistPivotBounds = artistCoords?.boundsInRoot()
+                                                }
+                                                artistMenuOptions = artistList
+                                                showArtistOptionsMenu = true
+                                            }
+                                        }
+                                    }
+                            )
+                        }
+                    }
+                }
 
-                 exit = fadeOut(animationSpec = tween(180)) + slideOutVertically(animationSpec = tween(200)) { it / 2 }
+                Row(
+                    modifier = Modifier.graphicsLayer { alpha = contentAlpha },
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(contentColor.copy(alpha = 0.15f))
+                            .clickable {
+                                if (playerState != null) {
+                                    if (!isSaved) {
+                                        LibraryManager.saveItem(LibraryItem(playerState.videoId ?: "", playerState.title, playerState.artist, playerState.artUrl?.toString(), ItemType.SONG))
+                                    } else {
+                                        LibraryManager.removeItem(playerState.videoId ?: "")
+                                    }
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isSaved) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.fav),
+                                contentDescription = "Fav",
+                                tint = contentColor,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        } else {
+                            AsyncImage(
+                                model = "file:///android_asset/img reproductor/c.png",
+                                contentDescription = "Fav",
+                                colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(contentColor),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
 
-             ) {
-                 val currentControlsBaseY = maxWidth * 1.23f
-                 Box(
-                      modifier = Modifier
-                          .fillMaxWidth()
-                          .height(maxHeight - currentControlsBaseY)
-                          .graphicsLayer {
-                              alpha = contentAlpha
-                          }
-                          .pointerInput(Unit) {} // Consume all pointer inputs so clicks don't fall through to the lists underneath
-                          .background(Color.Transparent)
-                  ) {
-
-                     Column(
-                          modifier = Modifier
-                              .fillMaxSize()
-                              .padding(horizontal = 34.dp)
-                              .padding(top = 0.dp)
-                              .padding(bottom = 0.dp)
-                      ) {
-
-                          Spacer(modifier = Modifier.height(72.dp)) 
-
-                          IsolatedPlayerSeekbar(
-                              musicPlayer = musicPlayer,
-                              duration = duration,
-                              fallbackPosition = currentPosition,
-                              sliderActiveColor = sliderActiveColor,
-                              sliderInactiveColor = sliderInactiveColor,
-                              contentColor = contentColor,
-                              onSeek = onSeek,
-                              onPositioned = { coords ->
-                                  sliderCoordinates = coords
-                              }
-                          )
-
-                          Spacer(modifier = Modifier.height(10.dp))
-
-                          Box(
-                              modifier = Modifier
-                                  .fillMaxWidth()
-                                  .weight(1f)
-                          ) {
-                              PlayerBottomControls(
-                                  progress = 0f, currentPosition = 0L, duration = duration,
-                                  isPlaying = isPlaying, contentColor = contentColor, volumePosition = volumePosition,
-                                  showLyrics = showLyrics, showQueue = showQueue,
-                                  onSeek = onSeek, onTogglePlayPause = onTogglePlayPause, onVolumeChange = { v -> 
-                                      volumePosition = v
-                                      audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, (v * maxVolume).toInt(), 0)
-                                      onVolumeChange(v) 
-                                  },
-                                  onToggleLyrics = { showLyrics = !showLyrics; showQueue = false }, onToggleQueue = { showQueue = !showQueue; showLyrics = false },
-                                  includeVolumeAndIcons = true,
-                                  includeProgress = false,
-                                  onSkipNext = { swipeDirection = 1; onSkipNext() },
-                                  onSkipPrevious = { swipeDirection = -1; onSkipPrevious() },
-                                  fillHeight = true,
-                                  sliderActiveColor = sliderActiveColor,
-                                  sliderInactiveColor = sliderInactiveColor
-                              )
-                          }
-                      }
-                  }
-              }
-
-
-
-             // UNIFIED SONG DETAILS HEADER (Placed AFTER controls in Z-order so star/3-dots are clickable in main view)
-
-             val isLightBackground = contentColor != Color.White
-
-             Row(
-                  modifier = Modifier
-                      .offset(x = detailsOffsetX, y = detailsOffsetY)
-                      .width(detailsWidth)
-                      .heightIn(min = 48.dp),
-                  verticalAlignment = Alignment.CenterVertically
-              ) {
-
-                 var dragAccumulator by remember { mutableStateOf(0f) }
-
-                 Box(
-
-                     modifier = Modifier
-
-                         .weight(1f)
-
-                         .pointerInput(playerState) {
-
-                             detectHorizontalDragGestures(
-
-                                 onDragEnd = {
-
-                                     if (dragAccumulator < -60f) { swipeDirection = 1; onSkipNext() }
-
-                                     else if (dragAccumulator > 60f) { swipeDirection = -1; onSkipPrevious() }
-
-                                     dragAccumulator = 0f
-
-                                 },
-
-                                 onHorizontalDrag = { change, dragAmount ->
-
-                                     dragAccumulator += dragAmount
-
-                                     change.consume()
-
-                                 }
-
-                             )
-
-                         }
-
-                 ) {
-
-                     val dir = swipeDirection
-
-                     androidx.compose.animation.AnimatedContent(
-
-                         targetState = playerState,
-
-                         transitionSpec = {
-
-                             (androidx.compose.animation.slideInHorizontally { width -> dir * width } + fadeIn()).togetherWith(
-
-                                 androidx.compose.animation.slideOutHorizontally { width -> dir * -width } + fadeOut()
-
-                             )
-
-                         }, label = "textSlide"
-
-                     ) { state ->
-
-                         Column(
-
-                             modifier = Modifier
-
-                                 .fillMaxWidth()
-
-                         ) {
-
-                             Text(
-
-                                 text = state?.title ?: "",
-
-                                 color = contentColor,
-
-                                 fontSize = titleFontSize,
-
-                                 fontWeight = FontWeight.Bold,
-
-                                 maxLines = 1,
-
-                                 overflow = TextOverflow.Ellipsis
-
-                             )
-
-                             Spacer(modifier = Modifier.height(3.dp))
-
-                             var artistCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
-                             Text(
-                                 text = state?.artist ?: "",
-                                 color = contentColor.copy(alpha = 0.72f),
-                                 fontSize = artistFontSize,
-                                 fontWeight = FontWeight.Normal,
-                                 maxLines = 1,
-                                 overflow = TextOverflow.Ellipsis,
-                                 modifier = Modifier
-                                     .onGloballyPositioned { artistCoords = it }
-                                     .clickable {
-                                         if (state?.artist != null) {
-                                             val artistList = state.artist.split(", ").filter { it.isNotEmpty() }
-                                             if (artistList.isNotEmpty()) {
-                                                 val parentCoords = parentCoordinates
-                                                 if (parentCoords != null && artistCoords != null && parentCoords.isAttached && artistCoords!!.isAttached) {
-                                                     val localOffset = parentCoords.localPositionOf(artistCoords!!, Offset.Zero)
-                                                     val size = artistCoords!!.size
-                                                     artistPivotBounds = androidx.compose.ui.geometry.Rect(localOffset, androidx.compose.ui.geometry.Size(size.width.toFloat(), size.height.toFloat()))
-                                                 } else {
-                                                     artistPivotBounds = artistCoords?.boundsInRoot()
-                                                 }
-                                                 artistMenuOptions = artistList
-                                                 showArtistOptionsMenu = true
-                                             }
-                                         }
-                                     }
-                             )
-                          }
-                      }
-                  }
-
-                  Row(
-                      modifier = Modifier.graphicsLayer { alpha = contentAlpha },
-                      horizontalArrangement = Arrangement.spacedBy(10.dp),
-                      verticalAlignment = Alignment.CenterVertically
-                  ) {
-                      Box(
-                          modifier = Modifier
-                              .size(36.dp)
-                              .clip(CircleShape)
-                              .background(contentColor.copy(alpha = 0.15f))
-                              .clickable {
-                                  if (playerState != null) {
-                                      if (!isSaved) {
-                                          LibraryManager.saveItem(LibraryItem(playerState.videoId ?: "", playerState.title, playerState.artist, playerState.artUrl?.toString(), ItemType.SONG))
-                                      } else {
-                                          LibraryManager.removeItem(playerState.videoId ?: "")
-                                      }
-                                  }
-                              },
-                          contentAlignment = Alignment.Center
-                      ) {
-                          if (isSaved) {
-                              Icon(
-                                  painter = painterResource(id = R.drawable.fav),
-                                  contentDescription = "Fav",
-                                  tint = contentColor,
-                                  modifier = Modifier.size(22.dp)
-                              )
-                          } else {
-                              AsyncImage(
-                                  model = "file:///android_asset/img reproductor/c.png",
-                                  contentDescription = "Fav",
-                                  colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(contentColor),
-                                  modifier = Modifier.size(18.dp)
-                              )
-                          }
-                      }
-
-                      var threeDotsCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
-                      Box(
-                          modifier = Modifier
-                              .onGloballyPositioned { threeDotsCoords = it }
-                              .size(36.dp)
-                              .clip(CircleShape)
-                              .background(contentColor.copy(alpha = 0.15f))
-                              .clickable { 
-                                  val parentCoords = parentCoordinates
-                                  if (parentCoords != null && threeDotsCoords != null && parentCoords.isAttached && threeDotsCoords!!.isAttached) {
-                                      val localOffset = parentCoords.localPositionOf(threeDotsCoords!!, Offset.Zero)
-                                      val size = threeDotsCoords!!.size
-                                      menuPivotBounds = androidx.compose.ui.geometry.Rect(localOffset, androidx.compose.ui.geometry.Size(size.width.toFloat(), size.height.toFloat()))
-                                  } else {
-                                      menuPivotBounds = threeDotsCoords?.boundsInRoot()
-                                  }
-                                  if (showLyrics) {
-                                      openDirectlyInProvidersView = false
-                                      showLyricsOptionsMenu = true
-                                  } else {
-                                      showOptionsMenu = true
-                                  }
-                              },
-                          contentAlignment = Alignment.Center
-                      ) {
-                          androidx.compose.foundation.Canvas(modifier = Modifier.size(moreIconSize)) {
-                              val r = 1.8.dp.toPx()
-                              val space = 3.5.dp.toPx()
-                              val cx = size.width / 2f
-                              val cy = size.height / 2f
-                              drawCircle(contentColor, radius = r, center = Offset(cx - space - r * 2, cy))
-                              drawCircle(contentColor, radius = r, center = Offset(cx, cy))
-                              drawCircle(contentColor, radius = r, center = Offset(cx + space + r * 2, cy))
-                          }
-                      }
-                  }
-
-              }
+                    var threeDotsCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
+                    Box(
+                        modifier = Modifier
+                            .onGloballyPositioned { threeDotsCoords = it }
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(contentColor.copy(alpha = 0.15f))
+                            .clickable { 
+                                val parentCoords = parentCoordinates
+                                if (parentCoords != null && threeDotsCoords != null && parentCoords.isAttached && threeDotsCoords!!.isAttached) {
+                                    val localOffset = parentCoords.localPositionOf(threeDotsCoords!!, Offset.Zero)
+                                    val size = threeDotsCoords!!.size
+                                    menuPivotBounds = androidx.compose.ui.geometry.Rect(localOffset, androidx.compose.ui.geometry.Size(size.width.toFloat(), size.height.toFloat()))
+                                } else {
+                                    menuPivotBounds = threeDotsCoords?.boundsInRoot()
+                                }
+                                if (showLyrics) {
+                                    openDirectlyInProvidersView = false
+                                    showLyricsOptionsMenu = true
+                                } else {
+                                    showOptionsMenu = true
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        androidx.compose.foundation.Canvas(modifier = Modifier.size(moreIconSize)) {
+                            val r = 1.8.dp.toPx()
+                            val space = 3.5.dp.toPx()
+                            val cx = size.width / 2f
+                            val cy = size.height / 2f
+                            drawCircle(contentColor, radius = r, center = Offset(cx - space - r * 2, cy))
+                            drawCircle(contentColor, radius = r, center = Offset(cx, cy))
+                            drawCircle(contentColor, radius = r, center = Offset(cx + space + r * 2, cy))
+                        }
+                    }
+                }
+            }
 
               if (isQueueItemDragging && draggingIndex != -1 && draggingSection != null) {
                   val density = androidx.compose.ui.platform.LocalDensity.current
@@ -4414,8 +4487,11 @@ fun PlayerScreen(
                     
 
                     LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max=300.dp)) {
-
-                        items(playlists.size) { i ->
+                        items(
+                            count = playlists.size,
+                            key = { i -> playlists[i].id },
+                            contentType = { "playlist_choice" }
+                        ) { i ->
 
                             val pl = playlists[i]
 

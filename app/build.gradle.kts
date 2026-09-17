@@ -63,7 +63,6 @@ android {
 
 dependencies {
     implementation(project(":shazamkit"))
-    implementation(project(":glass"))
     implementation(project(":innertube"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

@@ -215,7 +215,7 @@ fun FloatingMiniPlayer(
                     onClick = onClick,
                 )
                 .padding(
-                    horizontal = if (isInline) 8.dp else 12.dp,
+                    horizontal = if (isInline) 8.dp else 14.dp,
                     vertical = if (isInline) 4.dp else 6.dp,
                 ),
         ) {
@@ -258,7 +258,7 @@ fun FloatingMiniPlayer(
 
             IconButton(
                 onClick = onTogglePlayPause,
-                modifier = Modifier.size(if (isInline) 34.dp else 36.dp),
+                modifier = Modifier.size(if (isInline) 34.dp else 40.dp),
             ) {
                 AnimatedContent(
                     targetState = isPlaying,
@@ -273,7 +273,7 @@ fun FloatingMiniPlayer(
                         contentDescription = if (playing) "Pause" else "Play",
                         tint = effectiveIconColor,
                         modifier = Modifier
-                            .size(if (isInline) 22.dp else 24.dp)
+                            .size(if (isInline) 22.dp else 34.dp)
                             .graphicsLayer {
                                 rotationZ = playPauseRotation
                             }
@@ -282,16 +282,16 @@ fun FloatingMiniPlayer(
             }
 
             if (!isInline) {
-                Spacer(Modifier.width(4.dp))
+                Spacer(Modifier.width(6.dp))
                 IconButton(
                     onClick = onNext,
-                    modifier = Modifier.size(36.dp),
+                    modifier = Modifier.size(40.dp),
                 ) {
                     Icon(
                         painter = painterResource(id = R.drawable.forward),
                         contentDescription = "Next",
                         tint = effectiveIconColor,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(32.dp)
                     )
                 }
             }

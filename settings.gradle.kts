@@ -20,9 +20,8 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "liquid-glass-compose"
+rootProject.name = "RayMusic"
 include(":app")
-include(":glass")
 include(":innertube")
 include(":shazamkit")
 include(":EscritorioVersion")

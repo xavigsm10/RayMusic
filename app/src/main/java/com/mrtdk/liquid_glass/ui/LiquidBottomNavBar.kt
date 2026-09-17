@@ -494,31 +494,45 @@ fun LiquidBottomNavBar(
                                             modifier = Modifier.skipToLookaheadSize()
                                         ) {
                                             if (tabItem.iconRes != null) {
+                                                val iconModifier = when (tabItem.index) {
+                                                    0 -> Modifier.size(24.dp) // Home
+                                                    1 -> Modifier.size(21.dp) // New
+                                                    2 -> Modifier.size(width = 30.dp, height = 21.dp) // Radio
+                                                    3 -> Modifier.size(width = 24.dp, height = 26.dp) // Library
+                                                    else -> Modifier.size(24.dp)
+                                                }
+
                                                 Box(
                                                     modifier = if (isSharedIcon) {
-                                                        Modifier.sharedElement(
-                                                            sharedContentState = rememberSharedContentState("tab#${tabItem.index}-icon"),
-                                                            animatedVisibilityScope = this@AnimatedContent,
-                                                            boundsTransform = morphBoundsTransform,
-                                                            zIndexInOverlay = 2f
-                                                        )
+                                                        Modifier
+                                                            .height(26.dp)
+                                                            .wrapContentWidth()
+                                                            .sharedElement(
+                                                                sharedContentState = rememberSharedContentState("tab#${tabItem.index}-icon"),
+                                                                animatedVisibilityScope = this@AnimatedContent,
+                                                                boundsTransform = morphBoundsTransform,
+                                                                zIndexInOverlay = 2f
+                                                            )
                                                     } else {
-                                                        Modifier.animateEnterExitTab(
-                                                            sharedTransitionScope = this@SharedTransitionLayout,
-                                                            animatedVisibilityScope = this@AnimatedContent
-                                                        )
-                                                    }
+                                                        Modifier
+                                                            .height(26.dp)
+                                                            .wrapContentWidth()
+                                                            .animateEnterExitTab(
+                                                                sharedTransitionScope = this@SharedTransitionLayout,
+                                                                animatedVisibilityScope = this@AnimatedContent
+                                                            )
+                                                    },
+                                                    contentAlignment = Alignment.BottomCenter
                                                 ) {
                                                     Icon(
                                                         painter = painterResource(tabItem.iconRes),
                                                         contentDescription = stringResource(tabItem.titleRes),
                                                         tint = baseColor,
-                                                        modifier = Modifier
-                                                            .padding(top = 2.dp)
-                                                            .size(28.dp)
+                                                        modifier = iconModifier
                                                     )
                                                 }
                                             }
+                                            Spacer(modifier = Modifier.height(2.dp))
                                             Box(
                                                 modifier = Modifier.animateEnterExitTab(
                                                     sharedTransitionScope = this@SharedTransitionLayout,
@@ -528,7 +542,7 @@ fun LiquidBottomNavBar(
                                                 Text(
                                                     text = stringResource(tabItem.titleRes),
                                                     color = baseColor,
-                                                    fontSize = 10.sp,
+                                                    fontSize = 11.sp,
                                                     fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                                                     maxLines = 1,
                                                     overflow = TextOverflow.Ellipsis

@@ -111,7 +111,9 @@ fun ReplayScreen(
     // Load user's real playback records from database
     var playbackHistory by remember { mutableStateOf<List<PlaybackRecord>>(emptyList()) }
     LaunchedEffect(Unit) {
-        playbackHistory = LibraryManager.getPlaybackHistory()
+        playbackHistory = withContext(Dispatchers.IO) {
+            LibraryManager.getPlaybackHistory()
+        }
     }
 
     // Filter playback history by selected year and month
@@ -430,7 +432,7 @@ fun ReplayScreen(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.spacedBy(14.dp)
                                         ) {
-                                            itemsIndexed(artistsList) { index, artist ->
+                                            itemsIndexed(artistsList, key = { index, artist -> "replay_artist_${artist.id.ifEmpty { "$index" }}" }) { index, artist ->
                                                 val officialThumb = officialArtistImages[artist.name] ?: artist.thumbnail
                                                 Card(
                                                     modifier = Modifier
@@ -607,7 +609,7 @@ fun ReplayScreen(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.spacedBy(14.dp)
                                         ) {
-                                            itemsIndexed(albumsList) { index, album ->
+                                            itemsIndexed(albumsList, key = { index, album -> "replay_album_${album.id.ifEmpty { "$index" }}" }) { index, album ->
                                                 Column(
                                                     modifier = Modifier
                                                         .width(160.dp)
@@ -924,7 +926,7 @@ fun ReplayScreen(
                                     }
                                 }
 
-                                itemsIndexed(songsList) { index, song ->
+                                itemsIndexed(songsList, key = { index, song -> "replay_song_${song.id.ifEmpty { "$index" }}" }) { index, song ->
                                     ReplaySongRow(
                                         rank = index + 1,
                                         song = song,
@@ -973,7 +975,7 @@ fun ReplayScreen(
                                     verticalArrangement = Arrangement.spacedBy(18.dp),
                                     modifier = Modifier.fillMaxSize()
                                 ) {
-                                    itemsIndexed(albumsList) { index, album ->
+                                    itemsIndexed(albumsList, key = { index, album -> "replay_grid_album_${album.id.ifEmpty { "$index" }}" }) { index, album ->
                                         Column(
                                             modifier = Modifier
                                                 .fillMaxWidth()

@@ -402,7 +402,7 @@ fun SharedElementTransitionContainer(
                         compositingStrategy = if (p < 0.999f && shrinkToTarget) CompositingStrategy.Offscreen else CompositingStrategy.Auto
                     }
             ) {
-                val contentProgress = if (staticContainer || shrinkToTarget) progress.value else 1f
+                val contentProgress = if (staticContainer) progress.value else 1f
                 content(contentProgress, dismissAction)
             }
         }

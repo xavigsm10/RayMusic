@@ -293,33 +293,38 @@ fun AnimatedArtworkPlayer(
             kotlinx.coroutines.delay(50)
         }
 
-        val isUltraPerf = com.mrtdk.liquid_glass.data.LibraryManager.isUltraPerformanceMode()
-        if (!isUltraPerf) {
-            try {
-                val initialBmp = tv.getBitmap(120, 160)
-                if (initialBmp != null) {
-                    onFrameCaptured(initialBmp)
-                }
-            } catch (_: Exception) { }
-        }
+        try {
+            val initialBmp = tv.getBitmap(120, 160)
+            if (initialBmp != null) {
+                onFrameCaptured(initialBmp)
+            }
+        } catch (_: Exception) { }
 
-        // Periodically capture the frame of the TextureView
-        val reusableBmp = android.graphics.Bitmap.createBitmap(120, 160, android.graphics.Bitmap.Config.ARGB_8888)
+        // Double-buffered frame capture synchronized with hardware VSYNC (60/90/120 fps)
+        val reusableBmpA = android.graphics.Bitmap.createBitmap(120, 160, android.graphics.Bitmap.Config.ARGB_8888)
+        val reusableBmpB = android.graphics.Bitmap.createBitmap(120, 160, android.graphics.Bitmap.Config.ARGB_8888)
+        var useA = true
+
         while (true) {
+            if (!exoPlayer.isPlaying || isPaused || !enableFrameCapture || !tv.isAvailable) {
+                kotlinx.coroutines.delay(100)
+                continue
+            }
             val isCurrentUltraPerf = com.mrtdk.liquid_glass.data.LibraryManager.isUltraPerformanceMode()
-            if (!isCurrentUltraPerf && exoPlayer.isPlaying && enableFrameCapture && !isPaused && tv.isAvailable) {
+            if (isCurrentUltraPerf) {
+                kotlinx.coroutines.delay(33) // ~30 fps cap in ultra performance mode
+            } else {
+                androidx.compose.runtime.withFrameNanos { }
+            }
+            if (exoPlayer.isPlaying && enableFrameCapture && !isPaused && tv.isAvailable) {
+                val targetBmp = if (useA) reusableBmpA else reusableBmpB
+                useA = !useA
                 try {
-                    val bmp = tv.getBitmap(reusableBmp)
+                    val bmp = tv.getBitmap(targetBmp)
                     if (bmp != null) {
                         onFrameCaptured(bmp)
                     }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-                val intervalMs = com.mrtdk.liquid_glass.utils.PerformanceProfileManager.getConfig().motionCoverIntervalMs
-                kotlinx.coroutines.delay(intervalMs)
-            } else {
-                kotlinx.coroutines.delay(500) // Sleep when paused or frame capture disabled
+                } catch (_: Exception) { }
             }
         }
     }
@@ -368,6 +373,7 @@ fun AnimatedArtworkPlayer(
             view.isClickable = false
             view.isFocusable = false
             view.setOnTouchListener { _, _ -> false }
+            view.visibility = if (isPaused) android.view.View.INVISIBLE else android.view.View.VISIBLE
             if (outlineProvider != null) {
                 view.clipToOutline = true
                 view.outlineProvider = outlineProvider
