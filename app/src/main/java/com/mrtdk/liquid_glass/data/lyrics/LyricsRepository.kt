@@ -63,6 +63,8 @@ object LyricsRepository {
     /** Lyrics, and which source they turned out to come from. */
     data class Result(val source: LyricsSource, val lines: List<LyricLine>)
 
+    private val memoryCache = object : android.util.LruCache<String, Result>(100) {}
+
     /**
      * [sources] is the user's pick from Settings; anything not in it is not
      * contacted at all. An empty set means no lyrics, which is the same answer
@@ -89,6 +91,11 @@ object LyricsRepository {
         prioritizeSyllableSync: Boolean = false,
         isrc: String? = null,
     ): Result? = coroutineScope {
+        val cacheKey = videoId.takeIf { it.isNotBlank() } ?: "${title.trim().lowercase()}_${artist.trim().lowercase()}"
+        synchronized(memoryCache) {
+            memoryCache.get(cacheKey)?.let { return@coroutineScope it }
+        }
+
         val sequence = order.filter { it in sources } +
             LyricsSource.entries.filter { it in sources && it !in order }
 
@@ -125,11 +132,20 @@ object LyricsRepository {
                 if (lineSynced != null && source == LyricsSource.GENIUS) continue
 
                 val lines = runCatching { job.await() }.getOrNull() ?: continue
-                if (lines.any { it.isWordSynced }) return@coroutineScope result(source, lines)
+                if (lines.any { it.isWordSynced }) {
+                    val res = result(source, lines)
+                    synchronized(memoryCache) { memoryCache.put(cacheKey, res) }
+                    return@coroutineScope res
+                }
                 if (!prioritizeSyllableSync && lines.any { it.timeMs > 0 }) {
-                    return@coroutineScope result(source, lines)
+                    val res = result(source, lines)
+                    synchronized(memoryCache) { memoryCache.put(cacheKey, res) }
+                    return@coroutineScope res
                 }
                 if (lineSynced == null) lineSynced = result(source, lines)
+            }
+            if (lineSynced != null) {
+                synchronized(memoryCache) { memoryCache.put(cacheKey, lineSynced) }
             }
             lineSynced
         } finally {

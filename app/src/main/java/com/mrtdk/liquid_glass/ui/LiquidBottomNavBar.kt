@@ -2,16 +2,25 @@
 
 package com.mrtdk.liquid_glass.ui
 
+import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.BoundsTransform
+import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -260,19 +269,12 @@ fun LiquidBottomNavBar(
         }
     }
 
-    val glassSpringFloat = androidx.compose.animation.core.spring<Float>(dampingRatio = 0.72f, stiffness = 320f)
-    val glassSpringIntSize = androidx.compose.animation.core.spring<androidx.compose.ui.unit.IntSize>(dampingRatio = 0.72f, stiffness = 320f)
-
     SharedTransitionLayout(modifier = modifier.fillMaxWidth()) {
         AnimatedContent(
             targetState = visualState,
             transitionSpec = {
-                (fadeIn(animationSpec = glassSpringFloat))
-                    .togetherWith(
-                        fadeOut(animationSpec = glassSpringFloat)
-                    ).using(
-                        androidx.compose.animation.SizeTransform(clip = false, sizeAnimationSpec = { _, _ -> glassSpringIntSize })
-                    )
+                fadeIn(tween(220, easing = FastOutSlowInEasing)) togetherWith
+                    fadeOut(tween(180, easing = FastOutSlowInEasing))
             },
             contentAlignment = Alignment.BottomCenter,
             label = "navBarSharedMorphTransition"
@@ -285,7 +287,7 @@ fun LiquidBottomNavBar(
                             .fillMaxWidth()
                             .then(if (playerState == null) Modifier.wrapContentWidth() else Modifier)
                             .height(48.dp)
-                            .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Auto },
+                            .graphicsLayer { compositingStrategy = CompositingStrategy.ModulateAlpha },
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -297,9 +299,9 @@ fun LiquidBottomNavBar(
                                 .sharedElement(
                                     sharedContentState = rememberSharedContentState("tabGroup"),
                                     animatedVisibilityScope = this@AnimatedContent,
+                                    boundsTransform = morphBoundsTransform,
                                     zIndexInOverlay = 1f
                                 )
-                                .skipToLookaheadSize()
                                 .size(48.dp)
                                 .then(capsuleBackdropModifier)
                                 .clip(Capsule())
@@ -322,6 +324,7 @@ fun LiquidBottomNavBar(
                                     modifier = Modifier.sharedElement(
                                         sharedContentState = rememberSharedContentState("tab#${currentTab.index}-icon"),
                                         animatedVisibilityScope = this@AnimatedContent,
+                                        boundsTransform = morphBoundsTransform,
                                         zIndexInOverlay = 2f
                                     )
                                 ) {
@@ -344,9 +347,9 @@ fun LiquidBottomNavBar(
                                     .sharedElement(
                                         sharedContentState = rememberSharedContentState("accessory"),
                                         animatedVisibilityScope = this@AnimatedContent,
+                                        boundsTransform = morphBoundsTransform,
                                         zIndexInOverlay = 1f
                                     )
-                                    .skipToLookaheadSize()
                             ) {
                                 FloatingMiniPlayer(
                                     isInline = true,
@@ -378,9 +381,9 @@ fun LiquidBottomNavBar(
                                 .sharedElement(
                                     sharedContentState = rememberSharedContentState("standaloneTab"),
                                     animatedVisibilityScope = this@AnimatedContent,
+                                    boundsTransform = morphBoundsTransform,
                                     zIndexInOverlay = 1f
                                 )
-                                .skipToLookaheadSize()
                                 .then(capsuleBackdropModifier)
                                 .clip(Capsule())
                                 .clickable(
@@ -398,6 +401,7 @@ fun LiquidBottomNavBar(
                                 modifier = Modifier.sharedElement(
                                     sharedContentState = rememberSharedContentState("searchIcon"),
                                     animatedVisibilityScope = this@AnimatedContent,
+                                    boundsTransform = morphBoundsTransform,
                                     zIndexInOverlay = 2f
                                 )
                             ) {
@@ -417,7 +421,7 @@ fun LiquidBottomNavBar(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Auto },
+                            .graphicsLayer { compositingStrategy = CompositingStrategy.ModulateAlpha },
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
@@ -429,9 +433,9 @@ fun LiquidBottomNavBar(
                                     .sharedElement(
                                         sharedContentState = rememberSharedContentState("accessory"),
                                         animatedVisibilityScope = this@AnimatedContent,
+                                        boundsTransform = morphBoundsTransform,
                                         zIndexInOverlay = 1f
                                     )
-                                    .skipToLookaheadSize()
                             ) {
                                 FloatingMiniPlayer(
                                     isInline = false,
@@ -446,6 +450,7 @@ fun LiquidBottomNavBar(
                                     onSeek = onSeek,
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .skipToLookaheadSize()
                                         .then(miniPlayerBackdropModifier)
                                 )
                             }
@@ -464,9 +469,9 @@ fun LiquidBottomNavBar(
                                     .sharedElement(
                                         sharedContentState = rememberSharedContentState("tabGroup"),
                                         animatedVisibilityScope = this@AnimatedContent,
+                                        boundsTransform = morphBoundsTransform,
                                         zIndexInOverlay = 1f
                                     )
-                                    .skipToLookaheadSize()
                             ) {
                                 LiquidBottomTabs(
                                     selectedTabIndex = { if (selectedIndex in 0..3) selectedIndex else lastActiveMainTab },
@@ -475,7 +480,9 @@ fun LiquidBottomNavBar(
                                     tabsCount = MainNavTabs.size,
                                     accentColor = activeAccentColor,
                                     containerColor = if (isSolid) solidBgColor else actualTintColor,
-                                    modifier = Modifier.fillMaxWidth()
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .skipToLookaheadSize()
                                 ) {
                                     MainNavTabs.forEach { tabItem ->
                                         val isSelected = tabItem.index == selectedIndex
@@ -483,7 +490,8 @@ fun LiquidBottomNavBar(
                                         val baseColor = if (isSelected) activeAccentColor else navUnselectedColor
 
                                         LiquidBottomTab(
-                                            onClick = { onTabSelected(tabItem.index) }
+                                            onClick = { onTabSelected(tabItem.index) },
+                                            modifier = Modifier.skipToLookaheadSize()
                                         ) {
                                             if (tabItem.iconRes != null) {
                                                 Box(
@@ -491,9 +499,15 @@ fun LiquidBottomNavBar(
                                                         Modifier.sharedElement(
                                                             sharedContentState = rememberSharedContentState("tab#${tabItem.index}-icon"),
                                                             animatedVisibilityScope = this@AnimatedContent,
+                                                            boundsTransform = morphBoundsTransform,
                                                             zIndexInOverlay = 2f
                                                         )
-                                                    } else Modifier
+                                                    } else {
+                                                        Modifier.animateEnterExitTab(
+                                                            sharedTransitionScope = this@SharedTransitionLayout,
+                                                            animatedVisibilityScope = this@AnimatedContent
+                                                        )
+                                                    }
                                                 ) {
                                                     Icon(
                                                         painter = painterResource(tabItem.iconRes),
@@ -505,14 +519,21 @@ fun LiquidBottomNavBar(
                                                     )
                                                 }
                                             }
-                                            Text(
-                                                text = stringResource(tabItem.titleRes),
-                                                color = baseColor,
-                                                fontSize = 10.sp,
-                                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
+                                            Box(
+                                                modifier = Modifier.animateEnterExitTab(
+                                                    sharedTransitionScope = this@SharedTransitionLayout,
+                                                    animatedVisibilityScope = this@AnimatedContent
+                                                )
+                                            ) {
+                                                Text(
+                                                    text = stringResource(tabItem.titleRes),
+                                                    color = baseColor,
+                                                    fontSize = 10.sp,
+                                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -527,9 +548,9 @@ fun LiquidBottomNavBar(
                                     .sharedElement(
                                         sharedContentState = rememberSharedContentState("standaloneTab"),
                                         animatedVisibilityScope = this@AnimatedContent,
+                                        boundsTransform = morphBoundsTransform,
                                         zIndexInOverlay = 1f
                                     )
-                                    .skipToLookaheadSize()
                                     .size(64.dp)
                                     .then(capsuleBackdropModifier)
                                     .clip(Capsule())
@@ -545,6 +566,7 @@ fun LiquidBottomNavBar(
                                     modifier = Modifier.sharedElement(
                                         sharedContentState = rememberSharedContentState("searchIcon"),
                                         animatedVisibilityScope = this@AnimatedContent,
+                                        boundsTransform = morphBoundsTransform,
                                         zIndexInOverlay = 2f
                                     )
                                 ) {
@@ -565,7 +587,7 @@ fun LiquidBottomNavBar(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Auto },
+                            .graphicsLayer { compositingStrategy = CompositingStrategy.ModulateAlpha },
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
@@ -577,9 +599,9 @@ fun LiquidBottomNavBar(
                                     .sharedElement(
                                         sharedContentState = rememberSharedContentState("accessory"),
                                         animatedVisibilityScope = this@AnimatedContent,
+                                        boundsTransform = morphBoundsTransform,
                                         zIndexInOverlay = 1f
                                     )
-                                    .skipToLookaheadSize()
                             ) {
                                 FloatingMiniPlayer(
                                     isInline = false,
@@ -594,6 +616,7 @@ fun LiquidBottomNavBar(
                                     onSeek = onSeek,
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .skipToLookaheadSize()
                                         .then(miniPlayerBackdropModifier)
                                 )
                             }
@@ -613,9 +636,9 @@ fun LiquidBottomNavBar(
                                     .sharedElement(
                                         sharedContentState = rememberSharedContentState("tabGroup"),
                                         animatedVisibilityScope = this@AnimatedContent,
+                                        boundsTransform = morphBoundsTransform,
                                         zIndexInOverlay = 1f
                                     )
-                                    .skipToLookaheadSize()
                                     .size(48.dp)
                                     .then(capsuleBackdropModifier)
                                     .clip(Capsule())
@@ -631,6 +654,7 @@ fun LiquidBottomNavBar(
                                     modifier = Modifier.sharedElement(
                                         sharedContentState = rememberSharedContentState("tab#${previousTab.index}-icon"),
                                         animatedVisibilityScope = this@AnimatedContent,
+                                        boundsTransform = morphBoundsTransform,
                                         zIndexInOverlay = 2f
                                     )
                                 ) {
@@ -653,9 +677,9 @@ fun LiquidBottomNavBar(
                                     .sharedElement(
                                         sharedContentState = rememberSharedContentState("standaloneTab"),
                                         animatedVisibilityScope = this@AnimatedContent,
+                                        boundsTransform = morphBoundsTransform,
                                         zIndexInOverlay = 1f
                                     )
-                                    .skipToLookaheadSize()
                                     .then(capsuleBackdropModifier)
                                     .clip(Capsule())
                                     .clickable(
@@ -681,6 +705,7 @@ fun LiquidBottomNavBar(
                                         modifier = Modifier.sharedElement(
                                             sharedContentState = rememberSharedContentState("searchIcon"),
                                             animatedVisibilityScope = this@AnimatedContent,
+                                            boundsTransform = morphBoundsTransform,
                                             zIndexInOverlay = 2f
                                         )
                                     ) {
@@ -761,6 +786,51 @@ fun LiquidBottomNavBar(
                     }
                 }
             }
+        }
+    }
+}
+
+private val morphBoundsTransform = BoundsTransform { _, _ ->
+    spring(
+        dampingRatio = Spring.DampingRatioNoBouncy,
+        stiffness = 950f
+    )
+}
+
+@Composable
+private fun Modifier.animateEnterExitTab(
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
+): Modifier = with(sharedTransitionScope) {
+    with(animatedVisibilityScope) {
+        val enterStartFraction = 0.5f
+        val enterEndFraction = 0.8f
+        val durationMs = 150
+
+        val animatedAlpha by transition.animateFloat(
+            transitionSpec = {
+                keyframes {
+                    durationMillis = durationMs
+                    if (targetState == EnterExitState.Visible) {
+                        0f atFraction enterStartFraction using FastOutSlowInEasing
+                        1f atFraction enterEndFraction
+                    }
+                }
+            },
+            label = "navTabEnterExitAlpha"
+        ) { targetState ->
+            when (targetState) {
+                EnterExitState.Visible -> 1f
+                else -> 0f
+            }
+        }
+
+        graphicsLayer {
+            alpha = animatedAlpha
+            val s = 0.88f + (0.12f * animatedAlpha)
+            scaleX = s
+            scaleY = s
+            compositingStrategy = CompositingStrategy.ModulateAlpha
         }
     }
 }

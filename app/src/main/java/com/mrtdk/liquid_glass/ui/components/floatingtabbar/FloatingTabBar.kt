@@ -234,24 +234,44 @@ class FloatingTabBarScrollConnection(
     private val expandThresholdPx: Float = scrollThresholdPx,
     private val inlineBehavior: FloatingTabBarInlineBehavior = FloatingTabBarInlineBehavior.OnScrollHideUntilIdle,
     private val coroutineScope: kotlinx.coroutines.CoroutineScope? = null,
-    private val idleTimeoutMs: Long = 280L
+    private val idleTimeoutMs: Long = 260L
 ) : NestedScrollConnection {
     var isInline by mutableStateOf(initialIsInline)
         private set
 
-    private var accumulatedScroll = 0f
+    private var accumulatedDown = 0f
+    private var accumulatedUp = 0f
+    private var isUpScrollIntent = false
     private var idleJob: kotlinx.coroutines.Job? = null
 
     fun expand() {
         isInline = false
-        accumulatedScroll = 0f
+        accumulatedDown = 0f
+        accumulatedUp = 0f
+        isUpScrollIntent = false
         idleJob?.cancel()
     }
 
     fun inline() {
         isInline = true
-        accumulatedScroll = 0f
+        accumulatedDown = 0f
+        accumulatedUp = 0f
+        isUpScrollIntent = false
         idleJob?.cancel()
+    }
+
+    private fun scheduleIdleExpand() {
+        idleJob?.cancel()
+        coroutineScope?.let { scope ->
+            idleJob = scope.launch {
+                kotlinx.coroutines.delay(idleTimeoutMs)
+                if (isUpScrollIntent) {
+                    isInline = false
+                    isUpScrollIntent = false
+                    accumulatedUp = 0f
+                }
+            }
+        }
     }
 
     private fun handleScrollDelta(delta: Float) {
@@ -259,53 +279,53 @@ class FloatingTabBarScrollConnection(
         if (kotlin.math.abs(delta) < 0.5f) return
 
         if (inlineBehavior == FloatingTabBarInlineBehavior.OnScrollHideUntilIdle) {
-            if (delta < 0) {
-                // Scrolling down (navigating into content): always hide immediately
+            if (delta < -0.5f) {
+                // Deslizar hacia abajo: ocultar / colapsar a inline inmediatamente y cancelar cualquier intento de apertura
                 idleJob?.cancel()
-                accumulatedScroll += kotlin.math.abs(delta)
-                if (accumulatedScroll >= scrollThresholdPx) {
+                isUpScrollIntent = false
+                accumulatedUp = 0f
+                accumulatedDown += -delta
+                if (accumulatedDown >= scrollThresholdPx) {
                     isInline = true
-                    accumulatedScroll = 0f
                 }
-            } else if (delta > 0) {
-                // Scrolling up (navigating towards top): keep hidden while moving, reveal only after motion stops
-                accumulatedScroll = 0f
-                idleJob?.cancel()
-                if (isInline) {
-                    coroutineScope?.let { scope ->
-                        idleJob = scope.launch {
-                            kotlinx.coroutines.delay(idleTimeoutMs)
-                            isInline = false
-                        }
-                    }
+            } else if (delta > 0.5f) {
+                // Deslizar hacia arriba: el usuario quiere que aparezca el menú
+                // Se mantiene oculto/inline mientras continúe el movimiento y se programa la aparición
+                // única y exclusivamente cuando no haya movimiento alguno (reposo / idle)
+                accumulatedDown = 0f
+                accumulatedUp += delta
+                if (accumulatedUp >= scrollThresholdPx) {
+                    isUpScrollIntent = true
+                    scheduleIdleExpand()
                 }
             }
             return
         }
 
-        if ((accumulatedScroll > 0 && delta < 0) || (accumulatedScroll < 0 && delta > 0)) {
-            accumulatedScroll = 0f
-        }
-
+        var accumulatedScroll = if (delta > 0) accumulatedUp else -accumulatedDown
         accumulatedScroll += delta
 
         when (inlineBehavior) {
             FloatingTabBarInlineBehavior.OnScrollDown -> {
                 if (accumulatedScroll <= -scrollThresholdPx && !isInline) {
                     isInline = true
-                    accumulatedScroll = 0f
+                    accumulatedDown = 0f
+                    accumulatedUp = 0f
                 } else if (accumulatedScroll >= expandThresholdPx && isInline) {
                     isInline = false
-                    accumulatedScroll = 0f
+                    accumulatedDown = 0f
+                    accumulatedUp = 0f
                 }
             }
             FloatingTabBarInlineBehavior.OnScrollUp -> {
                 if (accumulatedScroll >= scrollThresholdPx && !isInline) {
                     isInline = true
-                    accumulatedScroll = 0f
+                    accumulatedDown = 0f
+                    accumulatedUp = 0f
                 } else if (accumulatedScroll <= -scrollThresholdPx && isInline) {
                     isInline = false
-                    accumulatedScroll = 0f
+                    accumulatedDown = 0f
+                    accumulatedUp = 0f
                 }
             }
             else -> {}
@@ -313,9 +333,7 @@ class FloatingTabBarScrollConnection(
     }
 
     override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-        if (source == NestedScrollSource.UserInput) {
-            handleScrollDelta(available.y)
-        }
+        handleScrollDelta(available.y)
         return Offset.Zero
     }
 
@@ -324,25 +342,16 @@ class FloatingTabBarScrollConnection(
         available: Offset,
         source: NestedScrollSource
     ): Offset {
-        if (source == NestedScrollSource.UserInput) {
-            handleScrollDelta(consumed.y + available.y)
+        if (kotlin.math.abs(available.y) > 0.5f) {
+            handleScrollDelta(available.y)
         }
         return Offset.Zero
     }
 
     override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
         if (inlineBehavior == FloatingTabBarInlineBehavior.OnScrollHideUntilIdle) {
-            if (consumed.y < 0f || available.y < 0f) {
-                idleJob?.cancel()
-                isInline = true
-            } else if (consumed.y > 0f || available.y > 0f) {
-                idleJob?.cancel()
-                coroutineScope?.let { scope ->
-                    idleJob = scope.launch {
-                        kotlinx.coroutines.delay(idleTimeoutMs)
-                        isInline = false
-                    }
-                }
+            if (isUpScrollIntent) {
+                scheduleIdleExpand()
             }
         }
         return Velocity.Zero
@@ -353,9 +362,9 @@ class FloatingTabBarScrollConnection(
 fun rememberFloatingTabBarScrollConnection(
     initialIsInline: Boolean = false,
     scrollThreshold: Dp = 18.dp,
-    expandThreshold: Dp = 40.dp,
+    expandThreshold: Dp = 30.dp,
     inlineBehavior: FloatingTabBarInlineBehavior = FloatingTabBarInlineBehavior.OnScrollHideUntilIdle,
-    idleTimeoutMs: Long = 320L
+    idleTimeoutMs: Long = 260L
 ): FloatingTabBarScrollConnection = with(LocalDensity.current) {
     val scrollThresholdPx = scrollThreshold.toPx()
     val expandThresholdPx = expandThreshold.toPx()

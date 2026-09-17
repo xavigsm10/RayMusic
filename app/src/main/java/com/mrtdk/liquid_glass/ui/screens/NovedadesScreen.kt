@@ -374,7 +374,10 @@ fun NovedadesScreen(
                     horizontalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
                     val columns = state.featuredNewSongs.chunked(4)
-                    items(columns.size) { colIndex ->
+                    items(
+                        count = columns.size,
+                        key = { colIndex -> "feat_${columns.getOrNull(colIndex)?.firstOrNull()?.id ?: colIndex}" }
+                    ) { colIndex ->
                         Column(modifier = Modifier.width(320.dp)) {
                             columns[colIndex].forEachIndexed { index, s ->
                                 val songThumb = s.thumbnail?.replace("=w226-h226", "=w200-h200")?.replace("=w120-h120", "=w200-h200")
@@ -400,7 +403,10 @@ fun NovedadesScreen(
                 ) {
                     val remaining = state.newReleaseAlbums.drop(6)
                     val pairedColumns = remaining.chunked(2)
-                    items(pairedColumns.size) { colIdx ->
+                    items(
+                        count = pairedColumns.size,
+                        key = { colIdx -> "rel_${pairedColumns.getOrNull(colIdx)?.firstOrNull()?.id ?: colIdx}" }
+                    ) { colIdx ->
                         Column(
                             verticalArrangement = Arrangement.spacedBy(16.dp),
                             modifier = Modifier.width(160.dp)
@@ -452,7 +458,10 @@ fun NovedadesScreen(
                     horizontalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
                     val columns = state.trendingSongs.chunked(4)
-                    items(columns.size) { colIndex ->
+                    items(
+                        count = columns.size,
+                        key = { colIndex -> "trend_${columns.getOrNull(colIndex)?.firstOrNull()?.id ?: colIndex}" }
+                    ) { colIndex ->
                         Column(modifier = Modifier.width(320.dp)) {
                             columns[colIndex].forEachIndexed { index, s ->
                                 val songThumb = s.thumbnail?.replace("=w226-h226", "=w200-h200")?.replace("=w120-h120", "=w200-h200")
@@ -480,7 +489,10 @@ fun NovedadesScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    items(state.everyoneListening.size) { idx ->
+                    items(
+                        count = state.everyoneListening.size,
+                        key = { idx -> "ev_${state.everyoneListening.getOrNull(idx)?.id ?: idx}" }
+                    ) { idx ->
                         val s = state.everyoneListening[idx]
                         val songThumb = s.thumbnail?.let {
                             when {

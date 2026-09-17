@@ -749,10 +749,12 @@ private fun SweptLyricLine(
                 maxLines = maxLines,
                 overflow = overflow,
                 modifier = Modifier
-                    .graphicsLayer { alpha = glowAlpha }
+                    .graphicsLayer {
+                        alpha = glowAlpha
+                        compositingStrategy = CompositingStrategy.Offscreen
+                    }
                     .blur(glowRadius, BlurredEdgeTreatment.Unbounded)
                     .then(room)
-                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                     .drawWithContent {
                         val measured = layout ?: return@drawWithContent
                         glowGrown(

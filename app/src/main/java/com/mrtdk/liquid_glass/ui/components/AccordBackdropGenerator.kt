@@ -33,6 +33,27 @@ object AccordBackdropGenerator {
         private set
 
     /**
+     * Genera un fondo difuminado estático ultra-suave y de alto rendimiento para
+     * la vista de letras y cola de reproducción (estilo Apple Music).
+     */
+    suspend fun generateLyricsBlurredBackdrop(
+        source: Bitmap
+    ): ImageBitmap = withContext(Dispatchers.Default) {
+        if (source.isRecycled || source.width <= 0 || source.height <= 0) {
+            val emptyBmp = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+            return@withContext emptyBmp.asImageBitmap()
+        }
+        try {
+            val targetSize = 160
+            val scaled = Bitmap.createScaledBitmap(source, targetSize, targetSize, true)
+            val blurred = fastBlurKeepingSize(scaled, 28.0f)
+            blurred.asImageBitmap()
+        } catch (e: Exception) {
+            source.asImageBitmap()
+        }
+    }
+
+    /**
      * Renderiza el backdrop completo de pantalla exactamente como lo hace Accord 2.0.
      *
      * @param source Carátula original de la canción.
@@ -45,9 +66,9 @@ object AccordBackdropGenerator {
         height: Int,
         includeCover: Boolean = true
     ): ImageBitmap = withContext(Dispatchers.Default) {
-        // Usamos una resolución equilibrada para un procesamiento instantáneo (30-40ms) en gama baja
-        // manteniendo una fidelidad visual perfecta escalada por hardware (bilinear).
-        val maxTargetW = min(540, max(1, width))
+        // Usamos una resolución equilibrada para un procesamiento instantáneo (sub-10ms)
+        // manteniendo una fidelidad visual perfecta escalada por hardware bilineal.
+        val maxTargetW = min(260, max(1, width))
         val aspect = height.toFloat() / max(1, width).toFloat()
         val targetW = maxTargetW
         val targetH = (maxTargetW * aspect).toInt().coerceAtLeast(1)
@@ -96,7 +117,6 @@ object AccordBackdropGenerator {
             val totalPixels = targetW * coverHeight
             val arrCrisp = IntArray(totalPixels)
             val arrBlur30 = IntArray(totalPixels)
-            val arrBlended = IntArray(totalPixels)
 
             createBitmap.getPixels(arrCrisp, 0, targetW, 0, 0, targetW, coverHeight)
             val blurred30 = fastBlurKeepingSize(createBitmap, 30.0f)
@@ -122,10 +142,10 @@ object AccordBackdropGenerator {
                     val r = (((Color.red(cBlur) - Color.red(cCrisp)) * factor) + Color.red(cCrisp)).toInt().coerceIn(0, 255)
                     val g = (((Color.green(cBlur) - Color.green(cCrisp)) * factor) + Color.green(cCrisp)).toInt().coerceIn(0, 255)
                     val b = (((Color.blue(cBlur) - Color.blue(cCrisp)) * factor) + Color.blue(cCrisp)).toInt().coerceIn(0, 255)
-                    arrBlended[idx] = Color.argb(Color.alpha(cCrisp), r, g, b)
+                    arrCrisp[idx] = Color.argb(Color.alpha(cCrisp), r, g, b)
                 }
             }
-            copy2.setPixels(arrBlended, 0, targetW, 0, 0, targetW, coverHeight)
+            copy2.setPixels(arrCrisp, 0, targetW, 0, 0, targetW, coverHeight)
 
             // ── Fase 4: Lienzo completo de pantalla (createBitmap3 de targetW x targetH) ──
             var createBitmap3 = Bitmap.createBitmap(targetW, targetH, Bitmap.Config.ARGB_8888)

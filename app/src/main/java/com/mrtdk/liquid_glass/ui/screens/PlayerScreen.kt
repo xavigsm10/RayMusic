@@ -1473,13 +1473,6 @@ fun PlayerScreen(
 
 
 
-        val livePosition by if (musicPlayer != null) {
-            musicPlayer.currentPosition.collectAsState()
-        } else {
-            androidx.compose.runtime.remember(currentPosition) { androidx.compose.runtime.mutableLongStateOf(currentPosition) }
-        }
-        val effectivePosition = if (musicPlayer != null) livePosition else currentPosition
-
         var lyricsLines by remember { mutableStateOf<List<com.mocharealm.accompanist.lyrics.core.model.ISyncedLine>?>(null) }
         var bitChordLyrics by remember { mutableStateOf<List<com.mrtdk.liquid_glass.data.lyrics.LyricLine>?>(null) }
         var isLyricsLoading by remember { mutableStateOf(false) }
@@ -1606,6 +1599,7 @@ fun PlayerScreen(
         var isVideoPlaying by remember { mutableStateOf(false) }
         var coverBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
         var accordBackdropBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+        var lyricsBackdropBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
         var hasGeneratedMotionBackdrop by remember(playerState?.artist, playerState?.title) { mutableStateOf(false) }
         var frameToken by remember { mutableStateOf(0L) }
         var reflectionSkew by remember { mutableStateOf(0.12f) }
@@ -1621,7 +1615,6 @@ fun PlayerScreen(
             if (!isUltraPerformance) {
                 coverBitmap = null
             }
-            accordBackdropBitmap = null
             hasGeneratedMotionBackdrop = false
             frameToken++
 
@@ -1651,7 +1644,6 @@ fun PlayerScreen(
             if (!isUltraPerformance) {
                 coverBitmap = null
             }
-            accordBackdropBitmap = null
             frameToken++
             reflectionSkew = 0.12f
 
@@ -1751,6 +1743,37 @@ fun PlayerScreen(
                 }
             }
 
+        }
+
+        // Generar fondo difuminado estático para la vista de letras y cola de reproducción (estilo Apple Music, 100% estático)
+        LaunchedEffect(coverBitmap, hdArtUrl, playerState?.artUrl) {
+            val src = coverBitmap?.asAndroidBitmap()
+            if (src != null && !src.isRecycled) {
+                lyricsBackdropBitmap = com.mrtdk.liquid_glass.ui.components.AccordBackdropGenerator.generateLyricsBlurredBackdrop(src)
+            } else {
+                val urlStr = (hdArtUrl ?: playerState?.artUrl)?.toString()
+                if (!urlStr.isNullOrBlank()) {
+                    withContext(Dispatchers.IO) {
+                        try {
+                            val req = coil.request.ImageRequest.Builder(context)
+                                .data(urlStr)
+                                .allowHardware(false)
+                                .size(160)
+                                .build()
+                            val res = coil.Coil.imageLoader(context).execute(req)
+                            if (res is coil.request.SuccessResult) {
+                                val bmp = (res.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                                if (bmp != null && !bmp.isRecycled) {
+                                    val generated = com.mrtdk.liquid_glass.ui.components.AccordBackdropGenerator.generateLyricsBlurredBackdrop(bmp)
+                                    withContext(Dispatchers.Main) {
+                                        lyricsBackdropBitmap = generated
+                                    }
+                                }
+                            }
+                        } catch (_: Exception) {}
+                    }
+                }
+            }
         }
 
         
@@ -2079,12 +2102,11 @@ fun PlayerScreen(
                                     } else null
                                 }
                                 if (bmp != null && !bmp.isRecycled) {
-                                    val hasMotion = !animatedArtworkUrl.isNullOrBlank()
                                     val generated = com.mrtdk.liquid_glass.ui.components.AccordBackdropGenerator.generateAccordBackdrop(
                                         source = bmp,
                                         width = screenWidthPx,
                                         height = screenHeightPx,
-                                        includeCover = !hasMotion
+                                        includeCover = false
                                     )
                                     withContext(Dispatchers.Main) {
                                         accordBackdropBitmap = generated
@@ -2436,10 +2458,6 @@ fun PlayerScreen(
                         .width(reflectionWidth)
                         .height(reflectionHeight)
                         .clipToBounds()
-                        .graphicsLayer {
-                            compositingStrategy = CompositingStrategy.Offscreen
-                            alpha = 1f
-                        }
                 ) {
                     val currentBitmap = if (!animatedArtworkUrl.isNullOrBlank()) {
                         if (isVideoPlaying) coverBitmap else null
@@ -2484,28 +2502,19 @@ fun PlayerScreen(
 
 
             // LYRICS / QUEUE OVERLAY
-
             AnimatedVisibility(
-
                 visible = showLyrics || showQueue,
-
-                enter = fadeIn(),
-
-                exit = fadeOut()
-
+                enter = fadeIn(animationSpec = tween(220, easing = FastOutSlowInEasing)),
+                exit = fadeOut(animationSpec = tween(180, easing = FastOutSlowInEasing))
             ) {
-
                  Box(
-
                      modifier = Modifier
-
                          .fillMaxSize()
-
-                         .graphicsLayer { alpha = overlayAlpha }
-
+                         .graphicsLayer {
+                             alpha = overlayAlpha
+                             compositingStrategy = CompositingStrategy.ModulateAlpha
+                         }
                  ) {
-
-                     // Fondo dinámico en movimiento con los colores exactos de la carátula (RayMusic Fluid Shader)
                      val secCol = if (rightSideAverageColor != Color.Transparent && rightSideAverageColor != dominantColor) {
                          rightSideAverageColor
                      } else {
@@ -2515,28 +2524,28 @@ fun PlayerScreen(
                      val fluidSecondary = if (isNormalArtwork) normalMidColor else secCol
                      val fluidAccent = if (isNormalArtwork) normalBottomColor else bottomAverageColor
 
-                     if (!isUltraPerformance && fullArtworkBackdropStyle != "accord") {
-                         com.mrtdk.liquid_glass.ui.components.RayMusicFluidBackground(
-                             primaryColor = fluidPrimary,
-                             secondaryColor = fluidSecondary,
-                             accentColor = fluidAccent,
-                             isPlaying = isPlaying,
-                             modifier = Modifier.fillMaxSize()
-                         )
-                     } else if (isUltraPerformance) {
-                         Box(
-                             modifier = Modifier
-                                 .fillMaxSize()
-                                 .background(
-                                     Brush.verticalGradient(
-                                         listOf(
-                                             fluidPrimary.copy(alpha = 0.85f),
-                                             Color.Black
-                                         )
+                     // Capa de fondo fluido estático con formas orgánicas difuminadas extraídas de la carátula
+                     com.mrtdk.liquid_glass.ui.components.RayMusicStaticFluidBackground(
+                         primaryColor = fluidPrimary,
+                         secondaryColor = fluidSecondary,
+                         accentColor = fluidAccent,
+                         modifier = Modifier.fillMaxSize()
+                     )
+
+                     // Scrim oscuro suave para contraste y nitidez total de letras y cola (estilo Apple Music)
+                     Box(
+                         modifier = Modifier
+                             .fillMaxSize()
+                             .background(
+                                 Brush.verticalGradient(
+                                     listOf(
+                                         Color.Black.copy(alpha = 0.22f),
+                                         Color.Black.copy(alpha = 0.35f),
+                                         Color.Black.copy(alpha = 0.58f)
                                      )
                                  )
-                         )
-                     }
+                             )
+                     )
                  }
 
                       // Height of the content area = exactly the cover image height (player controls start below)
@@ -2955,6 +2964,7 @@ fun PlayerScreen(
                                                        artist = song.artists.joinToString { it.name },
                                                        artUrl = upgradedArt,
                                                        videoId = song.id,
+                                                       queue = state?.queue ?: emptyList(),
                                                        isExclusiveQueue = state?.isExclusiveQueue ?: false,
                                                        album = song.album?.name,
                                                        albumId = song.album?.id
@@ -3127,6 +3137,13 @@ fun PlayerScreen(
                                           }
                                       }
                               ) {
+                                  val livePosition by if (musicPlayer != null) {
+                                      musicPlayer.currentPosition.collectAsState()
+                                  } else {
+                                      androidx.compose.runtime.remember(currentPosition) { androidx.compose.runtime.mutableLongStateOf(currentPosition) }
+                                  }
+                                  val effectivePosition = if (musicPlayer != null) livePosition else currentPosition
+
                                   val currentLyrics = bitChordLyrics
 
                                   if (currentLyrics != null && currentLyrics.isNotEmpty()) {
@@ -3291,8 +3308,7 @@ fun PlayerScreen(
                 label = "playPauseScale"
             )
 
-            val isAccordStaticOnly = isAccordActive && animatedArtworkUrl.isNullOrBlank()
-            val targetFgAlpha = if (isAccordStaticOnly && !isOverlayActive) 0f else 1f
+            val targetFgAlpha = 1f
             val fgArtworkAlpha by animateFloatAsState(
                 targetValue = targetFgAlpha,
                 animationSpec = tween(200),
@@ -3394,7 +3410,7 @@ fun PlayerScreen(
                 // Base sharp album cover (always drawn in background during drag or before playback starts)
                 AsyncImage(
                     model = ImageRequest.Builder(context)
-                        .data(hdArtUrl)
+                        .data(hdArtUrl ?: playerState?.artUrl)
                         .crossfade(true)
                         .build(),
                     imageLoader = animatedImageLoader,
@@ -6628,11 +6644,20 @@ private fun LandscapeQueueView(
 
                     val onRowClick = remember(qItem, index, state) {
                         {
+                            val upgradedArt = qItem.artUrl?.let {
+                                val itStr = it.toString()
+                                if (itStr.startsWith("file:///android_asset/")) {
+                                    it
+                                } else {
+                                    val upgraded = com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(itStr) ?: itStr
+                                    if (it is android.net.Uri) android.net.Uri.parse(upgraded) else upgraded
+                                }
+                            } ?: qItem.artUrl
                             val remaining = state.queue.drop(index + 1)
                             onSongSelectedFromQueue(PlayerState(
                                 title = qItem.title,
                                 artist = qItem.artist,
-                                artUrl = qItem.artUrl,
+                                artUrl = upgradedArt,
                                 videoId = qItem.videoId,
                                 queue = remaining,
                                 isExclusiveQueue = state.isExclusiveQueue,
@@ -6739,6 +6764,7 @@ private fun LandscapeQueueView(
                                 artist = song.artists.joinToString { it.name },
                                 artUrl = upgradedArt,
                                 videoId = song.id,
+                                queue = state?.queue ?: emptyList(),
                                 isExclusiveQueue = state?.isExclusiveQueue ?: false,
                                 album = song.album?.name,
                                 albumId = song.album?.id

@@ -75,6 +75,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.BlurredEdgeTreatment
 import com.skydoves.cloudy.cloudy
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.foundation.Image
 import kotlinx.coroutines.coroutineScope
 import com.echo.innertube.models.ArtistItem
@@ -1423,7 +1426,21 @@ fun InicioScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    items(section.items.size) { idx ->
+                    items(
+                        count = section.items.size,
+                        key = { idx ->
+                            val itm = section.items.getOrNull(idx)
+                            val baseId = when (itm) {
+                                is com.echo.innertube.models.SongItem -> itm.id
+                                is com.echo.innertube.models.AlbumItem -> itm.id
+                                is com.echo.innertube.models.ArtistItem -> itm.id
+                                is com.echo.innertube.models.PlaylistItem -> itm.id
+                                else -> "$idx"
+                            }
+                            "sim_${section.artistName}_${baseId}_$idx"
+                        },
+                        contentType = { "similar_item" }
+                    ) { idx ->
                         val item = section.items[idx]
                         val hdThumb = upgradeThumb(
                             when (item) {
@@ -1548,7 +1565,11 @@ fun InicioScreen(
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        items(section.songs.size) { index ->
+                        items(
+                            count = section.songs.size,
+                            key = { index -> "pq_${section.artistName}_${section.songs.getOrNull(index)?.id ?: index}" },
+                            contentType = { "song_item" }
+                        ) { index ->
                             val song = section.songs[index]
                             val hdThumb = upgradeThumb(song.thumbnail)
                             var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
@@ -1615,7 +1636,11 @@ fun InicioScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    items(state.seleccionesParaTi.size) { index ->
+                    items(
+                        count = state.seleccionesParaTi.size,
+                        key = { index -> "sel_${state.seleccionesParaTi.getOrNull(index)?.id ?: index}" },
+                        contentType = { "selecciones_item" }
+                    ) { index ->
                         val song = state.seleccionesParaTi[index]
                         val hdThumb = upgradeThumb(song.thumbnail)
                         var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
@@ -1785,7 +1810,21 @@ fun InicioScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    items(overlayItems.size) { index ->
+                    items(
+                        count = overlayItems.size,
+                        key = { index ->
+                            val itm = overlayItems.getOrNull(index)
+                            val itmId = when (itm) {
+                                is com.echo.innertube.models.SongItem -> itm.id
+                                is com.echo.innertube.models.AlbumItem -> itm.id
+                                is com.echo.innertube.models.ArtistItem -> itm.id
+                                is com.echo.innertube.models.PlaylistItem -> itm.id
+                                else -> "$index"
+                            }
+                            "overlay1_${itmId}_$index"
+                        },
+                        contentType = { "overlay_item" }
+                    ) { index ->
                         val item = overlayItems[index]
                         val hdThumb = upgradeThumb(
                             when (item) {
@@ -1934,7 +1973,14 @@ fun InicioScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    items(mappedRecentlyPlayed.size) { index ->
+                    items(
+                        count = mappedRecentlyPlayed.size,
+                        key = { index ->
+                            val itm = mappedRecentlyPlayed.getOrNull(index)
+                            "rec_${itm?.id ?: index}_$index"
+                        },
+                        contentType = { "recent_item" }
+                    ) { index ->
                         val item = mappedRecentlyPlayed[index]
                         val origItem = recentlyPlayed[index]
                         val hdThumb = upgradeThumb(item.thumbnail)
@@ -2058,7 +2104,11 @@ fun InicioScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    items(overlayItems.size) { index ->
+                    items(
+                        count = overlayItems.size,
+                        key = { index -> "pq_ov_${overlayItems.getOrNull(index)?.id ?: index}_$index" },
+                        contentType = { "overlay_song" }
+                    ) { index ->
                         val item = overlayItems[index]
                         val hdThumb = upgradeThumb(item.thumbnail)
                         
@@ -2162,7 +2212,11 @@ fun InicioScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    items(overlayItems.size) { index ->
+                    items(
+                        count = overlayItems.size,
+                        key = { index -> "sel_ov_${overlayItems.getOrNull(index)?.id ?: index}_$index" },
+                        contentType = { "overlay_song" }
+                    ) { index ->
                         val item = overlayItems[index]
                         val hdThumb = upgradeThumb(item.thumbnail)
                         
@@ -2422,8 +2476,7 @@ private fun ArtistStationCard(
 }
 
 private object SuggestionCardCache {
-    val dominantColorMap = java.util.concurrent.ConcurrentHashMap<String, Color>()
-    val coverBitmapMap = java.util.concurrent.ConcurrentHashMap<String, ImageBitmap>()
+    val dominantColorCache = object : android.util.LruCache<String, Color>(60) {}
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -2486,18 +2539,16 @@ private fun FeaturedSuggestionCard(
     }
 
     val hdThumb = upgradeThumb(thumbUrl)
-    val cachedColor = hdThumb?.let { SuggestionCardCache.dominantColorMap[it] } ?: Color(0xFF1C1C1E)
-    val cachedBitmap = hdThumb?.let { SuggestionCardCache.coverBitmapMap[it] }
+    val cachedColor = hdThumb?.let { SuggestionCardCache.dominantColorCache.get(it) } ?: Color(0xFF1C1C1E)
     var dominantColor by remember(hdThumb) { mutableStateOf(cachedColor) }
-    var coverBitmap by remember(hdThumb) { mutableStateOf(cachedBitmap) }
 
     LaunchedEffect(hdThumb) {
-        if (hdThumb != null && (coverBitmap == null || dominantColor == Color(0xFF1C1C1E))) {
+        if (hdThumb != null && dominantColor == Color(0xFF1C1C1E)) {
             withContext(Dispatchers.Default) {
                 val request = ImageRequest.Builder(context)
                     .data(hdThumb)
                     .allowHardware(false)
-                    .size(100)
+                    .size(24)
                     .build()
                 val result = Coil.imageLoader(context).execute(request)
                 if (result is SuccessResult) {
@@ -2513,12 +2564,11 @@ private fun FeaturedSuggestionCard(
                             drawable.draw(canvas)
                         }
                     
-                    val asComposeBmp = bitmap.asImageBitmap()
                     try {
                         var r = 0L; var g = 0L; var b = 0L
                         val y = bitmap.height - 1
                         val w = bitmap.width
-                        val step = maxOf(1, w / 16)
+                        val step = maxOf(1, w / 8)
                         var count = 0
                         for (x in 0 until w step step) {
                             val pixel = bitmap.getPixel(x, y)
@@ -2528,18 +2578,11 @@ private fun FeaturedSuggestionCard(
                             count++
                         }
                         val sampledColor = Color((r / count).toInt(), (g / count).toInt(), (b / count).toInt())
-                        SuggestionCardCache.dominantColorMap[hdThumb] = sampledColor
-                        SuggestionCardCache.coverBitmapMap[hdThumb] = asComposeBmp
+                        SuggestionCardCache.dominantColorCache.put(hdThumb, sampledColor)
                         withContext(Dispatchers.Main) {
-                            coverBitmap = asComposeBmp
                             dominantColor = sampledColor
                         }
-                    } catch (e: Exception) {
-                        SuggestionCardCache.coverBitmapMap[hdThumb] = asComposeBmp
-                        withContext(Dispatchers.Main) {
-                            coverBitmap = asComposeBmp
-                        }
-                    }
+                    } catch (_: Exception) { }
                 }
             }
         }
@@ -2559,98 +2602,60 @@ private fun FeaturedSuggestionCard(
                 clickAction()
             }
     ) {
-        // Capa 1: Reflejo Líquido Estirado 1D
-        val currentCoverBitmap = coverBitmap
-        val isUltraPerf = LibraryManager.isUltraPerformanceMode()
-        if (currentCoverBitmap != null && !isUltraPerf) {
-            val overlapDp = 20.dp
-            Box(
+        // Capa inferior: Reflejo invertido idéntico al reproductor principal con difuminado suave (sin nada de blur)
+        Box(
+            modifier = Modifier
+                .offset(y = 270.dp)
+                .size(width = 280.dp, height = 110.dp)
+                .clipToBounds()
+                .background(dominantColor)
+        ) {
+            val density = LocalDensity.current
+            val artworkHeightPx = with(density) { 270.dp.toPx() }
+
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(hdThumb)
+                    .size(560)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .offset(y = 270.dp - overlapDp) // Empieza a los 250.dp
-                    .size(width = 280.dp, height = 110.dp + overlapDp) // Altura es 130.dp
+                    .size(width = 280.dp, height = 270.dp)
                     .graphicsLayer {
-                        compositingStrategy = CompositingStrategy.Offscreen
+                        scaleY = -1f
+                        transformOrigin = TransformOrigin(0.5f, 0f)
+                        translationY = artworkHeightPx
                     }
-                    .blur(15.dp, edgeTreatment = BlurredEdgeTreatment.Unbounded)
                     .drawWithContent {
                         drawContent()
+                        // Difuminado: gradiente que desvanece el reflejo invertido suavemente hacia la base
                         drawRect(
                             brush = Brush.verticalGradient(
-                                colorStops = arrayOf(
-                                    0.0f to Color.Black,
-                                    0.05f to Color.Black,
-                                    0.15f to Color.Black.copy(alpha = 0.9f),
-                                    0.30f to Color.Black.copy(alpha = 0.7f),
-                                    0.45f to Color.Black.copy(alpha = 0.45f),
-                                    0.60f to Color.Black.copy(alpha = 0.25f),
-                                    0.75f to Color.Black.copy(alpha = 0.10f),
-                                    0.88f to Color.Black.copy(alpha = 0.03f),
-                                    1.0f to Color.Transparent
+                                colors = listOf(
+                                    Color.Transparent,
+                                    dominantColor.copy(alpha = 0.35f),
+                                    dominantColor.copy(alpha = 0.75f),
+                                    dominantColor.copy(alpha = 0.95f)
                                 )
-                            ),
-                            blendMode = BlendMode.DstIn
+                            )
+                        )
+                        // Gradiente de contraste oscuro para legibilidad garantizada del texto
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.25f),
+                                    Color.Black.copy(alpha = 0.60f)
+                                )
+                            )
                         )
                     }
-            ) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val containerW = 280.dp.toPx()
-                    val containerH = 270.dp.toPx()
-                    val bitmapW = currentCoverBitmap.width.toFloat()
-                    val bitmapH = currentCoverBitmap.height.toFloat()
-
-                    val containerRatio = containerW / containerH
-                    val bitmapRatio = bitmapW / bitmapH
-
-                    val srcX: Float
-                    val srcWidth: Float
-                    val srcY: Float
-
-                    val sampleHeight = 5
-                    val sampleH = sampleHeight.coerceAtMost(currentCoverBitmap.height).coerceAtLeast(1)
-
-                    if (containerRatio < bitmapRatio) {
-                        // El contenedor es proporcionalmente más alto (se recorta izq/der)
-                        val scale = containerH / bitmapH
-                        val visibleWidth = containerW / scale
-                        srcX = (bitmapW - visibleWidth) / 2f
-                        srcWidth = visibleWidth
-                        srcY = bitmapH - sampleH
-                    } else {
-                        // El contenedor es proporcionalmente más ancho (se recorta arriba/abajo)
-                        val scale = containerW / bitmapW
-                        val visibleHeight = containerW / scale
-                        srcX = 0f
-                        srcWidth = bitmapW
-                        val cropY = (bitmapH - visibleHeight) / 2f
-                        val visibleBottomY = cropY + visibleHeight
-                        srcY = (visibleBottomY - sampleH).coerceIn(0f, bitmapH - sampleH)
-                    }
-
-                    val srcXInt = srcX.toInt().coerceIn(0, currentCoverBitmap.width - 1)
-                    val srcWInt = srcWidth.toInt().coerceIn(1, currentCoverBitmap.width - srcXInt)
-                    val srcYInt = srcY.toInt().coerceIn(0, currentCoverBitmap.height - sampleH)
-
-                    drawImage(
-                        image = currentCoverBitmap,
-                        srcOffset = IntOffset(srcXInt, srcYInt),
-                        srcSize = IntSize(srcWInt, sampleH),
-                        dstOffset = IntOffset.Zero,
-                        dstSize = IntSize(size.width.toInt(), size.height.toInt()),
-                        filterQuality = FilterQuality.Low
-                    )
-                }
-            }
-        } else {
-            // Fallback while loading
-            Box(
-                modifier = Modifier
-                    .offset(y = 270.dp)
-                    .size(width = 280.dp, height = 110.dp)
-                    .background(dominantColor)
             )
         }
 
-        // Capa 3: Portada Principal con sutil transición inferior hacia el color dominante
+        // Portada Principal nítida sin difuminado en la parte inferior
         Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -2663,17 +2668,6 @@ private fun FeaturedSuggestionCard(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(24.dp)
-                    .align(Alignment.BottomCenter)
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color.Transparent, dominantColor)
-                        )
-                    )
-            )
         }
 
         // Text Content
@@ -2685,13 +2679,9 @@ private fun FeaturedSuggestionCard(
                 .padding(horizontal = 18.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.Center
         ) {
-            val isLightBackground = dominantColor.luminance() > 0.5f
-            val titleColor = if (isLightBackground) Color(0xFF1C1C1E) else Color.White
-            val subtitleColor = if (isLightBackground) Color(0xFF5E5E62) else Color.White.copy(alpha = 0.7f)
-
             Text(
                 titleStr,
-                color = titleColor,
+                color = Color.White,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
@@ -2700,7 +2690,7 @@ private fun FeaturedSuggestionCard(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 subtitleStr,
-                color = subtitleColor,
+                color = Color.White.copy(alpha = 0.75f),
                 fontSize = 14.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

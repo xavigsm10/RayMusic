@@ -159,6 +159,10 @@ class LibraryDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABA
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_saved_items_timestamp ON $TABLE_SAVED_ITEMS ($KEY_TIMESTAMP DESC)")
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_recently_played_timestamp ON $TABLE_RECENTLY_PLAYED ($KEY_TIMESTAMP DESC)")
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_playback_history_timestamp ON playback_history (timestamp DESC)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_playback_history_artist ON playback_history (artist)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_playback_history_song_id ON playback_history (song_id)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_playback_history_time_artist ON playback_history (timestamp, artist)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_playback_history_time_song ON playback_history (timestamp, song_id)")
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_playlist_items_playlist_id ON $TABLE_PLAYLIST_ITEMS ($KEY_PLAYLIST_ID)")
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_playlist_items_song_id ON $TABLE_PLAYLIST_ITEMS ($KEY_SONG_ID)")
         } catch (e: Exception) {

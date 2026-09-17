@@ -57,8 +57,13 @@ class MusicPlayer(private val context: Context) {
         set(value) {
             val changed = field != value
             field = value
-            if (changed && _isPlaying.value) {
-                startPolling()
+            if (changed) {
+                if (value && _isPlaying.value) {
+                    _currentPosition.value = controller?.currentPosition ?: 0L
+                    startPolling()
+                } else if (!value) {
+                    stopPolling()
+                }
             }
         }
 
@@ -171,12 +176,12 @@ class MusicPlayer(private val context: Context) {
     }
 
     private fun startPolling() {
+        if (!isAppInForeground) return
         pollingJob?.cancel()
         pollingJob = scope.launch {
-            while (true) {
+            while (isAppInForeground && _isPlaying.value) {
                 _currentPosition.value = controller?.currentPosition ?: 0L
-                val interval = if (isAppInForeground) 150L else 1000L
-                delay(interval)
+                delay(150L)
             }
         }
     }
