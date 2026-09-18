@@ -27,7 +27,19 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import expo.modules.androidglassview.backdrop.internal.ShapeProvider
 import expo.modules.androidglassview.backdrop.internal.blur
+import androidx.compose.ui.graphics.Shape
 import kotlin.math.ceil
+import expo.modules.androidglassview.backdrop.shadow.InnerShadowElement
+
+fun Modifier.shadow(
+    shape: () -> Shape,
+    shadow: () -> Shadow? = { Shadow.Default }
+): Modifier = this then ShadowElement(ShapeProvider(shape), shadow)
+
+fun Modifier.innerShadow(
+    shape: () -> Shape,
+    shadow: () -> InnerShadow? = { InnerShadow.Default }
+): Modifier = this then InnerShadowElement(ShapeProvider(shape), shadow)
 
 internal class ShadowElement(
     val shapeProvider: ShapeProvider,

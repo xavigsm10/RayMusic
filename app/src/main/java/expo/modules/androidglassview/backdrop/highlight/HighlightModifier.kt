@@ -33,7 +33,13 @@ import expo.modules.androidglassview.backdrop.internal.blur
 import expo.modules.androidglassview.backdrop.internal.clipOutline
 import expo.modules.androidglassview.backdrop.internal.setRuntimeShader
 import expo.modules.androidglassview.backdrop.isRuntimeShaderSupported
+import androidx.compose.ui.graphics.Shape
 import kotlin.math.ceil
+
+fun Modifier.highlight(
+    shape: () -> Shape,
+    highlight: () -> Highlight? = { Highlight.Default }
+): Modifier = this then HighlightElement(ShapeProvider(shape), highlight)
 
 internal class HighlightElement(
     val shapeProvider: ShapeProvider,
