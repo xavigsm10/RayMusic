@@ -157,6 +157,28 @@ fun AlbumScreen(
                      albumState.artist.contains("Michael Jackson", ignoreCase = true)
     val customMadeForYou = remember(albumState.id) { MadeForYouRepository.get(albumState.id) }
     val isMadeForYou = customMadeForYou != null || albumState.id.startsWith("made_for_you_")
+    // Playlists creadas por el usuario: se muestran con esta misma vista de álbumes
+    val isUserPlaylist = albumState.id.startsWith("user_playlist_")
+    val allUserPlaylists by LibraryManager.playlists.collectAsState()
+    val userPlaylistItems = remember(albumState.id, allUserPlaylists) {
+        if (isUserPlaylist) {
+            allUserPlaylists.find { it.id == albumState.id.removePrefix("user_playlist_") }?.items ?: emptyList()
+        } else {
+            emptyList()
+        }
+    }
+    fun userPlaylistTracks(): List<SongItem> {
+        return userPlaylistItems.filter { it.type == ItemType.SONG }.map { s ->
+            SongItem(
+                id = s.id,
+                title = s.title,
+                artists = listOf(com.echo.innertube.models.Artist(name = s.subtitle, id = null)),
+                album = com.echo.innertube.models.Album(name = s.album ?: albumState.title, id = albumState.id),
+                thumbnail = s.thumbnail ?: albumState.thumbnail ?: "",
+                explicit = false
+            )
+        }
+    }
     // Albums that should never use animated artwork (only made for you playlists)
     val isAnimatedArtworkBlocked = isMadeForYou
 
@@ -271,10 +293,21 @@ fun AlbumScreen(
         }
     }
 
+    // Las playlists de usuario se leen de la biblioteca local (reactivo a agregar/quitar)
+    LaunchedEffect(userPlaylistItems) {
+        if (isUserPlaylist) {
+            tracks = userPlaylistTracks()
+            albumError = null
+        }
+    }
+
     // Load album/playlist tracks & artist info
     LaunchedEffect(albumState.id) {
         withContext(Dispatchers.IO) {
-            if (isMadeForYou) {
+            if (isUserPlaylist) {
+                tracks = userPlaylistTracks()
+                albumError = null
+            } else if (isMadeForYou) {
                 val pl = customMadeForYou ?: MadeForYouRepository.get(albumState.id)
                 if (pl != null) {
                     tracks = pl.songs
@@ -392,7 +425,7 @@ fun AlbumScreen(
 
     // Artist Fallback Search if artistPageData is still empty
     LaunchedEffect(albumState.artist) {
-        if (isMadeForYou) return@LaunchedEffect
+        if (isMadeForYou || isUserPlaylist) return@LaunchedEffect
         if (artistPageData == null && albumState.artist.isNotBlank()) {
             withContext(Dispatchers.IO) {
                 try {
@@ -756,6 +789,8 @@ fun AlbumScreen(
                                     ) {
                                         val categoryText = if (isMadeForYou) {
                                             stringResource(R.string.playlists_hechas_para_ti) + " • RayMusic • "
+                                        } else if (isUserPlaylist) {
+                                            stringResource(R.string.user_playlist_label) + " • "
                                         } else {
                                             stringResource(R.string.soundtracks_category) + " • ${albumState.year ?: 2026} • "
                                         }

@@ -74,6 +74,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.drawWithCache
 import com.skydoves.cloudy.cloudy
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.platform.LocalDensity
@@ -2602,7 +2603,10 @@ private fun FeaturedSuggestionCard(
                 clickAction()
             }
     ) {
-        // Capa inferior: Reflejo invertido idéntico al reproductor principal con difuminado suave (sin nada de blur)
+        // Capa inferior: reflejo invertido con blur progresivo estilo imla
+        // (imla: sigma_px * maskAlpha por pixel + blend crisp donde mask=0).
+        // Aqui sin ImlaHost: capa nítida + capa borrosa enmascarada por Brush.verticalGradient.
+        // Arriba nítido -> abajo borroso, barato para LazyRow (1 copia blur, radios modestos).
         Box(
             modifier = Modifier
                 .offset(y = 270.dp)
@@ -2612,7 +2616,15 @@ private fun FeaturedSuggestionCard(
         ) {
             val density = LocalDensity.current
             val artworkHeightPx = with(density) { 270.dp.toPx() }
+            val mirrorModifier = Modifier
+                .size(width = 280.dp, height = 270.dp)
+                .graphicsLayer {
+                    scaleY = -1f
+                    transformOrigin = TransformOrigin(0.5f, 0f)
+                    translationY = artworkHeightPx
+                }
 
+            // 1. Base nítida (extremo crisp de imla, mask = 0)
             AsyncImage(
                 model = ImageRequest.Builder(context)
                     .data(hdThumb)
@@ -2621,38 +2633,67 @@ private fun FeaturedSuggestionCard(
                     .build(),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(width = 280.dp, height = 270.dp)
+                modifier = mirrorModifier
+            )
+
+            // 2. Capa borrosa con máscara progresiva (maskAlpha 0 arriba -> 1 abajo)
+            // Mismo size(560) que la base para compartir caché de Coil.
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(hdThumb)
+                    .size(560)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = mirrorModifier
+                    .blur(16.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
                     .graphicsLayer {
-                        scaleY = -1f
-                        transformOrigin = TransformOrigin(0.5f, 0f)
-                        translationY = artworkHeightPx
+                        compositingStrategy = CompositingStrategy.Offscreen
                     }
-                    .drawWithContent {
-                        drawContent()
-                        // Difuminado: gradiente que desvanece el reflejo invertido suavemente hacia la base
-                        drawRect(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    dominantColor.copy(alpha = 0.35f),
-                                    dominantColor.copy(alpha = 0.75f),
-                                    dominantColor.copy(alpha = 0.95f)
-                                )
+                    .drawWithCache {
+                        val progressiveMask = Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0.0f to Color.Transparent,
+                                0.35f to Color.Transparent,
+                                0.70f to Color.Black.copy(alpha = 0.8f),
+                                1.0f to Color.Black
                             )
                         )
-                        // Gradiente de contraste oscuro para legibilidad garantizada del texto
-                        drawRect(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    Color.Black.copy(alpha = 0.25f),
-                                    Color.Black.copy(alpha = 0.60f)
-                                )
+                        onDrawWithContent {
+                            drawContent()
+                            drawRect(
+                                brush = progressiveMask,
+                                blendMode = BlendMode.DstIn
                             )
-                        )
+                        }
                     }
             )
+
+            // 3. Fundidos de legibilidad (dominantColor + contraste), encima del compuesto
+            androidx.compose.foundation.Canvas(
+                modifier = Modifier.matchParentSize()
+            ) {
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            dominantColor.copy(alpha = 0.35f),
+                            dominantColor.copy(alpha = 0.75f),
+                            dominantColor.copy(alpha = 0.95f)
+                        )
+                    )
+                )
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.25f),
+                            Color.Black.copy(alpha = 0.60f)
+                        )
+                    )
+                )
+            }
         }
 
         // Portada Principal nítida sin difuminado en la parte inferior

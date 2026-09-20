@@ -7412,7 +7412,9 @@ private fun QueueItemRow(
     val currentOnDragStart by rememberUpdatedState(onDragStart)
     val currentOnDragDelta by rememberUpdatedState(onDragDelta)
     val currentOnDragEnd by rememberUpdatedState(onDragEnd)
+    val currentOnClick by rememberUpdatedState(onClick)
     val haptic = LocalHapticFeedback.current
+    val touchSlopPx = androidx.compose.ui.platform.LocalViewConfiguration.current.touchSlop
     var rowYInParent by remember { mutableFloatStateOf(0f) }
     var rowGlobalY by remember { mutableFloatStateOf(0f) }
 
@@ -7549,10 +7551,14 @@ private fun QueueItemRow(
                     .pointerInput(Unit) {
                         awaitEachGesture {
                             val down = awaitFirstDown(requireUnconsumed = false)
+                            // Se consume desde el inicio para no duplicar el tap de la fila,
+                            // pero el drag visual solo arranca tras superar el slop:
+                            // soltar antes equivale a tap en el handle y selecciona la canción.
                             down.consume()
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            currentOnDragStart(rowYInParent + down.position.y, rowGlobalY)
                             var pointerId = down.id
+                            var totalDx = 0f
+                            var totalDy = 0f
+                            var dragStarted = false
                             try {
                                 while (true) {
                                     val event = awaitPointerEvent(pass = PointerEventPass.Initial)
@@ -7561,14 +7567,32 @@ private fun QueueItemRow(
                                     if (dragChange == null || !dragChange.pressed) {
                                         break
                                     }
-                                    dragChange.consume()
-                                    pointerId = dragChange.id
                                     val deltaY = dragChange.position.y - dragChange.previousPosition.y
                                     val deltaX = dragChange.position.x - dragChange.previousPosition.x
+                                    dragChange.consume()
+                                    pointerId = dragChange.id
+                                    if (!dragStarted) {
+                                        totalDx += deltaX
+                                        totalDy += deltaY
+                                        if (kotlin.math.hypot(totalDx, totalDy) <= touchSlopPx) {
+                                            continue
+                                        }
+                                        dragStarted = true
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        currentOnDragStart(rowYInParent + down.position.y, rowGlobalY)
+                                        currentOnDragDelta(totalDx, totalDy)
+                                        totalDx = 0f
+                                        totalDy = 0f
+                                        continue
+                                    }
                                     currentOnDragDelta(deltaX, deltaY)
                                 }
                             } finally {
-                                currentOnDragEnd()
+                                if (dragStarted) {
+                                    currentOnDragEnd()
+                                } else {
+                                    currentOnClick()
+                                }
                             }
                         }
                     }
@@ -7598,7 +7622,9 @@ private fun UpNextSongRow(
     val currentOnDragStart by rememberUpdatedState(onDragStart)
     val currentOnDragDelta by rememberUpdatedState(onDragDelta)
     val currentOnDragEnd by rememberUpdatedState(onDragEnd)
+    val currentOnClick by rememberUpdatedState(onClick)
     val haptic = LocalHapticFeedback.current
+    val touchSlopPx = androidx.compose.ui.platform.LocalViewConfiguration.current.touchSlop
     var rowYInParent by remember { mutableFloatStateOf(0f) }
     var rowGlobalY by remember { mutableFloatStateOf(0f) }
 
@@ -7729,10 +7755,14 @@ private fun UpNextSongRow(
                     .pointerInput(Unit) {
                         awaitEachGesture {
                             val down = awaitFirstDown(requireUnconsumed = false)
+                            // Se consume desde el inicio para no duplicar el tap de la fila,
+                            // pero el drag visual solo arranca tras superar el slop:
+                            // soltar antes equivale a tap en el handle y selecciona la canción.
                             down.consume()
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            currentOnDragStart(rowYInParent + down.position.y, rowGlobalY)
                             var pointerId = down.id
+                            var totalDx = 0f
+                            var totalDy = 0f
+                            var dragStarted = false
                             try {
                                 while (true) {
                                     val event = awaitPointerEvent(pass = PointerEventPass.Initial)
@@ -7741,14 +7771,32 @@ private fun UpNextSongRow(
                                     if (dragChange == null || !dragChange.pressed) {
                                         break
                                     }
-                                    dragChange.consume()
-                                    pointerId = dragChange.id
                                     val deltaY = dragChange.position.y - dragChange.previousPosition.y
                                     val deltaX = dragChange.position.x - dragChange.previousPosition.x
+                                    dragChange.consume()
+                                    pointerId = dragChange.id
+                                    if (!dragStarted) {
+                                        totalDx += deltaX
+                                        totalDy += deltaY
+                                        if (kotlin.math.hypot(totalDx, totalDy) <= touchSlopPx) {
+                                            continue
+                                        }
+                                        dragStarted = true
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        currentOnDragStart(rowYInParent + down.position.y, rowGlobalY)
+                                        currentOnDragDelta(totalDx, totalDy)
+                                        totalDx = 0f
+                                        totalDy = 0f
+                                        continue
+                                    }
                                     currentOnDragDelta(deltaX, deltaY)
                                 }
                             } finally {
-                                currentOnDragEnd()
+                                if (dragStarted) {
+                                    currentOnDragEnd()
+                                } else {
+                                    currentOnClick()
+                                }
                             }
                         }
                     }

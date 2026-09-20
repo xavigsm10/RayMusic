@@ -2,6 +2,7 @@ package com.mrtdk.liquid_glass.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,8 +11,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
@@ -23,11 +28,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -113,7 +124,8 @@ fun BusquedaScreen(
     onVideoSelected: (String) -> Unit = {},
     onCategorySelected: (SearchCategory) -> Unit = {},
     onQueryChange: (String) -> Unit = {},
-    onSubmitChange: (Boolean) -> Unit = {}
+    onSubmitChange: (Boolean) -> Unit = {},
+    bottomTabsStyle: String = "ios26"
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -411,6 +423,16 @@ fun BusquedaScreen(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(bottom = 180.dp)
                         ) {
+                            if (bottomTabsStyle == "ios27") {
+                                item {
+                                    Ios27SearchBar(
+                                        query = query,
+                                        onQueryChange = onQueryChange,
+                                        onSubmitChange = onSubmitChange,
+                                        onInputActiveChange = onInputActiveChange
+                                    )
+                                }
+                            }
                             if (recentSearches.isNotEmpty()) {
                                 item {
                                     Row(
@@ -515,6 +537,17 @@ fun BusquedaScreen(
                                     )
                                 }
                             }
+                            // iOS 27: barra para escribir debajo del título
+                            if (bottomTabsStyle == "ios27") {
+                                item {
+                                    Ios27SearchBar(
+                                        query = query,
+                                        onQueryChange = onQueryChange,
+                                        onSubmitChange = onSubmitChange,
+                                        onInputActiveChange = onInputActiveChange
+                                    )
+                                }
+                            }
                             item {
                                 Text(
                                     text = "Explorar géneros",
@@ -592,6 +625,16 @@ fun BusquedaScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 180.dp)
                     ) {
+                        if (bottomTabsStyle == "ios27") {
+                            item {
+                                Ios27SearchBar(
+                                    query = query,
+                                    onQueryChange = onQueryChange,
+                                    onSubmitChange = onSubmitChange,
+                                    onInputActiveChange = onInputActiveChange
+                                )
+                            }
+                        }
                         // Autocompletion text suggestions
                         if (state.suggestions.isNotEmpty()) {
                             items(
@@ -813,6 +856,16 @@ fun BusquedaScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 180.dp)
                     ) {
+                        if (bottomTabsStyle == "ios27") {
+                            item {
+                                Ios27SearchBar(
+                                    query = query,
+                                    onQueryChange = onQueryChange,
+                                    onSubmitChange = onSubmitChange,
+                                    onInputActiveChange = onInputActiveChange
+                                )
+                            }
+                        }
                         // Filter tabs row
                         item {
                             LazyRow(
@@ -1322,6 +1375,84 @@ private fun SearchSourceSelector(
             }
         }
     }
+}
+
+@Composable
+private fun Ios27SearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onSubmitChange: (Boolean) -> Unit,
+    onInputActiveChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isDarkMode by ThemeManager.isDarkMode.collectAsState()
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    val containerBg = if (isDarkMode) Color(0xFF1C1C1E) else Color(0xFFE9E9EE)
+    val contentColor = if (isDarkMode) Color.White else Color(0xFF1C1C1E)
+    val hintColor = Color(0xFF8E8E93)
+
+    BasicTextField(
+        value = query,
+        onValueChange = {
+            onQueryChange(it)
+            onSubmitChange(false)
+        },
+        singleLine = true,
+        textStyle = TextStyle(color = contentColor, fontSize = 16.sp),
+        cursorBrush = SolidColor(ThemeManager.accentColor),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(
+            onSearch = {
+                onSubmitChange(true)
+                onInputActiveChange(false)
+                focusManager.clearFocus()
+                keyboardController?.hide()
+            }
+        ),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .height(52.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(containerBg)
+            .border(1.dp, contentColor.copy(alpha = 0.08f), RoundedCornerShape(18.dp))
+            .onFocusChanged { if (it.isFocused) onInputActiveChange(true) },
+        decorationBox = { innerTextField ->
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = null,
+                    tint = hintColor,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Box(modifier = Modifier.weight(1f)) {
+                    if (query.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.search_field_hint),
+                            color = hintColor,
+                            fontSize = 16.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    innerTextField()
+                }
+                Icon(
+                    imageVector = Icons.Default.Mic,
+                    contentDescription = null,
+                    tint = contentColor,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+        }
+    )
 }
 
 @Composable

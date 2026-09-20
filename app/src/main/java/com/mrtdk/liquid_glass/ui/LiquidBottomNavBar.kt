@@ -145,6 +145,7 @@ fun LiquidBottomNavBar(
     onPrevious: () -> Unit = {},
     playbackProgress: () -> Float = { 0f },
     onSeek: (Float) -> Unit = {},
+    bottomTabsStyle: String = "ios26",
     modifier: Modifier = Modifier,
     tintColor: Color = Color.Unspecified,
     contentColor: Color = Color.Unspecified,
@@ -188,8 +189,13 @@ fun LiquidBottomNavBar(
         }
     }
 
+    val isIos27 = bottomTabsStyle == "ios27"
     val isSearchActive = selectedIndex == 4 || isSearchInputActive
     val visualState = when {
+        // iOS 27: la pill unificada nunca despliega la barra inferior,
+        // el campo para escribir ya está arriba en BusquedaScreen.
+        isIos27 && scrollConnection.isInline -> LiquidNavVisualState.INLINE
+        isIos27 -> LiquidNavVisualState.EXPANDED
         // Con el input de búsqueda activo (historial/sugerencias) no se colapsa:
         // colapsar desmonta el campo, pierde el foco y cierra la vista.
         isSearchInputActive -> LiquidNavVisualState.SEARCH_EXPANDED
@@ -205,8 +211,9 @@ fun LiquidBottomNavBar(
     val isKeyboardOpen = WindowInsets.ime.getBottom(density) > 0
 
 
-    // System back handler while in search mode
-    BackHandler(enabled = visualState == LiquidNavVisualState.SEARCH_EXPANDED) {
+    // System back handler while in search mode (iOS 27: la pill no se expande,
+    // pero atrás igual vuelve a la tab anterior desde la búsqueda)
+    BackHandler(enabled = visualState == LiquidNavVisualState.SEARCH_EXPANDED || (isIos27 && isSearchActive)) {
         if (isKeyboardOpen) {
             keyboardController?.hide()
             focusManager.clearFocus()
@@ -459,7 +466,15 @@ fun LiquidBottomNavBar(
                             }
                         }
 
-                        // Navigation Row: [ Home, New, Radio, Library Pill ] + [ Standalone Search Pill ]
+                        // iOS 27 (AndroidLiquidGlass BottomTabs): single unified pill with
+                        // all 5 tabs together. iOS 26 (current): 4-tab pill + standalone search pill.
+                        val expandedTabs = if (isIos27) {
+                            MainNavTabs + NavTabItem(4, R.string.search_action, iconRes = R.drawable.nav_search)
+                        } else {
+                            MainNavTabs
+                        }
+
+                        // Navigation Row: [ Home, New, Radio, Library (+ Search) Pill ] + [ Standalone Search Pill ]
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -477,19 +492,19 @@ fun LiquidBottomNavBar(
                                     )
                             ) {
                                 LiquidBottomTabs(
-                                    selectedTabIndex = { if (selectedIndex in 0..3) selectedIndex else lastActiveMainTab },
+                                    selectedTabIndex = { if (selectedIndex in 0..4) selectedIndex else lastActiveMainTab },
                                     onTabSelected = onTabSelected,
                                     backdrop = backdrop,
-                                    tabsCount = MainNavTabs.size,
+                                    tabsCount = expandedTabs.size,
                                     accentColor = activeAccentColor,
                                     containerColor = if (isSolid) solidBgColor else actualTintColor,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .skipToLookaheadSize()
                                 ) {
-                                    MainNavTabs.forEach { tabItem ->
+                                    expandedTabs.forEach { tabItem ->
                                         val isSelected = tabItem.index == selectedIndex
-                                        val isSharedIcon = tabItem.index == (if (selectedIndex in 0..3) selectedIndex else lastActiveMainTab)
+                                        val isSharedIcon = tabItem.index == (if (selectedIndex in 0..4) selectedIndex else lastActiveMainTab)
                                         val baseColor = if (isSelected) activeAccentColor else navUnselectedColor
 
                                         LiquidBottomTab(
@@ -498,17 +513,18 @@ fun LiquidBottomNavBar(
                                         ) {
                                             if (tabItem.iconRes != null) {
                                                 val iconModifier = when (tabItem.index) {
-                                                    0 -> Modifier.size(22.dp) // Home
-                                                    1 -> Modifier.size(20.dp) // New
-                                                    2 -> Modifier.size(width = 28.dp, height = 20.dp) // Radio
-                                                    3 -> Modifier.size(width = 22.dp, height = 22.dp) // Library
-                                                    else -> Modifier.size(22.dp)
+                                                    0 -> Modifier.size(24.dp) // Home
+                                                    1 -> Modifier.size(24.dp) // New
+                                                    2 -> Modifier.size(27.5.dp) // Radio
+                                                    3 -> Modifier.size(27.5.dp) // Library
+                                                    4 -> Modifier.size(26.dp) // Search (iOS 27 unified pill)
+                                                    else -> Modifier.size(24.dp)
                                                 }
 
                                                 Box(
                                                     modifier = if (isSharedIcon) {
                                                         Modifier
-                                                            .height(22.dp)
+                                                            .height(27.5.dp)
                                                             .wrapContentWidth()
                                                             .sharedElement(
                                                                 sharedContentState = rememberSharedContentState("tab#${tabItem.index}-icon"),
@@ -518,7 +534,7 @@ fun LiquidBottomNavBar(
                                                             )
                                                     } else {
                                                         Modifier
-                                                            .height(22.dp)
+                                                            .height(27.5.dp)
                                                             .wrapContentWidth()
                                                             .animateEnterExitTab(
                                                                 sharedTransitionScope = this@SharedTransitionLayout,
@@ -562,42 +578,45 @@ fun LiquidBottomNavBar(
                             }
 
                             // Pill 2: Standalone Search Pill (sharedElement with standaloneTab - 64dp)
-                            val isSearchSelected = selectedIndex == 4
-                            val searchColor = if (isSearchSelected) activeAccentColor else navUnselectedColor
+                            // iOS 27 has Search inside the unified pill, so no standalone pill.
+                            if (!isIos27) {
+                                val isSearchSelected = selectedIndex == 4
+                                val searchColor = if (isSearchSelected) activeAccentColor else navUnselectedColor
 
-                            Box(
-                                modifier = Modifier
-                                    .sharedElement(
-                                        sharedContentState = rememberSharedContentState("standaloneTab"),
-                                        animatedVisibilityScope = this@AnimatedContent,
-                                        boundsTransform = morphBoundsTransform,
-                                        zIndexInOverlay = 1f
-                                    )
-                                    .size(64.dp)
-                                    .then(capsuleBackdropModifier)
-                                    .clip(Capsule())
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null,
-                                        role = Role.Tab,
-                                        onClick = { onTabSelected(4) }
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
                                 Box(
-                                    modifier = Modifier.sharedElement(
-                                        sharedContentState = rememberSharedContentState("searchIcon"),
-                                        animatedVisibilityScope = this@AnimatedContent,
-                                        boundsTransform = morphBoundsTransform,
-                                        zIndexInOverlay = 2f
-                                    )
+                                    modifier = Modifier
+                                        .sharedElement(
+                                            sharedContentState = rememberSharedContentState("standaloneTab"),
+                                            animatedVisibilityScope = this@AnimatedContent,
+                                            boundsTransform = morphBoundsTransform,
+                                            zIndexInOverlay = 1f
+                                        )
+                                        .size(64.dp)
+                                        .then(capsuleBackdropModifier)
+                                        .clip(Capsule())
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null,
+                                            role = Role.Tab,
+                                            onClick = { onTabSelected(4) }
+                                        ),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.nav_search),
-                                        contentDescription = stringResource(R.string.search_action),
-                                        tint = searchColor,
-                                        modifier = Modifier.size(28.dp)
-                                    )
+                                    Box(
+                                        modifier = Modifier.sharedElement(
+                                            sharedContentState = rememberSharedContentState("searchIcon"),
+                                            animatedVisibilityScope = this@AnimatedContent,
+                                            boundsTransform = morphBoundsTransform,
+                                            zIndexInOverlay = 2f
+                                        )
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.nav_search),
+                                            contentDescription = stringResource(R.string.search_action),
+                                            tint = searchColor,
+                                            modifier = Modifier.size(28.dp)
+                                        )
+                                    }
                                 }
                             }
                         }

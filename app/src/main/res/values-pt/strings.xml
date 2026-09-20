@@ -126,6 +126,11 @@
     <string name="vidrio_liquido_transparente">Vidro líquido transparente</string>
     <string name="semitransparente">Semitransparente</string>
     <string name="apariencia_dialog_title">Selecione o estilo Liquid Glass</string>
+    <string name="user_playlist_label">Playlist</string>
+    <string name="bottom_tabs_style_title">Bottom tabs</string>
+    <string name="bottom_tabs_style_ios26">Estilo iOS 26</string>
+    <string name="bottom_tabs_style_ios27">Estilo iOS 27</string>
+    <string name="search_field_hint">Artistas, músicas, letras e mais</string>
     <string name="audio_settings_section">ÁUDIO</string>
     <string name="audio_quality_label">Qualidade de áudio</string>
     <string name="audio_quality_high">Alta (160 kbps Opus / 128 kbps AAC)</string>

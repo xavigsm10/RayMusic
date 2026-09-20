@@ -70,6 +70,9 @@ object LibraryManager {
     private val _glassStyle = MutableStateFlow("transparent")
     val glassStyle: StateFlow<String> = _glassStyle
 
+    private val _bottomTabsStyle = MutableStateFlow("ios26")
+    val bottomTabsStyle: StateFlow<String> = _bottomTabsStyle
+
     private val _playerArtworkStyle = MutableStateFlow("fullartwork")
     val playerArtworkStyle: StateFlow<String> = _playerArtworkStyle
 
@@ -93,7 +96,10 @@ object LibraryManager {
         this.context = context.applicationContext
         prefs = this.context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         dbHelper = LibraryDatabaseHelper(this.context)
-        isInitialized = true
+        // NOTA: isInitialized se activa DESPUÉS de cargar los ajustes de apariencia:
+        // los getters devuelven el valor en memoria una vez inicializado, así que
+        // cargarlos con el flag ya activo siempre devolvería el valor por defecto
+        // y las opciones elegidas (tema, bottom tabs, etc.) se restablecerían.
 
         // Perform library items migration if not already migrated
         val isLibraryMigrated = dbHelper.getSetting("migrated_to_db") == "true" || prefs.getBoolean("migrated_to_db", false)
@@ -111,9 +117,11 @@ object LibraryManager {
 
         // Load UI appearance settings immediately (fast key-value reads)
         _glassStyle.value = getGlassStyle()
+        _bottomTabsStyle.value = getBottomTabsStyle()
         _playerArtworkStyle.value = getPlayerArtworkStyle()
         _fullArtworkBackdropStyle.value = getFullArtworkBackdropStyle()
         _ultraPerformanceMode.value = isUltraPerformanceMode()
+        isInitialized = true
 
         // Load heavy data collections asynchronously on Dispatchers.IO to avoid blocking main thread at startup
         CoroutineScope(Dispatchers.IO).launch {
@@ -249,6 +257,7 @@ object LibraryManager {
                     val keys = listOf(
                         "app_language",
                         "glass_style",
+                        "bottom_tabs_style",
                         "player_artwork_style",
                         "full_artwork_backdrop_style",
                         "audio_quality",
@@ -627,6 +636,24 @@ object LibraryManager {
             prefs.edit().putString("glass_style", style).apply()
         } catch (_: Exception) {}
         dbHelper.saveSetting("glass_style", style)
+    }
+
+    fun getBottomTabsStyle(): String {
+        if (isInitialized) return _bottomTabsStyle.value
+        val fromDb = dbHelper.getSetting("bottom_tabs_style", null)
+        if (fromDb != null) return fromDb
+        val fromPrefs = try { prefs.getString("bottom_tabs_style", null) } catch (_: Exception) { null }
+        if (fromPrefs != null) return fromPrefs
+        return "ios26"
+    }
+
+    fun saveBottomTabsStyle(style: String) {
+        if (!isInitialized) return
+        _bottomTabsStyle.value = style
+        try {
+            prefs.edit().putString("bottom_tabs_style", style).apply()
+        } catch (_: Exception) {}
+        dbHelper.saveSetting("bottom_tabs_style", style)
     }
 
     fun getPlayerArtworkStyle(): String {

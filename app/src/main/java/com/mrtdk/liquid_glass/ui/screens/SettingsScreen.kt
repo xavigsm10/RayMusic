@@ -131,6 +131,8 @@ fun MainSettingsMenu(
 ) {
     val scrollState = rememberScrollState()
     var showGlassStyleDialog by remember { mutableStateOf(false) }
+    var showBottomTabsStyleDialog by remember { mutableStateOf(false) }
+    val currentBottomTabsStyle by LibraryManager.bottomTabsStyle.collectAsState()
     var showArtworkStyleDialog by remember { mutableStateOf(false) }
     val currentArtworkStyle by LibraryManager.playerArtworkStyle.collectAsState()
     var showBackdropStyleDialog by remember { mutableStateOf(false) }
@@ -205,6 +207,18 @@ fun MainSettingsMenu(
                             Text(currentStyleName)
                         },
                         onClick = { showGlassStyleDialog = true }
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(id = R.drawable.nav_novedades),
+                        title = { Text(stringResource(R.string.bottom_tabs_style_title)) },
+                        description = {
+                            val currentStyleName = when (currentBottomTabsStyle) {
+                                "ios27" -> stringResource(R.string.bottom_tabs_style_ios27)
+                                else -> stringResource(R.string.bottom_tabs_style_ios26)
+                            }
+                            Text(currentStyleName)
+                        },
+                        onClick = { showBottomTabsStyleDialog = true }
                     ),
                     Material3SettingsItem(
                         icon = rememberPainter(Icons.Default.Tune),
@@ -379,6 +393,21 @@ fun MainSettingsMenu(
             onSelect = {
                 LibraryManager.saveGlassStyle(it)
                 onGlassStyleChanged(it)
+            }
+        )
+    }
+
+    if (showBottomTabsStyleDialog) {
+        SingleChoiceDialog(
+            title = stringResource(R.string.bottom_tabs_style_title),
+            options = listOf(
+                "ios26" to stringResource(R.string.bottom_tabs_style_ios26),
+                "ios27" to stringResource(R.string.bottom_tabs_style_ios27)
+            ),
+            selectedValue = currentBottomTabsStyle,
+            onDismiss = { showBottomTabsStyleDialog = false },
+            onSelect = {
+                LibraryManager.saveBottomTabsStyle(it)
             }
         )
     }

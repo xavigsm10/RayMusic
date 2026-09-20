@@ -247,6 +247,7 @@ class MainActivity : ComponentActivity() {
                 }
                 var glassStyle by remember { mutableStateOf(LibraryManager.getGlassStyle()) }
                 val currentBackdropStyle by LibraryManager.fullArtworkBackdropStyle.collectAsState()
+                val bottomTabsStyle by LibraryManager.bottomTabsStyle.collectAsState()
                 val isUltraPerformance by LibraryManager.ultraPerformanceMode.collectAsState()
                 val isLightweightGlass = currentBackdropStyle == "accord" || isUltraPerformance
                 val lastSavedState = remember { com.mrtdk.liquid_glass.data.LibraryManager.getLastPlayerState() }
@@ -769,7 +770,8 @@ class MainActivity : ComponentActivity() {
                                                     categoryDetail = category
                                                 },
                                                 onQueryChange = { newQuery -> searchQuery = newQuery },
-                                                onSubmitChange = { submitted -> isSearchSubmitted = submitted }
+                                                onSubmitChange = { submitted -> isSearchSubmitted = submitted },
+                                                bottomTabsStyle = bottomTabsStyle
                                             )
                                         }
 
@@ -820,12 +822,37 @@ class MainActivity : ComponentActivity() {
                                         }
 
                                         if (playlistDetail != null) {
-                                            PlaylistDetailScreen(
-                                                playlist = playlistDetail!!,
-                                                onBack = { playlistDetail = null },
-                                                onSongSelected = playSong,
-                                                onArtistSelected = { artistDetail = it }
-                                            )
+                                            val pl = playlistDetail!!
+                                            // Las playlists creadas por el usuario usan la misma vista que los álbumes
+                                            val isUserCreatedPlaylist = !pl.id.startsWith("replay_") &&
+                                                    !pl.id.startsWith("made_for_you_") &&
+                                                    !pl.id.startsWith("spotify_")
+                                            if (isUserCreatedPlaylist) {
+                                                AlbumScreen(
+                                                    albumState = AlbumState(
+                                                        id = "user_playlist_" + pl.id,
+                                                        playlistId = "",
+                                                        title = pl.name,
+                                                        artist = "",
+                                                        thumbnail = pl.coverUrl ?: pl.items.firstOrNull()?.thumbnail,
+                                                        year = null
+                                                    ),
+                                                    onBack = { playlistDetail = null },
+                                                    onSongSelected = playSong,
+                                                    onArtistSelected = { artist -> artistDetail = artist },
+                                                    onAlbumSelected = { album -> albumDetail = album },
+                                                    onVideoSelected = { videoId -> videoDetail = videoId },
+                                                    onDominantColorChanged = { color -> globalDominantColor = color },
+                                                    isPaused = showPlayer
+                                                )
+                                            } else {
+                                                PlaylistDetailScreen(
+                                                    playlist = pl,
+                                                    onBack = { playlistDetail = null },
+                                                    onSongSelected = playSong,
+                                                    onArtistSelected = { artistDetail = it }
+                                                )
+                                            }
                                         }
 
                                         androidx.compose.animation.AnimatedVisibility(
@@ -958,7 +985,8 @@ class MainActivity : ComponentActivity() {
                                                         videoDetail = null
                                                     },
                                                     isSearchInputActive = isSearchInputActive,
-                                                    onSearchInputActiveChange = { isSearchInputActive = it }
+                                                    onSearchInputActiveChange = { isSearchInputActive = it },
+                                                    bottomTabsStyle = bottomTabsStyle
                                                 )
                                             }
                                             if (updateReleaseInfo != null) {

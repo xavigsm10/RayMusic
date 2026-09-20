@@ -1761,7 +1761,7 @@ fun ArtistScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-            // Circular back button with GlassBox (same style as Replay Screen)
+            // Circular back button with GlassBox (liquid glass)
             scope.GlassBox(
                 modifier = Modifier
                     .size(54.dp)
@@ -1784,7 +1784,7 @@ fun ArtistScreen(
                 )
             }
 
-            // Capsule containing Share and Settings options
+            // Capsule containing Share and Settings options (liquid glass)
             scope.GlassBox(
                 modifier = Modifier
                     .height(48.dp),

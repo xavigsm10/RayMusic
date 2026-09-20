@@ -382,12 +382,23 @@ class MusicService : MediaSessionService() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        val player = mediaSession?.player
-        if (player != null) {
-            if (!player.playWhenReady || player.mediaItemCount == 0) {
-                stopSelf()
+        // Al cerrar la app de segundo plano se detiene la reproducción:
+        // se pausa, se limpia la cola y se elimina el servicio + notificación.
+        try {
+            mediaSession?.player?.let {
+                it.playWhenReady = false
+                it.stop()
+                it.clearMediaItems()
             }
+        } catch (_: Exception) {}
+        try {
+            stopForegroundAndSelf()
+        } catch (_: Exception) {
+            try {
+                stopSelf()
+            } catch (_: Exception) {}
         }
+        super.onTaskRemoved(rootIntent)
     }
 
     override fun onDestroy() {

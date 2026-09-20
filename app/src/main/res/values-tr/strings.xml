@@ -126,6 +126,11 @@
     <string name="vidrio_liquido_transparente">Şeffaf likit cam</string>
     <string name="semitransparente">Yarı şeffaf</string>
     <string name="apariencia_dialog_title">Liquid Glass stilini seçin</string>
+    <string name="user_playlist_label">Çalma listesi</string>
+    <string name="bottom_tabs_style_title">Alt sekmeler</string>
+    <string name="bottom_tabs_style_ios26">iOS 26 stili</string>
+    <string name="bottom_tabs_style_ios27">iOS 27 stili</string>
+    <string name="search_field_hint">Sanatçılar, Şarkılar, Sözler ve Daha Fazlası</string>
     <string name="audio_settings_section">SES</string>
     <string name="audio_quality_label">Ses kalitesi</string>
     <string name="audio_quality_high">Yüksek (160 kbps Opus / 128 kbps AAC)</string>
