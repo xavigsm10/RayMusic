@@ -46,6 +46,7 @@ import com.mrtdk.liquid_glass.ui.components.LocalBackdrop
 import com.mrtdk.liquid_glass.ui.components.SharedElementTransitionContainer
 import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
 import com.mrtdk.glass.GlassBox
+import com.mrtdk.glass.DarkGrayGlassTint
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
@@ -419,7 +420,7 @@ fun AlbumScreen(
     val circularButtonBg = if (isLightBackground) Color.Black.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.22f)
     val playButtonBg = if (isLightBackground) Color(0xFF151515) else Color.White
     val playButtonTextColor = if (isLightBackground) Color.White else (if (dominantColor.luminance() > 0.65f) Color(0xFF151515) else dominantColor)
-    val glassButtonTint = if (isLightBackground) Color.White.copy(alpha = 0.65f) else dominantColor.copy(alpha = 0.35f)
+    val glassButtonTint = if (isLightBackground) Color.White.copy(alpha = 0.65f) else DarkGrayGlassTint
     val glassIconTint = if (isLightBackground) Color(0xFF151515) else Color.White
 
     SharedElementTransitionContainer(
@@ -1438,12 +1439,12 @@ fun AlbumScreen(
                                 }
                                 .clickable(enabled = !showAlbumMenu) { dismiss() },
                             shape = CircleShape,
-                            tint = glassButtonTint,
+                            tint = Color.Unspecified,
                             blur = 0.8f,
                             centerDistortion = 0.1f,
                             scale = 0.02f,
                             warpEdges = 0.4f,
-                            elevation = 4.dp,
+                            elevation = 16.dp,
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -1944,7 +1945,7 @@ fun AlbumTopRightMorphingPill(
     val morphWidth = androidx.compose.ui.unit.lerp(86.dp, 268.dp, morphProgress)
     val morphHeight = androidx.compose.ui.unit.lerp(44.dp, targetMenuHeight, morphProgress)
     val morphCorner = androidx.compose.ui.unit.lerp(22.dp, 24.dp, morphProgress)
-    val morphTint = androidx.compose.ui.graphics.lerp(glassButtonTint, Color(0xFF1B1B1E).copy(alpha = 0.88f), morphProgress)
+    val morphTint = Color.Unspecified
 
     // Smooth crossfade opacities
     val pillIconsAlpha = ((0.28f - morphProgress) / 0.28f).coerceIn(0f, 1f)
@@ -1974,7 +1975,7 @@ fun AlbumTopRightMorphingPill(
         centerDistortion = 0.1f,
         scale = 0.02f,
         warpEdges = 0.4f,
-        elevation = if (isExpanded) 16.dp else 4.dp,
+        elevation = 16.dp,
         contentAlignment = Alignment.TopEnd
     ) {
         Box(modifier = Modifier.fillMaxSize()) {

@@ -1280,7 +1280,7 @@ fun PlaylistDetailScreen(
                                         .clip(CircleShape)
                                         .clickable { dismiss() },
                                     shape = CircleShape,
-                                    tint = dominantColor.copy(alpha = 0.35f),
+                                    tint = Color.Unspecified,
                                     blur = 0.8f,
                                     centerDistortion = 0.1f,
                                     scale = 0.02f,
@@ -1306,7 +1306,7 @@ fun PlaylistDetailScreen(
                                         }
                                         .height(48.dp),
                                     shape = RoundedCornerShape(percent = 50),
-                                    tint = dominantColor.copy(alpha = 0.35f),
+                                    tint = Color.Unspecified,
                                     blur = 0.8f,
                                     centerDistortion = 0.1f,
                                     scale = 0.02f,
@@ -2272,7 +2272,7 @@ fun FavoriteSongsScreen(
                                                  }
                                                  .clickable { dismiss() },
                                              shape = CircleShape,
-                                             tint = Color.White.copy(alpha = 0.15f),
+                                             tint = Color.Unspecified,
                                              blur = 0.8f,
                                              centerDistortion = 0.1f,
                                              scale = 0.02f,
@@ -2298,7 +2298,7 @@ fun FavoriteSongsScreen(
                                                  }
                                                  .height(48.dp),
                                              shape = RoundedCornerShape(percent = 50),
-                                             tint = Color.White.copy(alpha = 0.15f),
+                                             tint = Color.Unspecified,
                                              blur = 0.8f,
                                              centerDistortion = 0.1f,
                                              scale = 0.02f,

@@ -281,7 +281,12 @@ fun BusquedaScreen(
 
     LaunchedEffect(listState.isScrollInProgress) {
         if (listState.isScrollInProgress) {
-            focusManager.clearFocus()
+            // En el historial ("Búsquedas recientes", sin texto) no se quita el foco:
+            // perderlo hace que el campo inferior reporte isFocused=false y la vista
+            // se cierra saltando a las categorías. Solo se oculta el teclado.
+            if (query.isNotBlank() || state.isFullResultsMode) {
+                focusManager.clearFocus()
+            }
             keyboardController?.hide()
         }
     }

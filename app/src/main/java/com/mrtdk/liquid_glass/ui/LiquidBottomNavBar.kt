@@ -190,6 +190,9 @@ fun LiquidBottomNavBar(
 
     val isSearchActive = selectedIndex == 4 || isSearchInputActive
     val visualState = when {
+        // Con el input de búsqueda activo (historial/sugerencias) no se colapsa:
+        // colapsar desmonta el campo, pierde el foco y cierra la vista.
+        isSearchInputActive -> LiquidNavVisualState.SEARCH_EXPANDED
         scrollConnection.isInline -> LiquidNavVisualState.INLINE
         isSearchActive -> LiquidNavVisualState.SEARCH_EXPANDED
         else -> LiquidNavVisualState.EXPANDED
@@ -495,17 +498,17 @@ fun LiquidBottomNavBar(
                                         ) {
                                             if (tabItem.iconRes != null) {
                                                 val iconModifier = when (tabItem.index) {
-                                                    0 -> Modifier.size(24.dp) // Home
-                                                    1 -> Modifier.size(21.dp) // New
-                                                    2 -> Modifier.size(width = 30.dp, height = 21.dp) // Radio
-                                                    3 -> Modifier.size(width = 24.dp, height = 26.dp) // Library
-                                                    else -> Modifier.size(24.dp)
+                                                    0 -> Modifier.size(22.dp) // Home
+                                                    1 -> Modifier.size(20.dp) // New
+                                                    2 -> Modifier.size(width = 28.dp, height = 20.dp) // Radio
+                                                    3 -> Modifier.size(width = 22.dp, height = 22.dp) // Library
+                                                    else -> Modifier.size(22.dp)
                                                 }
 
                                                 Box(
                                                     modifier = if (isSharedIcon) {
                                                         Modifier
-                                                            .height(26.dp)
+                                                            .height(22.dp)
                                                             .wrapContentWidth()
                                                             .sharedElement(
                                                                 sharedContentState = rememberSharedContentState("tab#${tabItem.index}-icon"),
@@ -515,14 +518,14 @@ fun LiquidBottomNavBar(
                                                             )
                                                     } else {
                                                         Modifier
-                                                            .height(26.dp)
+                                                            .height(22.dp)
                                                             .wrapContentWidth()
                                                             .animateEnterExitTab(
                                                                 sharedTransitionScope = this@SharedTransitionLayout,
                                                                 animatedVisibilityScope = this@AnimatedContent
                                                             )
                                                     },
-                                                    contentAlignment = Alignment.BottomCenter
+                                                    contentAlignment = Alignment.Center
                                                 ) {
                                                     Icon(
                                                         painter = painterResource(tabItem.iconRes),
@@ -532,7 +535,6 @@ fun LiquidBottomNavBar(
                                                     )
                                                 }
                                             }
-                                            Spacer(modifier = Modifier.height(2.dp))
                                             Box(
                                                 modifier = Modifier.animateEnterExitTab(
                                                     sharedTransitionScope = this@SharedTransitionLayout,
@@ -545,7 +547,13 @@ fun LiquidBottomNavBar(
                                                     fontSize = 11.sp,
                                                     fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                                                     maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    style = TextStyle(
+                                                        lineHeight = 12.sp,
+                                                        platformStyle = androidx.compose.ui.text.PlatformTextStyle(
+                                                            includeFontPadding = false
+                                                        )
+                                                    )
                                                 )
                                             }
                                         }

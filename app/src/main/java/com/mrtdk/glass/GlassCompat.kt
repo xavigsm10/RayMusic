@@ -14,6 +14,7 @@ import expo.modules.androidglassview.GlassBox
 
 val LocalGlassStyle = expo.modules.androidglassview.LocalGlassStyle
 val LocalLightweightGlass = expo.modules.androidglassview.LocalLightweightGlass
+val DarkGrayGlassTint = expo.modules.androidglassview.DarkGrayGlassTint
 
 typealias GlassScope = expo.modules.androidglassview.GlassScope
 typealias GlassBoxScope = expo.modules.androidglassview.GlassBoxScope
@@ -31,11 +32,13 @@ fun GlassBoxScope.GlassBox(
     centerDistortion: Float = 0f,
     shape: CornerBasedShape = RoundedCornerShape(0.dp),
     elevation: Dp = 0.dp,
-    tint: Color = Color.Transparent,
+    tint: Color = DarkGrayGlassTint,
     @FloatRange(from = 0.0, to = 1.0)
     darkness: Float = 0f,
     @FloatRange(from = 0.0, to = 1.0)
     warpEdges: Float = 0f,
+    backdrop: expo.modules.androidglassview.backdrop.Backdrop = expo.modules.androidglassview.LocalBackdrop.current,
+    depthEffect: Boolean = true,
     content: @Composable BoxScope.() -> Unit = { },
 ) {
     (this as expo.modules.androidglassview.GlassBoxScope).GlassBox(
@@ -50,6 +53,8 @@ fun GlassBoxScope.GlassBox(
         tint = tint,
         darkness = darkness,
         warpEdges = warpEdges,
+        backdrop = backdrop,
+        depthEffect = depthEffect,
         content = content
     )
 }

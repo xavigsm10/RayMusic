@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -79,10 +80,21 @@ fun ReplayScreen(
     val context = LocalContext.current
     var currentView by remember { mutableStateOf(ReplayView.MAIN) }
 
-    // Year & Month Selection (Defaulting to August 2026 matching screenshots)
-    var selectedYear by remember { mutableStateOf("2026") }
-    var selectedMonthIndex by remember { mutableIntStateOf(7) } // 7 = August (0-indexed)
+    // Year & Month Selection (Defaulting to current month)
+    val currentCalendar = remember { Calendar.getInstance() }
+    val currentYear = remember { currentCalendar.get(Calendar.YEAR).toString() }
+    val currentMonthIndex = remember { currentCalendar.get(Calendar.MONTH) }
+
+    var selectedYear by remember { mutableStateOf(currentYear) }
+    var selectedMonthIndex by remember { mutableIntStateOf(currentMonthIndex) }
     var showYearDropdown by remember { mutableStateOf(false) }
+
+    // From August backwards (selectedMonthIndex <= 7 or past years), show that no songs have been listened to
+    val isPastEmptyMonth = remember(selectedYear, selectedMonthIndex, currentYear, currentMonthIndex) {
+        val selYearInt = selectedYear.toIntOrNull() ?: 2026
+        val curYearInt = currentYear.toIntOrNull() ?: 2026
+        selYearInt < curYearInt || (selYearInt == curYearInt && selectedMonthIndex <= 7)
+    }
 
     val years = listOf("2026")
     val monthShortNames = listOf("ene.", "feb.", "mar.", "abr.", "may.", "jun.", "jul.", "ago.", "sept.", "oct.", "nov.", "dic.")
@@ -128,30 +140,38 @@ fun ReplayScreen(
     }
 
     // Aggregate statistics with sample fallback if user has little or no history yet
-    val totalMinutes = remember(filteredHistory) {
-        val calculated = filteredHistory.size * 3
-        if (calculated > 0) calculated else 75
+    val totalMinutes = remember(filteredHistory, isPastEmptyMonth) {
+        if (isPastEmptyMonth) {
+            0
+        } else {
+            val calculated = filteredHistory.size * 3
+            if (calculated > 0) calculated else 75
+        }
     }
 
-    val artistsList = remember(filteredHistory) {
-        val grouped = filteredHistory
-            .groupBy { it.artist }
-            .map { (artistName, records) ->
-                ArtistStat(
-                    id = records.first().songId,
-                    name = artistName,
-                    thumbnail = records.firstOrNull { it.thumbnail != null }?.thumbnail,
-                    minutes = records.size * 3
-                )
-            }
-            .sortedByDescending { it.minutes }
+    val artistsList = remember(filteredHistory, isPastEmptyMonth) {
+        if (isPastEmptyMonth) {
+            emptyList()
+        } else {
+            val grouped = filteredHistory
+                .groupBy { it.artist }
+                .map { (artistName, records) ->
+                    ArtistStat(
+                        id = records.first().songId,
+                        name = artistName,
+                        thumbnail = records.firstOrNull { it.thumbnail != null }?.thumbnail,
+                        minutes = records.size * 3
+                    )
+                }
+                .sortedByDescending { it.minutes }
 
-        if (grouped.isNotEmpty()) grouped else listOf(
-            ArtistStat("sample_mj", "Michael Jackson", "https://upload.wikimedia.org/wikipedia/commons/thumb/3/31/Michael_Jackson_in_1988.jpg/800px-Michael_Jackson_in_1988.jpg", 31),
-            ArtistStat("sample_j5", "Jackson 5", "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Jackson_5_1974.jpg/800px-Jackson_5_1974.jpg", 7),
-            ArtistStat("sample_sc", "Sabrina Carpenter", "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Sabrina_Carpenter_November_2024.jpg/800px-Sabrina_Carpenter_November_2024.jpg", 5),
-            ArtistStat("sample_mg", "Manuel García", "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Manuel_Garc%C3%ADa_en_Concepci%C3%B3n_%28cropped%29.jpg/800px-Manuel_Garc%C3%ADa_en_Concepci%C3%B3n_%28cropped%29.jpg", 4)
-        )
+            if (grouped.isNotEmpty()) grouped else listOf(
+                ArtistStat("sample_mj", "Michael Jackson", "https://upload.wikimedia.org/wikipedia/commons/thumb/3/31/Michael_Jackson_in_1988.jpg/800px-Michael_Jackson_in_1988.jpg", 31),
+                ArtistStat("sample_j5", "Jackson 5", "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Jackson_5_1974.jpg/800px-Jackson_5_1974.jpg", 7),
+                ArtistStat("sample_sc", "Sabrina Carpenter", "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Sabrina_Carpenter_November_2024.jpg/800px-Sabrina_Carpenter_November_2024.jpg", 5),
+                ArtistStat("sample_mg", "Manuel García", "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Manuel_Garc%C3%ADa_en_Concepci%C3%B3n_%28cropped%29.jpg/800px-Manuel_Garc%C3%ADa_en_Concepci%C3%B3n_%28cropped%29.jpg", 4)
+            )
+        }
     }
 
     // Official artist portrait thumbnails cache resolved from YouTube Music
@@ -183,56 +203,64 @@ fun ReplayScreen(
         }
     }
 
-    val songsList = remember(filteredHistory) {
-        val grouped = filteredHistory
-            .groupBy { it.songId }
-            .map { (songId, records) ->
-                val first = records.first()
-                SongStat(
-                    id = songId,
-                    title = first.title,
-                    artist = first.artist,
-                    thumbnail = first.thumbnail,
-                    plays = records.size
-                )
-            }
-            .sortedByDescending { it.plays }
+    val songsList = remember(filteredHistory, isPastEmptyMonth) {
+        if (isPastEmptyMonth) {
+            emptyList()
+        } else {
+            val grouped = filteredHistory
+                .groupBy { it.songId }
+                .map { (songId, records) ->
+                    val first = records.first()
+                    SongStat(
+                        id = songId,
+                        title = first.title,
+                        artist = first.artist,
+                        thumbnail = first.thumbnail,
+                        plays = records.size
+                    )
+                }
+                .sortedByDescending { it.plays }
 
-        if (grouped.isNotEmpty()) grouped else listOf(
-            SongStat("s1", "Wanna Be Startin' Somethin'", "Michael Jackson", "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200&fit=crop", 4),
-            SongStat("s2", "I'll Be There", "Jackson 5", "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=200&fit=crop", 4),
-            SongStat("s3", "Don't Stop 'Til You Get Enough", "Michael Jackson", "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200&fit=crop", 3),
-            SongStat("s4", "Bad (2012 Remaster)", "Michael Jackson", "https://images.unsplash.com/photo-1511735111819-9a3f7709049c?w=200&fit=crop", 3),
-            SongStat("s5", "Baby Be Mine", "Michael Jackson", "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200&fit=crop", 2),
-            SongStat("s6", "Juno", "Sabrina Carpenter", "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200&fit=crop", 2),
-            SongStat("s7", "Human Nature", "Michael Jackson", "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200&fit=crop", 2),
-            SongStat("s8", "La Danza de las Libelulas", "Manuel García", "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=200&fit=crop", 2),
-            SongStat("s9", "Thriller", "Michael Jackson", "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200&fit=crop", 2)
-        )
+            if (grouped.isNotEmpty()) grouped else listOf(
+                SongStat("s1", "Wanna Be Startin' Somethin'", "Michael Jackson", "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200&fit=crop", 4),
+                SongStat("s2", "I'll Be There", "Jackson 5", "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=200&fit=crop", 4),
+                SongStat("s3", "Don't Stop 'Til You Get Enough", "Michael Jackson", "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200&fit=crop", 3),
+                SongStat("s4", "Bad (2012 Remaster)", "Michael Jackson", "https://images.unsplash.com/photo-1511735111819-9a3f7709049c?w=200&fit=crop", 3),
+                SongStat("s5", "Baby Be Mine", "Michael Jackson", "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200&fit=crop", 2),
+                SongStat("s6", "Juno", "Sabrina Carpenter", "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200&fit=crop", 2),
+                SongStat("s7", "Human Nature", "Michael Jackson", "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200&fit=crop", 2),
+                SongStat("s8", "La Danza de las Libelulas", "Manuel García", "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=200&fit=crop", 2),
+                SongStat("s9", "Thriller", "Michael Jackson", "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200&fit=crop", 2)
+            )
+        }
     }
 
-    val albumsList = remember(filteredHistory) {
-        val grouped = filteredHistory
-            .filter { it.album != null }
-            .groupBy { it.album }
-            .map { (albumName, records) ->
-                val first = records.first()
-                AlbumStat(
-                    id = first.songId,
-                    title = albumName ?: "",
-                    artist = first.artist,
-                    thumbnail = first.thumbnail,
-                    minutes = records.size * 3
-                )
-            }
-            .sortedByDescending { it.minutes }
+    val albumsList = remember(filteredHistory, isPastEmptyMonth) {
+        if (isPastEmptyMonth) {
+            emptyList()
+        } else {
+            val grouped = filteredHistory
+                .filter { it.album != null }
+                .groupBy { it.album }
+                .map { (albumName, records) ->
+                    val first = records.first()
+                    AlbumStat(
+                        id = first.songId,
+                        title = albumName ?: "",
+                        artist = first.artist,
+                        thumbnail = first.thumbnail,
+                        minutes = records.size * 3
+                    )
+                }
+                .sortedByDescending { it.minutes }
 
-        if (grouped.isNotEmpty()) grouped else listOf(
-            AlbumStat("a1", "Michael: Songs From The Motion Picture", "Michael Jackson", "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&fit=crop", 17),
-            AlbumStat("a2", "Thriller", "Michael Jackson", "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&fit=crop", 15),
-            AlbumStat("a3", "Off the Wall", "Michael Jackson", "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&fit=crop", 2),
-            AlbumStat("a4", "Bad", "Michael Jackson", "https://images.unsplash.com/photo-1511735111819-9a3f7709049c?w=300&fit=crop", 2)
-        )
+            if (grouped.isNotEmpty()) grouped else listOf(
+                AlbumStat("a1", "Michael: Songs From The Motion Picture", "Michael Jackson", "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&fit=crop", 17),
+                AlbumStat("a2", "Thriller", "Michael Jackson", "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&fit=crop", 15),
+                AlbumStat("a3", "Off the Wall", "Michael Jackson", "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&fit=crop", 2),
+                AlbumStat("a4", "Bad", "Michael Jackson", "https://images.unsplash.com/photo-1511735111819-9a3f7709049c?w=300&fit=crop", 2)
+            )
+        }
     }
 
     val achievementMinutes = remember(totalMinutes) {
@@ -380,6 +408,47 @@ fun ReplayScreen(
                                     }
                                 }
 
+                                if (isPastEmptyMonth) {
+                                    item {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 48.dp, horizontal = 20.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(76.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color.White.copy(alpha = 0.08f))
+                                                    .border(0.8.dp, Color.White.copy(alpha = 0.15f), CircleShape),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.nav_biblioteca),
+                                                    contentDescription = null,
+                                                    tint = Color.White.copy(alpha = 0.5f),
+                                                    modifier = Modifier.size(36.dp)
+                                                )
+                                            }
+                                            Text(
+                                                text = "No se ha escuchado canciones",
+                                                color = Color.White,
+                                                fontSize = 24.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                textAlign = TextAlign.Center
+                                            )
+                                            Text(
+                                                text = "En ${getMonthFullDisplay(selectedMonthIndex)} de $selectedYear no se registraron canciones escuchadas. Tu Replay solo está disponible a partir del mes actual.",
+                                                color = Color.White.copy(alpha = 0.65f),
+                                                fontSize = 15.sp,
+                                                textAlign = TextAlign.Center,
+                                                lineHeight = 22.sp
+                                            )
+                                        }
+                                    }
+                                } else {
                                 // Big summary statement
                                 item {
                                     Column(modifier = Modifier.fillMaxWidth()) {
@@ -810,6 +879,7 @@ fun ReplayScreen(
                                         }
                                     }
                                 }
+                                }
 
                                 item {
                                     Spacer(modifier = Modifier.height(120.dp))
@@ -844,103 +914,114 @@ fun ReplayScreen(
                                     }
                                 }
 
-                                // Play and Shuffle pill buttons
-                                item {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        Button(
-                                            onClick = {
-                                                songsList.firstOrNull()?.let { firstSong ->
-                                                    onSongSelected(
-                                                        PlayerState(
-                                                            title = firstSong.title,
-                                                            artist = firstSong.artist,
-                                                            artUrl = firstSong.thumbnail,
-                                                            videoId = firstSong.id
+                                if (isPastEmptyMonth) {
+                                    item {
+                                        Text(
+                                            text = "No se ha escuchado canciones en este mes.",
+                                            color = Color.White.copy(alpha = 0.7f),
+                                            fontSize = 16.sp,
+                                            modifier = Modifier.padding(vertical = 32.dp)
+                                        )
+                                    }
+                                } else {
+                                    // Play and Shuffle pill buttons
+                                    item {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            Button(
+                                                onClick = {
+                                                    songsList.firstOrNull()?.let { firstSong ->
+                                                        onSongSelected(
+                                                            PlayerState(
+                                                                title = firstSong.title,
+                                                                artist = firstSong.artist,
+                                                                artUrl = firstSong.thumbnail,
+                                                                videoId = firstSong.id
+                                                            )
                                                         )
+                                                    }
+                                                },
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .height(52.dp),
+                                                shape = RoundedCornerShape(12.dp),
+                                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C2C2E))
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.PlayArrow,
+                                                        contentDescription = null,
+                                                        tint = Color.White
+                                                    )
+                                                    Text(
+                                                        text = "Reproducir",
+                                                        color = Color.White,
+                                                        fontSize = 16.sp,
+                                                        fontWeight = FontWeight.SemiBold
                                                     )
                                                 }
-                                            },
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .height(48.dp),
-                                            shape = RoundedCornerShape(24.dp),
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF242426))
-                                        ) {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.PlayArrow,
-                                                    contentDescription = null,
-                                                    tint = Color.White
-                                                )
-                                                Text(
-                                                    text = "Reproducir",
-                                                    color = Color.White,
-                                                    fontSize = 16.sp,
-                                                    fontWeight = FontWeight.SemiBold
-                                                )
                                             }
-                                        }
 
-                                        Button(
-                                            onClick = {
-                                                songsList.shuffled().firstOrNull()?.let { randSong ->
-                                                    onSongSelected(
-                                                        PlayerState(
-                                                            title = randSong.title,
-                                                            artist = randSong.artist,
-                                                            artUrl = randSong.thumbnail,
-                                                            videoId = randSong.id
+                                            Button(
+                                                onClick = {
+                                                    songsList.shuffled().firstOrNull()?.let { shuffledSong ->
+                                                        onSongSelected(
+                                                            PlayerState(
+                                                                title = shuffledSong.title,
+                                                                artist = shuffledSong.artist,
+                                                                artUrl = shuffledSong.thumbnail,
+                                                                videoId = shuffledSong.id
+                                                            )
                                                         )
+                                                    }
+                                                },
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .height(52.dp),
+                                                shape = RoundedCornerShape(12.dp),
+                                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2C2C2E))
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Shuffle,
+                                                        contentDescription = null,
+                                                        tint = Color.White
+                                                    )
+                                                    Text(
+                                                        text = "Aleatorio",
+                                                        color = Color.White,
+                                                        fontSize = 16.sp,
+                                                        fontWeight = FontWeight.SemiBold
                                                     )
                                                 }
-                                            },
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .height(48.dp),
-                                            shape = RoundedCornerShape(24.dp),
-                                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF242426))
-                                        ) {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Shuffle,
-                                                    contentDescription = null,
-                                                    tint = Color.White
-                                                )
-                                                Text(
-                                                    text = "Aleatorio",
-                                                    color = Color.White,
-                                                    fontSize = 16.sp,
-                                                    fontWeight = FontWeight.SemiBold
-                                                )
                                             }
                                         }
                                     }
-                                }
 
-                                itemsIndexed(songsList, key = { index, song -> "replay_song_${song.id.ifEmpty { "$index" }}" }) { index, song ->
-                                    ReplaySongRow(
-                                        rank = index + 1,
-                                        song = song,
-                                        onClick = {
-                                            onSongSelected(
-                                                PlayerState(
-                                                    title = song.title,
-                                                    artist = song.artist,
-                                                    artUrl = song.thumbnail,
-                                                    videoId = song.id
+                                    itemsIndexed(songsList, key = { index, song -> "replay_song_${song.id.ifEmpty { "$index" }}" }) { index, song ->
+                                        ReplaySongRow(
+                                            rank = index + 1,
+                                            song = song,
+                                            onClick = {
+                                                onSongSelected(
+                                                    PlayerState(
+                                                        title = song.title,
+                                                        artist = song.artist,
+                                                        artUrl = song.thumbnail,
+                                                        videoId = song.id
+                                                    )
                                                 )
-                                            )
-                                        }
-                                    )
+                                            }
+                                        )
+                                    }
                                 }
 
                                 item { Spacer(modifier = Modifier.height(120.dp)) }
@@ -969,67 +1050,76 @@ fun ReplayScreen(
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
 
-                                LazyVerticalGrid(
-                                    columns = GridCells.Fixed(2),
-                                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                                    verticalArrangement = Arrangement.spacedBy(18.dp),
-                                    modifier = Modifier.fillMaxSize()
-                                ) {
-                                    itemsIndexed(albumsList, key = { index, album -> "replay_grid_album_${album.id.ifEmpty { "$index" }}" }) { index, album ->
-                                        Column(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clickable {
-                                                    onAlbumSelected(
-                                                        AlbumState(
-                                                            id = album.id,
-                                                            playlistId = album.id,
-                                                            title = album.title,
-                                                            artist = album.artist,
-                                                            thumbnail = album.thumbnail
-                                                        )
-                                                    )
-                                                }
-                                        ) {
-                                            AsyncImage(
-                                                model = ImageRequest.Builder(context)
-                                                    .data(album.thumbnail)
-                                                    .crossfade(true)
-                                                    .build(),
-                                                contentDescription = album.title,
-                                                contentScale = ContentScale.Crop,
+                                if (isPastEmptyMonth) {
+                                    Text(
+                                        text = "No se ha escuchado canciones en este mes.",
+                                        color = Color.White.copy(alpha = 0.7f),
+                                        fontSize = 16.sp,
+                                        modifier = Modifier.padding(vertical = 32.dp)
+                                    )
+                                } else {
+                                    LazyVerticalGrid(
+                                        columns = GridCells.Fixed(2),
+                                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                        verticalArrangement = Arrangement.spacedBy(18.dp),
+                                        modifier = Modifier.fillMaxSize()
+                                    ) {
+                                        itemsIndexed(albumsList, key = { index, album -> "replay_grid_album_${album.id.ifEmpty { "$index" }}" }) { index, album ->
+                                            Column(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .aspectRatio(1f)
-                                                    .clip(RoundedCornerShape(12.dp))
-                                            )
-                                            Spacer(modifier = Modifier.height(6.dp))
-                                            Text(
-                                                text = "${index + 1}",
-                                                color = Color.White,
-                                                fontSize = 17.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                            Text(
-                                                text = album.title,
-                                                color = Color.White,
-                                                fontSize = 14.sp,
-                                                fontWeight = FontWeight.SemiBold,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                            Text(
-                                                text = album.artist,
-                                                color = Color.White.copy(alpha = 0.65f),
-                                                fontSize = 13.sp,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                            Text(
-                                                text = "${album.minutes} minutos",
-                                                color = Color.White.copy(alpha = 0.55f),
-                                                fontSize = 13.sp
-                                            )
+                                                    .clickable {
+                                                        onAlbumSelected(
+                                                            AlbumState(
+                                                                id = album.id,
+                                                                playlistId = album.id,
+                                                                title = album.title,
+                                                                artist = album.artist,
+                                                                thumbnail = album.thumbnail
+                                                            )
+                                                        )
+                                                    }
+                                            ) {
+                                                AsyncImage(
+                                                    model = ImageRequest.Builder(context)
+                                                        .data(album.thumbnail)
+                                                        .crossfade(true)
+                                                        .build(),
+                                                    contentDescription = album.title,
+                                                    contentScale = ContentScale.Crop,
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .aspectRatio(1f)
+                                                        .clip(RoundedCornerShape(12.dp))
+                                                )
+                                                Spacer(modifier = Modifier.height(6.dp))
+                                                Text(
+                                                    text = "${index + 1}",
+                                                    color = Color.White,
+                                                    fontSize = 17.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                                Text(
+                                                    text = album.title,
+                                                    color = Color.White,
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                Text(
+                                                    text = album.artist,
+                                                    color = Color.White.copy(alpha = 0.65f),
+                                                    fontSize = 13.sp,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                Text(
+                                                    text = "${album.minutes} minutos",
+                                                    color = Color.White.copy(alpha = 0.55f),
+                                                    fontSize = 13.sp
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -1062,7 +1152,7 @@ fun ReplayScreen(
                             }
                         },
                     shape = CircleShape,
-                    tint = Color.Black.copy(alpha = 0.25f),
+                    tint = Color.Unspecified,
                     blur = 0.8f,
                     centerDistortion = 0.1f,
                     scale = 0.02f,
@@ -1092,7 +1182,7 @@ fun ReplayScreen(
                             context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.compartir)))
                         },
                     shape = CircleShape,
-                    tint = Color.Black.copy(alpha = 0.25f),
+                    tint = Color.Unspecified,
                     blur = 0.8f,
                     centerDistortion = 0.1f,
                     scale = 0.02f,

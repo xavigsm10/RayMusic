@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -31,6 +33,8 @@ import androidx.compose.ui.util.fastCoerceAtMost
 import androidx.compose.ui.util.lerp
 import expo.modules.androidglassview.backdrop.Backdrop
 import expo.modules.androidglassview.backdrop.backdrops.emptyBackdrop
+import expo.modules.androidglassview.backdrop.backdrops.layerBackdrop
+import expo.modules.androidglassview.backdrop.backdrops.rememberLayerBackdrop
 import expo.modules.androidglassview.backdrop.drawBackdrop
 import expo.modules.androidglassview.backdrop.highlight.Highlight
 import expo.modules.androidglassview.backdrop.isRenderEffectSupported
@@ -46,11 +50,16 @@ val LocalGlassStyle = staticCompositionLocalOf { "transparent" }
 val LocalLightweightGlass = staticCompositionLocalOf { false }
 val LocalBackdrop = staticCompositionLocalOf<Backdrop> { emptyBackdrop() }
 
+/**
+ * Default untinted glass tint matching the Frosted variant from expo-android-glass-view.
+ */
+val DarkGrayGlassTint = Color.Unspecified
+
 interface GlassScope {
     fun Modifier.glassBackground(
         shape: CornerBasedShape,
         elevation: Dp = 0.dp,
-        tint: Color = Color.Transparent,
+        tint: Color = Color.Unspecified,
         blur: Float = 0.8f,
     ): Modifier
 }
@@ -68,40 +77,44 @@ private class GlassScopeImpl : GlassScope {
         elevation: Dp,
         tint: Color,
         blur: Float,
-    ): Modifier = this
-        .clip(shape)
-        .background(
-            brush = Brush.verticalGradient(
-                listOf(
-                    tint.copy(alpha = (tint.alpha * 0.95f).coerceIn(0f, 1f)),
-                    tint.copy(alpha = (tint.alpha * 0.75f).coerceIn(0f, 1f)),
-                    tint
-                )
-            ),
-            shape = shape
-        )
-        .border(
-            width = 0.8.dp,
-            brush = Brush.verticalGradient(
-                listOf(
-                    Color.White.copy(alpha = 0.35f),
-                    Color.White.copy(alpha = 0.08f)
-                )
-            ),
-            shape = shape
-        )
+    ): Modifier {
+        val baseTint = if (tint.isSpecified) tint else Color.White.copy(alpha = 0.08f)
+        val alpha = baseTint.alpha
+        return this
+            .clip(shape)
+            .background(
+                brush = Brush.verticalGradient(
+                    listOf(
+                        baseTint.copy(alpha = (alpha * 0.95f).coerceIn(0f, 1f)),
+                        baseTint.copy(alpha = (alpha * 0.75f).coerceIn(0f, 1f)),
+                        baseTint
+                    )
+                ),
+                shape = shape
+            )
+            .border(
+                width = 0.8.dp,
+                brush = Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.35f),
+                        Color.White.copy(alpha = 0.08f)
+                    )
+                ),
+                shape = shape
+            )
+    }
 }
 
 /**
- * Dedicated Glass Pill for Back and Share buttons using expo-android-glass-view.
+ * Dedicated Glass Pill for Back and Share buttons using the "Frosted" variant from expo-android-glass-view.
  */
 @Composable
 fun ExpoGlassPill(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     shape: Shape = CircleShape,
-    tint: Color = Color.White.copy(alpha = 0.15f),
-    dark: Boolean = true,
+    tint: Color = Color.Unspecified,
+    dark: Boolean = false,
     isInteractive: Boolean = true,
     backdrop: Backdrop = LocalBackdrop.current,
     enabled: Boolean = true,
@@ -118,15 +131,21 @@ fun ExpoGlassPill(
         InteractiveHighlight(animationScope = animationScope)
     }
 
-    val state = remember(dark, tint) {
+    val resolvedTint = if (tint == DarkGrayGlassTint) Color.Unspecified else tint
+
+    val state = remember(resolvedTint) {
         GlassState().apply {
+            this.themed = false
             this.dark = dark
-            this.themed = true
-            this.tintColor = tint
-            this.chromaticAberration = true
+            this.tintColor = resolvedTint
+            this.heightOverride = 2f
+            this.amountOverride = 3f
+            this.blurOverride = 12f
+            this.chromaticAberration = false // Pure neutral refraction without color fringes
             this.depthEffect = true
             this.highlight = true
             this.shadow = true
+            this.vibrancyOverride = true
         }
     }
 
@@ -157,8 +176,8 @@ fun ExpoGlassPill(
                             glassEffects(state, effectScale = 1.5f)
                         }
                     },
-                    highlight = { if (state.highlight) state.rim else null },
-                    shadow = { if (state.shadow) state.dropShadow else null },
+                    highlight = { Highlight(width = 0.8.dp, alpha = 0.45f) },
+                    shadow = { Shadow(radius = 16.dp, color = Color.Black.copy(alpha = 0.25f)) },
                     layerBlock = if (isInteractive) {
                         {
                             val width = size.width
@@ -182,6 +201,16 @@ fun ExpoGlassPill(
                     } else null,
                     onDrawSurface = { glassSurface(state, effectsSupported) }
                 )
+                .border(
+                    width = 0.8.dp,
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.35f),
+                            Color.White.copy(alpha = 0.08f)
+                        )
+                    ),
+                    shape = shape
+                )
                 .clickable(
                     interactionSource = interactionSource,
                     indication = ripple(bounded = true, color = Color.White),
@@ -195,14 +224,14 @@ fun ExpoGlassPill(
 }
 
 /**
- * Dedicated Glass Menu Card for 3-dots menus using expo-android-glass-view.
+ * Dedicated Glass Menu Card for 3-dots menus using the "Frosted" variant from expo-android-glass-view.
  */
 @Composable
 fun ExpoGlassMenuCard(
     modifier: Modifier = Modifier,
     shape: CornerBasedShape = RoundedCornerShape(24.dp),
-    dark: Boolean = true,
-    tint: Color = Color(0xFF1E1E1E).copy(alpha = 0.85f),
+    dark: Boolean = false,
+    tint: Color = Color.Unspecified,
     backdrop: Backdrop = LocalBackdrop.current,
     content: @Composable BoxScope.() -> Unit
 ) {
@@ -211,15 +240,21 @@ fun ExpoGlassMenuCard(
     val isSolid = glassStyle == "solid"
     val effectsSupported = isRenderEffectSupported()
 
-    val state = remember(dark, tint) {
+    val resolvedTint = if (tint == DarkGrayGlassTint) Color.Unspecified else tint
+
+    val state = remember(resolvedTint) {
         GlassState().apply {
+            this.themed = false
             this.dark = dark
-            this.themed = true
-            this.tintColor = tint
-            this.chromaticAberration = true
+            this.tintColor = resolvedTint
+            this.heightOverride = 2f
+            this.amountOverride = 3f
+            this.blurOverride = 12f
+            this.chromaticAberration = false // Pure neutral refraction without color fringes
             this.depthEffect = true
             this.highlight = true
             this.shadow = true
+            this.vibrancyOverride = true
         }
     }
 
@@ -246,6 +281,16 @@ fun ExpoGlassMenuCard(
                     highlight = { Highlight(width = 0.8.dp, alpha = 0.45f) },
                     shadow = { Shadow(radius = 16.dp, color = Color.Black.copy(alpha = 0.25f)) },
                     onDrawSurface = { glassSurface(state, effectsSupported) }
+                )
+                .border(
+                    width = 0.8.dp,
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.35f),
+                            Color.White.copy(alpha = 0.08f)
+                        )
+                    ),
+                    shape = shape
                 ),
             content = content
         )
@@ -253,7 +298,7 @@ fun ExpoGlassMenuCard(
 }
 
 /**
- * Standard GlassBox implementation for screens and morphing pills.
+ * Standard GlassBox implementation using the "Frosted" variant from expo-android-glass-view.
  */
 @Composable
 fun GlassBoxScope.GlassBox(
@@ -268,28 +313,35 @@ fun GlassBoxScope.GlassBox(
     centerDistortion: Float = 0f,
     shape: CornerBasedShape = RoundedCornerShape(0.dp),
     elevation: Dp = 0.dp,
-    tint: Color = Color.Transparent,
+    tint: Color = Color.Unspecified,
     @FloatRange(from = 0.0, to = 1.0)
     darkness: Float = 0f,
     @FloatRange(from = 0.0, to = 1.0)
     warpEdges: Float = 0f,
+    backdrop: Backdrop = LocalBackdrop.current,
+    depthEffect: Boolean = true,
     content: @Composable BoxScope.() -> Unit = { },
 ) {
     val glassStyle = LocalGlassStyle.current
     val isSolid = glassStyle == "solid"
     val isLightweight = LocalLightweightGlass.current
     val effectsSupported = isRenderEffectSupported()
-    val backdrop = LocalBackdrop.current
 
-    val state = remember(tint, blur) {
+    val resolvedTint = if (tint == DarkGrayGlassTint) Color.Unspecified else tint
+
+    val state = remember(resolvedTint, blur, depthEffect) {
         GlassState().apply {
-            this.dark = true
-            this.themed = true
-            this.tintColor = tint
-            this.chromaticAberration = true
-            this.depthEffect = true
+            this.themed = false
+            this.dark = false
+            this.tintColor = resolvedTint
+            this.heightOverride = 2f
+            this.amountOverride = 3f
+            this.blurOverride = if (blur > 0f) (blur * 12f).coerceIn(8f, 16f) else 12f
+            this.chromaticAberration = false // Pure neutral refraction without color fringes
+            this.depthEffect = depthEffect
             this.highlight = true
-            this.shadow = elevation > 0.dp
+            this.shadow = true
+            this.vibrancyOverride = true
         }
     }
 
@@ -297,7 +349,7 @@ fun GlassBoxScope.GlassBox(
         Box(
             modifier = modifier
                 .clip(shape)
-                .background(if (tint != Color.Transparent) tint else Color(0xFF242428), shape),
+                .background(Color(0xFF242428), shape),
             contentAlignment = contentAlignment,
             propagateMinConstraints = propagateMinConstraints,
             content = content
@@ -315,9 +367,22 @@ fun GlassBoxScope.GlassBox(
                             glassEffects(state, effectScale = 1.5f)
                         }
                     },
-                    highlight = { Highlight(width = 0.75.dp, alpha = 0.4f) },
-                    shadow = { if (elevation > 0.dp) Shadow(radius = elevation, color = Color.Black.copy(alpha = 0.2f)) else null },
+                    highlight = { Highlight(width = 0.8.dp, alpha = 0.45f) },
+                    shadow = {
+                        val shadowRadius = if (elevation > 0.dp) elevation else 16.dp
+                        Shadow(radius = shadowRadius, color = Color.Black.copy(alpha = 0.25f))
+                    },
                     onDrawSurface = { glassSurface(state, effectsSupported) }
+                )
+                .border(
+                    width = 0.8.dp,
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.35f),
+                            Color.White.copy(alpha = 0.08f)
+                        )
+                    ),
+                    shape = shape
                 ),
             contentAlignment = contentAlignment,
             propagateMinConstraints = propagateMinConstraints,
@@ -327,7 +392,8 @@ fun GlassBoxScope.GlassBox(
 }
 
 /**
- * Root container for glass content.
+ * Root container for glass content. Captures background content into layerBackdrop
+ * and provides LocalBackdrop to glassContent.
  */
 @Composable
 fun GlassContainer(
@@ -337,13 +403,22 @@ fun GlassContainer(
     glassContent: @Composable GlassBoxScope.() -> Unit,
 ) {
     val glassScope = remember { GlassScopeImpl() }
+    val backdrop = rememberLayerBackdrop()
+
     Box(modifier = modifier) {
-        Box(modifier = Modifier.matchParentSize()) {
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .layerBackdrop(backdrop)
+        ) {
             content()
         }
-        val boxScopeImpl = remember(glassScope) {
-            GlassBoxScopeImpl(this, glassScope)
+        CompositionLocalProvider(LocalBackdrop provides backdrop) {
+            val boxScopeImpl = remember(glassScope) {
+                GlassBoxScopeImpl(this, glassScope)
+            }
+            boxScopeImpl.glassContent()
         }
-        boxScopeImpl.glassContent()
     }
 }
+

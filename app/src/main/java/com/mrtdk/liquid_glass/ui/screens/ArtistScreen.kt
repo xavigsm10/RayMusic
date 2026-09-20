@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.ArrowDownward
 import com.mrtdk.liquid_glass.ui.components.LiquidButton
 import com.mrtdk.glass.GlassContainer
 import com.mrtdk.glass.GlassBox
+import com.mrtdk.glass.DarkGrayGlassTint
 import com.mrtdk.liquid_glass.ui.components.AppleMusicArtistMenu
 import android.os.Build
 import androidx.compose.ui.graphics.BlurEffect
@@ -541,7 +542,7 @@ fun ArtistScreen(
                             .fillMaxWidth()
                             .height(475.dp)
                             .align(Alignment.TopCenter)
-                            .then(if (showArtistMenu) Modifier.layerBackdrop(localBackdrop) else Modifier)
+                            .layerBackdrop(localBackdrop)
                     ) {
                         // 1. Sharp full-res cover image
                         AsyncImage(
@@ -1766,12 +1767,13 @@ fun ArtistScreen(
                     .size(54.dp)
                     .clickable { onBack() },
                 shape = CircleShape,
-                tint = Color.Black.copy(alpha = 0.25f),
+                tint = Color.Unspecified,
                 blur = 0.8f,
                 centerDistortion = 0.1f,
                 scale = 0.02f,
                 warpEdges = 0.4f,
-                elevation = 4.dp,
+                elevation = 16.dp,
+                backdrop = localBackdrop,
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -1787,12 +1789,13 @@ fun ArtistScreen(
                 modifier = Modifier
                     .height(48.dp),
                 shape = RoundedCornerShape(percent = 50),
-                tint = Color.Black.copy(alpha = 0.25f),
+                tint = Color.Unspecified,
                 blur = 0.8f,
                 centerDistortion = 0.1f,
                 scale = 0.02f,
                 warpEdges = 0.4f,
-                elevation = 4.dp,
+                elevation = 16.dp,
+                backdrop = localBackdrop,
                 contentAlignment = Alignment.Center
             ) {
                 Row(

@@ -115,8 +115,7 @@ internal fun DrawScope.glassSurface(state: GlassState, effectsSupported: Boolean
   if (!effectsSupported) drawRect(state.fallbackColor)
   val tint = state.tintColor
   if (tint.isSpecified) {
-    drawRect(tint, blendMode = BlendMode.Hue)
-    drawRect(tint.copy(alpha = 0.75f * tint.alpha))
+    drawRect(tint)
   }
   val surface = state.surfaceColor
   if (surface.isSpecified) drawRect(surface)

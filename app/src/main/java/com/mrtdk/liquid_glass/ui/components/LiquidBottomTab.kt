@@ -43,7 +43,7 @@ fun RowScope.LiquidBottomTab(
                 scaleX = scaleVal
                 scaleY = scaleVal
             },
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
         content = content
     )

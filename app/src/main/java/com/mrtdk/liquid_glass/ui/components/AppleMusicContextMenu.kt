@@ -41,6 +41,10 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.mrtdk.glass.GlassBox
 import com.mrtdk.glass.GlassBoxScope
+import com.mrtdk.glass.DarkGrayGlassTint
+import expo.modules.androidglassview.backdrop.highlight.Highlight
+import expo.modules.androidglassview.backdrop.shadow.Shadow
+import androidx.compose.ui.graphics.BlendMode
 import com.mrtdk.liquid_glass.R
 import com.mrtdk.liquid_glass.data.ItemType
 import com.mrtdk.liquid_glass.data.LibraryItem
@@ -167,9 +171,11 @@ fun GlassBoxScope.AppleMusicSongMenu(
                     .padding(top = 24.dp, bottom = bottomPadding),
                 blur = 0.9f,
                 scale = 0.02f,
-                tint = Color(0xFF1E1E1E).copy(alpha = 0.85f),
+                tint = Color.Unspecified,
+                darkness = 0f,
                 shape = RoundedCornerShape(24.dp),
-                elevation = 16.dp
+                elevation = 16.dp,
+                depthEffect = false
             ) {
                 Column(
                     modifier = Modifier
@@ -709,9 +715,11 @@ fun GlassBoxScope.AppleMusicAlbumMenu(
                 centerDistortion = 0.1f,
                 scale = 0.02f,
                 warpEdges = 0.4f,
-                tint = Color(0xFF1A1A1C).copy(alpha = 0.86f),
+                tint = Color.Unspecified,
+                darkness = 0f,
                 shape = RoundedCornerShape(24.dp),
-                elevation = 16.dp
+                elevation = 16.dp,
+                depthEffect = false
             ) {
                 if (!isPlaylistsScreen) {
                     Column(
@@ -1389,11 +1397,7 @@ fun GlassBoxScope.AppleMusicPlaylistMenu(
         animationSpec = tween(durationMillis = 200),
         label = "menuAlpha"
     )
-    val cornerRadius by animateFloatAsState(
-        targetValue = if (visible) 24f else 80f,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
-        label = "menuCornerRadius"
-    )
+
     val blurPx by animateFloatAsState(
         targetValue = if (visible) 0f else 15f,
         animationSpec = tween(durationMillis = 180),
@@ -1439,27 +1443,37 @@ fun GlassBoxScope.AppleMusicPlaylistMenu(
                 .wrapContentHeight()
                 .let {
                     if (isSolid) {
-                        it.background(Color(0xFF202022).copy(alpha = 0.95f), RoundedCornerShape(cornerRadius.dp))
+                        it.background(Color(0xFF202022).copy(alpha = 0.95f), RoundedCornerShape(24.dp))
                     } else {
                         it.drawBackdrop(
                             backdrop = backdrop,
-                            shape = { RoundedCornerShape(cornerRadius.dp) },
+                            shape = { RoundedCornerShape(24.dp) },
                             effects = {
                                 if (!isLightweight) {
                                     vibrancy()
                                     blur(12f.dp.toPx())
-                                    lens(16f.dp.toPx(), 24f.dp.toPx())
+                                    lens(2f.dp.toPx(), 3f.dp.toPx(), depthEffect = false, chromaticAberration = false)
                                 } else {
-                                    blur(2f.dp.toPx())
+                                    blur(3f.dp.toPx())
                                 }
                             },
-                            onDrawSurface = {
-                                drawRect(if (isLightweight) Color(0xFF202022).copy(alpha = 0.88f) else dominantColor.copy(alpha = 0.35f))
-                            }
+                            highlight = { Highlight(width = 0.8.dp, alpha = 0.45f) },
+                            shadow = { Shadow(radius = 16.dp, color = Color.Black.copy(alpha = 0.25f)) },
+                            onDrawSurface = { /* Untinted Frosted Glass */ }
+                        )
+                        .border(
+                            width = 0.8.dp,
+                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.35f),
+                                    Color.White.copy(alpha = 0.08f)
+                                )
+                            ),
+                            shape = RoundedCornerShape(24.dp)
                         )
                     }
                 }
-                .clip(RoundedCornerShape(cornerRadius.dp))
+                .clip(RoundedCornerShape(24.dp))
         ) {
             Column(
                 modifier = Modifier
@@ -2067,11 +2081,7 @@ fun GlassBoxScope.AppleMusicArtistMenu(
         animationSpec = tween(durationMillis = 200),
         label = "menuAlpha"
     )
-    val cornerRadius by animateFloatAsState(
-        targetValue = if (visible) 24f else 80f,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
-        label = "menuCornerRadius"
-    )
+
     val blurPx by animateFloatAsState(
         targetValue = if (visible) 0f else 15f,
         animationSpec = tween(durationMillis = 180),
@@ -2117,27 +2127,37 @@ fun GlassBoxScope.AppleMusicArtistMenu(
                 .wrapContentHeight()
                 .let {
                     if (isSolid) {
-                        it.background(Color(0xFF202022).copy(alpha = 0.95f), RoundedCornerShape(cornerRadius.dp))
+                        it.background(Color(0xFF202022).copy(alpha = 0.95f), RoundedCornerShape(24.dp))
                     } else {
                         it.drawBackdrop(
                             backdrop = backdrop,
-                            shape = { RoundedCornerShape(cornerRadius.dp) },
+                            shape = { RoundedCornerShape(24.dp) },
                             effects = {
                                 if (!isLightweight) {
                                     vibrancy()
                                     blur(12f.dp.toPx())
-                                    lens(16f.dp.toPx(), 24f.dp.toPx())
+                                    lens(2f.dp.toPx(), 3f.dp.toPx(), depthEffect = false, chromaticAberration = false)
                                 } else {
-                                    blur(2f.dp.toPx())
+                                    blur(3f.dp.toPx())
                                 }
                             },
-                            onDrawSurface = {
-                                drawRect(if (isLightweight) Color(0xFF202022).copy(alpha = 0.88f) else dominantColor.copy(alpha = 0.35f))
-                            }
+                            highlight = { Highlight(width = 0.8.dp, alpha = 0.45f) },
+                            shadow = { Shadow(radius = 16.dp, color = Color.Black.copy(alpha = 0.25f)) },
+                            onDrawSurface = { /* Untinted Frosted Glass */ }
+                        )
+                        .border(
+                            width = 0.8.dp,
+                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.35f),
+                                    Color.White.copy(alpha = 0.08f)
+                                )
+                            ),
+                            shape = RoundedCornerShape(24.dp)
                         )
                     }
                 }
-                .clip(RoundedCornerShape(cornerRadius.dp))
+                .clip(RoundedCornerShape(24.dp))
         ) {
             Column(
                 modifier = Modifier
@@ -2255,11 +2275,7 @@ fun GlassBoxScope.AppleMusicCreateMenu(
         animationSpec = tween(durationMillis = 200),
         label = "menuAlpha"
     )
-    val cornerRadius by animateFloatAsState(
-        targetValue = if (visible) 24f else 80f,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
-        label = "menuCornerRadius"
-    )
+
     val blurPx by animateFloatAsState(
         targetValue = if (visible) 0f else 15f,
         animationSpec = tween(durationMillis = 180),
@@ -2305,27 +2321,37 @@ fun GlassBoxScope.AppleMusicCreateMenu(
                 .wrapContentHeight()
                 .let {
                     if (isSolid) {
-                        it.background(Color(0xFF202022).copy(alpha = 0.95f), RoundedCornerShape(cornerRadius.dp))
+                        it.background(Color(0xFF202022).copy(alpha = 0.95f), RoundedCornerShape(24.dp))
                     } else {
                         it.drawBackdrop(
                             backdrop = backdrop,
-                            shape = { RoundedCornerShape(cornerRadius.dp) },
+                            shape = { RoundedCornerShape(24.dp) },
                             effects = {
                                 if (!isLightweight) {
                                     vibrancy()
-                                    blur(8f.dp.toPx())
-                                    lens(24f.dp.toPx(), 24f.dp.toPx())
+                                    blur(12f.dp.toPx())
+                                    lens(2f.dp.toPx(), 3f.dp.toPx(), depthEffect = false, chromaticAberration = false)
                                 } else {
-                                    blur(2f.dp.toPx())
+                                    blur(3f.dp.toPx())
                                 }
                             },
-                            onDrawSurface = {
-                                drawRect(if (isLightweight) Color(0xFF202022).copy(alpha = 0.88f) else tintColor)
-                            }
+                            highlight = { Highlight(width = 0.8.dp, alpha = 0.45f) },
+                            shadow = { Shadow(radius = 16.dp, color = Color.Black.copy(alpha = 0.25f)) },
+                            onDrawSurface = { /* Untinted Frosted Glass */ }
+                        )
+                        .border(
+                            width = 0.8.dp,
+                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.35f),
+                                    Color.White.copy(alpha = 0.08f)
+                                )
+                            ),
+                            shape = RoundedCornerShape(24.dp)
                         )
                     }
                 }
-                .clip(RoundedCornerShape(cornerRadius.dp))
+                .clip(RoundedCornerShape(24.dp))
         ) {
             Column(
                 modifier = Modifier
@@ -2383,11 +2409,7 @@ fun GlassBoxScope.PlaylistsPageMoreMenu(
         animationSpec = tween(durationMillis = 200),
         label = "menuAlpha"
     )
-    val cornerRadius by animateFloatAsState(
-        targetValue = if (visible) 24f else 80f,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
-        label = "menuCornerRadius"
-    )
+
     val blurPx by animateFloatAsState(
         targetValue = if (visible) 0f else 15f,
         animationSpec = tween(durationMillis = 180),
@@ -2433,27 +2455,37 @@ fun GlassBoxScope.PlaylistsPageMoreMenu(
                 .wrapContentHeight()
                 .let {
                     if (isSolid) {
-                        it.background(Color(0xFF202022).copy(alpha = 0.95f), RoundedCornerShape(cornerRadius.dp))
+                        it.background(Color(0xFF202022).copy(alpha = 0.95f), RoundedCornerShape(24.dp))
                     } else {
                         it.drawBackdrop(
                             backdrop = backdrop,
-                            shape = { RoundedCornerShape(cornerRadius.dp) },
+                            shape = { RoundedCornerShape(24.dp) },
                             effects = {
                                 if (!isLightweight) {
                                     vibrancy()
-                                    blur(8f.dp.toPx())
-                                    lens(24f.dp.toPx(), 24f.dp.toPx())
+                                    blur(12f.dp.toPx())
+                                    lens(2f.dp.toPx(), 3f.dp.toPx(), depthEffect = false, chromaticAberration = false)
                                 } else {
-                                    blur(2f.dp.toPx())
+                                    blur(3f.dp.toPx())
                                 }
                             },
-                            onDrawSurface = {
-                                drawRect(if (isLightweight) Color(0xFF202022).copy(alpha = 0.88f) else tintColor)
-                            }
+                            highlight = { Highlight(width = 0.8.dp, alpha = 0.45f) },
+                            shadow = { Shadow(radius = 16.dp, color = Color.Black.copy(alpha = 0.25f)) },
+                            onDrawSurface = { /* Untinted Frosted Glass */ }
+                        )
+                        .border(
+                            width = 0.8.dp,
+                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.35f),
+                                    Color.White.copy(alpha = 0.08f)
+                                )
+                            ),
+                            shape = RoundedCornerShape(24.dp)
                         )
                     }
                 }
-                .clip(RoundedCornerShape(cornerRadius.dp))
+                .clip(RoundedCornerShape(24.dp))
         ) {
             Column(
                 modifier = Modifier
@@ -2566,11 +2598,7 @@ fun GlassBoxScope.PlaylistsPageSortMenu(
         animationSpec = tween(durationMillis = 200),
         label = "menuAlpha"
     )
-    val cornerRadius by animateFloatAsState(
-        targetValue = if (visible) 24f else 80f,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
-        label = "menuCornerRadius"
-    )
+
     val blurPx by animateFloatAsState(
         targetValue = if (visible) 0f else 15f,
         animationSpec = tween(durationMillis = 180),
@@ -2616,27 +2644,37 @@ fun GlassBoxScope.PlaylistsPageSortMenu(
                 .wrapContentHeight()
                 .let {
                     if (isSolid) {
-                        it.background(Color(0xFF202022).copy(alpha = 0.95f), RoundedCornerShape(cornerRadius.dp))
+                        it.background(Color(0xFF202022).copy(alpha = 0.95f), RoundedCornerShape(24.dp))
                     } else {
                         it.drawBackdrop(
                             backdrop = backdrop,
-                            shape = { RoundedCornerShape(cornerRadius.dp) },
+                            shape = { RoundedCornerShape(24.dp) },
                             effects = {
                                 if (!isLightweight) {
                                     vibrancy()
-                                    blur(8f.dp.toPx())
-                                    lens(24f.dp.toPx(), 24f.dp.toPx())
+                                    blur(12f.dp.toPx())
+                                    lens(2f.dp.toPx(), 3f.dp.toPx(), depthEffect = false, chromaticAberration = false)
                                 } else {
-                                    blur(2f.dp.toPx())
+                                    blur(3f.dp.toPx())
                                 }
                             },
-                            onDrawSurface = {
-                                drawRect(if (isLightweight) Color(0xFF202022).copy(alpha = 0.88f) else tintColor)
-                            }
+                            highlight = { Highlight(width = 0.8.dp, alpha = 0.45f) },
+                            shadow = { Shadow(radius = 16.dp, color = Color.Black.copy(alpha = 0.25f)) },
+                            onDrawSurface = { /* Untinted Frosted Glass */ }
+                        )
+                        .border(
+                            width = 0.8.dp,
+                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.35f),
+                                    Color.White.copy(alpha = 0.08f)
+                                )
+                            ),
+                            shape = RoundedCornerShape(24.dp)
                         )
                     }
                 }
-                .clip(RoundedCornerShape(cornerRadius.dp))
+                .clip(RoundedCornerShape(24.dp))
         ) {
             Column(
                 modifier = Modifier
@@ -2707,11 +2745,7 @@ fun GlassBoxScope.PlayerOptionsMenu(
         animationSpec = tween(durationMillis = 200),
         label = "menuAlpha"
     )
-    val cornerRadius by animateFloatAsState(
-        targetValue = if (visible) 24f else 80f,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
-        label = "menuCornerRadius"
-    )
+
     val blurPx by animateFloatAsState(
         targetValue = if (visible) 0f else 15f,
         animationSpec = tween(durationMillis = 180),
@@ -2772,10 +2806,12 @@ fun GlassBoxScope.PlayerOptionsMenu(
             scale = 0.02f,
             centerDistortion = 0.1f,
             warpEdges = 0.4f,
-            elevation = 4.dp,
-            shape = RoundedCornerShape(cornerRadius.dp),
-            tint = dominantColor.copy(alpha = 0.25f),
-            darkness = 0.2f
+            elevation = 16.dp,
+            shape = RoundedCornerShape(24.dp),
+            tint = Color.Unspecified,
+            darkness = 0f,
+            backdrop = backdrop,
+            depthEffect = false
         ) {
             Column(
                 modifier = Modifier
@@ -3096,11 +3132,7 @@ fun GlassBoxScope.LyricsOptionsMenu(
         animationSpec = tween(durationMillis = 200),
         label = "menuAlpha"
     )
-    val cornerRadius by animateFloatAsState(
-        targetValue = if (visible) 24f else 80f,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
-        label = "menuCornerRadius"
-    )
+
     val blurPx by animateFloatAsState(
         targetValue = if (visible) 0f else 15f,
         animationSpec = tween(durationMillis = 180),
@@ -3193,10 +3225,12 @@ fun GlassBoxScope.LyricsOptionsMenu(
             scale = 0.02f,
             centerDistortion = 0.1f,
             warpEdges = 0.4f,
-            elevation = 6.dp,
-            shape = RoundedCornerShape(cornerRadius.dp),
-            tint = dominantColor.copy(alpha = 0.28f),
-            darkness = 0.22f
+            elevation = 16.dp,
+            shape = RoundedCornerShape(24.dp),
+            tint = Color.Unspecified,
+            darkness = 0f,
+            backdrop = backdrop,
+            depthEffect = false
         ) {
             Column(
                 modifier = Modifier
@@ -3367,7 +3401,7 @@ fun GlassBoxScope.LyricsOptionsMenu(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 8.dp),
+                            .padding(horizontal = 10.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         // Title
@@ -3376,7 +3410,7 @@ fun GlassBoxScope.LyricsOptionsMenu(
                             color = Color.White.copy(alpha = 0.95f),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp)
                         )
 
                         // --- Pill 1: Distribuidor y Tipografía ---
@@ -3707,11 +3741,7 @@ fun GlassBoxScope.ArtistOptionsMenu(
         animationSpec = tween(durationMillis = 200),
         label = "menuAlpha"
     )
-    val cornerRadius by animateFloatAsState(
-        targetValue = if (visible) 24f else 80f,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
-        label = "menuCornerRadius"
-    )
+
     val blurPx by animateFloatAsState(
         targetValue = if (visible) 0f else 15f,
         animationSpec = tween(durationMillis = 180),
@@ -3799,10 +3829,12 @@ fun GlassBoxScope.ArtistOptionsMenu(
             scale = 0.02f,
             centerDistortion = 0.1f,
             warpEdges = 0.4f,
-            elevation = 4.dp,
-            shape = RoundedCornerShape(cornerRadius.dp),
-            tint = dominantColor.copy(alpha = 0.25f),
-            darkness = 0.2f
+            elevation = 16.dp,
+            shape = RoundedCornerShape(24.dp),
+            tint = Color.Unspecified,
+            darkness = 0f,
+            backdrop = backdrop,
+            depthEffect = false
         ) {
             Column(
                 modifier = Modifier

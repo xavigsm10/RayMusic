@@ -1783,7 +1783,12 @@ fun PlayerScreen(
 
         
 
-        val isLightBackground = run {
+        // En las vistas de letras y cola el fondo fluido es oscuro: se fuerza el
+        // color original blanco y se conserva el adaptativo solo en la vista principal.
+        val isOverlayView = showLyrics || showQueue
+        val isLightBackground = if (isOverlayView) {
+            false
+        } else run {
             val r = bottomAverageColor.red
             val g = bottomAverageColor.green
             val b = bottomAverageColor.blue
@@ -2576,15 +2581,14 @@ fun PlayerScreen(
                      val fluidSecondary = if (isNormalArtwork) normalMidColor else secCol
                      val fluidAccent = if (isNormalArtwork) normalBottomColor else bottomAverageColor
 
-                     // Fondo dinámico en movimiento con los colores exactos de la carátula (RayMusic Fluid Shader)
-                     if (!isUltraPerformance && fullArtworkBackdropStyle != "accord") {
-                         com.mrtdk.liquid_glass.ui.components.RayMusicFluidBackground(
-                             primaryColor = fluidPrimary,
-                             secondaryColor = fluidSecondary,
-                             accentColor = fluidAccent,
-                             isPlaying = isPlaying,
-                             modifier = Modifier.fillMaxSize()
-                         )
+                      // Fondo de formas estáticas (sin movimiento) para letras y cola: ahorra recursos.
+                      if (!isUltraPerformance && fullArtworkBackdropStyle != "accord") {
+                          com.mrtdk.liquid_glass.ui.components.RayMusicStaticFluidBackground(
+                              primaryColor = fluidPrimary,
+                              secondaryColor = fluidSecondary,
+                              accentColor = fluidAccent,
+                              modifier = Modifier.fillMaxSize()
+                          )
                      } else if (isUltraPerformance) {
                          Box(
                              modifier = Modifier
@@ -4625,7 +4629,7 @@ fun PlayerScreen(
                     glassScope.GlassBox(
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))
-                            .border(1.dp, dominantColor.copy(alpha = 0.55f), RoundedCornerShape(50))
+                            .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(50))
                             .clickable {
                                 isAutoScrollEnabled = true
                                 scrollToCurrentTrigger++
@@ -4638,7 +4642,7 @@ fun PlayerScreen(
                         warpEdges = 0.4f,
                         elevation = 6.dp,
                         shape = RoundedCornerShape(50),
-                        tint = dominantColor.copy(alpha = 0.35f),
+                        tint = com.mrtdk.glass.DarkGrayGlassTint,
                         darkness = 0.2f
                     ) {
                         Row(
