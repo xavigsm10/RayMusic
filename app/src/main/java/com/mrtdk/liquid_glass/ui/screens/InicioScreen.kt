@@ -83,6 +83,9 @@ import com.skydoves.cloudy.cloudy
 import android.os.Build
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.foundation.Image
@@ -2547,80 +2550,15 @@ private fun FeaturedSuggestionCard(
     }
 
     val hdThumb = upgradeThumb(thumbUrl)
-    val cachedColor = hdThumb?.let { SuggestionCardCache.dominantColorCache.get(it) } ?: Color(0xFF1C1C1E)
-    var dominantColor by remember(hdThumb) { mutableStateOf(cachedColor) }
 
-    LaunchedEffect(hdThumb) {
-        if (hdThumb != null && dominantColor == Color(0xFF1C1C1E)) {
-            withContext(Dispatchers.Default) {
-                val request = ImageRequest.Builder(context)
-                    .data(hdThumb)
-                    .allowHardware(false)
-                    .size(24)
-                    .build()
-                val result = Coil.imageLoader(context).execute(request)
-                if (result is SuccessResult) {
-                    val drawable = result.drawable
-                    val bitmap = (drawable as? BitmapDrawable)?.bitmap
-                        ?: Bitmap.createBitmap(
-                            drawable.intrinsicWidth.coerceAtLeast(1),
-                            drawable.intrinsicHeight.coerceAtLeast(1),
-                            Bitmap.Config.ARGB_8888
-                        ).also {
-                            val canvas = Canvas(it)
-                            drawable.setBounds(0, 0, canvas.width, canvas.height)
-                            drawable.draw(canvas)
-                        }
-                    
-                    try {
-                        var r = 0L; var g = 0L; var b = 0L
-                        val startY = (bitmap.height * 0.75f).toInt().coerceIn(0, bitmap.height - 1)
-                        val stepY = maxOf(1, (bitmap.height - startY) / 4)
-                        val w = bitmap.width
-                        val step = maxOf(1, w / 8)
-                        var count = 0
-                        for (y in startY until bitmap.height step stepY) {
-                            for (x in 0 until w step step) {
-                                val pixel = bitmap.getPixel(x, y)
-                                r += android.graphics.Color.red(pixel)
-                                g += android.graphics.Color.green(pixel)
-                                b += android.graphics.Color.blue(pixel)
-                                count++
-                            }
-                        }
-                        val sampledColor = Color((r / count).toInt(), (g / count).toInt(), (b / count).toInt())
-                        SuggestionCardCache.dominantColorCache.put(hdThumb, sampledColor)
-                        withContext(Dispatchers.Main) {
-                            dominantColor = sampledColor
-                        }
-                    } catch (_: Exception) { }
-                }
-            }
-        }
-    }
-
-    val scrimColor = remember(dominantColor) {
-        if (dominantColor.luminance() > 0.35f) {
-            val factor = 0.5f
-            Color(
-                red = (dominantColor.red * factor).coerceIn(0f, 1f),
-                green = (dominantColor.green * factor).coerceIn(0f, 1f),
-                blue = (dominantColor.blue * factor).coerceIn(0f, 1f),
-                alpha = 1f
-            )
-        } else {
-            dominantColor
-        }
-    }
-
-    // Card container
+    // Card container (sin ningún filtro oscuro)
     var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
     Box(
         modifier = Modifier
             .width(280.dp)
             .height(380.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(scrimColor)
+            .background(Color.Transparent)
             .wiggleOnScroll(item.id, lazyListState = scrollState)
             .clickable {
                 SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
@@ -2629,6 +2567,8 @@ private fun FeaturedSuggestionCard(
     ) {
         // Capa inferior: reflejo invertido con la misma posición de PlayerScreen.kt
         // pero tomando como referencia las dimensiones de la tarjeta de sugerencias destacadas
+        // y con el mismo desenfoque en blur de PlayerScreen.kt (createBlurEffect TileMode.MIRROR)
+        // aplicado únicamente a la imagen invertida, preservando sus colores vibrantes sin filtro oscuro
         val cardWidth = 280.dp
         val cardHeight = 380.dp
         val expandedWidth = 280.dp
@@ -2661,22 +2601,37 @@ private fun FeaturedSuggestionCard(
                     .width(childWidth)
                     .height(expandedHeight)
             ) {
-                com.mrtdk.liquid_glass.ui.components.GraduatedBlurArtwork(
-                    imageUrl = hdThumb,
-                    modifier = Modifier.fillMaxSize(),
-                    mildBlurRadiusX = 40.dp,
-                    mildBlurRadiusY = 14.dp,
-                    strongBlurRadiusX = 180.dp,
-                    strongBlurRadiusY = 55.dp,
-                    sliderThresholdDp = 50.dp,
-                    verticalScale = verticalScale,
-                    pivotY = pivotY,
-                    horizontalScale = 1.0f
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(hdThumb)
+                        .crossfade(false)
+                        .build(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            scaleY = verticalScale
+                            transformOrigin = TransformOrigin(0.5f, pivotY)
+                            if (verticalScale < 0f && size.height > 0f) {
+                                translationY = size.height * kotlin.math.abs(verticalScale)
+                            }
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                                renderEffect = android.graphics.RenderEffect
+                                    .createBlurEffect(20f, 20f, android.graphics.Shader.TileMode.MIRROR)
+                                    .asComposeRenderEffect()
+                            }
+                        }
+                        .then(
+                            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) {
+                                Modifier.blur(14.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
+                            } else Modifier
+                        )
                 )
             }
         }
 
-        // Portada Principal (Nítida)
+        // Portada Principal (Nítida, sin blur y sin filtros oscuros)
         Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -2710,15 +2665,27 @@ private fun FeaturedSuggestionCard(
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                style = LocalTextStyle.current.copy(
+                    shadow = androidx.compose.ui.graphics.Shadow(
+                        color = Color.Black.copy(alpha = 0.65f),
+                        blurRadius = 8f
+                    )
+                )
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 subtitleStr,
-                color = Color.White.copy(alpha = 0.8f),
+                color = Color.White.copy(alpha = 0.85f),
                 fontSize = 14.sp,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                style = LocalTextStyle.current.copy(
+                    shadow = androidx.compose.ui.graphics.Shadow(
+                        color = Color.Black.copy(alpha = 0.65f),
+                        blurRadius = 6f
+                    )
+                )
             )
         }
     }
