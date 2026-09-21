@@ -33,6 +33,8 @@ import com.mrtdk.liquid_glass.ui.components.AppleMusicArtistMenu
 import android.os.Build
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.drawWithContent
@@ -485,8 +487,6 @@ fun ArtistScreen(
         }
     }
 
-    val localBackdrop = rememberLayerBackdrop()
-
     val listState = rememberLazyListState()
     val isScrolled = remember {
         derivedStateOf {
@@ -542,7 +542,6 @@ fun ArtistScreen(
                             .fillMaxWidth()
                             .height(475.dp)
                             .align(Alignment.TopCenter)
-                            .layerBackdrop(localBackdrop)
                     ) {
                         // 1. Sharp full-res cover image
                         AsyncImage(
@@ -570,10 +569,10 @@ fun ArtistScreen(
                                 .background(
                                     Brush.verticalGradient(
                                         0.0f to Color.Transparent,
-                                        0.45f to Color.Transparent,
-                                        0.65f to finalBackgroundColor.copy(alpha = 0.25f),
-                                        0.78f to finalBackgroundColor.copy(alpha = 0.60f),
-                                        0.88f to finalBackgroundColor.copy(alpha = 0.88f),
+                                        0.40f to Color.Transparent,
+                                        0.65f to finalBackgroundColor.copy(alpha = 0.35f),
+                                        0.80f to finalBackgroundColor.copy(alpha = 0.75f),
+                                        0.90f to finalBackgroundColor.copy(alpha = 0.95f),
                                         1.0f to finalBackgroundColor
                                     )
                                 )
@@ -599,48 +598,6 @@ fun ArtistScreen(
                                 .padding(horizontal = 24.dp)
                         )
 
-                        // Subscriber and monthly listener counts in elegant translucent border chips
-                        if (artistPage?.subscriberCountText != null || artistPage?.monthlyListenerCount != null) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(top = 8.dp)
-                            ) {
-                                artistPage?.subscriberCountText?.let { subscribers ->
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(Color.White.copy(alpha = 0.08f))
-                                            .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
-                                            .padding(horizontal = 10.dp, vertical = 5.dp)
-                                    ) {
-                                        Text(
-                                            text = "$subscribers ${stringResource(R.string.suscriptores)}",
-                                            color = Color.White.copy(alpha = 0.7f),
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                    }
-                                }
-
-                                artistPage?.monthlyListenerCount?.let { listeners ->
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(Color.White.copy(alpha = 0.08f))
-                                            .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
-                                            .padding(horizontal = 10.dp, vertical = 5.dp)
-                                    ) {
-                                        Text(
-                                            text = "$listeners ${stringResource(R.string.oyentes_mensuales)}",
-                                            color = Color.White.copy(alpha = 0.7f),
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                    }
-                                }
-                            }
-                        }
 
                         Spacer(modifier = Modifier.height(16.dp))
 
@@ -810,7 +767,7 @@ fun ArtistScreen(
                                 if (release.dateText.isNotEmpty()) {
                                     Text(
                                         text = release.dateText,
-                                        color = Color.White.copy(alpha = 0.5f),
+                                        color = Color.White.copy(alpha = 0.75f),
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Normal
                                     )
@@ -827,7 +784,7 @@ fun ArtistScreen(
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = release.songCountText,
-                                    color = Color.White.copy(alpha = 0.5f),
+                                    color = Color.White.copy(alpha = 0.75f),
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Normal
                                 )
@@ -835,21 +792,41 @@ fun ArtistScreen(
 
                             Spacer(modifier = Modifier.width(12.dp))
 
-                            // Down arrow icon button
+                            val isLatestReleaseSaved by androidx.compose.runtime.produceState(initialValue = false, release.id) {
+                                LibraryManager.savedItems.collect { list ->
+                                    value = list.any { it.id == release.id }
+                                }
+                            }
+
+                            // Add / Save icon button (replaces down arrow with +)
                             Box(
                                 modifier = Modifier
                                     .size(38.dp)
                                     .clip(CircleShape)
                                     .background(Color.White.copy(alpha = 0.15f))
                                     .clickable {
-                                        Toast.makeText(context, "Descargando...", Toast.LENGTH_SHORT).show()
+                                        if (!isLatestReleaseSaved) {
+                                            LibraryManager.saveItem(
+                                                LibraryItem(
+                                                    id = release.id,
+                                                    title = release.title,
+                                                    subtitle = "Album",
+                                                    thumbnail = release.thumbnail,
+                                                    type = ItemType.ALBUM
+                                                )
+                                            )
+                                            Toast.makeText(context, "Álbum guardado en la biblioteca", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            LibraryManager.removeItem(release.id)
+                                            Toast.makeText(context, "Eliminado de la biblioteca", Toast.LENGTH_SHORT).show()
+                                        }
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.ArrowDownward,
-                                    contentDescription = "Download",
-                                    tint = Color.White.copy(alpha = 0.8f),
+                                    imageVector = if (isLatestReleaseSaved) Icons.Default.Check else Icons.Default.Add,
+                                    contentDescription = if (isLatestReleaseSaved) "Saved" else "Add",
+                                    tint = Color.White.copy(alpha = 0.9f),
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -935,9 +912,9 @@ fun ArtistScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(song.title, color = Color.White, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(song.artists.joinToString { it.name }, color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(song.artists.joinToString { it.name }, color = Color.White.copy(alpha = 0.75f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-                        IconButton(onClick = { }) { Icon(Icons.Default.MoreHoriz, null, tint = Color.Gray) }
+                        IconButton(onClick = { }) { Icon(Icons.Default.MoreHoriz, null, tint = Color.White.copy(alpha = 0.7f)) }
                     }
                 }
             }
@@ -1015,7 +992,7 @@ fun ArtistScreen(
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = albumDescription,
-                                        color = Color.White.copy(alpha = 0.6f),
+                                        color = Color.White.copy(alpha = 0.8f),
                                         fontSize = 14.sp,
                                         maxLines = 3,
                                         overflow = TextOverflow.Ellipsis,
@@ -1029,7 +1006,7 @@ fun ArtistScreen(
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                     contentDescription = null,
-                                    tint = Color.White.copy(alpha = 0.5f),
+                                    tint = Color.White.copy(alpha = 0.7f),
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -1363,13 +1340,13 @@ fun ArtistScreen(
                         horizontalArrangement = Arrangement.Start,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(section.title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Text(section.title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                         if (isClickable) {
                             Spacer(modifier = Modifier.width(6.dp))
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                 contentDescription = "Ver todo",
-                                tint = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor,
+                                tint = Color.White.copy(alpha = 0.7f),
                                 modifier = Modifier.size(28.dp)
                             )
                         }
@@ -1428,9 +1405,9 @@ fun ArtistScreen(
                                     .background(
                                         Brush.verticalGradient(
                                             0.0f to Color.Transparent,
-                                            0.60f to Color.Transparent,
-                                            0.78f to finalBackgroundColor.copy(alpha = 0.40f),
-                                            0.92f to finalBackgroundColor.copy(alpha = 0.85f),
+                                            0.50f to Color.Transparent,
+                                            0.70f to finalBackgroundColor.copy(alpha = 0.40f),
+                                            0.85f to finalBackgroundColor.copy(alpha = 0.80f),
                                             1.0f to finalBackgroundColor
                                         )
                                     )
@@ -1727,7 +1704,7 @@ fun ArtistScreen(
                                 .padding(horizontal = 20.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("${index + 1}", color = Color.Gray, fontSize = 16.sp, modifier = Modifier.width(36.dp))
+                            Text("${index + 1}", color = Color.White.copy(alpha = 0.6f), fontSize = 16.sp, modifier = Modifier.width(36.dp))
                             AsyncImage(
                                 model = ImageRequest.Builder(context).data(song.thumbnail).crossfade(true).build(),
                                 contentDescription = song.title,
@@ -1737,9 +1714,9 @@ fun ArtistScreen(
                             Spacer(modifier = Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(song.title, color = Color.White, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(song.artists.joinToString { it.name }, color = Color.Gray, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(song.artists.joinToString { it.name }, color = Color.White.copy(alpha = 0.75f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
-                            IconButton(onClick = { }) { Icon(Icons.Default.MoreVert, null, tint = Color.Gray) }
+                            IconButton(onClick = { }) { Icon(Icons.Default.MoreVert, null, tint = Color.White.copy(alpha = 0.7f)) }
                         }
                     }
                     item { Spacer(modifier = Modifier.height(80.dp)) }
@@ -1773,7 +1750,6 @@ fun ArtistScreen(
                 scale = 0.02f,
                 warpEdges = 0.4f,
                 elevation = 16.dp,
-                backdrop = localBackdrop,
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -1795,7 +1771,6 @@ fun ArtistScreen(
                 scale = 0.02f,
                 warpEdges = 0.4f,
                 elevation = 16.dp,
-                backdrop = localBackdrop,
                 contentAlignment = Alignment.Center
             ) {
                 Row(
@@ -1843,7 +1818,7 @@ fun ArtistScreen(
                 artistId = artistState.id,
                 artistName = artistState.name,
                 artistThumb = artistThumb,
-                backdrop = localBackdrop,
+                backdrop = (expo.modules.androidglassview.LocalBackdrop.current as? com.kyant.backdrop.backdrops.LayerBackdrop) ?: rememberLayerBackdrop(),
                 dominantColor = dominantColor,
                 onDismiss = { showArtistMenu = false },
                 onSongSelected = onSongSelected,
@@ -1966,8 +1941,8 @@ private fun ItemCard(
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(item.title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("${item.year ?: ""}", color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 13.sp)
+                Text(item.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("${item.year ?: ""}", color = Color.White.copy(alpha = 0.75f), fontSize = 13.sp)
             }
         }
         is SongItem -> {
@@ -2003,8 +1978,8 @@ private fun ItemCard(
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(item.title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(item.artists.joinToString { it.name }, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(item.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(item.artists.joinToString { it.name }, color = Color.White.copy(alpha = 0.75f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         is PlaylistItem -> {
@@ -2042,8 +2017,8 @@ private fun ItemCard(
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(item.title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(item.author?.name ?: stringResource(R.string.playlists), color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(item.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(item.author?.name ?: stringResource(R.string.playlists), color = Color.White.copy(alpha = 0.75f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         is ArtistItem -> {
@@ -2053,7 +2028,7 @@ private fun ItemCard(
             }) {
                 AsyncImage(model = ImageRequest.Builder(context).data(hdThumb).size(300).crossfade(true).build(), contentDescription = item.title, contentScale = ContentScale.Crop, modifier = Modifier.size(if (fillWidth) 160.dp else 120.dp).clip(CircleShape).background(Color.DarkGray))
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(item.title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(item.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         else -> {}

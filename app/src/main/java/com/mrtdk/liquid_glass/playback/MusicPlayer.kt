@@ -298,6 +298,14 @@ class MusicPlayer(private val context: Context) {
         _currentPosition.value = position
     }
 
+    fun seekToNext() {
+        controller?.seekToNextMediaItem()
+    }
+
+    fun seekToPrevious() {
+        controller?.seekToPreviousMediaItem()
+    }
+
     fun setVolume(volume: Float) {
         controller?.setVolume(volume)
     }

@@ -28,6 +28,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.mrtdk.liquid_glass.R
@@ -36,8 +37,15 @@ import com.mrtdk.liquid_glass.R
 @OptIn(UnstableApi::class)
 class MusicService : MediaSessionService() {
     private var mediaSession: MediaSession? = null
-    lateinit var player: ExoPlayer
-    private lateinit var eqProcessor: com.mrtdk.liquid_glass.playback.eq.CustomEqualizerAudioProcessor
+    lateinit var playerA: ExoPlayer
+    lateinit var playerB: ExoPlayer
+    lateinit var activePlayer: ExoPlayer
+    lateinit var standbyPlayer: ExoPlayer
+
+    val player: ExoPlayer get() = activePlayer
+
+    private lateinit var eqProcessorA: com.mrtdk.liquid_glass.playback.eq.CustomEqualizerAudioProcessor
+    private lateinit var eqProcessorB: com.mrtdk.liquid_glass.playback.eq.CustomEqualizerAudioProcessor
 
     private val serviceJob = Job()
     private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
@@ -50,38 +58,565 @@ class MusicService : MediaSessionService() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var wifiLock: android.net.wifi.WifiManager.WifiLock? = null
 
-    private fun playSongState(state: com.mrtdk.liquid_glass.ui.screens.PlayerState) {
-        if (state.contentUri != null) {
-            val metadata = androidx.media3.common.MediaMetadata.Builder().apply {
-                setTitle(state.title)
-                setArtist(state.artist)
-                state.artUrl?.toString()?.let { setArtworkUri(android.net.Uri.parse(it)) }
-            }.build()
-            val mediaItem = androidx.media3.common.MediaItem.Builder()
+    private var isCrossfading = false
+    private var isPreloading = false
+    private var preloadedSongKey: String? = null
+    private var preloadedState: com.mrtdk.liquid_glass.ui.screens.PlayerState? = null
+    private var crossfadeJob: Job? = null
+    private var trackEndMonitorJob: Job? = null
+    private var recoveryJob: Job? = null
+    private val songRetryCounts = java.util.concurrent.ConcurrentHashMap<String, Int>()
+
+    private val mediaAudioAttributes: AudioAttributes = AudioAttributes.Builder()
+        .setUsage(C.USAGE_MEDIA)
+        .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+        .build()
+
+    private fun buildMediaItem(state: com.mrtdk.liquid_glass.ui.screens.PlayerState): androidx.media3.common.MediaItem {
+        val metadata = androidx.media3.common.MediaMetadata.Builder().apply {
+            setTitle(state.title)
+            setArtist(state.artist)
+            state.artUrl?.toString()?.let { setArtworkUri(android.net.Uri.parse(it)) }
+        }.build()
+
+        return if (state.contentUri != null) {
+            androidx.media3.common.MediaItem.Builder()
                 .setUri(state.contentUri)
                 .setMediaMetadata(metadata)
                 .build()
-            player.setMediaItem(mediaItem)
-            player.prepare()
-            player.play()
-        } else if (state.videoId != null) {
-            com.mrtdk.liquid_glass.playback.MusicPlayer.songMetadataCache[state.videoId] = Pair(state.title, state.artist)
-            val metadata = androidx.media3.common.MediaMetadata.Builder().apply {
-                setTitle(state.title)
-                setArtist(state.artist)
-                state.artUrl?.toString()?.let { setArtworkUri(android.net.Uri.parse(it)) }
-            }.build()
-            
-            val mediaItem = androidx.media3.common.MediaItem.Builder()
-                .setMediaId(state.videoId)
-                .setUri(android.net.Uri.parse("yt://${state.videoId}"))
-                .setCustomCacheKey(state.videoId)
+        } else {
+            val videoId = state.videoId ?: ""
+            com.mrtdk.liquid_glass.playback.MusicPlayer.songMetadataCache[videoId] = Pair(state.title, state.artist)
+            androidx.media3.common.MediaItem.Builder()
+                .setMediaId(videoId)
+                .setUri(android.net.Uri.parse("yt://$videoId"))
+                .setCustomCacheKey(videoId)
                 .setMediaMetadata(metadata)
                 .build()
-            
-            player.setMediaItem(mediaItem)
-            player.prepare()
-            player.play()
+        }
+    }
+
+    private fun preloadNextSong(nextSong: com.mrtdk.liquid_glass.ui.screens.PlayerState) {
+        val key = nextSong.videoId ?: nextSong.contentUri?.toString() ?: nextSong.title
+        preloadedSongKey = key
+        preloadedState = nextSong
+        isPreloading = true
+        serviceScope.launch {
+            try {
+                android.util.Log.d("MusicService", "AutoMix: Preloading next song in background: ${nextSong.title}")
+                val mediaItem = buildMediaItem(nextSong)
+                standbyPlayer.volume = 0f
+                standbyPlayer.playWhenReady = false
+                standbyPlayer.setMediaItem(mediaItem)
+                standbyPlayer.prepare()
+            } catch (e: Exception) {
+                android.util.Log.e("MusicService", "AutoMix: Error preloading next song: ${e.message}")
+            } finally {
+                isPreloading = false
+            }
+        }
+    }
+
+    private fun startCrossfadeTransition(
+        durationMs: Long,
+        targetState: com.mrtdk.liquid_glass.ui.screens.PlayerState,
+        isNaturalEnding: Boolean = false
+    ) {
+        if (isCrossfading) return
+        isCrossfading = true
+        com.mrtdk.liquid_glass.playback.PlaybackQueue.isAutoMixing = true
+
+        crossfadeJob?.cancel()
+        crossfadeJob = serviceScope.launch {
+            try {
+                val key = targetState.videoId ?: targetState.contentUri?.toString() ?: targetState.title
+                if (preloadedSongKey != key || standbyPlayer.playbackState == Player.STATE_IDLE) {
+                    preloadedSongKey = key
+                    preloadedState = targetState
+                    val mediaItem = buildMediaItem(targetState)
+                    standbyPlayer.volume = 0f
+                    standbyPlayer.playWhenReady = false
+                    standbyPlayer.setMediaItem(mediaItem)
+                    standbyPlayer.prepare()
+                }
+
+                var waitCount = 0
+                while ((standbyPlayer.playbackState == Player.STATE_BUFFERING || standbyPlayer.playbackState == Player.STATE_IDLE) && waitCount < 50) {
+                    delay(40L)
+                    waitCount++
+                }
+
+                if (standbyPlayer.playerError != null) {
+                    android.util.Log.w("MusicService", "standbyPlayer error, falling back to activePlayer: ${standbyPlayer.playerError?.message}")
+                    isCrossfading = false
+                    com.mrtdk.liquid_glass.playback.PlaybackQueue.isAutoMixing = false
+                    activePlayer.volume = 1f
+                    playSongState(targetState)
+                    return@launch
+                }
+
+                standbyPlayer.volume = 0f
+                standbyPlayer.play()
+
+                val steps = (durationMs / 25L).toInt().coerceAtLeast(10)
+                val stepDelay = durationMs / steps
+
+                for (i in 0..steps) {
+                    val t = i.toFloat() / steps
+                    val rad = (t * (Math.PI / 2.0)).toFloat()
+                    val outVol = kotlin.math.cos(rad).coerceIn(0f, 1f)
+                    val inVol = kotlin.math.sin(rad).coerceIn(0f, 1f)
+
+                    activePlayer.volume = outVol
+                    standbyPlayer.volume = inVol
+
+                    delay(stepDelay)
+                }
+
+                activePlayer.volume = 0f
+                standbyPlayer.volume = 1f
+
+                completeCrossfade(targetState, isNaturalEnding)
+            } catch (e: Exception) {
+                android.util.Log.e("MusicService", "AutoMix crossfade error", e)
+                completeCrossfade(targetState, isNaturalEnding)
+            }
+        }
+    }
+
+    private fun completeCrossfade(
+        targetState: com.mrtdk.liquid_glass.ui.screens.PlayerState,
+        isNaturalEnding: Boolean
+    ) {
+        activePlayer.stop()
+        activePlayer.clearMediaItems()
+        activePlayer.volume = 1f
+
+        activePlayer.setAudioAttributes(mediaAudioAttributes, false)
+        standbyPlayer.setAudioAttributes(mediaAudioAttributes, true)
+
+        val temp = activePlayer
+        activePlayer = standbyPlayer
+        standbyPlayer = temp
+
+        val currentQueueSong = com.mrtdk.liquid_glass.playback.PlaybackQueue.currentSong
+        val targetKey = targetState.videoId ?: targetState.contentUri?.toString()
+        val currentKey = currentQueueSong?.videoId ?: currentQueueSong?.contentUri?.toString()
+        if (currentKey != targetKey) {
+            com.mrtdk.liquid_glass.playback.PlaybackQueue.getNextSongAndAdvance(activePlayer.repeatMode)
+        }
+
+        updateMediaSessionPlayer()
+
+        preloadedSongKey = null
+        preloadedState = null
+        isCrossfading = false
+        com.mrtdk.liquid_glass.playback.PlaybackQueue.isAutoMixing = false
+
+        startTrackEndMonitor()
+        checkForegroundState()
+    }
+
+    private fun updateMediaSessionPlayer() {
+        val forwardingPlayer = createForwardingPlayer(activePlayer)
+        mediaSession?.setPlayer(forwardingPlayer)
+    }
+
+    private fun startTrackEndMonitor() {
+        trackEndMonitorJob?.cancel()
+        if (!com.mrtdk.liquid_glass.playback.PlaybackQueue.isAutomixEnabled) return
+        trackEndMonitorJob = serviceScope.launch {
+            while (isActive) {
+                delay(200L)
+                if (!activePlayer.isPlaying || isCrossfading) continue
+                val dur = activePlayer.duration
+                val pos = activePlayer.currentPosition
+                if (dur > 15_000L && pos > 0L) {
+                    val remainingMs = dur - pos
+
+                    // 1. Preload next song at 22s before end
+                    if (remainingMs in 8_600L..25_000L && !isPreloading) {
+                        val nextSong = com.mrtdk.liquid_glass.playback.PlaybackQueue.peekNextSong(activePlayer.repeatMode)
+                        if (nextSong != null) {
+                            val key = nextSong.videoId ?: nextSong.contentUri?.toString() ?: nextSong.title
+                            if (preloadedSongKey != key) {
+                                preloadNextSong(nextSong)
+                            }
+                        }
+                    }
+
+                    // 2. Trigger crossfade at 8.0s before end
+                    if (remainingMs in 100L..8_500L && !isCrossfading) {
+                        val nextSong = preloadedState ?: com.mrtdk.liquid_glass.playback.PlaybackQueue.peekNextSong(activePlayer.repeatMode)
+                        if (nextSong != null) {
+                            startCrossfadeTransition(
+                                durationMs = remainingMs.coerceIn(4500L, 8000L),
+                                targetState = nextSong,
+                                isNaturalEnding = true
+                            )
+                        }
+                    }
+                } else if (dur in 1L..15_000L && pos > 0L) {
+                    val remainingMs = dur - pos
+                    if (!isPreloading && preloadedSongKey == null) {
+                        val nextSong = com.mrtdk.liquid_glass.playback.PlaybackQueue.peekNextSong(activePlayer.repeatMode)
+                        if (nextSong != null) {
+                            preloadNextSong(nextSong)
+                        }
+                    }
+                    if (remainingMs in 100L..4_000L && !isCrossfading) {
+                        val nextSong = preloadedState ?: com.mrtdk.liquid_glass.playback.PlaybackQueue.peekNextSong(activePlayer.repeatMode)
+                        if (nextSong != null) {
+                            startCrossfadeTransition(
+                                durationMs = remainingMs.coerceAtLeast(1500L),
+                                targetState = nextSong,
+                                isNaturalEnding = true
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun playSongState(state: com.mrtdk.liquid_glass.ui.screens.PlayerState) {
+        val automix = com.mrtdk.liquid_glass.playback.PlaybackQueue.isAutomixEnabled
+        if (automix && activePlayer.isPlaying) {
+            startCrossfadeTransition(durationMs = 1500L, targetState = state, isNaturalEnding = false)
+        } else {
+            activePlayer.volume = 1f
+            val mediaItem = buildMediaItem(state)
+            activePlayer.setMediaItem(mediaItem)
+            activePlayer.prepare()
+            activePlayer.play()
+            if (automix) {
+                startTrackEndMonitor()
+            }
+        }
+    }
+
+    private fun handleNewMediaItem(mediaItem: androidx.media3.common.MediaItem, startPositionMs: Long = 0L) {
+        val automix = com.mrtdk.liquid_glass.playback.PlaybackQueue.isAutomixEnabled
+        if (automix && activePlayer.isPlaying) {
+            val state = com.mrtdk.liquid_glass.ui.screens.PlayerState(
+                title = mediaItem.mediaMetadata.title?.toString() ?: "",
+                artist = mediaItem.mediaMetadata.artist?.toString() ?: "",
+                artUrl = mediaItem.mediaMetadata.artworkUri?.toString(),
+                videoId = mediaItem.mediaId.takeIf { it.isNotBlank() },
+                contentUri = mediaItem.requestMetadata.mediaUri ?: mediaItem.localConfiguration?.uri
+            )
+            startCrossfadeTransition(durationMs = 1500L, targetState = state, isNaturalEnding = false)
+        } else {
+            activePlayer.volume = 1f
+            if (startPositionMs > 0L) {
+                activePlayer.setMediaItem(mediaItem, startPositionMs)
+            } else {
+                activePlayer.setMediaItem(mediaItem)
+            }
+            activePlayer.prepare()
+            activePlayer.play()
+            if (automix) {
+                startTrackEndMonitor()
+            }
+        }
+    }
+
+    private fun getHttpResponseCode(error: androidx.media3.common.PlaybackException): Int {
+        var cause: Throwable? = error.cause ?: error
+        while (cause != null) {
+            if (cause is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException) {
+                return cause.responseCode
+            }
+            val msg = cause.message ?: ""
+            if (msg.contains("Response code: 403") || msg.contains("403")) {
+                return 403
+            }
+            if (msg.contains("Response code: 416") || msg.contains("416")) {
+                return 416
+            }
+            cause = cause.cause
+        }
+        return -1
+    }
+
+    private fun isExpiredUrlError(error: androidx.media3.common.PlaybackException): Boolean {
+        val code = getHttpResponseCode(error)
+        return code == 403 || error.message?.contains("403") == true
+    }
+
+    private fun isRangeNotSatisfiableError(error: androidx.media3.common.PlaybackException): Boolean {
+        val code = getHttpResponseCode(error)
+        return code == 416 || error.message?.contains("416") == true
+    }
+
+    private fun isPageReloadError(error: androidx.media3.common.PlaybackException): Boolean {
+        val msg = (error.message.orEmpty() + " " + error.cause?.message.orEmpty()).lowercase()
+        return msg.contains("page needs to be reloaded") || msg.contains("reload")
+    }
+
+    private fun handlePlaybackRecovery(targetPlayer: ExoPlayer, error: androidx.media3.common.PlaybackException, mediaId: String) {
+        val httpCode = getHttpResponseCode(error)
+        val is403 = isExpiredUrlError(error)
+        val is416 = isRangeNotSatisfiableError(error)
+        val isReload = isPageReloadError(error)
+
+        val currentRetries = songRetryCounts.getOrDefault(mediaId, 0)
+        if (currentRetries >= 3) {
+            android.util.Log.e("MusicService", "Max retries (3) reached for $mediaId. Halting retry.")
+            return
+        }
+
+        songRetryCounts[mediaId] = currentRetries + 1
+        android.util.Log.w("MusicService", "Recovering from error (http=$httpCode, is403=$is403, code=${error.errorCode}) for $mediaId, retry #${currentRetries + 1}/3")
+
+        com.mrtdk.liquid_glass.playback.MusicPlayer.clearCache(mediaId)
+        com.echo.innertube.YouTubeExtractor.clearCache()
+
+        val currentPos = if (is416) 0L else targetPlayer.currentPosition
+        val currentIndex = targetPlayer.currentMediaItemIndex
+
+        val downloadUtil = com.mrtdk.liquid_glass.playback.DownloadUtil.getInstance(this@MusicService)
+        val playerCache = downloadUtil.playerCache
+
+        recoveryJob?.cancel()
+        recoveryJob = serviceScope.launch(Dispatchers.IO) {
+            try {
+                playerCache.removeResource(mediaId)
+            } catch (_: Exception) {}
+            if (is403) {
+                com.mrtdk.liquid_glass.utils.BotDetectionMitigator.notifyPlaybackFailure(YouTube.cookie != null, error.message)
+                com.mrtdk.liquid_glass.utils.BotDetectionMitigator.rotateGuestSession()
+            }
+            delay(300)
+            withContext(Dispatchers.Main) {
+                try {
+                    targetPlayer.seekTo(currentIndex, currentPos)
+                    targetPlayer.prepare()
+                    targetPlayer.play()
+                    android.util.Log.d("MusicService", "Playback silently recovered and re-prepared at $currentPos ms for $mediaId")
+                } catch (e: Exception) {
+                    android.util.Log.e("MusicService", "Silent recovery prepare failed for $mediaId", e)
+                }
+            }
+        }
+    }
+
+    private fun createPlayerListener(targetPlayer: ExoPlayer): Player.Listener {
+        return object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                updateWakeLocks()
+                checkForegroundState()
+
+                if (playbackState == Player.STATE_READY) {
+                    songRetryCounts.clear()
+                    if (targetPlayer == activePlayer && com.mrtdk.liquid_glass.playback.PlaybackQueue.isAutomixEnabled) {
+                        startTrackEndMonitor()
+                    }
+                }
+
+                if (playbackState == Player.STATE_ENDED) {
+                    if (targetPlayer == activePlayer && !isCrossfading) {
+                        val nextState = com.mrtdk.liquid_glass.playback.PlaybackQueue.getNextSongAndAdvance(activePlayer.repeatMode)
+                        if (nextState != null) {
+                            playSongState(nextState)
+                        }
+                    }
+                }
+            }
+
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                updateWakeLocks()
+                checkForegroundState()
+                if (playWhenReady && targetPlayer == activePlayer && com.mrtdk.liquid_glass.playback.PlaybackQueue.isAutomixEnabled) {
+                    startTrackEndMonitor()
+                }
+            }
+
+            override fun onPositionDiscontinuity(
+                oldPosition: Player.PositionInfo,
+                newPosition: Player.PositionInfo,
+                reason: Int
+            ) {
+                if (reason == Player.DISCONTINUITY_REASON_SEEK && targetPlayer == activePlayer) {
+                    if (isCrossfading) {
+                        crossfadeJob?.cancel()
+                        standbyPlayer.stop()
+                        standbyPlayer.clearMediaItems()
+                        activePlayer.volume = 1f
+                        isCrossfading = false
+                        preloadedSongKey = null
+                        preloadedState = null
+                    }
+                    activePlayer.volume = 1f
+                }
+            }
+
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                val currentMediaId = targetPlayer.currentMediaItem?.mediaId
+                if (currentMediaId != null) {
+                    handlePlaybackRecovery(targetPlayer, error, currentMediaId)
+                }
+            }
+        }
+    }
+
+    private fun createPlayerInstance(
+        processor: com.mrtdk.liquid_glass.playback.eq.CustomEqualizerAudioProcessor,
+        handleAudioFocus: Boolean,
+        dataSourceFactory: androidx.media3.datasource.DataSource.Factory,
+        extractorsFactory: androidx.media3.extractor.ExtractorsFactory
+    ): ExoPlayer {
+        val renderersFactory = object : androidx.media3.exoplayer.DefaultRenderersFactory(this) {
+            override fun buildAudioSink(
+                context: Context,
+                enableFloatOutput: Boolean,
+                enableAudioTrackPlaybackParams: Boolean
+            ): androidx.media3.exoplayer.audio.AudioSink? {
+                return androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(context)
+                    .setAudioProcessors(arrayOf(processor))
+                    .setEnableFloatOutput(enableFloatOutput)
+                    .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+                    .build()
+            }
+        }
+
+        val mediaSourceFactory = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(dataSourceFactory, extractorsFactory)
+
+        val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
+            .setBufferDurationsMs(
+                15_000,
+                45_000,
+                500,
+                1_000
+            )
+            .setPrioritizeTimeOverSizeThresholds(true)
+            .build()
+
+        return ExoPlayer.Builder(this, renderersFactory)
+            .setMediaSourceFactory(mediaSourceFactory)
+            .setLoadControl(loadControl)
+            .setAudioAttributes(mediaAudioAttributes, handleAudioFocus)
+            .setHandleAudioBecomingNoisy(true)
+            .setWakeMode(C.WAKE_MODE_NETWORK)
+            .build()
+    }
+
+    private fun createForwardingPlayer(targetPlayer: ExoPlayer): androidx.media3.common.ForwardingPlayer {
+        return object : androidx.media3.common.ForwardingPlayer(targetPlayer) {
+            override fun getAvailableCommands(): Player.Commands {
+                return super.getAvailableCommands().buildUpon()
+                    .add(Player.COMMAND_SEEK_TO_NEXT)
+                    .add(Player.COMMAND_SEEK_TO_PREVIOUS)
+                    .add(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
+                    .add(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
+                    .build()
+            }
+
+            override fun isCommandAvailable(command: Int): Boolean {
+                return if (command == Player.COMMAND_SEEK_TO_NEXT || 
+                    command == Player.COMMAND_SEEK_TO_PREVIOUS ||
+                    command == Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM ||
+                    command == Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM) {
+                    true
+                } else {
+                    super.isCommandAvailable(command)
+                }
+            }
+
+            override fun hasNextMediaItem(): Boolean = true
+            override fun hasPreviousMediaItem(): Boolean = true
+
+            override fun seekToNext() {
+                seekToNextMediaItem()
+            }
+
+            override fun seekToPrevious() {
+                if (activePlayer.currentPosition > 3000) {
+                    activePlayer.seekTo(0)
+                } else {
+                    seekToPreviousMediaItem()
+                }
+            }
+
+            override fun seekToNextMediaItem() {
+                val nextState = com.mrtdk.liquid_glass.playback.PlaybackQueue.peekNextSong(activePlayer.repeatMode)
+                    ?: com.mrtdk.liquid_glass.playback.PlaybackQueue.getNextSongAndAdvance(activePlayer.repeatMode)
+                if (nextState != null) {
+                    if (com.mrtdk.liquid_glass.playback.PlaybackQueue.isAutomixEnabled && activePlayer.isPlaying) {
+                        startCrossfadeTransition(durationMs = 1500L, targetState = nextState, isNaturalEnding = false)
+                    } else {
+                        playSongState(nextState)
+                    }
+                }
+            }
+
+            override fun seekToPreviousMediaItem() {
+                val prevState = com.mrtdk.liquid_glass.playback.PlaybackQueue.getPreviousSongAndGoBack()
+                if (prevState != null) {
+                    playSongState(prevState)
+                }
+            }
+
+            override fun pause() {
+                activePlayer.pause()
+                if (isCrossfading) {
+                    standbyPlayer.pause()
+                }
+            }
+
+            override fun play() {
+                activePlayer.play()
+                if (isCrossfading) {
+                    standbyPlayer.play()
+                }
+            }
+
+            override fun prepare() {
+                if (!isCrossfading) {
+                    super.prepare()
+                }
+            }
+
+            override fun setMediaItem(mediaItem: androidx.media3.common.MediaItem) {
+                handleNewMediaItem(mediaItem)
+            }
+
+            override fun setMediaItem(mediaItem: androidx.media3.common.MediaItem, startPositionMs: Long) {
+                handleNewMediaItem(mediaItem, startPositionMs)
+            }
+
+            override fun setMediaItem(mediaItem: androidx.media3.common.MediaItem, resetPosition: Boolean) {
+                handleNewMediaItem(mediaItem)
+            }
+
+            override fun setMediaItems(mediaItems: MutableList<androidx.media3.common.MediaItem>) {
+                if (mediaItems.isNotEmpty()) {
+                    handleNewMediaItem(mediaItems.first())
+                } else {
+                    super.setMediaItems(mediaItems)
+                }
+            }
+
+            override fun setMediaItems(mediaItems: MutableList<androidx.media3.common.MediaItem>, resetPosition: Boolean) {
+                if (mediaItems.isNotEmpty()) {
+                    handleNewMediaItem(mediaItems.first())
+                } else {
+                    super.setMediaItems(mediaItems, resetPosition)
+                }
+            }
+
+            override fun setMediaItems(
+                mediaItems: MutableList<androidx.media3.common.MediaItem>,
+                startIndex: Int,
+                startPositionMs: Long
+            ) {
+                if (mediaItems.isNotEmpty()) {
+                    val item = mediaItems.getOrNull(startIndex) ?: mediaItems.first()
+                    handleNewMediaItem(item, startPositionMs)
+                } else {
+                    super.setMediaItems(mediaItems, startIndex, startPositionMs)
+                }
+            }
         }
     }
 
@@ -89,9 +624,13 @@ class MusicService : MediaSessionService() {
         super.onCreate()
         
         com.mrtdk.liquid_glass.data.LibraryManager.init(applicationContext)
+        com.mrtdk.liquid_glass.playback.PlaybackQueue.isAutomixEnabled =
+            com.mrtdk.liquid_glass.data.LibraryManager.getString("automix_enabled", "true") == "true"
         com.mrtdk.liquid_glass.playback.eq.EqualizerService.init(applicationContext)
-        eqProcessor = com.mrtdk.liquid_glass.playback.eq.CustomEqualizerAudioProcessor()
-        com.mrtdk.liquid_glass.playback.eq.EqualizerService.addAudioProcessor(eqProcessor)
+        eqProcessorA = com.mrtdk.liquid_glass.playback.eq.CustomEqualizerAudioProcessor()
+        eqProcessorB = com.mrtdk.liquid_glass.playback.eq.CustomEqualizerAudioProcessor()
+        com.mrtdk.liquid_glass.playback.eq.EqualizerService.addAudioProcessor(eqProcessorA)
+        com.mrtdk.liquid_glass.playback.eq.EqualizerService.addAudioProcessor(eqProcessorB)
 
         com.mrtdk.liquid_glass.utils.YTPlayerUtils.init(applicationContext)
         serviceScope.launch(Dispatchers.IO) {
@@ -122,215 +661,21 @@ class MusicService : MediaSessionService() {
             )
         }
 
-        val mediaSourceFactory = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(dataSourceFactory, extractorsFactory)
+        playerA = createPlayerInstance(eqProcessorA, handleAudioFocus = true, dataSourceFactory = dataSourceFactory, extractorsFactory = extractorsFactory)
+        playerB = createPlayerInstance(eqProcessorB, handleAudioFocus = false, dataSourceFactory = dataSourceFactory, extractorsFactory = extractorsFactory)
 
-        val renderersFactory = object : androidx.media3.exoplayer.DefaultRenderersFactory(this) {
-            override fun buildAudioSink(
-                context: Context,
-                enableFloatOutput: Boolean,
-                enableAudioTrackPlaybackParams: Boolean
-            ): androidx.media3.exoplayer.audio.AudioSink? {
-                return androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(context)
-                    .setAudioProcessors(arrayOf(eqProcessor))
-                    .setEnableFloatOutput(enableFloatOutput)
-                    .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
-                    .build()
-            }
-        }
+        playerA.addListener(createPlayerListener(playerA))
+        playerB.addListener(createPlayerListener(playerB))
 
-        val loadControl = androidx.media3.exoplayer.DefaultLoadControl.Builder()
-            .setBufferDurationsMs(
-                15_000,
-                45_000,
-                500,
-                1_000
-            )
-            .setPrioritizeTimeOverSizeThresholds(true)
-            .build()
-
-        player = ExoPlayer.Builder(this, renderersFactory)
-            .setMediaSourceFactory(mediaSourceFactory)
-            .setLoadControl(loadControl)
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(C.USAGE_MEDIA)
-                    .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
-                    .build(),
-                true
-            )
-            .setHandleAudioBecomingNoisy(true)
-            .setWakeMode(C.WAKE_MODE_NETWORK)
-            .build()
-
-        player.addListener(object : androidx.media3.common.Player.Listener {
-            private var recoveryJob: Job? = null
-            private val songRetryCounts = java.util.concurrent.ConcurrentHashMap<String, Int>()
-
-            private fun getHttpResponseCode(error: androidx.media3.common.PlaybackException): Int {
-                var cause: Throwable? = error.cause ?: error
-                while (cause != null) {
-                    if (cause is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException) {
-                        return cause.responseCode
-                    }
-                    val msg = cause.message ?: ""
-                    if (msg.contains("Response code: 403") || msg.contains("403")) {
-                        return 403
-                    }
-                    if (msg.contains("Response code: 416") || msg.contains("416")) {
-                        return 416
-                    }
-                    cause = cause.cause
-                }
-                return -1
-            }
-
-            private fun isExpiredUrlError(error: androidx.media3.common.PlaybackException): Boolean {
-                val code = getHttpResponseCode(error)
-                return code == 403 || error.message?.contains("403") == true
-            }
-
-            private fun isRangeNotSatisfiableError(error: androidx.media3.common.PlaybackException): Boolean {
-                val code = getHttpResponseCode(error)
-                return code == 416 || error.message?.contains("416") == true
-            }
-
-            private fun isPageReloadError(error: androidx.media3.common.PlaybackException): Boolean {
-                val msg = (error.message.orEmpty() + " " + error.cause?.message.orEmpty()).lowercase()
-                return msg.contains("page needs to be reloaded") || msg.contains("reload")
-            }
-
-            private fun handlePlaybackRecovery(error: androidx.media3.common.PlaybackException, mediaId: String) {
-                val httpCode = getHttpResponseCode(error)
-                val is403 = isExpiredUrlError(error)
-                val is416 = isRangeNotSatisfiableError(error)
-                val isReload = isPageReloadError(error)
-
-                val currentRetries = songRetryCounts.getOrDefault(mediaId, 0)
-                if (currentRetries >= 3) {
-                    android.util.Log.e("MusicService", "Max retries (3) reached for $mediaId. Halting retry.")
-                    return
-                }
-
-                songRetryCounts[mediaId] = currentRetries + 1
-                android.util.Log.w("MusicService", "Recovering from error (http=$httpCode, is403=$is403, code=${error.errorCode}) for $mediaId, retry #${currentRetries + 1}/3")
-
-                com.mrtdk.liquid_glass.playback.MusicPlayer.clearCache(mediaId)
-                com.echo.innertube.YouTubeExtractor.clearCache()
-
-                val currentPos = if (is416) 0L else player.currentPosition
-                val currentIndex = player.currentMediaItemIndex
-
-                val downloadUtil = com.mrtdk.liquid_glass.playback.DownloadUtil.getInstance(this@MusicService)
-                val playerCache = downloadUtil.playerCache
-
-                recoveryJob?.cancel()
-                recoveryJob = serviceScope.launch(Dispatchers.IO) {
-                    try {
-                        playerCache.removeResource(mediaId)
-                    } catch (_: Exception) {}
-                    if (is403) {
-                        com.mrtdk.liquid_glass.utils.BotDetectionMitigator.notifyPlaybackFailure(YouTube.cookie != null, error.message)
-                        com.mrtdk.liquid_glass.utils.BotDetectionMitigator.rotateGuestSession()
-                    }
-                    delay(300)
-                    withContext(Dispatchers.Main) {
-                        try {
-                            player.seekTo(currentIndex, currentPos)
-                            player.prepare()
-                            player.play()
-                            android.util.Log.d("MusicService", "Playback silently recovered and re-prepared at $currentPos ms for $mediaId")
-                        } catch (e: Exception) {
-                            android.util.Log.e("MusicService", "Silent recovery prepare failed for $mediaId", e)
-                        }
-                    }
-                }
-            }
-
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                updateWakeLocks()
-                checkForegroundState()
-
-                if (playbackState == androidx.media3.common.Player.STATE_READY) {
-                    songRetryCounts.clear()
-                }
-
-                if (playbackState == androidx.media3.common.Player.STATE_ENDED) {
-                    val nextState = com.mrtdk.liquid_glass.playback.PlaybackQueue.getNextSongAndAdvance(player.repeatMode)
-                    if (nextState != null) {
-                        playSongState(nextState)
-                    }
-                }
-            }
-
-            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-                updateWakeLocks()
-                checkForegroundState()
-            }
-
-            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                val currentMediaId = player.currentMediaItem?.mediaId
-                if (currentMediaId != null) {
-                    handlePlaybackRecovery(error, currentMediaId)
-                }
-            }
-        })
+        activePlayer = playerA
+        standbyPlayer = playerB
 
         val intent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(
             this, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val forwardingPlayer = object : androidx.media3.common.ForwardingPlayer(player) {
-            override fun getAvailableCommands(): Player.Commands {
-                return super.getAvailableCommands().buildUpon()
-                    .add(Player.COMMAND_SEEK_TO_NEXT)
-                    .add(Player.COMMAND_SEEK_TO_PREVIOUS)
-                    .add(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
-                    .add(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
-                    .build()
-            }
-
-            override fun isCommandAvailable(command: Int): Boolean {
-                return if (command == Player.COMMAND_SEEK_TO_NEXT || 
-                    command == Player.COMMAND_SEEK_TO_PREVIOUS ||
-                    command == Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM ||
-                    command == Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM) {
-                    true
-                } else {
-                    super.isCommandAvailable(command)
-                }
-            }
-
-            override fun hasNextMediaItem(): Boolean = true
-
-            override fun hasPreviousMediaItem(): Boolean = true
-
-            override fun seekToNext() {
-                seekToNextMediaItem()
-            }
-
-            override fun seekToPrevious() {
-                if (player.currentPosition > 3000) {
-                    player.seekTo(0)
-                } else {
-                    seekToPreviousMediaItem()
-                }
-            }
-
-            override fun seekToNextMediaItem() {
-                val nextState = com.mrtdk.liquid_glass.playback.PlaybackQueue.getNextSongAndAdvance(player.repeatMode)
-                if (nextState != null) {
-                    playSongState(nextState)
-                }
-            }
-
-            override fun seekToPreviousMediaItem() {
-                val prevState = com.mrtdk.liquid_glass.playback.PlaybackQueue.getPreviousSongAndGoBack()
-                if (prevState != null) {
-                    playSongState(prevState)
-                }
-            }
-        }
+        val forwardingPlayer = createForwardingPlayer(activePlayer)
 
         mediaSession = MediaSession.Builder(this, forwardingPlayer)
             .setSessionActivity(pendingIntent)
@@ -382,13 +727,16 @@ class MusicService : MediaSessionService() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        // Al cerrar la app de segundo plano se detiene la reproducción:
-        // se pausa, se limpia la cola y se elimina el servicio + notificación.
         try {
-            mediaSession?.player?.let {
-                it.playWhenReady = false
-                it.stop()
-                it.clearMediaItems()
+            if (::playerA.isInitialized) {
+                playerA.playWhenReady = false
+                playerA.stop()
+                playerA.clearMediaItems()
+            }
+            if (::playerB.isInitialized) {
+                playerB.playWhenReady = false
+                playerB.stop()
+                playerB.clearMediaItems()
             }
         } catch (_: Exception) {}
         try {
@@ -405,13 +753,22 @@ class MusicService : MediaSessionService() {
         serviceJob.cancel()
         cancelIdleStop()
         releaseLocks()
-        if (::eqProcessor.isInitialized) {
-            com.mrtdk.liquid_glass.playback.eq.EqualizerService.removeAudioProcessor(eqProcessor)
+        if (::eqProcessorA.isInitialized) {
+            com.mrtdk.liquid_glass.playback.eq.EqualizerService.removeAudioProcessor(eqProcessorA)
+        }
+        if (::eqProcessorB.isInitialized) {
+            com.mrtdk.liquid_glass.playback.eq.EqualizerService.removeAudioProcessor(eqProcessorB)
         }
         mediaSession?.run {
             player.release()
             release()
             mediaSession = null
+        }
+        if (::playerA.isInitialized) {
+            playerA.release()
+        }
+        if (::playerB.isInitialized) {
+            playerB.release()
         }
         super.onDestroy()
     }
@@ -468,9 +825,11 @@ class MusicService : MediaSessionService() {
 
     private fun updateWakeLocks() {
         val isResolving = activeResolutions.get() > 0
-        val playWhenReady = player.playWhenReady
-        val playbackState = player.playbackState
-        val shouldHold = isResolving || (playWhenReady && (playbackState == Player.STATE_BUFFERING || playbackState == Player.STATE_READY))
+        val isPlayingA = ::playerA.isInitialized && playerA.playWhenReady &&
+                (playerA.playbackState == Player.STATE_BUFFERING || playerA.playbackState == Player.STATE_READY)
+        val isPlayingB = ::playerB.isInitialized && playerB.playWhenReady &&
+                (playerB.playbackState == Player.STATE_BUFFERING || playerB.playbackState == Player.STATE_READY)
+        val shouldHold = isResolving || isPlayingA || isPlayingB
         
         if (shouldHold) {
             acquireLocks()

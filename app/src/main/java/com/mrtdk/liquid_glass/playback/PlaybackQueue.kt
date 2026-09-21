@@ -17,6 +17,9 @@ object PlaybackQueue {
     @Volatile
     var isExclusiveQueue: Boolean = false
 
+    @Volatile
+    var isAutomixEnabled: Boolean = true
+
     val songHistory = mutableListOf<PlayerState>()
 
     private fun addToHistory(state: PlayerState) {
@@ -41,6 +44,16 @@ object PlaybackQueue {
     
     @Volatile
     var onCurrentSongChanged: ((PlayerState?) -> Unit)? = null
+
+    @Volatile
+    var isAutoMixing: Boolean = false
+        set(value) {
+            field = value
+            onAutoMixTransitionChanged?.invoke(value)
+        }
+
+    @Volatile
+    var onAutoMixTransitionChanged: ((Boolean) -> Unit)? = null
 
     @Synchronized
     fun getNextSongAndAdvance(repeatMode: Int = androidx.media3.common.Player.REPEAT_MODE_OFF): PlayerState? {
@@ -75,7 +88,7 @@ object PlaybackQueue {
             onCurrentSongChanged?.invoke(nextState)
             onQueueChanged?.invoke()
             return nextState
-        } else if (!isExclusiveQueue && upNextSongs.isNotEmpty()) {
+        } else if (upNextSongs.isNotEmpty()) {
             val next = upNextSongs.first()
             addToHistory(current)
             
@@ -89,7 +102,7 @@ object PlaybackQueue {
                 artUrl = upgradedArt,
                 videoId = next.id,
                 contentUri = null,
-                isExclusiveQueue = false,
+                isExclusiveQueue = isExclusiveQueue,
                 album = next.album?.name,
                 albumId = next.album?.id
             )
@@ -152,6 +165,85 @@ object PlaybackQueue {
             onCurrentSongChanged?.invoke(prev)
             onQueueChanged?.invoke()
             return prev
+        }
+        return null
+    }
+
+    @Synchronized
+    fun peekNextSong(repeatMode: Int): PlayerState? {
+        val current = currentSong ?: return null
+        if (repeatMode == androidx.media3.common.Player.REPEAT_MODE_ONE) {
+            return current
+        }
+        if (queue.isNotEmpty()) {
+            val next = queue.first()
+            val upgradedArt = next.artUrl?.let {
+                val itStr = it.toString()
+                if (itStr.startsWith("file:///android_asset/")) {
+                    it
+                } else {
+                    val upgraded = com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(itStr) ?: itStr
+                    if (it is android.net.Uri) android.net.Uri.parse(upgraded) else upgraded
+                }
+            } ?: next.artUrl
+
+            return PlayerState(
+                title = next.title,
+                artist = next.artist,
+                artUrl = upgradedArt,
+                videoId = next.videoId,
+                contentUri = null,
+                queue = queue.drop(1),
+                isExclusiveQueue = isExclusiveQueue,
+                album = next.album,
+                albumId = next.albumId,
+                playlistId = next.playlistId,
+                playlistName = next.playlistName
+            )
+        } else if (upNextSongs.isNotEmpty()) {
+            val next = upNextSongs.first()
+            val upgradedArt = next.thumbnail?.let {
+                com.mrtdk.liquid_glass.utils.CoilUtils.upgradeThumbQuality(it) ?: it
+            } ?: next.thumbnail
+
+            return PlayerState(
+                title = next.title,
+                artist = next.artists.joinToString { it.name },
+                artUrl = upgradedArt,
+                videoId = next.id,
+                contentUri = null,
+                isExclusiveQueue = isExclusiveQueue,
+                album = next.album?.name,
+                albumId = next.album?.id
+            )
+        } else if (repeatMode == androidx.media3.common.Player.REPEAT_MODE_ALL && songHistory.isNotEmpty()) {
+            val allSongs = songHistory + listOf(current)
+            val first = allSongs.first()
+            val remaining = allSongs.drop(1).map { state ->
+                QueueItem(
+                    title = state.title,
+                    artist = state.artist,
+                    artUrl = state.artUrl,
+                    videoId = state.videoId,
+                    album = state.album,
+                    albumId = state.albumId,
+                    playlistId = state.playlistId,
+                    playlistName = state.playlistName
+                )
+            }
+            return PlayerState(
+                title = first.title,
+                artist = first.artist,
+                artUrl = first.artUrl,
+                videoId = first.videoId,
+                contentUri = first.contentUri,
+                queue = remaining,
+                isExclusiveQueue = isExclusiveQueue,
+                album = first.album,
+                albumId = first.albumId,
+                playlistId = first.playlistId,
+                playlistName = first.playlistName
+            )
         }
         return null
     }

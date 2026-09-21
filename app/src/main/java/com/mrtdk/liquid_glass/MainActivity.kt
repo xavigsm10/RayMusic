@@ -528,9 +528,6 @@ class MainActivity : ComponentActivity() {
                             if (vid == null) return@collect
                             if (isExclusive == true) {
                                 radioLoadingJob?.cancel()
-                                upNextSongs = emptyList()
-                                com.mrtdk.liquid_glass.playback.PlaybackQueue.upNextSongs = emptyList()
-                                com.mrtdk.liquid_glass.playback.PlaybackQueue.onQueueChanged?.invoke()
                                 return@collect
                             }
                             
@@ -584,7 +581,7 @@ class MainActivity : ComponentActivity() {
                                 val currentCont = queueContinuation
                                 if (size in 1..3 && currentEp != null && currentCont != null) {
                                     val isAutoplayEnabled = com.mrtdk.liquid_glass.data.LibraryManager.getString("autoplay_similar", "true") == "true"
-                                    if (isAutoplayEnabled) {
+                                    if (isAutoplayEnabled && playerState?.isExclusiveQueue != true) {
                                         withContext(kotlinx.coroutines.Dispatchers.IO) {
                                             com.echo.innertube.YouTube.next(currentEp, currentCont).onSuccess { nextResult ->
                                                 val newEp = nextResult.endpoint
@@ -616,12 +613,7 @@ class MainActivity : ComponentActivity() {
                         if (listenTogetherManager.isInRoom && !listenTogetherManager.isHost) {
                             android.widget.Toast.makeText(context, "Solo el anfitrion puede cambiar canciones.", android.widget.Toast.LENGTH_SHORT).show()
                         } else {
-                            val nextState = com.mrtdk.liquid_glass.playback.PlaybackQueue.getNextSongAndAdvance()
-                            if (nextState != null) {
-                                if (nextState.contentUri != null) musicPlayer?.playLocalSong(nextState.contentUri, nextState.title, nextState.artist, nextState.artUrl?.toString())
-                                else if (nextState.videoId != null) musicPlayer?.playOnlineSong(nextState.videoId, nextState.title, nextState.artist, nextState.artUrl?.toString())
-                                listenTogetherManager.broadcastSongChange(nextState)
-                            }
+                            musicPlayer?.seekToNext()
                         }
                     }
 
@@ -629,12 +621,7 @@ class MainActivity : ComponentActivity() {
                         if (listenTogetherManager.isInRoom && !listenTogetherManager.isHost) {
                             android.widget.Toast.makeText(context, "Solo el anfitrion puede cambiar canciones.", android.widget.Toast.LENGTH_SHORT).show()
                         } else {
-                            val prevState = com.mrtdk.liquid_glass.playback.PlaybackQueue.getPreviousSongAndGoBack()
-                            if (prevState != null) {
-                                if (prevState.contentUri != null) musicPlayer?.playLocalSong(prevState.contentUri, prevState.title, prevState.artist, prevState.artUrl?.toString())
-                                else if (prevState.videoId != null) musicPlayer?.playOnlineSong(prevState.videoId, prevState.title, prevState.artist, prevState.artUrl?.toString())
-                                listenTogetherManager.broadcastSongChange(prevState)
-                            }
+                            musicPlayer?.seekToPrevious()
                         }
                     }
 
@@ -1084,7 +1071,21 @@ class MainActivity : ComponentActivity() {
                                     musicPlayer?.setRepeatMode(nextMode)
                                 },
                                 playbackError = playbackError,
-                                onClearPlaybackError = { musicPlayer?.clearPlaybackError() }
+                                onClearPlaybackError = { musicPlayer?.clearPlaybackError() },
+                                onToggleAutoplay = {
+                                    val current = playerState ?: return@PlayerScreen
+                                    val newExclusive = !current.isExclusiveQueue
+                                    playerState = current.copy(isExclusiveQueue = newExclusive)
+                                    com.mrtdk.liquid_glass.playback.PlaybackQueue.isExclusiveQueue = newExclusive
+                                    com.mrtdk.liquid_glass.playback.PlaybackQueue.onQueueChanged?.invoke()
+                                    if (!newExclusive && upNextSongs.isEmpty()) {
+                                        val vid = current.videoId
+                                        if (vid != null) {
+                                            queueSeedVideoId = vid
+                                            com.mrtdk.liquid_glass.playback.PlaybackQueue.queueSeedVideoId = vid
+                                        }
+                                    }
+                                }
                             )
                         }
                     }

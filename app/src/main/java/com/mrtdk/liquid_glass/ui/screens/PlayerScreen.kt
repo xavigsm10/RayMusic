@@ -1122,6 +1122,41 @@ private fun extractDominantColor(bitmap: android.graphics.Bitmap, isBillieJean: 
     }
 }
 
+@Composable
+fun AutomixIcon(
+    tint: Color,
+    modifier: Modifier = Modifier,
+    size: androidx.compose.ui.unit.Dp = 22.dp
+) {
+    Canvas(modifier = modifier.size(size)) {
+        val strokeWidth = 1.6.dp.toPx()
+        val radius = this.size.height * 0.28f
+        val centerY = this.size.height / 2f
+        val leftCenterX = this.size.width * 0.38f
+        val rightCenterX = this.size.width * 0.62f
+
+        // Left circle: subtle thin outline
+        drawCircle(
+            color = tint.copy(alpha = 0.45f),
+            radius = radius,
+            center = androidx.compose.ui.geometry.Offset(leftCenterX, centerY),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth)
+        )
+        // Right circle: bold ring with center fill
+        drawCircle(
+            color = tint,
+            radius = radius,
+            center = androidx.compose.ui.geometry.Offset(rightCenterX, centerY),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth * 2.2f)
+        )
+        drawCircle(
+            color = tint,
+            radius = radius * 0.45f,
+            center = androidx.compose.ui.geometry.Offset(rightCenterX, centerY)
+        )
+    }
+}
+
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 
 @Composable
@@ -1181,7 +1216,9 @@ fun PlayerScreen(
 
     playbackError: String? = null,
 
-    onClearPlaybackError: () -> Unit = {}
+    onClearPlaybackError: () -> Unit = {},
+
+    onToggleAutoplay: (() -> Unit)? = null
 
 ) {
 
@@ -1472,6 +1509,17 @@ fun PlayerScreen(
 
         var sliderCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
 
+        var isAutoMixing by remember { mutableStateOf(com.mrtdk.liquid_glass.playback.PlaybackQueue.isAutoMixing) }
+        DisposableEffect(Unit) {
+            val listener: (Boolean) -> Unit = { isAutoMixing = it }
+            com.mrtdk.liquid_glass.playback.PlaybackQueue.onAutoMixTransitionChanged = listener
+            onDispose {
+                if (com.mrtdk.liquid_glass.playback.PlaybackQueue.onAutoMixTransitionChanged == listener) {
+                    com.mrtdk.liquid_glass.playback.PlaybackQueue.onAutoMixTransitionChanged = null
+                }
+            }
+        }
+
 
 
         var lyricsLines by remember { mutableStateOf<List<com.mocharealm.accompanist.lyrics.core.model.ISyncedLine>?>(null) }
@@ -1490,6 +1538,24 @@ fun PlayerScreen(
         var currentLyricsProviderIndex by remember { mutableStateOf(0) }
 
         var isRomajiEnabled by remember { mutableStateOf(false) }
+
+        var isAutomixEnabled by remember {
+            mutableStateOf(
+                com.mrtdk.liquid_glass.data.LibraryManager.getString("automix_enabled", "true") == "true"
+            )
+        }
+
+        val onToggleAutomix: () -> Unit = {
+            val next = !isAutomixEnabled
+            isAutomixEnabled = next
+            com.mrtdk.liquid_glass.data.LibraryManager.saveString("automix_enabled", next.toString())
+            com.mrtdk.liquid_glass.playback.PlaybackQueue.isAutomixEnabled = next
+            android.widget.Toast.makeText(
+                context,
+                if (next) "AutoMix activado" else "AutoMix desactivado",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+        }
 
         LaunchedEffect(playerState?.videoId) {
             if (playerState?.videoId != null) {
@@ -1985,7 +2051,10 @@ fun PlayerScreen(
                                 artistPivotBounds = bounds
                                 showArtistOptionsMenu = true
                             },
-                            onAutoScrollChange = { isAutoScrollEnabled = it }
+                            onAutoScrollChange = { isAutoScrollEnabled = it },
+                            isAutomixEnabled = isAutomixEnabled,
+                            onToggleAutomix = onToggleAutomix,
+                            onToggleAutoplay = onToggleAutoplay
                         )
                     }
                 )
@@ -2650,12 +2719,12 @@ fun PlayerScreen(
                             val autoplayBgColor by animateColorAsState(targetValue = if (isAutoplayActive) activeBg else contentColor.copy(alpha=0.15f), label = "autoplayBg")
                             val autoplayIconColor by animateColorAsState(targetValue = if (isAutoplayActive) activeIcon else contentColor.copy(alpha=0.5f), label = "autoplayIcon")
 
-                            val romajiInteraction = remember { MutableInteractionSource() }
-                            val isRomajiActive = isRomajiEnabled
-                            val isRomajiPressed by romajiInteraction.collectIsPressedAsState()
-                            val romajiScale by animateFloatAsState(targetValue = if (isRomajiPressed) 0.85f else 1.0f, label = "romajiScale")
-                            val romajiBgColor by animateColorAsState(targetValue = if (isRomajiActive) activeBg else contentColor.copy(alpha=0.15f), label = "romajiBg")
-                            val romajiIconColor by animateColorAsState(targetValue = if (isRomajiActive) activeIcon else contentColor.copy(alpha=0.5f), label = "romajiIcon")
+                            val automixInteraction = remember { MutableInteractionSource() }
+                            val isAutomixActive = isAutomixEnabled
+                            val isAutomixPressed by automixInteraction.collectIsPressedAsState()
+                            val automixScale by animateFloatAsState(targetValue = if (isAutomixPressed) 0.85f else 1.0f, label = "automixScale")
+                            val automixBgColor by animateColorAsState(targetValue = if (isAutomixActive) activeBg else contentColor.copy(alpha=0.15f), label = "automixBg")
+                            val automixIconColor by animateColorAsState(targetValue = if (isAutomixActive) activeIcon else contentColor.copy(alpha=0.5f), label = "automixIcon")
 
                             Row(modifier = Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Box(
@@ -2704,7 +2773,12 @@ fun PlayerScreen(
                                             interactionSource = autoplayInteraction,
                                             indication = null,
                                             onClick = {
-                                                onSongSelected(playerState.copy(isExclusiveQueue = !playerState.isExclusiveQueue))
+                                                if (onToggleAutoplay != null) {
+                                                    onToggleAutoplay()
+                                                } else {
+                                                    val newExclusive = !playerState.isExclusiveQueue
+                                                    com.mrtdk.liquid_glass.playback.PlaybackQueue.isExclusiveQueue = newExclusive
+                                                }
                                             }
                                         ),
                                     contentAlignment = Alignment.Center
@@ -2715,46 +2789,18 @@ fun PlayerScreen(
                                 Box(
                                     modifier = Modifier
                                         .weight(1f)
-                                        .graphicsLayer(scaleX = romajiScale, scaleY = romajiScale)
+                                        .graphicsLayer(scaleX = automixScale, scaleY = automixScale)
                                         .height(40.dp)
                                         .clip(RoundedCornerShape(50))
-                                        .background(romajiBgColor)
+                                        .background(automixBgColor)
                                         .clickable(
-                                            interactionSource = romajiInteraction,
+                                            interactionSource = automixInteraction,
                                             indication = null,
-                                            onClick = {
-                                                isRomajiEnabled = !isRomajiEnabled
-                                            }
+                                            onClick = onToggleAutomix
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Canvas(modifier = Modifier.size(24.dp)) {
-                                        val strokeWidth = 1.6.dp.toPx()
-                                        val radius = size.height * 0.28f
-                                        val centerY = size.height / 2f
-                                        val leftCenterX = size.width * 0.38f
-                                        val rightCenterX = size.width * 0.62f
-
-                                        // Left circle: subtle thin outline
-                                        drawCircle(
-                                            color = romajiIconColor.copy(alpha = 0.45f),
-                                            radius = radius,
-                                            center = androidx.compose.ui.geometry.Offset(leftCenterX, centerY),
-                                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth)
-                                        )
-                                        // Right circle: bold ring with center fill
-                                        drawCircle(
-                                            color = romajiIconColor,
-                                            radius = radius,
-                                            center = androidx.compose.ui.geometry.Offset(rightCenterX, centerY),
-                                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth * 2.2f)
-                                        )
-                                        drawCircle(
-                                            color = romajiIconColor,
-                                            radius = radius * 0.45f,
-                                            center = androidx.compose.ui.geometry.Offset(rightCenterX, centerY)
-                                        )
-                                    }
+                                    AutomixIcon(tint = automixIconColor, size = 24.dp)
                                 }
                             }
 
@@ -2999,7 +3045,7 @@ fun PlayerScreen(
                                   }
 
                                  // 2. Up Next / Autoplay Section
-                                 if (playerState?.isExclusiveQueue != true && upNextSongs.isNotEmpty()) {
+                                 if (upNextSongs.isNotEmpty()) {
                                       val state = playerState
                                       itemsIndexed(
                                           items = upNextSongs,
@@ -3478,17 +3524,32 @@ fun PlayerScreen(
 
                 // Base sharp album cover (always drawn in background during drag or before playback starts)
                 // In lyrics and queue views, it strictly displays the original static image!
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(playerState?.artUrl ?: hdArtUrl)
-                        .crossfade(true)
-                        .build(),
-                    imageLoader = animatedImageLoader,
-                    contentDescription = "Album Art",
-                    contentScale = ContentScale.Crop,
-                    alignment = artworkBiasAlignment,
+                val artData = playerState?.artUrl ?: hdArtUrl
+                androidx.compose.animation.AnimatedContent(
+                    targetState = artData,
+                    transitionSpec = {
+                        (fadeIn(animationSpec = tween(700, easing = FastOutSlowInEasing)) +
+                         scaleIn(initialScale = 0.93f, animationSpec = tween(700, easing = FastOutSlowInEasing)))
+                            .togetherWith(
+                                fadeOut(animationSpec = tween(600, easing = FastOutSlowInEasing)) +
+                                scaleOut(targetScale = 1.05f, animationSpec = tween(600, easing = FastOutSlowInEasing))
+                            )
+                    },
+                    label = "albumArtAutoMixTransition",
                     modifier = Modifier.fillMaxSize()
-                )
+                ) { currentArt ->
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(currentArt)
+                            .crossfade(true)
+                            .build(),
+                        imageLoader = animatedImageLoader,
+                        contentDescription = "Album Art",
+                        contentScale = ContentScale.Crop,
+                        alignment = artworkBiasAlignment,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
 
                 if (!currentAnimatedUrl.isNullOrBlank()) {
                     DisposableEffect(currentAnimatedUrl) {
@@ -3925,6 +3986,31 @@ fun PlayerScreen(
                         Column(
                             modifier = Modifier.fillMaxWidth()
                         ) {
+                            AnimatedVisibility(
+                                visible = isAutoMixing,
+                                enter = fadeIn(animationSpec = tween(350)) + slideInVertically(animationSpec = tween(350)) { -it / 2 },
+                                exit = fadeOut(animationSpec = tween(300)) + slideOutVertically(animationSpec = tween(300)) { -it / 2 }
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .padding(bottom = 4.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color.White.copy(alpha = 0.16f))
+                                        .padding(horizontal = 7.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    AutomixIcon(modifier = Modifier.size(12.dp), tint = Color.White)
+                                    Text(
+                                        text = "AutoMix",
+                                        color = Color.White,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.5.sp
+                                    )
+                                }
+                            }
+
                             Text(
                                 text = state?.title ?: "",
                                 color = contentColor,
@@ -4891,11 +4977,17 @@ private fun IsolatedPlayerSeekbar(
         androidx.compose.runtime.remember { androidx.compose.runtime.mutableLongStateOf(fallbackPosition) }
     }
     val effectivePos = if (musicPlayer != null) livePosition else fallbackPosition
-    val progress = if (duration > 0) effectivePos.toFloat() / duration.toFloat() else 0f
+    var scrubPos by remember { mutableStateOf<Long?>(null) }
+    val displayPos = scrubPos ?: effectivePos
+    val progress = if (duration > 0) displayPos.toFloat() / duration.toFloat() else 0f
 
     AppleMusicSlider(
         value = progress,
-        onValueChange = { onSeek((it * duration).toLong()) },
+        onValueChange = { scrubPos = (it * duration).toLong() },
+        onValueChangeFinished = { finalProg ->
+            onSeek((finalProg * duration).toLong())
+            scrubPos = null
+        },
         modifier = Modifier
             .fillMaxWidth()
             .height(26.dp)
@@ -4912,12 +5004,12 @@ private fun IsolatedPlayerSeekbar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(formatDuration(effectivePos), color = contentColor.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Normal)
+        Text(formatDuration(displayPos), color = contentColor.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Normal)
         LosslessBadge(
             contentColor = contentColor,
             onClick = { AudioRoutingState.showAudioRoutingMenu = true }
         )
-        Text("-${formatDuration((duration - effectivePos).coerceAtLeast(0L))}", color = contentColor.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Normal)
+        Text("-${formatDuration((duration - displayPos).coerceAtLeast(0L))}", color = contentColor.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Normal)
     }
 }
 
@@ -4946,8 +5038,16 @@ fun PlayerBottomControls(
             .then(if (fillHeight) Modifier.fillMaxHeight() else Modifier)
     ) {
         if (includeProgress) {
+            var scrubPos by remember { mutableStateOf<Long?>(null) }
+            val displayPos = scrubPos ?: currentPosition
+            val currentProgress = if (duration > 0) displayPos.toFloat() / duration.toFloat() else 0f
             AppleMusicSlider(
-                value = progress, onValueChange = { onSeek((it * duration).toLong()) },
+                value = currentProgress,
+                onValueChange = { scrubPos = (it * duration).toLong() },
+                onValueChangeFinished = { finalProg ->
+                    onSeek((finalProg * duration).toLong())
+                    scrubPos = null
+                },
                 modifier = Modifier.fillMaxWidth().height(26.dp),
                 activeColor = sliderActiveColor,
                 inactiveColor = sliderInactiveColor,
@@ -4958,12 +5058,12 @@ fun PlayerBottomControls(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(formatDuration(currentPosition), color = contentColor.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Normal)
+                Text(formatDuration(displayPos), color = contentColor.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Normal)
                 LosslessBadge(
                     contentColor = contentColor,
                     onClick = { AudioRoutingState.showAudioRoutingMenu = true }
                 )
-                Text("-${formatDuration((duration - currentPosition).coerceAtLeast(0L))}", color = contentColor.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Normal)
+                Text("-${formatDuration((duration - displayPos).coerceAtLeast(0L))}", color = contentColor.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Normal)
             }
 
             Spacer(modifier = Modifier.height(28.dp))
@@ -5263,145 +5363,88 @@ fun AnimatedSkipButton(
 fun AppleMusicSlider(
     value: Float,
     onValueChange: (Float) -> Unit,
+    onValueChangeFinished: ((Float) -> Unit)? = null,
     modifier: Modifier = Modifier,
     activeColor: Color = Color(0xFFE5E5EA),
     inactiveColor: Color = Color.White.copy(alpha = 0.18f),
     barHeightDp: androidx.compose.ui.unit.Dp = 7.dp
 ) {
-
     var isDragging by remember { mutableStateOf(false) }
+    var localDragValue by remember { mutableStateOf<Float?>(null) }
 
     val scale by androidx.compose.animation.core.animateFloatAsState(
-
         targetValue = if (isDragging) 1.5f else 1f,
-
         animationSpec = androidx.compose.animation.core.tween(durationMillis = 150, easing = androidx.compose.animation.core.FastOutSlowInEasing),
-
         label = "slider_scale"
-
     )
 
     var sliderWidth by remember { mutableFloatStateOf(0f) }
 
-
-
     Box(
-
         modifier = modifier
-
             .graphicsLayer {
-
                 scaleY = scale
-
             }
-
             .pointerInput(Unit) {
-
                 awaitPointerEventScope {
-
                     while (true) {
-
                         val down = awaitFirstDown()
-
                         isDragging = true
-
-                        if (sliderWidth > 0) {
-
-                            onValueChange((down.position.x / sliderWidth).coerceIn(0f, 1f))
-
-                        }
-
+                        val startProg = if (sliderWidth > 0) (down.position.x / sliderWidth).coerceIn(0f, 1f) else 0f
+                        localDragValue = startProg
+                        onValueChange(startProg)
                         down.consume()
 
-                        
-
                         while (true) {
-
                             val event = awaitPointerEvent()
-
                             val dragEvent = event.changes.firstOrNull()
-
                             if (dragEvent != null && dragEvent.pressed) {
-
                                 if (sliderWidth > 0) {
-
-                                    onValueChange((dragEvent.position.x / sliderWidth).coerceIn(0f, 1f))
-
+                                    val currentProg = (dragEvent.position.x / sliderWidth).coerceIn(0f, 1f)
+                                    localDragValue = currentProg
+                                    onValueChange(currentProg)
                                 }
-
                                 dragEvent.consume()
-
                             } else {
-
                                 break
-
                             }
-
                         }
 
+                        val finalVal = localDragValue ?: value
+                        onValueChangeFinished?.invoke(finalVal)
+                        localDragValue = null
                         isDragging = false
-
                     }
-
                 }
-
             }
-
             .onSizeChanged { sliderWidth = it.width.toFloat() }
-
     ) {
-
         Canvas(modifier = Modifier.fillMaxSize()) {
-
             val height = size.height
-
             val width = size.width
-
             val barHeight = barHeightDp.toPx()
-
             val cornerRadius = androidx.compose.ui.geometry.CornerRadius(barHeight / 2, barHeight / 2)
-
             val centerY = height / 2 - barHeight / 2
 
-
-
             // Inactive track
-
             drawRoundRect(
-
                 color = inactiveColor,
-
                 topLeft = Offset(0f, centerY),
-
                 size = Size(width, barHeight),
-
                 cornerRadius = cornerRadius
-
             )
-
-
 
             // Active track
-
+            val displayValue = (localDragValue ?: value).coerceIn(0f, 1f)
             drawRoundRect(
-
                 color = activeColor,
-
                 topLeft = Offset(0f, centerY),
-
-                size = Size(width * value, barHeight),
-
+                size = Size(width * displayValue, barHeight),
                 cornerRadius = cornerRadius
-
             )
-
         }
-
     }
-
 }
-
-
 
 fun downloadSong(context: android.content.Context, videoId: String, title: String, artist: String, artUrl: String?, album: String? = null, silent: Boolean = false) {
 
@@ -5516,7 +5559,10 @@ data class LandscapePlayerCallbacks(
     val onShowLyricsMenu: () -> Unit,
     val onShowPlaylistMenu: () -> Unit,
     val onShowArtistMenu: (List<String>, androidx.compose.ui.geometry.Rect?) -> Unit,
-    val onAutoScrollChange: (Boolean) -> Unit = {}
+    val onAutoScrollChange: (Boolean) -> Unit = {},
+    val isAutomixEnabled: Boolean = true,
+    val onToggleAutomix: () -> Unit = {},
+    val onToggleAutoplay: (() -> Unit)? = null
 )
 
 @Composable
@@ -5585,6 +5631,9 @@ fun LandscapePlayerLayout(
     val onShowPlaylistMenu = callbacks.onShowPlaylistMenu
     val onShowArtistMenu = callbacks.onShowArtistMenu
     val onAutoScrollChange = callbacks.onAutoScrollChange
+    val isAutomixEnabled = callbacks.isAutomixEnabled
+    val onToggleAutomix = callbacks.onToggleAutomix
+    val onToggleAutoplay = callbacks.onToggleAutoplay
 
     val context = LocalContext.current
     val density = androidx.compose.ui.platform.LocalDensity.current
@@ -6307,13 +6356,14 @@ fun LandscapePlayerLayout(
                             onToggleRepeat = onToggleRepeat,
                             onSongSelected = onSongSelected,
                             onSongSelectedFromQueue = onSongSelectedFromQueue,
-                            isRomajiEnabled = isRomajiEnabled,
-                            onToggleRomaji = onToggleRomaji,
+                            isAutomixEnabled = isAutomixEnabled,
+                            onToggleAutomix = onToggleAutomix,
                             upNextSongs = upNextSongs,
                             onUpNextSongsChange = onUpNextSongsChange,
                             contentColor = contentColor,
                             rightSideAverageColor = rightSideAverageColor,
-                            context = context
+                            context = context,
+                            onToggleAutoplay = onToggleAutoplay
                         )
                     } else {
                         LandscapeControlsView(
@@ -6506,13 +6556,14 @@ private fun LandscapeQueueView(
     onToggleRepeat: () -> Unit,
     onSongSelected: (PlayerState) -> Unit,
     onSongSelectedFromQueue: (PlayerState) -> Unit,
-    isRomajiEnabled: Boolean,
-    onToggleRomaji: () -> Unit,
+    isAutomixEnabled: Boolean,
+    onToggleAutomix: () -> Unit,
     upNextSongs: List<com.echo.innertube.models.SongItem>,
     onUpNextSongsChange: (List<com.echo.innertube.models.SongItem>) -> Unit,
     contentColor: Color,
     rightSideAverageColor: Color,
-    context: android.content.Context
+    context: android.content.Context,
+    onToggleAutoplay: (() -> Unit)? = null
 ) {
     val queueListState = rememberLazyListState()
     Column(modifier = Modifier.fillMaxSize()) {
@@ -6539,12 +6590,12 @@ private fun LandscapeQueueView(
         val autoplayBgColor by animateColorAsState(targetValue = if (isAutoplayActive) activeBg else contentColor.copy(alpha = 0.15f), label = "autoplayBg")
         val autoplayIconColor by animateColorAsState(targetValue = if (isAutoplayActive) activeIcon else contentColor.copy(alpha = 0.5f), label = "autoplayIcon")
 
-        val romajiInteraction = remember { MutableInteractionSource() }
-        val isRomajiActive = isRomajiEnabled
-        val romajiPressed by romajiInteraction.collectIsPressedAsState()
-        val romajiScale by animateFloatAsState(targetValue = if (romajiPressed) 0.85f else 1.0f, label = "romajiScale")
-        val romajiBgColor by animateColorAsState(targetValue = if (isRomajiActive) activeBg else contentColor.copy(alpha = 0.15f), label = "romajiBg")
-        val romajiIconColor by animateColorAsState(targetValue = if (isRomajiActive) activeIcon else contentColor.copy(alpha = 0.5f), label = "romajiIcon")
+        val automixInteraction = remember { MutableInteractionSource() }
+        val isAutomixActive = isAutomixEnabled
+        val isAutomixPressed by automixInteraction.collectIsPressedAsState()
+        val automixScale by animateFloatAsState(targetValue = if (isAutomixPressed) 0.85f else 1.0f, label = "automixScale")
+        val automixBgColor by animateColorAsState(targetValue = if (isAutomixActive) activeBg else contentColor.copy(alpha = 0.15f), label = "automixBg")
+        val automixIconColor by animateColorAsState(targetValue = if (isAutomixActive) activeIcon else contentColor.copy(alpha = 0.5f), label = "automixIcon")
 
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -6593,8 +6644,11 @@ private fun LandscapeQueueView(
                         interactionSource = autoplayInteraction,
                         indication = null,
                         onClick = {
-                            if (playerState != null) {
-                                onSongSelected(playerState.copy(isExclusiveQueue = !playerState.isExclusiveQueue))
+                            if (onToggleAutoplay != null) {
+                                onToggleAutoplay()
+                            } else if (playerState != null) {
+                                val newExclusive = !playerState.isExclusiveQueue
+                                com.mrtdk.liquid_glass.playback.PlaybackQueue.isExclusiveQueue = newExclusive
                             }
                         }
                     ),
@@ -6605,24 +6659,24 @@ private fun LandscapeQueueView(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .graphicsLayer(scaleX = romajiScale, scaleY = romajiScale)
+                    .graphicsLayer(scaleX = automixScale, scaleY = automixScale)
                     .height(36.dp)
                     .clip(RoundedCornerShape(50))
-                    .background(romajiBgColor)
+                    .background(automixBgColor)
                     .clickable(
-                        interactionSource = romajiInteraction,
+                        interactionSource = automixInteraction,
                         indication = null,
-                        onClick = onToggleRomaji
+                        onClick = onToggleAutomix
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(if (isRomajiActive) Icons.Default.ToggleOn else Icons.Default.ToggleOff, "Toggle", tint = romajiIconColor, modifier = Modifier.size(22.dp))
+                AutomixIcon(tint = automixIconColor, size = 20.dp)
             }
         }
 
         if (playerState != null && playerState.queue.isNotEmpty()) {
             Text(text = stringResource(R.string.siguiente_en_album_playlist), color = contentColor, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp, bottom = 6.dp))
-        } else if (playerState?.isExclusiveQueue != true) {
+        } else if (upNextSongs.isNotEmpty()) {
             Column(modifier = Modifier.padding(top = 8.dp, bottom = 6.dp)) {
                 Text(text = stringResource(R.string.continue_playing), color = contentColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 Text(text = stringResource(R.string.autoplaying_similar_music), color = contentColor.copy(alpha = 0.7f), fontSize = 12.sp)
@@ -6796,7 +6850,7 @@ private fun LandscapeQueueView(
                 }
             }
 
-            if (playerState?.isExclusiveQueue != true) {
+            if (upNextSongs.isNotEmpty()) {
                 val state = playerState
                 itemsIndexed(
                     items = upNextSongs,

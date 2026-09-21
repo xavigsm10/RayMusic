@@ -55,6 +55,9 @@ import com.mrtdk.liquid_glass.data.Song
 import com.mrtdk.liquid_glass.data.MadeForYouPlaylist
 import com.mrtdk.liquid_glass.data.MadeForYouRepository
 import com.mrtdk.liquid_glass.ui.components.MadeForYouCardContent
+import com.mrtdk.liquid_glass.ui.components.GraduatedBlurArtwork
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import com.echo.innertube.YouTube
 import org.json.JSONArray
 import org.json.JSONObject
@@ -65,6 +68,7 @@ import com.echo.innertube.models.YTItem
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
@@ -76,6 +80,9 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.drawWithCache
 import com.skydoves.cloudy.cloudy
+import android.os.Build
+import androidx.compose.ui.graphics.BlurEffect
+import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.draw.clipToBounds
@@ -2483,6 +2490,7 @@ private object SuggestionCardCache {
 // ═══════════════════════════════════════════════════════════════════
 // Featured Suggestion Card — full-bleed image with overlaid text
 // ═══════════════════════════════════════════════════════════════════
+@OptIn(UnstableApi::class)
 @Composable
 private fun FeaturedSuggestionCard(
     context: android.content.Context,
@@ -2567,16 +2575,19 @@ private fun FeaturedSuggestionCard(
                     
                     try {
                         var r = 0L; var g = 0L; var b = 0L
-                        val y = bitmap.height - 1
+                        val startY = (bitmap.height * 0.75f).toInt().coerceIn(0, bitmap.height - 1)
+                        val stepY = maxOf(1, (bitmap.height - startY) / 4)
                         val w = bitmap.width
                         val step = maxOf(1, w / 8)
                         var count = 0
-                        for (x in 0 until w step step) {
-                            val pixel = bitmap.getPixel(x, y)
-                            r += android.graphics.Color.red(pixel)
-                            g += android.graphics.Color.green(pixel)
-                            b += android.graphics.Color.blue(pixel)
-                            count++
+                        for (y in startY until bitmap.height step stepY) {
+                            for (x in 0 until w step step) {
+                                val pixel = bitmap.getPixel(x, y)
+                                r += android.graphics.Color.red(pixel)
+                                g += android.graphics.Color.green(pixel)
+                                b += android.graphics.Color.blue(pixel)
+                                count++
+                            }
                         }
                         val sampledColor = Color((r / count).toInt(), (g / count).toInt(), (b / count).toInt())
                         SuggestionCardCache.dominantColorCache.put(hdThumb, sampledColor)
@@ -2589,6 +2600,20 @@ private fun FeaturedSuggestionCard(
         }
     }
 
+    val scrimColor = remember(dominantColor) {
+        if (dominantColor.luminance() > 0.35f) {
+            val factor = 0.5f
+            Color(
+                red = (dominantColor.red * factor).coerceIn(0f, 1f),
+                green = (dominantColor.green * factor).coerceIn(0f, 1f),
+                blue = (dominantColor.blue * factor).coerceIn(0f, 1f),
+                alpha = 1f
+            )
+        } else {
+            dominantColor
+        }
+    }
+
     // Card container
     var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
     Box(
@@ -2596,122 +2621,61 @@ private fun FeaturedSuggestionCard(
             .width(280.dp)
             .height(380.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(dominantColor)
+            .background(scrimColor)
             .wiggleOnScroll(item.id, lazyListState = scrollState)
             .clickable {
                 SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
                 clickAction()
             }
     ) {
-        // Capa inferior: reflejo invertido con blur progresivo estilo imla
-        // (imla: sigma_px * maskAlpha por pixel + blend crisp donde mask=0).
-        // Aqui sin ImlaHost: capa nítida + capa borrosa enmascarada por Brush.verticalGradient.
-        // Arriba nítido -> abajo borroso, barato para LazyRow (1 copia blur, radios modestos).
+        // Capa de Reflejo Invertido estilo PlayerScreen (GraduatedBlurArtwork)
+        val reflectionOverlap = 32.dp
+        val baseReflectionY = 270.dp - reflectionOverlap
+        val reflectionHeight = (380.dp - baseReflectionY).coerceAtLeast(270.dp)
+
         Box(
             modifier = Modifier
-                .offset(y = 270.dp)
-                .size(width = 280.dp, height = 110.dp)
+                .offset(x = 0.dp, y = baseReflectionY)
+                .width(280.dp)
+                .height(reflectionHeight)
                 .clipToBounds()
-                .background(dominantColor)
         ) {
-            val density = LocalDensity.current
-            val artworkHeightPx = with(density) { 270.dp.toPx() }
-            val mirrorModifier = Modifier
-                .size(width = 280.dp, height = 270.dp)
-                .graphicsLayer {
-                    scaleY = -1f
-                    transformOrigin = TransformOrigin(0.5f, 0f)
-                    translationY = artworkHeightPx
-                }
-
-            // 1. Base nítida (extremo crisp de imla, mask = 0)
-            AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(hdThumb)
-                    .size(560)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = mirrorModifier
-            )
-
-            // 2. Capa borrosa con máscara progresiva (maskAlpha 0 arriba -> 1 abajo)
-            // Mismo size(560) que la base para compartir caché de Coil.
-            AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(hdThumb)
-                    .size(560)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = mirrorModifier
-                    .blur(16.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
-                    .graphicsLayer {
-                        compositingStrategy = CompositingStrategy.Offscreen
-                    }
-                    .drawWithCache {
-                        val progressiveMask = Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0.0f to Color.Transparent,
-                                0.35f to Color.Transparent,
-                                0.70f to Color.Black.copy(alpha = 0.8f),
-                                1.0f to Color.Black
-                            )
-                        )
-                        onDrawWithContent {
-                            drawContent()
-                            drawRect(
-                                brush = progressiveMask,
-                                blendMode = BlendMode.DstIn
-                            )
-                        }
-                    }
-            )
-
-            // 3. Fundidos de legibilidad (dominantColor + contraste), encima del compuesto
-            androidx.compose.foundation.Canvas(
-                modifier = Modifier.matchParentSize()
+            Box(
+                modifier = Modifier
+                    .width(280.dp)
+                    .height(270.dp)
             ) {
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            dominantColor.copy(alpha = 0.35f),
-                            dominantColor.copy(alpha = 0.75f),
-                            dominantColor.copy(alpha = 0.95f)
-                        )
-                    )
-                )
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.Black.copy(alpha = 0.25f),
-                            Color.Black.copy(alpha = 0.60f)
-                        )
-                    )
+                GraduatedBlurArtwork(
+                    imageUrl = hdThumb,
+                    modifier = Modifier.fillMaxSize(),
+                    mildBlurRadiusX = 40.dp,
+                    mildBlurRadiusY = 14.dp,
+                    strongBlurRadiusX = 180.dp,
+                    strongBlurRadiusY = 55.dp,
+                    sliderThresholdDp = 50.dp,
+                    verticalScale = -4.0f,
+                    pivotY = 0f,
+                    horizontalScale = 1.0f
                 )
             }
         }
 
-        // Portada Principal nítida sin difuminado en la parte inferior
-        Box(
+        // Portada Principal (Nítida)
+        AsyncImage(
+            model = ImageRequest.Builder(context)
+                .data(hdThumb)
+                .size(560)
+                .crossfade(true)
+                .build(),
+            contentDescription = titleStr,
+            contentScale = ContentScale.Crop,
             modifier = Modifier
-                .align(Alignment.TopCenter)
                 .size(width = 280.dp, height = 270.dp)
+                .align(Alignment.TopCenter)
                 .onGloballyPositioned { imageCoords = it }
-        ) {
-            AsyncImage(
-                model = ImageRequest.Builder(context).data(hdThumb).size(560).crossfade(true).build(),
-                contentDescription = titleStr,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+        )
 
-        // Text Content
+        // 3. Contenido de Texto
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -2731,7 +2695,7 @@ private fun FeaturedSuggestionCard(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 subtitleStr,
-                color = Color.White.copy(alpha = 0.75f),
+                color = Color.White.copy(alpha = 0.8f),
                 fontSize = 14.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
