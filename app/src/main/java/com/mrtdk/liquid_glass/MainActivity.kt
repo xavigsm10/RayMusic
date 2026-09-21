@@ -254,6 +254,15 @@ class MainActivity : ComponentActivity() {
                 var playerState by remember { mutableStateOf<PlayerState?>(lastSavedState) }
                 var isFirstStateLoad by remember { mutableStateOf(true) }
                 var showPlayer by remember { mutableStateOf(false) }
+                var miniPlayerBounceTrigger by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
+                var wasPlayerShowing by remember { mutableStateOf(false) }
+
+                LaunchedEffect(showPlayer) {
+                    if (wasPlayerShowing && !showPlayer) {
+                        miniPlayerBounceTrigger = System.currentTimeMillis()
+                    }
+                    wasPlayerShowing = showPlayer
+                }
                     var upNextSongs by remember { mutableStateOf<List<com.echo.innertube.models.SongItem>>(emptyList()) }
                     var queueSeedVideoId by remember { mutableStateOf<String?>(null) }
                     var queueContinuation by remember { mutableStateOf<String?>(null) }
@@ -973,7 +982,8 @@ class MainActivity : ComponentActivity() {
                                                     },
                                                     isSearchInputActive = isSearchInputActive,
                                                     onSearchInputActiveChange = { isSearchInputActive = it },
-                                                    bottomTabsStyle = bottomTabsStyle
+                                                    bottomTabsStyle = bottomTabsStyle,
+                                                    landingTrigger = miniPlayerBounceTrigger
                                                 )
                                             }
                                             if (updateReleaseInfo != null) {

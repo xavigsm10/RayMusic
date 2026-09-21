@@ -2208,47 +2208,21 @@ fun CarouselToGridTransitionOverlay(
 ) {
     if (!visible) return
 
-    val density = LocalDensity.current
     val scope = rememberCoroutineScope()
-    
     var isOverlayVisible by remember { mutableStateOf(visible) }
     var isClosing by remember { mutableStateOf(false) }
     val progress = remember { Animatable(0f) }
-    
-    // Stable capture of carousel bounds
-    val capturedCarouselBounds = remember { mutableStateMapOf<String, Rect>() }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            SharedTransitionState.animatingItemIds.clear()
-        }
-    }
 
     LaunchedEffect(visible) {
         if (visible) {
             isOverlayVisible = true
             isClosing = false
-            
-            // Populate animatingItemIds so their carousel cards hide static covers
-            SharedTransitionState.animatingItemIds.clear()
-            items.take(8).forEach {
-                SharedTransitionState.animatingItemIds.add(it.id)
-            }
-            
-            capturedCarouselBounds.clear()
-            // Use snapshot bounds passed at click time (prefer over global state for scrolled carousels)
-            val boundsSource = if (snapshotBounds.isNotEmpty()) snapshotBounds else SharedTransitionState.carouselItemBounds
-            boundsSource.forEach { (key, value) ->
-                if (value.width > 0f && value.height > 0f) {
-                    capturedCarouselBounds[key] = value
-                }
-            }
-            
+            progress.snapTo(0f)
             progress.animateTo(
                 targetValue = 1f,
                 animationSpec = spring(
-                    dampingRatio = 0.85f,
-                    stiffness = 110f
+                    dampingRatio = 0.88f,
+                    stiffness = 380f
                 )
             )
         }
@@ -2262,11 +2236,10 @@ fun CarouselToGridTransitionOverlay(
                     progress.animateTo(
                         targetValue = 0f,
                         animationSpec = spring(
-                            dampingRatio = 0.7f,
-                            stiffness = 110f
+                            dampingRatio = 0.88f,
+                            stiffness = 380f
                         )
                     )
-                    SharedTransitionState.animatingItemIds.clear()
                     isOverlayVisible = false
                     onClose()
                 }
@@ -2276,153 +2249,21 @@ fun CarouselToGridTransitionOverlay(
     }
 
     // Intercept back button
-    androidx.activity.compose.BackHandler(enabled = isOverlayVisible) {
+    androidx.activity.compose.BackHandler(enabled = isOverlayVisible && !isClosing) {
         dismissAction()
     }
 
     if (isOverlayVisible) {
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val screenWidthPx = constraints.maxWidth.toFloat()
-            val screenHeightPx = constraints.maxHeight.toFloat()
-            val statusBarsDp = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-            
-            val spacingPx = with(density) { 12.dp.toPx() }
-            val paddingPx = with(density) { 20.dp.toPx() }
-            val gridItemWidthPx = (screenWidthPx - paddingPx * 2f - spacingPx) / 2f
-            
-            val thumbnailRatio = if (isVideo) 16f / 9f else 1f
-            val gridItemHeightPx = gridItemWidthPx / thumbnailRatio
-            
-            val rowSpacingPx = with(density) { 16.dp.toPx() }
-            val gridStartY = with(density) { (80.dp + statusBarsDp).toPx() }
-            
-            // Text padding + height is approximately 46.dp
-            val textContainerHeightPx = with(density) { 46.dp.toPx() }
-            val rowHeightPx = gridItemHeightPx + textContainerHeightPx + rowSpacingPx
-
-            val currentProgress = progress.value
-
-            if (currentProgress < 1f || isClosing) {
-                // Opening or Closing: background fade + flying cards animation
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = currentProgress))
-                ) {
-                    // Header title and back button
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .statusBarsPadding()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .graphicsLayer { alpha = currentProgress },
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.12f))
-                                .clickable { dismissAction() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.ArrowBackIosNew, "Back", tint = Color(0xFFFA243C), modifier = Modifier.size(22.dp))
-                        }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(title, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                    }
-
-                    // Render the flying cover images for the first 8 items
-                    val referenceY = capturedCarouselBounds.values.firstOrNull { it.top > 0f }?.top
-                        ?: (screenHeightPx / 2f)
-
-                    val itemsToAnimate = items.take(8)
-                    
-                    // Find the index of the first visible item in the carousel among itemsToAnimate to determine direction for missing bounds
-                    var firstVisibleIdx = -1
-                    for (idx in itemsToAnimate.indices) {
-                        val b = capturedCarouselBounds[itemsToAnimate[idx].id]
-                        if (b != null && b.right > 0f && b.left < screenWidthPx) {
-                            firstVisibleIdx = idx
-                            break
-                        }
-                    }
-                    if (firstVisibleIdx == -1) {
-                        firstVisibleIdx = 0
-                    }
-
-                    itemsToAnimate.forEachIndexed { i, item ->
-                        val startBounds = capturedCarouselBounds[item.id]
-                        
-                        val col = i % 2
-                        val row = i / 2
-                        val targetGridX = paddingPx + col * (gridItemWidthPx + spacingPx)
-                        val targetGridY = gridStartY + row * rowHeightPx
-
-                        val sourceX: Float
-                        val sourceY: Float
-                        val sourceW: Float
-                        val sourceH: Float
-                        val startCorner: Float
-
-                        if (startBounds != null) {
-                            sourceX = startBounds.left
-                            sourceY = startBounds.top
-                            sourceW = startBounds.width
-                            sourceH = startBounds.height
-                            startCorner = 12f
-                        } else {
-                            // If we don't have bounds, items before the first visible item slide left, and items after slide right
-                            val isLeft = i < firstVisibleIdx
-                            sourceW = gridItemWidthPx
-                            sourceH = gridItemHeightPx
-                            sourceX = if (isLeft) -sourceW else screenWidthPx
-                            sourceY = referenceY
-                            startCorner = 0f
-                        }
-
-                        // Interpolate coordinates
-                        val curX = lerpFloat(sourceX, targetGridX, currentProgress)
-                        val curY = lerpFloat(sourceY, targetGridY, currentProgress)
-                        val curW = lerpFloat(sourceW, gridItemWidthPx, currentProgress).coerceAtLeast(0f)
-                        val curH = lerpFloat(sourceH, gridItemHeightPx, currentProgress).coerceAtLeast(0f)
-                        val curCorner = lerpFloat(startCorner, 12f, currentProgress).coerceAtLeast(0f)
-
-                        val hdThumb = when (item) {
-                            is AlbumItem -> item.thumbnail?.replace("=w226-h226", "=w540-h540")?.replace("=w120-h120", "=w540-h540")
-                            is SongItem -> item.thumbnail?.replace("=w226-h226", "=w540-h540")?.replace("=w120-h120", "=w540-h540")
-                            is PlaylistItem -> item.thumbnail?.replace("=w226-h226", "=w540-h540")?.replace("=w120-h120", "=w540-h540")
-                            is ArtistItem -> item.thumbnail?.replace("=w226-h226", "=w400-h400")?.replace("=w120-h120", "=w400-h400")
-                            else -> null
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .offset { IntOffset(curX.roundToInt(), curY.roundToInt()) }
-                                .size(with(density) { curW.toDp() }, with(density) { curH.toDp() })
-                                .clip(if (item is ArtistItem) CircleShape else RoundedCornerShape(curCorner.dp))
-                                .background(Color.DarkGray)
-                        ) {
-                            if (hdThumb != null) {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(LocalContext.current)
-                                        .data(hdThumb)
-                                        .crossfade(false)
-                                        .build(),
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-                        }
-                    }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    // Al entrar: progress 0 -> 1 => translationX: width -> 0 (de derecha a izquierda)
+                    // Al salir: progress 1 -> 0 => translationX: 0 -> width (de izquierda a derecha)
+                    translationX = (1f - progress.value) * size.width
                 }
-            } else {
-                // Static content when animation is complete
-                Box(modifier = Modifier.fillMaxSize()) {
-                    content(dismissAction)
-                }
-            }
+        ) {
+            content(dismissAction)
         }
     }
 }

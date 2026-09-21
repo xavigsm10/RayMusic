@@ -65,6 +65,7 @@ class MusicService : MediaSessionService() {
     private var crossfadeJob: Job? = null
     private var trackEndMonitorJob: Job? = null
     private var recoveryJob: Job? = null
+    private var radioRefillJob: Job? = null
     private val songRetryCounts = java.util.concurrent.ConcurrentHashMap<String, Int>()
 
     private val mediaAudioAttributes: AudioAttributes = AudioAttributes.Builder()
@@ -118,6 +119,57 @@ class MusicService : MediaSessionService() {
                 android.util.Log.e("MusicService", "AutoMix: Error preloading next song: ${e.message}")
             } finally {
                 isPreloading = false
+            }
+        }
+    }
+
+    /**
+     * Cancela un crossfade a medias y deja los players en estado sano para que una
+     * pulsación manual de siguiente nunca se pierda. Solo se usa en skips manuales;
+     * el avance automático del automix no pasa por aquí.
+     */
+    private fun cancelCrossfadeToIdle() {
+        try { crossfadeJob?.cancel() } catch (_: Exception) {}
+        crossfadeJob = null
+        isCrossfading = false
+        com.mrtdk.liquid_glass.playback.PlaybackQueue.isAutoMixing = false
+        try { activePlayer.volume = 1f } catch (_: Exception) {}
+        try { standbyPlayer.stop(); standbyPlayer.clearMediaItems() } catch (_: Exception) {}
+        preloadedSongKey = null
+        preloadedState = null
+    }
+
+    /**
+     * Rellena upNext con autoplay cuando la cola se vacía, para que "siguiente"
+     * funcione siempre. No toca el automix: solo agrega canciones a la cola.
+     */
+    private fun triggerRadioRefillIfNeeded() {
+        val queue = com.mrtdk.liquid_glass.playback.PlaybackQueue
+        if (queue.upNextSongs.isNotEmpty()) return
+        if (com.mrtdk.liquid_glass.data.LibraryManager.getString("autoplay_similar", "true") != "true") return
+        if (queue.isExclusiveQueue) return
+        val seed = queue.currentSong?.videoId ?: queue.queueSeedVideoId ?: return
+        if (radioRefillJob?.isActive == true) return
+        radioRefillJob = serviceScope.launch(Dispatchers.IO) {
+            try {
+                var result = YouTube.next(com.echo.innertube.models.WatchEndpoint(videoId = seed)).getOrNull()
+                if (result == null || result.items.isEmpty()) {
+                    val fallback = com.echo.innertube.models.WatchEndpoint(videoId = seed, playlistId = "RDAMVM$seed")
+                    result = YouTube.next(fallback).getOrNull()
+                }
+                val res = result ?: return@launch
+                val nonVideo = res.items.filterNot { it.isVideoSong }
+                val finalItems = nonVideo.ifEmpty { res.items }
+                val nextItems = if (finalItems.isNotEmpty() && finalItems.first().id == seed) finalItems.drop(1) else finalItems
+                if (nextItems.isEmpty()) return@launch
+                withContext(Dispatchers.Main) {
+                    queue.queueEndpoint = res.endpoint
+                    queue.queueContinuation = res.continuation
+                    queue.upNextSongs = nextItems
+                    queue.onQueueChanged?.invoke()
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("MusicService", "Radio refill failed: ${e.message}")
             }
         }
     }
@@ -541,22 +593,36 @@ class MusicService : MediaSessionService() {
             }
 
             override fun seekToPrevious() {
-                if (activePlayer.currentPosition > 3000) {
-                    activePlayer.seekTo(0)
-                } else {
-                    seekToPreviousMediaItem()
-                }
+                // Ir siempre a la canción anterior (o reiniciar si no hay historial).
+                // Sin regla de 3 segundos: el botón de retroceder siempre responde.
+                seekToPreviousMediaItem()
             }
 
             override fun seekToNextMediaItem() {
-                val nextState = com.mrtdk.liquid_glass.playback.PlaybackQueue.peekNextSong(activePlayer.repeatMode)
-                    ?: com.mrtdk.liquid_glass.playback.PlaybackQueue.getNextSongAndAdvance(activePlayer.repeatMode)
-                if (nextState != null) {
-                    if (com.mrtdk.liquid_glass.playback.PlaybackQueue.isAutomixEnabled && activePlayer.isPlaying) {
-                        startCrossfadeTransition(durationMs = 1500L, targetState = nextState, isNaturalEnding = false)
-                    } else {
-                        playSongState(nextState)
-                    }
+                val queue = com.mrtdk.liquid_glass.playback.PlaybackQueue
+                // Avanzar y consumir la cola SIEMPRE primero (una sola vez por pulsación).
+                // peekNextSong no consume ni actualiza historial/currentSong, por eso el
+                // botón/swipe parecía muerto o repetía. El avance automático del automix
+                // (monitor de fin de pista / STATE_ENDED) no se toca: sigue igual abajo.
+                var nextState = queue.getNextSongAndAdvance(activePlayer.repeatMode)
+                if (nextState == null && activePlayer.repeatMode == Player.REPEAT_MODE_ONE) {
+                    nextState = queue.currentSong
+                }
+                if (nextState == null) {
+                    // Cola vacía: pedir más autoplay en segundo plano y reiniciar la actual
+                    // para que el botón siempre responda. La próxima pulsación ya tendrá cola.
+                    triggerRadioRefillIfNeeded()
+                    try { activePlayer.seekTo(0); activePlayer.play() } catch (_: Exception) {}
+                    return
+                }
+                if (queue.isAutomixEnabled && activePlayer.isPlaying) {
+                    // Si quedó un crossfade a medias, cancelarlo para que esta pulsación
+                    // manual nunca se trague: completeCrossfade compara current vs target,
+                    // y como ya avanzamos (current == target) no habrá doble consumo.
+                    if (isCrossfading) cancelCrossfadeToIdle()
+                    startCrossfadeTransition(durationMs = 1500L, targetState = nextState, isNaturalEnding = false)
+                } else {
+                    playSongState(nextState)
                 }
             }
 
@@ -564,6 +630,9 @@ class MusicService : MediaSessionService() {
                 val prevState = com.mrtdk.liquid_glass.playback.PlaybackQueue.getPreviousSongAndGoBack()
                 if (prevState != null) {
                     playSongState(prevState)
+                } else {
+                    // Sin historial: reiniciar la canción actual para que el botón responda.
+                    try { activePlayer.seekTo(0); activePlayer.play() } catch (_: Exception) {}
                 }
             }
 

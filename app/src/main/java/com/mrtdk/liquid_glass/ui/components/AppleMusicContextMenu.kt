@@ -1324,6 +1324,7 @@ private fun HorizontalActionButton(
 fun VerticalMenuActionItem(
     icon: ImageVector,
     label: String,
+    subtitle: String? = null,
     iconTint: Color = Color.White.copy(alpha = 0.7f),
     textColor: Color = Color.White,
     trailingContent: (@Composable () -> Unit)? = null,
@@ -1333,7 +1334,7 @@ fun VerticalMenuActionItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(vertical = 12.dp, horizontal = 12.dp),
+            .padding(vertical = if (subtitle != null) 8.dp else 11.dp, horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -1343,13 +1344,27 @@ fun VerticalMenuActionItem(
             modifier = Modifier.size(22.dp)
         )
         Spacer(modifier = Modifier.width(16.dp))
-        Text(
-            text = label,
-            color = textColor,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Normal,
-            modifier = Modifier.weight(1f)
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                color = textColor,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Normal,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (!subtitle.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(1.dp))
+                Text(
+                    text = subtitle,
+                    color = textColor.copy(alpha = 0.55f),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
         if (trailingContent != null) {
             Spacer(modifier = Modifier.width(8.dp))
             trailingContent()
@@ -2726,9 +2741,11 @@ fun GlassBoxScope.PlayerOptionsMenu(
     onAddToPlaylist: () -> Unit,
     onSongSelected: (PlayerState) -> Unit,
     onAlbumSelected: (com.mrtdk.liquid_glass.ui.screens.AlbumState) -> Unit,
-    pivotBounds: androidx.compose.ui.geometry.Rect? = null
+    pivotBounds: androidx.compose.ui.geometry.Rect? = null,
+    onArtistSelected: ((com.mrtdk.liquid_glass.ui.screens.ArtistState) -> Unit)? = null
 ) {
     var visible by remember { mutableStateOf(false) }
+    var isDismissing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
@@ -2736,13 +2753,17 @@ fun GlassBoxScope.PlayerOptionsMenu(
     }
 
     val scale by animateFloatAsState(
-        targetValue = if (visible) 1f else 0.4f,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
+        targetValue = if (visible) 1f else 0.35f,
+        animationSpec = if (visible) {
+            spring(dampingRatio = 0.80f, stiffness = Spring.StiffnessMediumLow)
+        } else {
+            tween(durationMillis = 180, easing = FastOutSlowInEasing)
+        },
         label = "menuScale"
     )
     val alpha by animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
-        animationSpec = tween(durationMillis = 200),
+        animationSpec = tween(durationMillis = if (visible) 160 else 140, easing = FastOutSlowInEasing),
         label = "menuAlpha"
     )
 
@@ -2752,14 +2773,26 @@ fun GlassBoxScope.PlayerOptionsMenu(
         label = "menuContentBlur"
     )
 
+    val scrimAlpha by animateFloatAsState(
+        targetValue = if (visible) 0.35f else 0f,
+        animationSpec = tween(durationMillis = 180),
+        label = "menuScrimAlpha"
+    )
+
     val context = LocalContext.current
 
-    fun handleDismiss() {
+    fun handleDismiss(action: (() -> Unit)? = null) {
+        if (isDismissing) return
+        isDismissing = true
         visible = false
-        onDismiss()
+        scope.launch {
+            kotlinx.coroutines.delay(180L)
+            action?.invoke()
+            onDismiss()
+        }
     }
 
-    BackHandler(enabled = visible) {
+    BackHandler(enabled = true) {
         handleDismiss()
     }
 
@@ -2770,7 +2803,7 @@ fun GlassBoxScope.PlayerOptionsMenu(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.4f))
+            .background(Color.Black.copy(alpha = scrimAlpha))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -2781,15 +2814,35 @@ fun GlassBoxScope.PlayerOptionsMenu(
         modifier = Modifier.fillMaxSize()
     ) {
         val density = LocalDensity.current
-        val menuWidth = 280.dp
-        val padding = 16.dp
-        val estimatedHeight = 470.dp
+        val menuWidth = 275.dp
+        val estimatedHeight = 450.dp
 
         val screenWidthDp = maxWidth
         val screenHeightDp = maxHeight
 
-        var targetLeft = (screenWidthDp - menuWidth) / 2
-        var targetTop = (screenHeightDp - estimatedHeight) / 2
+        val targetLeft: androidx.compose.ui.unit.Dp
+        val targetTop: androidx.compose.ui.unit.Dp
+        val transformOrigin: androidx.compose.ui.graphics.TransformOrigin
+
+        if (pivotBounds != null) {
+            val pivotCenterXDp = with(density) { pivotBounds.center.x.toDp() }
+            val pivotCenterYDp = with(density) { pivotBounds.center.y.toDp() }
+
+            // Align menu to the right side where 3 dots button is located
+            targetLeft = (screenWidthDp - menuWidth - 16.dp).coerceAtLeast(16.dp)
+
+            // In Apple Music, menu appears directly above or centered on 3-dots button
+            val preferredTop = pivotCenterYDp - estimatedHeight * 0.72f
+            targetTop = preferredTop.coerceIn(48.dp, screenHeightDp - estimatedHeight - 24.dp)
+
+            val originX = if (menuWidth.value > 0) ((pivotCenterXDp - targetLeft) / menuWidth).coerceIn(0f, 1f) else 1f
+            val originY = if (estimatedHeight.value > 0) ((pivotCenterYDp - targetTop) / estimatedHeight).coerceIn(0f, 1f) else 0.8f
+            transformOrigin = androidx.compose.ui.graphics.TransformOrigin(originX, originY)
+        } else {
+            targetLeft = (screenWidthDp - menuWidth) / 2
+            targetTop = (screenHeightDp - estimatedHeight) / 2
+            transformOrigin = androidx.compose.ui.graphics.TransformOrigin.Center
+        }
 
         this@PlayerOptionsMenu.GlassBox(
             modifier = Modifier
@@ -2799,15 +2852,16 @@ fun GlassBoxScope.PlayerOptionsMenu(
                     scaleX = scale
                     scaleY = scale
                     this.alpha = alpha
+                    this.transformOrigin = transformOrigin
                 }
                 .width(menuWidth)
                 .wrapContentHeight(),
-            blur = 0.8f,
+            blur = 0.85f,
             scale = 0.02f,
             centerDistortion = 0.1f,
             warpEdges = 0.4f,
             elevation = 16.dp,
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(22.dp),
             tint = Color.Unspecified,
             darkness = 0f,
             backdrop = backdrop,
@@ -2832,8 +2886,7 @@ fun GlassBoxScope.PlayerOptionsMenu(
                         modifier = Modifier
                             .weight(1f)
                             .clickable {
-                                onDownload()
-                                handleDismiss()
+                                handleDismiss { onDownload() }
                             }
                             .padding(vertical = 8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -2848,8 +2901,7 @@ fun GlassBoxScope.PlayerOptionsMenu(
                         modifier = Modifier
                             .weight(1f)
                             .clickable {
-                                onToggleSaved()
-                                handleDismiss()
+                                handleDismiss { onToggleSaved() }
                             }
                             .padding(vertical = 8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -2874,16 +2926,17 @@ fun GlassBoxScope.PlayerOptionsMenu(
                         modifier = Modifier
                             .weight(1f)
                             .clickable {
-                                if (playerState?.videoId != null) {
-                                    val shareUrl = "https://music.youtube.com/watch?v=${playerState.videoId}"
-                                    val intent = Intent(Intent.ACTION_SEND).apply {
-                                        type = "text/plain"
-                                        putExtra(Intent.EXTRA_SUBJECT, playerState.title)
-                                        putExtra(Intent.EXTRA_TEXT, shareUrl)
+                                handleDismiss {
+                                    if (playerState?.videoId != null) {
+                                        val shareUrl = "https://music.youtube.com/watch?v=${playerState.videoId}"
+                                        val intent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(Intent.EXTRA_SUBJECT, playerState.title)
+                                            putExtra(Intent.EXTRA_TEXT, shareUrl)
+                                        }
+                                        context.startActivity(Intent.createChooser(intent, context.getString(R.string.compartir)))
                                     }
-                                    context.startActivity(Intent.createChooser(intent, context.getString(R.string.compartir)))
                                 }
-                                handleDismiss()
                             }
                             .padding(vertical = 8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -2894,7 +2947,7 @@ fun GlassBoxScope.PlayerOptionsMenu(
                     }
                 }
 
-                HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 8.dp))
+                HorizontalDivider(color = Color.White.copy(alpha = 0.12f), thickness = 0.5.dp, modifier = Modifier.padding(vertical = 8.dp))
 
                 // Vertical Actions List
                 Column(
@@ -2902,7 +2955,7 @@ fun GlassBoxScope.PlayerOptionsMenu(
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
                 ) {
-                    // Fijar canción
+                    // Fijar canción / Destacar canción
                     val isPinned = remember(playerState?.videoId) {
                         val key = "song_pinned_${playerState?.videoId ?: ""}"
                         LibraryManager.getString(key) == "true"
@@ -2911,13 +2964,14 @@ fun GlassBoxScope.PlayerOptionsMenu(
                         icon = Icons.Default.PushPin,
                         label = if (isPinned) stringResource(R.string.player_menu_unpin_song) else stringResource(R.string.player_menu_pin_song)
                     ) {
-                        if (playerState?.videoId != null) {
-                            val key = "song_pinned_${playerState.videoId}"
-                            val newPinned = !isPinned
-                            LibraryManager.saveString(key, if (newPinned) "true" else "false")
-                            Toast.makeText(context, if (newPinned) context.getString(R.string.toast_song_pinned) else context.getString(R.string.toast_song_unpinned), Toast.LENGTH_SHORT).show()
+                        handleDismiss {
+                            if (playerState?.videoId != null) {
+                                val key = "song_pinned_${playerState.videoId}"
+                                val newPinned = !isPinned
+                                LibraryManager.saveString(key, if (newPinned) "true" else "false")
+                                Toast.makeText(context, if (newPinned) context.getString(R.string.toast_song_pinned) else context.getString(R.string.toast_song_unpinned), Toast.LENGTH_SHORT).show()
+                            }
                         }
-                        handleDismiss()
                     }
 
                     // Añadir a una playlist
@@ -2925,8 +2979,7 @@ fun GlassBoxScope.PlayerOptionsMenu(
                         icon = Icons.Default.PlaylistAdd,
                         label = stringResource(R.string.player_menu_add_to_playlist)
                     ) {
-                        onAddToPlaylist()
-                        handleDismiss()
+                        handleDismiss { onAddToPlaylist() }
                     }
 
                     // Crear emisora
@@ -2934,98 +2987,120 @@ fun GlassBoxScope.PlayerOptionsMenu(
                         icon = Icons.Default.Radio,
                         label = stringResource(R.string.player_menu_create_station)
                     ) {
-                        if (playerState != null) {
-                            startRadioStation(
-                                scope = scope,
-                                context = context,
-                                targetState = playerState,
-                                onSongSelected = onSongSelected
-                            )
+                        handleDismiss {
+                            if (playerState != null) {
+                                startRadioStation(
+                                    scope = scope,
+                                    context = context,
+                                    targetState = playerState,
+                                    onSongSelected = onSongSelected
+                                )
+                            }
                         }
-                        handleDismiss()
                     }
 
-                    // Ir al álbum
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.12f), thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
+
+                    // Ir al álbum (con subtítulo de nombre del álbum estilo Apple Music)
                     VerticalMenuActionItem(
                         icon = Icons.Default.Album,
-                        label = stringResource(R.string.player_menu_go_to_album)
+                        label = stringResource(R.string.player_menu_go_to_album),
+                        subtitle = playerState?.album
                     ) {
-                        if (playerState != null) {
-                            if (!playerState.albumId.isNullOrBlank()) {
-                                onAlbumSelected(
-                                    com.mrtdk.liquid_glass.ui.screens.AlbumState(
-                                        id = playerState.albumId,
-                                        playlistId = playerState.albumId,
-                                        title = playerState.album ?: playerState.title,
-                                        artist = playerState.artist,
-                                        thumbnail = playerState.artUrl?.toString()
-                                    )
-                                )
-                                handleDismiss()
-                            } else {
-                                // Fallback: If offline/local or no internet
-                                val isOffline = playerState.contentUri != null || (!playerState.album.isNullOrBlank() && LibraryManager.getDownloadedSongsForAlbum(playerState.album).isNotEmpty())
-                                if (isOffline && !playerState.album.isNullOrBlank()) {
+                        handleDismiss {
+                            if (playerState != null) {
+                                if (!playerState.albumId.isNullOrBlank()) {
                                     onAlbumSelected(
                                         com.mrtdk.liquid_glass.ui.screens.AlbumState(
-                                            id = "offline_album_${playerState.album}",
-                                            playlistId = "offline_album_${playerState.album}",
-                                            title = playerState.album,
+                                            id = playerState.albumId,
+                                            playlistId = playerState.albumId,
+                                            title = playerState.album ?: playerState.title,
                                             artist = playerState.artist,
                                             thumbnail = playerState.artUrl?.toString()
                                         )
                                     )
-                                    handleDismiss()
                                 } else {
-                                    // Online search fallback
-                                    scope.launch {
-                                        Toast.makeText(context, context.getString(R.string.toast_searching_album), Toast.LENGTH_SHORT).show()
-                                        withContext(Dispatchers.IO) {
-                                            val query = "${playerState.album ?: playerState.title} ${playerState.artist}"
-                                            val searchResult = YouTube.search(query, YouTube.SearchFilter.FILTER_ALBUM).getOrNull()
-                                            val albumItem = searchResult?.items?.filterIsInstance<com.echo.innertube.models.AlbumItem>()?.firstOrNull {
-                                                it.title.equals(playerState.album, ignoreCase = true)
-                                            } ?: searchResult?.items?.filterIsInstance<com.echo.innertube.models.AlbumItem>()?.firstOrNull()
+                                    // Fallback: If offline/local or no internet
+                                    val isOffline = playerState.contentUri != null || (!playerState.album.isNullOrBlank() && LibraryManager.getDownloadedSongsForAlbum(playerState.album).isNotEmpty())
+                                    if (isOffline && !playerState.album.isNullOrBlank()) {
+                                        onAlbumSelected(
+                                            com.mrtdk.liquid_glass.ui.screens.AlbumState(
+                                                id = "offline_album_${playerState.album}",
+                                                playlistId = "offline_album_${playerState.album}",
+                                                title = playerState.album,
+                                                artist = playerState.artist,
+                                                thumbnail = playerState.artUrl?.toString()
+                                            )
+                                        )
+                                    } else {
+                                        // Online search fallback
+                                        scope.launch {
+                                            Toast.makeText(context, context.getString(R.string.toast_searching_album), Toast.LENGTH_SHORT).show()
+                                            withContext(Dispatchers.IO) {
+                                                val query = "${playerState.album ?: playerState.title} ${playerState.artist}"
+                                                val searchResult = YouTube.search(query, YouTube.SearchFilter.FILTER_ALBUM).getOrNull()
+                                                val albumItem = searchResult?.items?.filterIsInstance<com.echo.innertube.models.AlbumItem>()?.firstOrNull {
+                                                    it.title.equals(playerState.album, ignoreCase = true)
+                                                } ?: searchResult?.items?.filterIsInstance<com.echo.innertube.models.AlbumItem>()?.firstOrNull()
 
-                                            if (albumItem != null) {
-                                                withContext(Dispatchers.Main) {
-                                                    onAlbumSelected(
-                                                        com.mrtdk.liquid_glass.ui.screens.AlbumState(
-                                                            id = albumItem.browseId,
-                                                            playlistId = albumItem.playlistId,
-                                                            title = albumItem.title,
-                                                            artist = albumItem.artists?.joinToString { it.name } ?: playerState.artist,
-                                                            thumbnail = albumItem.thumbnail
-                                                        )
-                                                    )
-                                                    handleDismiss()
-                                                }
-                                            } else {
-                                                withContext(Dispatchers.Main) {
-                                                    if (!playerState.album.isNullOrBlank()) {
-                                                        // Last fallback: try to open offline
+                                                if (albumItem != null) {
+                                                    withContext(Dispatchers.Main) {
                                                         onAlbumSelected(
                                                             com.mrtdk.liquid_glass.ui.screens.AlbumState(
-                                                                id = "offline_album_${playerState.album}",
-                                                                playlistId = "offline_album_${playerState.album}",
-                                                                title = playerState.album,
-                                                                artist = playerState.artist,
-                                                                thumbnail = playerState.artUrl?.toString()
+                                                                id = albumItem.browseId,
+                                                                playlistId = albumItem.playlistId,
+                                                                title = albumItem.title,
+                                                                artist = albumItem.artists?.joinToString { it.name } ?: playerState.artist,
+                                                                thumbnail = albumItem.thumbnail
                                                             )
                                                         )
-                                                        handleDismiss()
-                                                    } else {
-                                                        Toast.makeText(context, context.getString(R.string.toast_album_info_unavailable), Toast.LENGTH_SHORT).show()
+                                                    }
+                                                } else {
+                                                    withContext(Dispatchers.Main) {
+                                                        if (!playerState.album.isNullOrBlank()) {
+                                                            onAlbumSelected(
+                                                                com.mrtdk.liquid_glass.ui.screens.AlbumState(
+                                                                    id = "offline_album_${playerState.album}",
+                                                                    playlistId = "offline_album_${playerState.album}",
+                                                                    title = playerState.album,
+                                                                    artist = playerState.artist,
+                                                                    thumbnail = playerState.artUrl?.toString()
+                                                                )
+                                                            )
+                                                        } else {
+                                                            Toast.makeText(context, context.getString(R.string.toast_album_info_unavailable), Toast.LENGTH_SHORT).show()
+                                                        }
                                                     }
                                                 }
                                             }
                                         }
                                     }
                                 }
+                            } else {
+                                Toast.makeText(context, context.getString(R.string.toast_album_info_unavailable), Toast.LENGTH_SHORT).show()
                             }
-                        } else {
-                            Toast.makeText(context, context.getString(R.string.toast_album_info_unavailable), Toast.LENGTH_SHORT).show()
-                            handleDismiss()
+                        }
+                    }
+
+                    // Ir al artista (con subtítulo de nombre del artista estilo Apple Music)
+                    VerticalMenuActionItem(
+                        icon = Icons.Default.Person,
+                        label = stringResource(R.string.menu_ir_al_artista),
+                        subtitle = playerState?.artist
+                    ) {
+                        handleDismiss {
+                            if (playerState != null && !playerState.artist.isNullOrBlank()) {
+                                val targetArtist = playerState.artist.split(",", "&", "feat.", "ft.").firstOrNull()?.trim() ?: playerState.artist
+                                onArtistSelected?.invoke(
+                                    com.mrtdk.liquid_glass.ui.screens.ArtistState(
+                                        id = targetArtist,
+                                        name = targetArtist,
+                                        thumbnail = null
+                                    )
+                                ) ?: run {
+                                    Toast.makeText(context, targetArtist, Toast.LENGTH_SHORT).show()
+                                }
+                            }
                         }
                     }
 
@@ -3034,10 +3109,11 @@ fun GlassBoxScope.PlayerOptionsMenu(
                         icon = Icons.Default.Info,
                         label = stringResource(R.string.player_menu_view_credits)
                     ) {
-                        if (playerState != null) {
-                            Toast.makeText(context, context.getString(R.string.toast_credits_perf_by, playerState.artist), Toast.LENGTH_SHORT).show()
+                        handleDismiss {
+                            if (playerState != null) {
+                                Toast.makeText(context, context.getString(R.string.toast_credits_perf_by, playerState.artist), Toast.LENGTH_SHORT).show()
+                            }
                         }
-                        handleDismiss()
                     }
 
                     // Compartir letra
@@ -3045,8 +3121,9 @@ fun GlassBoxScope.PlayerOptionsMenu(
                         icon = Icons.Default.ChatBubble,
                         label = stringResource(R.string.player_menu_share_lyrics)
                     ) {
-                        Toast.makeText(context, context.getString(R.string.toast_lyrics_shared), Toast.LENGTH_SHORT).show()
-                        handleDismiss()
+                        handleDismiss {
+                            Toast.makeText(context, context.getString(R.string.toast_lyrics_shared), Toast.LENGTH_SHORT).show()
+                        }
                     }
 
                     // Sugerir menos
@@ -3054,8 +3131,9 @@ fun GlassBoxScope.PlayerOptionsMenu(
                         icon = Icons.Default.ThumbDown,
                         label = stringResource(R.string.player_menu_suggest_less)
                     ) {
-                        Toast.makeText(context, context.getString(R.string.toast_suggestion_saved), Toast.LENGTH_SHORT).show()
-                        handleDismiss()
+                        handleDismiss {
+                            Toast.makeText(context, context.getString(R.string.toast_suggestion_saved), Toast.LENGTH_SHORT).show()
+                        }
                     }
 
                     // Eliminar de...
@@ -3065,15 +3143,16 @@ fun GlassBoxScope.PlayerOptionsMenu(
                         iconTint = Color(0xFFFA243C),
                         textColor = Color(0xFFFA243C)
                     ) {
-                        if (playerState?.videoId != null) {
-                            if (isSaved) {
-                                LibraryManager.removeItem(playerState.videoId)
-                                Toast.makeText(context, context.getString(R.string.toast_removed_favorites), Toast.LENGTH_SHORT).show()
-                            } else {
-                                Toast.makeText(context, context.getString(R.string.toast_not_in_library), Toast.LENGTH_SHORT).show()
+                        handleDismiss {
+                            if (playerState?.videoId != null) {
+                                if (isSaved) {
+                                    LibraryManager.removeItem(playerState.videoId)
+                                    Toast.makeText(context, context.getString(R.string.toast_removed_favorites), Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, context.getString(R.string.toast_not_in_library), Toast.LENGTH_SHORT).show()
+                                }
                             }
                         }
-                        handleDismiss()
                     }
                 }
             }
@@ -3139,14 +3218,27 @@ fun GlassBoxScope.LyricsOptionsMenu(
         label = "menuContentBlur"
     )
 
+    var isDismissing by remember { mutableStateOf(false) }
+    val scrimAlpha by animateFloatAsState(
+        targetValue = if (visible) 0.45f else 0f,
+        animationSpec = tween(durationMillis = 180),
+        label = "menuScrimAlpha"
+    )
+
     val context = LocalContext.current
 
-    fun handleDismiss() {
+    fun handleDismiss(action: (() -> Unit)? = null) {
+        if (isDismissing) return
+        isDismissing = true
         visible = false
-        onDismiss()
+        scope.launch {
+            kotlinx.coroutines.delay(180L)
+            action?.invoke()
+            onDismiss()
+        }
     }
 
-    BackHandler(enabled = visible) {
+    BackHandler(enabled = true) {
         if (showProviderSelection) {
             showProviderSelection = false
         } else if (showExportFormatSelection) {
@@ -3161,7 +3253,7 @@ fun GlassBoxScope.LyricsOptionsMenu(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.45f))
+            .background(Color.Black.copy(alpha = scrimAlpha))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -3726,6 +3818,7 @@ fun GlassBoxScope.ArtistOptionsMenu(
     pivotBounds: androidx.compose.ui.geometry.Rect? = null
 ) {
     var visible by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         visible = true
@@ -3748,14 +3841,27 @@ fun GlassBoxScope.ArtistOptionsMenu(
         label = "menuContentBlur"
     )
 
+    var isDismissing by remember { mutableStateOf(false) }
+    val scrimAlpha by animateFloatAsState(
+        targetValue = if (visible) 0.35f else 0f,
+        animationSpec = tween(durationMillis = 180),
+        label = "menuScrimAlpha"
+    )
+
     val context = LocalContext.current
 
-    fun handleDismiss() {
+    fun handleDismiss(action: (() -> Unit)? = null) {
+        if (isDismissing) return
+        isDismissing = true
         visible = false
-        onDismiss()
+        scope.launch {
+            kotlinx.coroutines.delay(180L)
+            action?.invoke()
+            onDismiss()
+        }
     }
 
-    BackHandler(enabled = visible) {
+    BackHandler(enabled = true) {
         handleDismiss()
     }
 
@@ -3764,7 +3870,7 @@ fun GlassBoxScope.ArtistOptionsMenu(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.4f))
+            .background(Color.Black.copy(alpha = scrimAlpha))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -3867,8 +3973,7 @@ fun GlassBoxScope.ArtistOptionsMenu(
                             icon = Icons.Default.Person,
                             label = labelText,
                             onClick = {
-                                onArtistSelected(artist)
-                                handleDismiss()
+                                handleDismiss { onArtistSelected(artist) }
                             }
                         )
                     }

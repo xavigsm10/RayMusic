@@ -1219,27 +1219,63 @@ fun PlayerScreen(
     onClearPlaybackError: () -> Unit = {},
 
     onToggleAutoplay: (() -> Unit)? = null
-
 ) {
+    val context = LocalContext.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val screenHeightPx = remember(context) { context.resources.displayMetrics.heightPixels.toFloat() }
 
-    AnimatedVisibility(
+    var isMounted by remember { mutableStateOf(isVisible) }
+    var isClosingAnim by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val dragOffsetY = remember { Animatable(if (isVisible) 0f else screenHeightPx) }
 
-        visible = isVisible,
+    val triggerCollapse = remember(scope, screenHeightPx, onClose) {
+        {
+            if (!isClosingAnim) {
+                isClosingAnim = true
+                scope.launch {
+                    dragOffsetY.animateTo(
+                        screenHeightPx,
+                        spring(
+                            dampingRatio = 0.85f,
+                            stiffness = Spring.StiffnessMediumLow
+                        )
+                    )
+                    onClose()
+                    isMounted = false
+                    isClosingAnim = false
+                }
+            }
+        }
+    }
 
-        enter = androidx.compose.animation.slideInVertically(
-               initialOffsetY = { it },
-               animationSpec = androidx.compose.animation.core.tween(380, easing = androidx.compose.animation.core.FastOutSlowInEasing)
-           ) + androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(250)),
+    LaunchedEffect(isVisible) {
+        if (isVisible) {
+            isMounted = true
+            isClosingAnim = false
+            if (dragOffsetY.value >= screenHeightPx * 0.7f || dragOffsetY.value == 0f) {
+                dragOffsetY.snapTo(screenHeightPx)
+            }
+            dragOffsetY.animateTo(
+                0f,
+                spring(
+                    dampingRatio = 0.82f,
+                    stiffness = Spring.StiffnessMediumLow
+                )
+            )
+        } else if (isMounted && !isClosingAnim) {
+            triggerCollapse()
+        }
+    }
 
-        exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(100))
+    BackHandler(enabled = isMounted && !isClosingAnim) {
+        triggerCollapse()
+    }
 
-    ) {
+    if (!isMounted && !isVisible) return
+    if (playerState == null) return
 
-        if (playerState == null) return@AnimatedVisibility
-
-        val context = LocalContext.current
-
-        val localBackdrop = rememberLayerBackdrop()
+    val localBackdrop = rememberLayerBackdrop()
 
 
 
@@ -1353,16 +1389,6 @@ fun PlayerScreen(
 
             mutableFloatStateOf(audioManager.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) / maxVolume)
 
-        }
-
-        val scope = rememberCoroutineScope()
-
-        val dragOffsetY = remember { Animatable(0f) }
-
-        LaunchedEffect(isVisible) {
-            if (isVisible) {
-                dragOffsetY.snapTo(0f)
-            }
         }
 
         val offsetY = dragOffsetY.value
@@ -1881,28 +1907,14 @@ fun PlayerScreen(
 
 
         val isOverlayActive = showLyrics || showQueue
-        val density = androidx.compose.ui.platform.LocalDensity.current
-        val screenHeightPx = remember(context) { context.resources.displayMetrics.heightPixels.toFloat() }
         GlassContainer(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    val currentDragY = dragOffsetY.value
-                    translationY = currentDragY
-                    val dragFraction = if (screenHeightPx > 0f) (currentDragY / screenHeightPx).coerceIn(0f, 1f) else 0f
-                    val cornerRadiusPx = if (!isOverlayActive) {
-                        val maxCorner = 36.dp.toPx()
-                        (dragFraction * 4f).coerceIn(0f, 1f) * maxCorner
-                    } else 0f
-
-                    shape = RoundedCornerShape(
-                        topStart = cornerRadiusPx,
-                        topEnd = cornerRadiusPx,
-                        bottomStart = 0f,
-                        bottomEnd = 0f
-                    )
+                    translationY = dragOffsetY.value
+                    shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
                     clip = true
-                    shadowElevation = if (dragFraction > 0f) 28.dp.toPx() else 0f
+                    shadowElevation = if (dragOffsetY.value > 0f) 32.dp.toPx() else 0f
                 }
                 .pointerInput(showLyrics, showQueue) {
                     if (!showLyrics && !showQueue) {
@@ -1911,19 +1923,13 @@ fun PlayerScreen(
                                 val currentOffsetY = dragOffsetY.value
                                 val thresholdPx = with(density) { 120.dp.toPx() }
                                 if (currentOffsetY > thresholdPx) {
-                                    scope.launch {
-                                        dragOffsetY.animateTo(
-                                            targetValue = screenHeightPx,
-                                            animationSpec = tween(280, easing = FastOutSlowInEasing)
-                                        )
-                                        onClose()
-                                    }
+                                    triggerCollapse()
                                 } else {
                                     scope.launch {
                                         dragOffsetY.animateTo(
                                             0f,
                                             spring(
-                                                dampingRatio = Spring.DampingRatioLowBouncy,
+                                                dampingRatio = 0.85f,
                                                 stiffness = Spring.StiffnessMediumLow
                                             )
                                         )
@@ -2296,7 +2302,7 @@ fun PlayerScreen(
             val detailsOffsetYTarget = if (isOverlayActive) {
                 if (p > 0f) androidx.compose.ui.unit.lerp(startOffsetY + 6.dp, targetOffsetY, p) else (startOffsetY + 6.dp)
             } else {
-                if (p > 0f) androidx.compose.ui.unit.lerp(controlsBaseY - 8.dp, targetOffsetY + 4.dp, p) else (controlsBaseY - 8.dp)
+                controlsBaseY - 8.dp
             }
 
             val animatedDetailsOffsetY by androidx.compose.animation.core.animateDpAsState(
@@ -2432,18 +2438,10 @@ fun PlayerScreen(
 
                         val currentOffsetY = dragOffsetY.value
 
-                        if (currentOffsetY > with(density) { 150.dp.toPx() }) {
-
-                            dragOffsetY.animateTo(
-                                targetValue = maxDragDistance,
-                                animationSpec = tween(300, easing = FastOutSlowInEasing)
-                            )
-                            onClose()
-
+                        if (currentOffsetY > with(density) { 120.dp.toPx() } || available.y > 1000f) {
+                            triggerCollapse()
                         } else {
-
-                            dragOffsetY.animateTo(0f, spring())
-
+                            dragOffsetY.animateTo(0f, spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessMediumLow))
                         }
 
                         return Velocity.Zero
@@ -2501,6 +2499,23 @@ fun PlayerScreen(
                         playerBoxRootY = coordinates.positionInRoot().y
                     }
             ) {
+                // Apple Music top drag handle pill
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 12.dp)
+                        .size(width = 36.dp, height = 5.dp)
+                        .clip(RoundedCornerShape(2.5.dp))
+                        .background(Color.White.copy(alpha = 0.35f * contentAlpha))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            triggerCollapse()
+                        }
+                )
+
+
 
             // Capa Fondo Ultra Rendimiento (Gradiente nativo por hardware directo, 0ms CPU / 0ms GPU)
             if (isUltraPerformance && !isNormalArtwork) {
@@ -3837,6 +3852,8 @@ fun PlayerScreen(
                 }
 
 
+
+
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -3845,17 +3862,11 @@ fun PlayerScreen(
                                 detectVerticalDragGestures(
                                     onDragEnd = {
                                         val currentOffsetY = dragOffsetY.value
-                                        if (currentOffsetY > with(density) { 150.dp.toPx() }) {
-                                            scope.launch {
-                                                dragOffsetY.animateTo(
-                                                    targetValue = maxDragDistance,
-                                                    animationSpec = tween(300, easing = FastOutSlowInEasing)
-                                                )
-                                                onClose()
-                                            }
+                                        if (currentOffsetY > with(density) { 120.dp.toPx() }) {
+                                            triggerCollapse()
                                         } else {
                                             scope.launch {
-                                                dragOffsetY.animateTo(0f, spring())
+                                                dragOffsetY.animateTo(0f, spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessMediumLow))
                                             }
                                         }
                                     }
@@ -3956,7 +3967,7 @@ fun PlayerScreen(
                     modifier = Modifier
                         .weight(1f)
                         .offset { androidx.compose.ui.unit.IntOffset(titleDragOffsetX.value.roundToInt(), 0) }
-                        .pointerInput(playerState) {
+                        .pointerInput(Unit) {
                             detectHorizontalDragGestures(
                                 onDragStart = {
                                     dragStartTime = System.currentTimeMillis()
@@ -3978,10 +3989,10 @@ fun PlayerScreen(
                                     val dragDuration = System.currentTimeMillis() - dragStartTime
                                     val velocity = if (dragDuration > 0) totalDragDistance / dragDuration else 0f
                                     val currentVal = titleDragOffsetX.value
-                                    val thresholdPx = with(density) { 38.dp.toPx() }
+                                    val thresholdPx = with(density) { 32.dp.toPx() }
 
                                     val shouldSkip = kotlin.math.abs(currentVal) > thresholdPx ||
-                                            (velocity > 0.45f && kotlin.math.abs(currentVal) > thresholdPx * 0.35f)
+                                            (velocity > 0.4f && kotlin.math.abs(currentVal) > thresholdPx * 0.3f)
 
                                     if (shouldSkip) {
                                         if (currentVal < 0) {
@@ -4005,12 +4016,22 @@ fun PlayerScreen(
                             )
                         }
                 ) {
-                    val dir = swipeDirection
                     androidx.compose.animation.AnimatedContent(
                         targetState = playerState,
                         transitionSpec = {
-                            (androidx.compose.animation.slideInHorizontally { width -> dir * width } + fadeIn()).togetherWith(
-                                androidx.compose.animation.slideOutHorizontally { width -> dir * -width } + fadeOut()
+                            val dir = swipeDirection
+                            (androidx.compose.animation.slideInHorizontally(
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                )
+                            ) { width -> dir * width } + fadeIn(tween(200))).togetherWith(
+                                androidx.compose.animation.slideOutHorizontally(
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                        stiffness = Spring.StiffnessMediumLow
+                                    )
+                                ) { width -> dir * -width } + fadeOut(tween(160))
                             )
                         }, label = "textSlide"
                     ) { state ->
@@ -4893,7 +4914,11 @@ fun PlayerScreen(
                     showOptionsMenu = false
                     onAlbumSelected(album)
                 },
-                pivotBounds = menuPivotBounds
+                pivotBounds = menuPivotBounds,
+                onArtistSelected = { artistState ->
+                    showOptionsMenu = false
+                    onArtistSelected(artistState)
+                }
             )
         }
         if (showArtistOptionsMenu) {
@@ -4941,8 +4966,6 @@ fun PlayerScreen(
     }
 
 )
-
-}
 
 }
 

@@ -161,6 +161,26 @@ object PlaybackQueue {
     fun getPreviousSongAndGoBack(): PlayerState? {
         if (songHistory.isNotEmpty()) {
             val prev = songHistory.removeLast()
+            val cur = currentSong
+            // Devolver la actual al frente de la cola para que siguiente/anterior
+            // sean simétricos y funcionen siempre (A→B→A→B...). Solo temas online
+            // (QueueItem no guarda contentUri de locales).
+            if (cur != null && cur.videoId != null &&
+                queue.firstOrNull()?.videoId != cur.videoId
+            ) {
+                queue = listOf(
+                    QueueItem(
+                        title = cur.title,
+                        artist = cur.artist,
+                        artUrl = cur.artUrl,
+                        videoId = cur.videoId,
+                        album = cur.album,
+                        albumId = cur.albumId,
+                        playlistId = cur.playlistId,
+                        playlistName = cur.playlistName
+                    )
+                ) + queue
+            }
             currentSong = prev
             onCurrentSongChanged?.invoke(prev)
             onQueueChanged?.invoke()

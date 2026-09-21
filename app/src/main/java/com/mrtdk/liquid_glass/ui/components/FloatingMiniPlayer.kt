@@ -11,7 +11,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -35,10 +38,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -88,6 +93,7 @@ fun FloatingMiniPlayer(
     modifier: Modifier = Modifier,
     playbackProgress: () -> Float = { 0f },
     onSeek: (Float) -> Unit = {},
+    landingTrigger: Long = 0L,
 ) {
     if (playerState == null) return
 
@@ -115,6 +121,52 @@ fun FloatingMiniPlayer(
     val density = LocalDensity.current
     val densityScale = density.density
 
+    val jumpOffsetY = remember { Animatable(0f) }
+    val jumpScale = remember { Animatable(1f) }
+    val artScale = remember { Animatable(1f) }
+
+    var lastArtUrl by remember { mutableStateOf(playerState.artUrl) }
+    var lastTrigger by remember { mutableLongStateOf(landingTrigger) }
+
+    LaunchedEffect(playerState.artUrl, landingTrigger) {
+        val artChanged = lastArtUrl != null && lastArtUrl != playerState.artUrl
+        val triggered = landingTrigger > 0L && landingTrigger != lastTrigger
+        if (artChanged || triggered) {
+            coroutineScope.launch {
+                jumpOffsetY.snapTo(-14f * densityScale)
+                jumpOffsetY.animateTo(
+                    targetValue = 0f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                )
+            }
+            coroutineScope.launch {
+                jumpScale.snapTo(1.07f)
+                jumpScale.animateTo(
+                    targetValue = 1f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                )
+            }
+            coroutineScope.launch {
+                artScale.snapTo(0.82f)
+                artScale.animateTo(
+                    targetValue = 1f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                )
+            }
+        }
+        lastArtUrl = playerState.artUrl
+        lastTrigger = landingTrigger
+    }
+
     val offsetXAnimatable = remember { Animatable(0f) }
     var dragStartTime by remember { mutableLongStateOf(0L) }
     var totalDragDistance by remember { mutableFloatStateOf(0f) }
@@ -139,9 +191,12 @@ fun FloatingMiniPlayer(
     val interactiveHighlight = remember(coroutineScope) { InteractiveHighlight(animationScope = coroutineScope) }
 
     val pillShape = ContinuousRoundedRectangle(percent = 50)
-    val containerHeight = if (isInline) 48.dp else 56.dp
-    val artSize = if (isInline) 34.dp else 38.dp
-    val artCornerRadius = if (isInline) 8.dp else 9.dp
+    // Minireproductor compacto: píldora baja con carátula e iconos medianos.
+    val containerHeight = if (isInline) 44.dp else 52.dp
+    val artSize = if (isInline) 32.dp else 38.dp
+    val artCornerRadius = if (isInline) 8.dp else 10.dp
+
+    var miniPlayerSwipeDirection by remember { mutableIntStateOf(1) }
 
     val playPauseRotation by animateFloatAsState(
         targetValue = if (isPlaying) 180f else 0f,
@@ -157,8 +212,9 @@ fun FloatingMiniPlayer(
         modifier = modifier
             .height(containerHeight)
             .graphicsLayer {
-                scaleX = pressScale
-                scaleY = pressScale
+                scaleX = pressScale * jumpScale.value
+                scaleY = pressScale * jumpScale.value
+                translationY = jumpOffsetY.value
             }
             .clip(pillShape)
             .clipToBounds()
@@ -175,7 +231,7 @@ fun FloatingMiniPlayer(
                     onClick = onClick,
                 )
                 .padding(
-                    horizontal = if (isInline) 8.dp else 12.dp,
+                    horizontal = if (isInline) 8.dp else 10.dp,
                     vertical = if (isInline) 4.dp else 6.dp,
                 ),
         ) {
@@ -187,10 +243,14 @@ fun FloatingMiniPlayer(
                 error = painterResource(R.drawable.nav_inicio),
                 modifier = Modifier
                     .size(artSize)
+                    .graphicsLayer {
+                        scaleX = artScale.value
+                        scaleY = artScale.value
+                    }
                     .clip(RoundedCornerShape(artCornerRadius)),
             )
 
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(8.dp))
 
             Column(
                 modifier = Modifier
@@ -207,7 +267,8 @@ fun FloatingMiniPlayer(
                                     offsetXAnimatable.animateTo(0f, animationSpec)
                                 }
                             },
-                            onHorizontalDrag = { _, dragAmount ->
+                            onHorizontalDrag = { change, dragAmount ->
+                                change.consume()
                                 totalDragDistance += abs(dragAmount)
                                 coroutineScope.launch {
                                     offsetXAnimatable.snapTo(offsetXAnimatable.value + dragAmount)
@@ -219,14 +280,16 @@ fun FloatingMiniPlayer(
                                 val currentOffset = offsetXAnimatable.value
                                 val dragged = abs(currentOffset)
 
-                                val threshold = 36f * densityScale
+                                val threshold = 28f * densityScale
                                 val shouldChangeSong = dragged > threshold ||
-                                        (velocity > 0.4f && dragged > 16f * densityScale)
+                                        (velocity > 0.35f && dragged > 12f * densityScale)
 
                                 if (shouldChangeSong) {
                                     if (currentOffset > 0) {
+                                        miniPlayerSwipeDirection = -1
                                         onPrevious()
                                     } else {
+                                        miniPlayerSwipeDirection = 1
                                         onNext()
                                     }
                                 }
@@ -237,45 +300,53 @@ fun FloatingMiniPlayer(
                         )
                     }
             ) {
-                Text(
-                    text = playerState.title.ifEmpty { "Reproduciendo" },
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontSize = if (isInline) 13.sp else 14.sp,
-                        fontWeight = FontWeight.SemiBold
-                    ),
-                    color = effectiveTitleColor,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = playerState.artist.ifEmpty { "Artista" },
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = if (isInline) 10.sp else 11.sp
-                    ),
-                    color = effectiveSubtextColor,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-
-            if (!isInline) {
-                IconButton(
-                    onClick = onPrevious,
-                    modifier = Modifier.size(34.dp),
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.previous),
-                        contentDescription = "Previous",
-                        tint = effectiveIconColor,
-                        modifier = Modifier.size(22.dp)
-                    )
+                AnimatedContent(
+                    targetState = (playerState.title.ifEmpty { "Reproduciendo" }) to (playerState.artist.ifEmpty { "Artista" }),
+                    transitionSpec = {
+                        val dir = miniPlayerSwipeDirection
+                        (slideInHorizontally(
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            )
+                        ) { width -> dir * width } + fadeIn(tween(180))).togetherWith(
+                            slideOutHorizontally(
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                )
+                            ) { width -> dir * -width } + fadeOut(tween(150))
+                        )
+                    },
+                    label = "miniPlayerSongSlide"
+                ) { (titleText, artistText) ->
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = titleText,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = if (isInline) 13.sp else 14.5.sp,
+                                fontWeight = FontWeight.SemiBold
+                            ),
+                            color = effectiveTitleColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = artistText,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = if (isInline) 10.5.sp else 12.sp
+                            ),
+                            color = effectiveSubtextColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
-                Spacer(Modifier.width(2.dp))
             }
 
             IconButton(
                 onClick = onTogglePlayPause,
-                modifier = Modifier.size(if (isInline) 32.dp else 38.dp),
+                modifier = Modifier.size(if (isInline) 36.dp else 40.dp),
             ) {
                 AnimatedContent(
                     targetState = isPlaying,
@@ -290,7 +361,7 @@ fun FloatingMiniPlayer(
                         contentDescription = if (playing) "Pause" else "Play",
                         tint = effectiveIconColor,
                         modifier = Modifier
-                            .size(if (isInline) 20.dp else 28.dp)
+                            .size(if (isInline) 22.dp else 26.dp)
                             .graphicsLayer {
                                 rotationZ = playPauseRotation
                             }
@@ -298,16 +369,19 @@ fun FloatingMiniPlayer(
                 }
             }
 
-            Spacer(Modifier.width(if (isInline) 2.dp else 2.dp))
+            Spacer(Modifier.width(if (isInline) 2.dp else 4.dp))
             IconButton(
-                onClick = onNext,
-                modifier = Modifier.size(if (isInline) 30.dp else 34.dp),
+                onClick = {
+                    miniPlayerSwipeDirection = 1
+                    onNext()
+                },
+                modifier = Modifier.size(if (isInline) 32.dp else 36.dp),
             ) {
                 Icon(
                     painter = painterResource(id = R.drawable.forward),
                     contentDescription = "Next",
                     tint = effectiveIconColor,
-                    modifier = Modifier.size(if (isInline) 20.dp else 22.dp)
+                    modifier = Modifier.size(if (isInline) 20.dp else 24.dp)
                 )
             }
         }

@@ -161,7 +161,7 @@ fun MiniPlayer(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(56.dp)
+            .height(52.dp)
             .graphicsLayer {
                 translationY = landingTranslateY.value
                 scaleX = landingScale.value
@@ -171,7 +171,7 @@ fun MiniPlayer(
             .clip(Capsule())
             .clickable { onClick() }
             .pointerInput(Unit) {
-                val thresholdPx = 80.dp.toPx()
+                val thresholdPx = 32.dp.toPx()
                 detectHorizontalDragGestures(
                     onDragEnd = {
                         scope.launch {
@@ -228,16 +228,16 @@ fun MiniPlayer(
                 .fillMaxSize()
                 .graphicsLayer {
                     translationX = swipeOffsetX.value
-                    val thresholdPx = 80.dp.toPx()
+                    val thresholdPx = 32.dp.toPx()
                     val progress = (Math.abs(swipeOffsetX.value) / thresholdPx).coerceIn(0f, 1f)
                     alpha = 1f - (progress * 0.7f)
                 }
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = 10.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(38.dp)
                     .clip(CircleShape)
                     .background(Color.DarkGray)
             ) {
@@ -256,14 +256,14 @@ fun MiniPlayer(
                 Text(
                     text = playerState.title,
                     color = effectiveTitleColor,
-                    fontSize = 14.sp,
+                    fontSize = 14.5.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = playerState.artist,
                     color = effectiveSubtextColor,
-                    fontSize = 11.sp,
+                    fontSize = 12.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -288,7 +288,7 @@ fun MiniPlayer(
 
             Box(
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(40.dp)
                     .clip(CircleShape)
                     .background(playPauseBgColor)
                     .clickable(
@@ -311,7 +311,7 @@ fun MiniPlayer(
                         contentDescription = if (playing) "Pause" else "Play",
                         tint = effectiveIconColor,
                         modifier = Modifier
-                            .size(24.dp)
+                            .size(26.dp)
                             .graphicsLayer {
                                 rotationZ = playPauseRotation
                             }
@@ -319,8 +319,8 @@ fun MiniPlayer(
                 }
             }
             
-            Spacer(modifier = Modifier.width(8.dp))
-            IconButton(onClick = onNext, modifier = Modifier.size(32.dp)) {
+            Spacer(modifier = Modifier.width(4.dp))
+            IconButton(onClick = onNext, modifier = Modifier.size(36.dp)) {
                 Icon(
                     painter = painterResource(id = R.drawable.forward),
                     contentDescription = "Next",

@@ -443,6 +443,58 @@ object LibraryManager {
 
             _savedItems.value = dbHelper.getSavedItems()
 
+            // 4. Sync Liked Songs / Favoritos ("Canciones que te gustan")
+            val allSavedTracks = mutableListOf<com.mrtdk.liquid_glass.spotify.SpotifyTrack>()
+            var savedOffset = 0
+            val savedLimit = 50
+            while (true) {
+                val savedPage = com.mrtdk.liquid_glass.spotify.Spotify.mySavedTracks(limit = savedLimit, offset = savedOffset).getOrNull() ?: break
+                if (savedPage.isEmpty()) break
+                allSavedTracks.addAll(savedPage)
+                for (track in savedPage) {
+                    if (track.id.isBlank() || track.name.isBlank()) continue
+                    val artistStr = track.artists.joinToString(", ") { it.name }
+                    val coverUrl = track.album?.images?.firstOrNull()?.url
+                    val item = LibraryItem(
+                        id = track.id,
+                        title = track.name,
+                        subtitle = artistStr,
+                        thumbnail = coverUrl,
+                        type = ItemType.SONG,
+                        album = track.album?.name
+                    )
+                    dbHelper.insertSavedItem(item)
+                }
+                if (savedPage.size < savedLimit) break
+                savedOffset += savedPage.size
+                if (savedOffset >= 200) break
+            }
+
+            if (allSavedTracks.isNotEmpty()) {
+                val likedPlaylistId = "spotify_liked_songs"
+                val existingLiked = _playlists.value.find { it.id == likedPlaylistId }
+                val likedItems = allSavedTracks.map { track ->
+                    val artistStr = track.artists.joinToString(", ") { it.name }
+                    LibraryItem(
+                        id = track.id,
+                        title = track.name,
+                        subtitle = artistStr,
+                        thumbnail = track.album?.images?.firstOrNull()?.url,
+                        type = ItemType.SONG,
+                        album = track.album?.name
+                    )
+                }
+                val coverUrl = likedItems.firstOrNull()?.thumbnail
+                if (existingLiked == null) {
+                    dbHelper.insertPlaylist(Playlist(likedPlaylistId, "Canciones que te gustan", likedItems, coverUrl, true, System.currentTimeMillis()))
+                } else {
+                    dbHelper.insertPlaylist(existingLiked.copy(items = likedItems, coverUrl = coverUrl ?: existingLiked.coverUrl))
+                }
+                _playlists.value = dbHelper.getPlaylists()
+            }
+
+            _savedItems.value = dbHelper.getSavedItems()
+
             // Asynchronously fetch tracks for each imported playlist
             for (spPlaylist in spotifyPlaylists) {
                 if (spPlaylist.id.isBlank()) continue
@@ -462,17 +514,30 @@ object LibraryManager {
 
     suspend fun fetchSpotifyPlaylistTracks(playlistId: String) {
         if (!isInitialized) return
-        val rawId = playlistId.removePrefix("spotify_")
         try {
             val allTracks = mutableListOf<com.mrtdk.liquid_glass.spotify.SpotifyTrack>()
-            var offset = 0
-            val limit = 100
-            while (true) {
-                val page = com.mrtdk.liquid_glass.spotify.Spotify.playlistTracks(rawId, limit = limit, offset = offset).getOrNull() ?: break
-                if (page.isEmpty()) break
-                allTracks.addAll(page)
-                if (page.size < limit) break
-                offset += page.size
+            if (playlistId == "spotify_liked_songs") {
+                var offset = 0
+                val limit = 50
+                while (true) {
+                    val page = com.mrtdk.liquid_glass.spotify.Spotify.mySavedTracks(limit = limit, offset = offset).getOrNull() ?: break
+                    if (page.isEmpty()) break
+                    allTracks.addAll(page)
+                    if (page.size < limit) break
+                    offset += page.size
+                    if (offset >= 200) break
+                }
+            } else {
+                val rawId = playlistId.removePrefix("spotify_")
+                var offset = 0
+                val limit = 100
+                while (true) {
+                    val page = com.mrtdk.liquid_glass.spotify.Spotify.playlistTracks(rawId, limit = limit, offset = offset).getOrNull() ?: break
+                    if (page.isEmpty()) break
+                    allTracks.addAll(page)
+                    if (page.size < limit) break
+                    offset += page.size
+                }
             }
             if (allTracks.isEmpty()) return
 

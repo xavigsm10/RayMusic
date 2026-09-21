@@ -78,6 +78,7 @@ fun SpotifyLoginDialog(
             delay(1000)
             if (tokenFetchStarted.get()) continue
             val spDc = extractCookie("sp_dc")
+            val spKey = extractCookie("sp_key") ?: ""
             if (!spDc.isNullOrBlank() && tokenFetchStarted.compareAndSet(false, true)) {
                 isProcessing = true
                 hasError = false
@@ -88,7 +89,7 @@ fun SpotifyLoginDialog(
                     var lastError: Throwable? = null
 
                     repeat(3) { attempt ->
-                        val result = SpotifyAuth.fetchAccessToken(spDc)
+                        val result = SpotifyAuth.fetchAccessToken(spDc, spKey)
                         result.onSuccess { token ->
                             SpotifySession.saveSession(spDc, token, "", "")
 
@@ -151,10 +152,11 @@ fun SpotifyLoginDialog(
                 factory = { ctx ->
                     val cookieManager = CookieManager.getInstance()
                     cookieManager.setAcceptCookie(true)
+                    cookieManager.removeAllCookies(null)
+                    cookieManager.flush()
 
                     WebView(ctx).apply {
                         webViewRef = this
-                        setBackgroundColor(android.graphics.Color.parseColor("#121212"))
                         cookieManager.setAcceptThirdPartyCookies(this, true)
 
                         settings.apply {
@@ -164,15 +166,11 @@ fun SpotifyLoginDialog(
                             databaseEnabled = true
                             loadWithOverviewMode = true
                             useWideViewPort = true
-                            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                            mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
                             javaScriptCanOpenWindowsAutomatically = true
-                            setSupportMultipleWindows(false)
-                            cacheMode = WebSettings.LOAD_DEFAULT
-
-                            // Strip "; wv" and "Version/X.X " so Google reCAPTCHA Enterprise and
-                            // Spotify do not detect WebView and block storage access / form display
-                            val defaultUa = userAgentString
-                            userAgentString = defaultUa.replace("; wv", "").replace(Regex("Version/[0-9.]+ "), "")
+                            // Keep the WebView's REAL (mobile Chrome) User-Agent for login —
+                            // a spoofed/modified UA trips Spotify's reCAPTCHA / bot
+                            // protection and returns a blank screen or login errors.
                         }
 
                         webChromeClient = object : WebChromeClient() {
@@ -191,6 +189,7 @@ fun SpotifyLoginDialog(
                                 super.onPageFinished(view, url)
                                 isLoadingPage = false
                                 cookieManager.flush()
+                                view?.let(::fixSpotifyLoginLayout)
                             }
 
                             @Deprecated("Deprecated in Java")
@@ -252,5 +251,27 @@ fun SpotifyLoginDialog(
                 }
             }
         }
+    }
+}
+
+/** Spotify computes its login <main> at ~48px or collapsed inside Android WebView. */
+private fun fixSpotifyLoginLayout(webView: WebView) {
+    webView.post {
+        val viewportHeight = webView.height.coerceAtLeast(1)
+        webView.evaluateJavascript(
+            """
+            (function(){
+              var style = document.getElementById('spotui-login-layout-fix');
+              if (!style) {
+                style = document.createElement('style');
+                style.id = 'spotui-login-layout-fix';
+                document.head.appendChild(style);
+              }
+              style.textContent = 'html,body,#__next{height:${viewportHeight}px!important;min-height:${viewportHeight}px!important;}' +
+                'main{height:${viewportHeight}px!important;min-height:${viewportHeight}px!important;max-height:none!important;position:relative!important;overflow:auto!important;}';
+            })();
+            """.trimIndent(),
+            null
+        )
     }
 }

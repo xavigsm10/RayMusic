@@ -83,7 +83,6 @@ import com.skydoves.cloudy.cloudy
 import android.os.Build
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.TileMode
-import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.foundation.Image
@@ -2628,95 +2627,51 @@ private fun FeaturedSuggestionCard(
                 clickAction()
             }
     ) {
-        // Capa inferior: reflejo invertido con blur progresivo estilo imla / Apple Music
-        // Arriba nítido/suave en la unión -> abajo difuminado fundiéndose con el color dominante
+        // Capa inferior: reflejo invertido con la misma posición de PlayerScreen.kt
+        // pero tomando como referencia las dimensiones de la tarjeta de sugerencias destacadas
+        val cardWidth = 280.dp
+        val cardHeight = 380.dp
+        val expandedWidth = 280.dp
+        val expandedHeight = 270.dp
+        val expandedX = 0.dp
+        val expandedY = 0.dp
+
+        val reflectionWidth = cardWidth
+        val reflectionX = 0.dp
+        val childWidth = expandedWidth
+        val childOffsetX = expandedX
+        val reflectionOverlap = 32.dp
+        val baseReflectionY = (expandedY + expandedHeight) - reflectionOverlap
+        val reflectionY = baseReflectionY
+        val reflectionHeight = (cardHeight - baseReflectionY).coerceAtLeast(expandedHeight)
+
+        val verticalScale = -4.0f
+        val pivotY = 0f
+
         Box(
             modifier = Modifier
-                .offset(y = 270.dp)
-                .size(width = 280.dp, height = 110.dp)
+                .offset(x = reflectionX, y = reflectionY)
+                .width(reflectionWidth)
+                .height(reflectionHeight)
                 .clipToBounds()
-                .background(dominantColor)
         ) {
-            val density = LocalDensity.current
-            val artworkHeightPx = with(density) { 270.dp.toPx() }
-            val mirrorModifier = Modifier
-                .size(width = 280.dp, height = 270.dp)
-                .graphicsLayer {
-                    scaleY = -1f
-                    transformOrigin = TransformOrigin(0.5f, 0f)
-                    translationY = artworkHeightPx
-                }
-
-            // 1. Base nítida del reflejo (mantiene los contornos y formas en la unión con la carátula)
-            AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(hdThumb)
-                    .size(560)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = mirrorModifier
-            )
-
-            // 2. Capa borrosa con máscara progresiva (desvanecimiento suave hacia abajo)
-            AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(hdThumb)
-                    .size(560)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = mirrorModifier
-                    .blur(20.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
-                    .graphicsLayer {
-                        compositingStrategy = CompositingStrategy.Offscreen
-                    }
-                    .drawWithCache {
-                        val progressiveMask = Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0.0f to Color.Transparent,
-                                0.25f to Color.Transparent,
-                                0.65f to Color.Black.copy(alpha = 0.8f),
-                                1.0f to Color.Black
-                            )
-                        )
-                        onDrawWithContent {
-                            drawContent()
-                            drawRect(
-                                brush = progressiveMask,
-                                blendMode = BlendMode.DstIn
-                            )
-                        }
-                    }
-            )
-
-            // 3. Fundidos de color y contraste que respetan los tonos de la imagen invertida
-            androidx.compose.foundation.Canvas(
-                modifier = Modifier.matchParentSize()
+            Box(
+                modifier = Modifier
+                    .offset(x = childOffsetX, y = 0.dp)
+                    .width(childWidth)
+                    .height(expandedHeight)
             ) {
-                // Tinte suave con el color dominante para unificar tonos sin opacar la imagen
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            dominantColor.copy(alpha = 0.20f),
-                            dominantColor.copy(alpha = 0.50f),
-                            dominantColor.copy(alpha = 0.70f)
-                        )
-                    )
-                )
-                // Gradiente oscuro de contraste para máxima legibilidad de los textos
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color.Black.copy(alpha = 0.15f),
-                            Color.Black.copy(alpha = 0.45f),
-                            Color.Black.copy(alpha = 0.70f)
-                        )
-                    )
+                com.mrtdk.liquid_glass.ui.components.GraduatedBlurArtwork(
+                    imageUrl = hdThumb,
+                    modifier = Modifier.fillMaxSize(),
+                    mildBlurRadiusX = 40.dp,
+                    mildBlurRadiusY = 14.dp,
+                    strongBlurRadiusX = 180.dp,
+                    strongBlurRadiusY = 55.dp,
+                    sliderThresholdDp = 50.dp,
+                    verticalScale = verticalScale,
+                    pivotY = pivotY,
+                    horizontalScale = 1.0f
                 )
             }
         }

@@ -18,6 +18,7 @@ object Spotify {
     private const val HASH_FETCH_PLAYLIST = "346811f856fb0b7e4f6c59f8ebea78dd081c6e2fb01b77c954b26259d5fc6763"
     private const val HASH_ARTIST_OVERVIEW = "5b9e64f43843fa3a9b6a98543600299b0a2cbbbccfdcdcef2402eb9c1017ca4c"
     private const val HASH_PROFILE_ATTRIBUTES = "53bcb064f6cd18c23f752bc324a791194d20df612d8e1239c735144ab0399ced"
+    private const val HASH_FETCH_LIBRARY_TRACKS = "087278b20b743578a6262c2b0b4bcd20d879c503cc359a2285baf083ef944240"
 
     suspend fun me(): Result<SpotifyUser> = withContext(Dispatchers.IO) {
         runCatching {
@@ -544,6 +545,111 @@ object Spotify {
             }
 
             allAlbums
+        }
+    }
+
+    suspend fun mySavedTracks(limit: Int = 50, offset: Int = 0): Result<List<SpotifyTrack>> = withContext(Dispatchers.IO) {
+        runCatching {
+            SpotifySession.ensureValidToken()
+            val token = SpotifySession.accessToken
+
+            // 1. Try GQL fetchLibraryTracks
+            try {
+                val variables = JSONObject().apply {
+                    put("offset", offset)
+                    put("limit", limit)
+                }
+                val response = graphqlPost("fetchLibraryTracks", HASH_FETCH_LIBRARY_TRACKS, variables, token)
+                val tracksData = response.optJSONObject("data")?.optJSONObject("me")?.optJSONObject("library")?.optJSONObject("tracks")
+                val itemsArr = tracksData?.optJSONArray("items")
+                if (itemsArr != null && itemsArr.length() > 0) {
+                    val tracks = mutableListOf<SpotifyTrack>()
+                    for (i in 0 until itemsArr.length()) {
+                        val elem = itemsArr.optJSONObject(i) ?: continue
+                        val trackWrapper = elem.optJSONObject("track") ?: continue
+                        val trackData = trackWrapper.optJSONObject("data") ?: continue
+                        val wrapperUri = trackWrapper.optString("_uri", trackWrapper.optString("uri", trackData.optString("uri", "")))
+                        val trackId = if (wrapperUri.contains(":")) wrapperUri.substringAfterLast(":") else wrapperUri
+                        val name = trackData.optString("name", "")
+                        if (name.isBlank() && trackId.isBlank()) continue
+
+                        val durationObj = trackData.optJSONObject("duration")
+                        val durationMs = durationObj?.optInt("totalMilliseconds", 0) ?: trackData.optInt("durationMs", trackData.optInt("duration_ms", 0))
+
+                        val artists = mutableListOf<SpotifySimpleArtist>()
+                        val artistsArr = trackData.optJSONObject("artists")?.optJSONArray("items")
+                        if (artistsArr != null) {
+                            for (a in 0 until artistsArr.length()) {
+                                val art = artistsArr.optJSONObject(a) ?: continue
+                                val artUri = art.optString("uri", "")
+                                val artId = if (artUri.contains(":")) artUri.substringAfterLast(":") else artUri
+                                val profile = art.optJSONObject("profile")
+                                val artName = profile?.optString("name", art.optString("name", "")) ?: art.optString("name", "")
+                                artists.add(SpotifySimpleArtist(id = artId, name = artName))
+                            }
+                        }
+
+                        val albumData = trackData.optJSONObject("albumOfTrack")
+                        var album: SpotifySimpleAlbum? = null
+                        if (albumData != null) {
+                            val albumUri = albumData.optString("uri", "")
+                            val albumId = if (albumUri.contains(":")) albumUri.substringAfterLast(":") else albumUri
+                            val albumImages = parseGqlPlaylistImages(albumData.optJSONObject("coverArt"))
+                            album = SpotifySimpleAlbum(id = albumId, name = albumData.optString("name", ""), images = albumImages)
+                        }
+
+                        tracks.add(SpotifyTrack(id = trackId, name = name, artists = artists, album = album, durationMs = durationMs))
+                    }
+                    if (tracks.isNotEmpty()) {
+                        return@runCatching tracks
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
+            // 2. Fallback to REST API: /me/tracks
+            val jsonStr = httpGet("$REST_URL/me/tracks?limit=$limit&offset=$offset", mapOf("Authorization" to "Bearer $token", "App-Platform" to "WebPlayer"))
+            val json = JSONObject(jsonStr)
+            val items = json.optJSONArray("items") ?: JSONArray()
+            val tracks = mutableListOf<SpotifyTrack>()
+            for (i in 0 until items.length()) {
+                val item = items.optJSONObject(i) ?: continue
+                val trackObj = item.optJSONObject("track") ?: continue
+                val id = trackObj.optString("id", "")
+                val name = trackObj.optString("name", "")
+                val durationMs = trackObj.optInt("duration_ms", 0)
+
+                val artistsArr = trackObj.optJSONArray("artists")
+                val artists = mutableListOf<SpotifySimpleArtist>()
+                if (artistsArr != null) {
+                    for (a in 0 until artistsArr.length()) {
+                        val art = artistsArr.optJSONObject(a) ?: continue
+                        artists.add(SpotifySimpleArtist(art.optString("id"), art.optString("name")))
+                    }
+                }
+
+                val albumObj = trackObj.optJSONObject("album")
+                var album: SpotifySimpleAlbum? = null
+                if (albumObj != null) {
+                    val albumImagesArr = albumObj.optJSONArray("images")
+                    val albumImages = mutableListOf<SpotifyImage>()
+                    if (albumImagesArr != null) {
+                        for (imgIdx in 0 until albumImagesArr.length()) {
+                            val img = albumImagesArr.optJSONObject(imgIdx) ?: continue
+                            albumImages.add(SpotifyImage(img.optString("url")))
+                        }
+                    }
+                    album = SpotifySimpleAlbum(
+                        id = albumObj.optString("id"),
+                        name = albumObj.optString("name"),
+                        images = albumImages
+                    )
+                }
+
+                tracks.add(SpotifyTrack(id = id, name = name, artists = artists, album = album, durationMs = durationMs))
+            }
+            tracks
         }
     }
 
