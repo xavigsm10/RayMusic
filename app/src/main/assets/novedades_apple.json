@@ -1,1254 +1,4332 @@
 {
+  "regions": {
+    "ar": {
+      "featuredAlbums": [
+        {
+          "browseId": "MPREb_GGyqjINgWtg",
+          "playlistId": "GGyqjINgWtg",
+          "title": "COMO AGUA",
+          "artists": [
+            {
+              "name": "YEИDRY",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/GGyqjINgWtg/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLPphH56tigk4",
+          "playlistId": "PLPphH56tigk4",
+          "title": "EL GREEN PRINT: La Saga (Disc 2) - EL CLUB DE LAS 19 FLORES",
+          "artists": [
+            {
+              "name": "Feid",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/rMWWFNCPnk8/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "browseId": "PLMORtpsmycv8",
+          "playlistId": "PLMORtpsmycv8",
+          "title": "Tributo al Rey Con Banda (Grandes Duetos), Vol. 2",
+          "artists": [
+            {
+              "name": "Vicente Fernández & Banda MS",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/757Up8unXQw/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLdxYfe8lqT7w",
+          "playlistId": "PLdxYfe8lqT7w",
+          "title": "fill de la mar (2026)",
+          "artists": [
+            {
+              "name": "Rels B",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/REz_ytkQqp8/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "browseId": "PLVG_lM4yQvtg",
+          "playlistId": "PLVG_lM4yQvtg",
+          "title": "Bass Persuades",
+          "artists": [
+            {
+              "name": "Miley Cyrus",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/aWpw-Ynl0Yc/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLU5gPXS5EC_0",
+          "playlistId": "PLU5gPXS5EC_0",
+          "title": "10 de 10",
+          "artists": [
+            {
+              "name": "Banda MS de Sergio Lizárraga",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/HFy2Dxu33Y0/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLUfp9hBSsRcQ",
+          "playlistId": "PLUfp9hBSsRcQ",
+          "title": "Para Cuando Sean Mayores",
+          "artists": [
+            {
+              "name": "Camilo",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/27qc2zfDmQk/hqdefault.jpg",
+          "explicit": false
+        }
+      ],
+      "featuredNewSongs": [
+        {
+          "id": "ivX_Bule86Q",
+          "title": "VAMO A VEL",
+          "artists": [
+            {
+              "name": "ROA",
+              "id": null
+            },
+            {
+              "name": "Anuel AA",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ivX_Bule86Q/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "2-NkuLjtGNY",
+          "title": "AGUA",
+          "artists": [
+            {
+              "name": "Maluma",
+              "id": null
+            },
+            {
+              "name": "Shakira",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/2-NkuLjtGNY/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "TcwwJUFpnfA",
+          "title": "Sábado de Noche",
+          "artists": [
+            {
+              "name": "Esau Ortiz",
+              "id": null
+            },
+            {
+              "name": "ELMANU GOMEZ",
+              "id": null
+            },
+            {
+              "name": "Joel De La P",
+              "id": null
+            },
+            {
+              "name": "Luis R Conriquez",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/TcwwJUFpnfA/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "xrwnF3JQWGY",
+          "title": "No Me Suman",
+          "artists": [
+            {
+              "name": "Cris MJ",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/xrwnF3JQWGY/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "ZJXLJLMSc00",
+          "title": "Sin Ti",
+          "artists": [
+            {
+              "name": "LOS DOS DE TAMAULIPAS",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ZJXLJLMSc00/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "kLNwlamNawY",
+          "title": "ELLA",
+          "artists": [
+            {
+              "name": "Blessd",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/kLNwlamNawY/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "_oCrIGbeDno",
+          "title": "Pa' Bailar",
+          "artists": [
+            {
+              "name": "Elvis Crespo",
+              "id": null
+            },
+            {
+              "name": "Beéle",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/_oCrIGbeDno/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "757Up8unXQw",
+          "title": "Por Tu Maldito Amor",
+          "artists": [
+            {
+              "name": "Vicente Fernández",
+              "id": null
+            },
+            {
+              "name": "Banda MS de Sergio Lizárraga",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/757Up8unXQw/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "R3q5mVDsCYQ",
+          "title": "IA",
+          "artists": [
+            {
+              "name": "Chuyin",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/R3q5mVDsCYQ/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "ItIM5uaxZEE",
+          "title": "gaviotas de cristal",
+          "artists": [
+            {
+              "name": "Rels B",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ItIM5uaxZEE/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "PyewvF-OPQw",
+          "title": "De México Soy",
+          "artists": [
+            {
+              "name": "Los Tucanes de Tijuana",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/PyewvF-OPQw/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "F8QApOSLFr0",
+          "title": "Confundido",
+          "artists": [
+            {
+              "name": "Marca MP",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/F8QApOSLFr0/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "dCrQUOAtyJo",
+          "title": "Cómo Te Olvido",
+          "artists": [
+            {
+              "name": "Diferente Nivel",
+              "id": null
+            },
+            {
+              "name": "Grupo Arriesgado",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/dCrQUOAtyJo/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "bH_S_FsetyE",
+          "title": "Tierra de N@RCO$",
+          "artists": [
+            {
+              "name": "Zimple",
+              "id": null
+            },
+            {
+              "name": "Los Dos Carnales",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/bH_S_FsetyE/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "UqCOEO8oUV8",
+          "title": "Segunda Cita",
+          "artists": [
+            {
+              "name": "Piso 21",
+              "id": null
+            },
+            {
+              "name": "Micro TDH",
+              "id": null
+            },
+            {
+              "name": "Gangsta",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/UqCOEO8oUV8/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "g4HaSBWqqyY",
+          "title": "MENTIRAS 2",
+          "artists": [
+            {
+              "name": "Grupo Los de la O",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/g4HaSBWqqyY/hqdefault.jpg",
+          "explicit": true
+        }
+      ],
+      "newReleaseAlbums": [
+        {
+          "browseId": "PLPphH56tigk4",
+          "playlistId": "PLPphH56tigk4",
+          "title": "EL GREEN PRINT: La Saga (Disc 2) - EL CLUB DE LAS 19 FLORES",
+          "artists": [
+            {
+              "name": "Feid",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/rMWWFNCPnk8/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "browseId": "PLdxYfe8lqT7w",
+          "playlistId": "PLdxYfe8lqT7w",
+          "title": "fill de la mar (2026)",
+          "artists": [
+            {
+              "name": "Rels B",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/REz_ytkQqp8/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "browseId": "PLVG_lM4yQvtg",
+          "playlistId": "PLVG_lM4yQvtg",
+          "title": "Bass Persuades",
+          "artists": [
+            {
+              "name": "Miley Cyrus",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/aWpw-Ynl0Yc/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLMORtpsmycv8",
+          "playlistId": "PLMORtpsmycv8",
+          "title": "Tributo al Rey Con Banda (Grandes Duetos), Vol. 2",
+          "artists": [
+            {
+              "name": "Vicente Fernández",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/757Up8unXQw/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "MPREb_gSrV-1zDnlY",
+          "playlistId": "gSrV-1zDnlY",
+          "title": "LEY DE VIDA",
+          "artists": [
+            {
+              "name": "Grupo Los de la O",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/gSrV-1zDnlY/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "browseId": "MPREb_GGyqjINgWtg",
+          "playlistId": "GGyqjINgWtg",
+          "title": "Como agua",
+          "artists": [
+            {
+              "name": "YEИDRY",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/GGyqjINgWtg/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLTdcUK7aWXEA",
+          "playlistId": "PLTdcUK7aWXEA",
+          "title": "La Gloria",
+          "artists": [
+            {
+              "name": "Michelle Maciel",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/Fp7iKFVH7Pg/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLU5gPXS5EC_0",
+          "playlistId": "PLU5gPXS5EC_0",
+          "title": "10 de 10",
+          "artists": [
+            {
+              "name": "Banda MS de Sergio Lizárraga",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/HFy2Dxu33Y0/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLUfp9hBSsRcQ",
+          "playlistId": "PLUfp9hBSsRcQ",
+          "title": "Para Cuando Sean Mayores",
+          "artists": [
+            {
+              "name": "Camilo",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/27qc2zfDmQk/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLALAlxeJIvA4",
+          "playlistId": "PLALAlxeJIvA4",
+          "title": "Mi Hubiera Favorito",
+          "artists": [
+            {
+              "name": "Calibre 50",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/aZsI4p5ObCQ/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLAdVAUTXKwXc",
+          "playlistId": "PLAdVAUTXKwXc",
+          "title": "ReVivo - EP",
+          "artists": [
+            {
+              "name": "Ricky Martin",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/zOSGSbdB3Og/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLha_lxjdTZihUfdoEh2SfUrg7L4frCmLW",
+          "playlistId": "PLha_lxjdTZihUfdoEh2SfUrg7L4frCmLW",
+          "title": "Lo Esencial Vol.1",
+          "artists": [
+            {
+              "name": "Novato El Flow & Fuentes Prod",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/kq31g-S7Omo/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLGz8z-YcPoV8",
+          "playlistId": "PLGz8z-YcPoV8",
+          "title": "Desde La México Capítulo 4",
+          "artists": [
+            {
+              "name": "PALOMAZO NORTEÑO",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/UKFQM4TyFe4/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLHgwtiiVQzd0",
+          "playlistId": "PLHgwtiiVQzd0",
+          "title": "Una Raya Más Al Tigre",
+          "artists": [
+            {
+              "name": "Camila Fernández",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/aK-p69BQHco/hqdefault.jpg",
+          "explicit": false
+        }
+      ],
+      "trendingSongs": [
+        {
+          "id": "ivX_Bule86Q",
+          "title": "VAMO A VEL",
+          "artists": [
+            {
+              "name": "ROA",
+              "id": null
+            },
+            {
+              "name": "Anuel AA",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ivX_Bule86Q/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "2-NkuLjtGNY",
+          "title": "AGUA",
+          "artists": [
+            {
+              "name": "Maluma",
+              "id": null
+            },
+            {
+              "name": "Shakira",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/2-NkuLjtGNY/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "TcwwJUFpnfA",
+          "title": "Sábado de Noche",
+          "artists": [
+            {
+              "name": "Esau Ortiz",
+              "id": null
+            },
+            {
+              "name": "ELMANU GOMEZ",
+              "id": null
+            },
+            {
+              "name": "Joel De La P",
+              "id": null
+            },
+            {
+              "name": "Luis R Conriquez",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/TcwwJUFpnfA/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "xrwnF3JQWGY",
+          "title": "No Me Suman",
+          "artists": [
+            {
+              "name": "Cris MJ",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/xrwnF3JQWGY/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "ZJXLJLMSc00",
+          "title": "Sin Ti",
+          "artists": [
+            {
+              "name": "LOS DOS DE TAMAULIPAS",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ZJXLJLMSc00/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "kLNwlamNawY",
+          "title": "ELLA",
+          "artists": [
+            {
+              "name": "Blessd",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/kLNwlamNawY/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "_oCrIGbeDno",
+          "title": "Pa' Bailar",
+          "artists": [
+            {
+              "name": "Elvis Crespo",
+              "id": null
+            },
+            {
+              "name": "Beéle",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/_oCrIGbeDno/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "757Up8unXQw",
+          "title": "Por Tu Maldito Amor",
+          "artists": [
+            {
+              "name": "Vicente Fernández",
+              "id": null
+            },
+            {
+              "name": "Banda MS de Sergio Lizárraga",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/757Up8unXQw/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "R3q5mVDsCYQ",
+          "title": "IA",
+          "artists": [
+            {
+              "name": "Chuyin",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/R3q5mVDsCYQ/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "ItIM5uaxZEE",
+          "title": "gaviotas de cristal",
+          "artists": [
+            {
+              "name": "Rels B",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ItIM5uaxZEE/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "PyewvF-OPQw",
+          "title": "De México Soy",
+          "artists": [
+            {
+              "name": "Los Tucanes de Tijuana",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/PyewvF-OPQw/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "F8QApOSLFr0",
+          "title": "Confundido",
+          "artists": [
+            {
+              "name": "Marca MP",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/F8QApOSLFr0/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "dCrQUOAtyJo",
+          "title": "Cómo Te Olvido",
+          "artists": [
+            {
+              "name": "Diferente Nivel",
+              "id": null
+            },
+            {
+              "name": "Grupo Arriesgado",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/dCrQUOAtyJo/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "bH_S_FsetyE",
+          "title": "Tierra de N@RCO$",
+          "artists": [
+            {
+              "name": "Zimple",
+              "id": null
+            },
+            {
+              "name": "Los Dos Carnales",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/bH_S_FsetyE/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "UqCOEO8oUV8",
+          "title": "Segunda Cita",
+          "artists": [
+            {
+              "name": "Piso 21",
+              "id": null
+            },
+            {
+              "name": "Micro TDH",
+              "id": null
+            },
+            {
+              "name": "Gangsta",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/UqCOEO8oUV8/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "g4HaSBWqqyY",
+          "title": "MENTIRAS 2",
+          "artists": [
+            {
+              "name": "Grupo Los de la O",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/g4HaSBWqqyY/hqdefault.jpg",
+          "explicit": true
+        }
+      ],
+      "everyoneListening": [
+        {
+          "id": "T_UEawa2wCk",
+          "title": "you seem pretty sad for a girl so in love",
+          "artists": [
+            {
+              "name": "Olivia Rodrigo",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/T_UEawa2wCk/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "wbstEDi0Jzw",
+          "title": "DEPR</3$$ED MFKZ",
+          "artists": [
+            {
+              "name": "Junior H",
+              "id": null
+            },
+            {
+              "name": "Gael Valenzuela",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/wbstEDi0Jzw/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "uG53V49TM4c",
+          "title": "Nunca Voy a Morir",
+          "artists": [
+            {
+              "name": "Omar Camacho",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/uG53V49TM4c/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "ve_ZyV6HNm4",
+          "title": "ACOMODO",
+          "artists": [
+            {
+              "name": "Tito Double P",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ve_ZyV6HNm4/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "WdSGEvDGZAo",
+          "title": "DeBÍ TiRAR MáS FOToS",
+          "artists": [
+            {
+              "name": "Bad Bunny",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/WdSGEvDGZAo/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "qAzWL2M1sN8",
+          "title": "LA PANTERA NEGRA",
+          "artists": [
+            {
+              "name": "Myke Towers",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/qAzWL2M1sN8/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "3BymntDAYxs",
+          "title": "Pero No Te Enamores",
+          "artists": [
+            {
+              "name": "Fuerza Regida",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/3BymntDAYxs/hqdefault.jpg",
+          "explicit": true
+        }
+      ]
+    },
+    "mx": {
+      "featuredAlbums": [
+        {
+          "browseId": "MPREb_GGyqjINgWtg",
+          "playlistId": "GGyqjINgWtg",
+          "title": "COMO AGUA",
+          "artists": [
+            {
+              "name": "YEИDRY",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/GGyqjINgWtg/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLPphH56tigk4",
+          "playlistId": "PLPphH56tigk4",
+          "title": "EL GREEN PRINT: La Saga (Disc 2) - EL CLUB DE LAS 19 FLORES",
+          "artists": [
+            {
+              "name": "Feid",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/rMWWFNCPnk8/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "browseId": "PLMORtpsmycv8",
+          "playlistId": "PLMORtpsmycv8",
+          "title": "Tributo al Rey Con Banda (Grandes Duetos), Vol. 2",
+          "artists": [
+            {
+              "name": "Vicente Fernández & Banda MS",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/757Up8unXQw/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLdxYfe8lqT7w",
+          "playlistId": "PLdxYfe8lqT7w",
+          "title": "fill de la mar (2026)",
+          "artists": [
+            {
+              "name": "Rels B",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/REz_ytkQqp8/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "browseId": "PLVG_lM4yQvtg",
+          "playlistId": "PLVG_lM4yQvtg",
+          "title": "Bass Persuades",
+          "artists": [
+            {
+              "name": "Miley Cyrus",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/aWpw-Ynl0Yc/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLU5gPXS5EC_0",
+          "playlistId": "PLU5gPXS5EC_0",
+          "title": "10 de 10",
+          "artists": [
+            {
+              "name": "Banda MS de Sergio Lizárraga",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/HFy2Dxu33Y0/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLUfp9hBSsRcQ",
+          "playlistId": "PLUfp9hBSsRcQ",
+          "title": "Para Cuando Sean Mayores",
+          "artists": [
+            {
+              "name": "Camilo",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/27qc2zfDmQk/hqdefault.jpg",
+          "explicit": false
+        }
+      ],
+      "featuredNewSongs": [
+        {
+          "id": "ivX_Bule86Q",
+          "title": "VAMO A VEL",
+          "artists": [
+            {
+              "name": "ROA",
+              "id": null
+            },
+            {
+              "name": "Anuel AA",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ivX_Bule86Q/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "2-NkuLjtGNY",
+          "title": "AGUA",
+          "artists": [
+            {
+              "name": "Maluma",
+              "id": null
+            },
+            {
+              "name": "Shakira",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/2-NkuLjtGNY/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "TcwwJUFpnfA",
+          "title": "Sábado de Noche",
+          "artists": [
+            {
+              "name": "Esau Ortiz",
+              "id": null
+            },
+            {
+              "name": "ELMANU GOMEZ",
+              "id": null
+            },
+            {
+              "name": "Joel De La P",
+              "id": null
+            },
+            {
+              "name": "Luis R Conriquez",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/TcwwJUFpnfA/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "xrwnF3JQWGY",
+          "title": "No Me Suman",
+          "artists": [
+            {
+              "name": "Cris MJ",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/xrwnF3JQWGY/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "ZJXLJLMSc00",
+          "title": "Sin Ti",
+          "artists": [
+            {
+              "name": "LOS DOS DE TAMAULIPAS",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ZJXLJLMSc00/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "kLNwlamNawY",
+          "title": "ELLA",
+          "artists": [
+            {
+              "name": "Blessd",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/kLNwlamNawY/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "_oCrIGbeDno",
+          "title": "Pa' Bailar",
+          "artists": [
+            {
+              "name": "Elvis Crespo",
+              "id": null
+            },
+            {
+              "name": "Beéle",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/_oCrIGbeDno/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "757Up8unXQw",
+          "title": "Por Tu Maldito Amor",
+          "artists": [
+            {
+              "name": "Vicente Fernández",
+              "id": null
+            },
+            {
+              "name": "Banda MS de Sergio Lizárraga",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/757Up8unXQw/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "R3q5mVDsCYQ",
+          "title": "IA",
+          "artists": [
+            {
+              "name": "Chuyin",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/R3q5mVDsCYQ/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "ItIM5uaxZEE",
+          "title": "gaviotas de cristal",
+          "artists": [
+            {
+              "name": "Rels B",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ItIM5uaxZEE/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "PyewvF-OPQw",
+          "title": "De México Soy",
+          "artists": [
+            {
+              "name": "Los Tucanes de Tijuana",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/PyewvF-OPQw/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "F8QApOSLFr0",
+          "title": "Confundido",
+          "artists": [
+            {
+              "name": "Marca MP",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/F8QApOSLFr0/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "dCrQUOAtyJo",
+          "title": "Cómo Te Olvido",
+          "artists": [
+            {
+              "name": "Diferente Nivel",
+              "id": null
+            },
+            {
+              "name": "Grupo Arriesgado",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/dCrQUOAtyJo/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "bH_S_FsetyE",
+          "title": "Tierra de N@RCO$",
+          "artists": [
+            {
+              "name": "Zimple",
+              "id": null
+            },
+            {
+              "name": "Los Dos Carnales",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/bH_S_FsetyE/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "UqCOEO8oUV8",
+          "title": "Segunda Cita",
+          "artists": [
+            {
+              "name": "Piso 21",
+              "id": null
+            },
+            {
+              "name": "Micro TDH",
+              "id": null
+            },
+            {
+              "name": "Gangsta",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/UqCOEO8oUV8/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "g4HaSBWqqyY",
+          "title": "MENTIRAS 2",
+          "artists": [
+            {
+              "name": "Grupo Los de la O",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/g4HaSBWqqyY/hqdefault.jpg",
+          "explicit": true
+        }
+      ],
+      "newReleaseAlbums": [
+        {
+          "browseId": "PLPphH56tigk4",
+          "playlistId": "PLPphH56tigk4",
+          "title": "EL GREEN PRINT: La Saga (Disc 2) - EL CLUB DE LAS 19 FLORES",
+          "artists": [
+            {
+              "name": "Feid",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/rMWWFNCPnk8/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "browseId": "PLdxYfe8lqT7w",
+          "playlistId": "PLdxYfe8lqT7w",
+          "title": "fill de la mar (2026)",
+          "artists": [
+            {
+              "name": "Rels B",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/REz_ytkQqp8/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "browseId": "PLVG_lM4yQvtg",
+          "playlistId": "PLVG_lM4yQvtg",
+          "title": "Bass Persuades",
+          "artists": [
+            {
+              "name": "Miley Cyrus",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/aWpw-Ynl0Yc/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLMORtpsmycv8",
+          "playlistId": "PLMORtpsmycv8",
+          "title": "Tributo al Rey Con Banda (Grandes Duetos), Vol. 2",
+          "artists": [
+            {
+              "name": "Vicente Fernández",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/757Up8unXQw/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "MPREb_gSrV-1zDnlY",
+          "playlistId": "gSrV-1zDnlY",
+          "title": "LEY DE VIDA",
+          "artists": [
+            {
+              "name": "Grupo Los de la O",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/gSrV-1zDnlY/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "browseId": "MPREb_GGyqjINgWtg",
+          "playlistId": "GGyqjINgWtg",
+          "title": "Como agua",
+          "artists": [
+            {
+              "name": "YEИDRY",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/GGyqjINgWtg/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLTdcUK7aWXEA",
+          "playlistId": "PLTdcUK7aWXEA",
+          "title": "La Gloria",
+          "artists": [
+            {
+              "name": "Michelle Maciel",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/Fp7iKFVH7Pg/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLU5gPXS5EC_0",
+          "playlistId": "PLU5gPXS5EC_0",
+          "title": "10 de 10",
+          "artists": [
+            {
+              "name": "Banda MS de Sergio Lizárraga",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/HFy2Dxu33Y0/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLUfp9hBSsRcQ",
+          "playlistId": "PLUfp9hBSsRcQ",
+          "title": "Para Cuando Sean Mayores",
+          "artists": [
+            {
+              "name": "Camilo",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/27qc2zfDmQk/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLALAlxeJIvA4",
+          "playlistId": "PLALAlxeJIvA4",
+          "title": "Mi Hubiera Favorito",
+          "artists": [
+            {
+              "name": "Calibre 50",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/aZsI4p5ObCQ/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLAdVAUTXKwXc",
+          "playlistId": "PLAdVAUTXKwXc",
+          "title": "ReVivo - EP",
+          "artists": [
+            {
+              "name": "Ricky Martin",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/zOSGSbdB3Og/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLha_lxjdTZihUfdoEh2SfUrg7L4frCmLW",
+          "playlistId": "PLha_lxjdTZihUfdoEh2SfUrg7L4frCmLW",
+          "title": "Lo Esencial Vol.1",
+          "artists": [
+            {
+              "name": "Novato El Flow & Fuentes Prod",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/kq31g-S7Omo/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLGz8z-YcPoV8",
+          "playlistId": "PLGz8z-YcPoV8",
+          "title": "Desde La México Capítulo 4",
+          "artists": [
+            {
+              "name": "PALOMAZO NORTEÑO",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/UKFQM4TyFe4/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLHgwtiiVQzd0",
+          "playlistId": "PLHgwtiiVQzd0",
+          "title": "Una Raya Más Al Tigre",
+          "artists": [
+            {
+              "name": "Camila Fernández",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/aK-p69BQHco/hqdefault.jpg",
+          "explicit": false
+        }
+      ],
+      "trendingSongs": [
+        {
+          "id": "ivX_Bule86Q",
+          "title": "VAMO A VEL",
+          "artists": [
+            {
+              "name": "ROA",
+              "id": null
+            },
+            {
+              "name": "Anuel AA",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ivX_Bule86Q/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "2-NkuLjtGNY",
+          "title": "AGUA",
+          "artists": [
+            {
+              "name": "Maluma",
+              "id": null
+            },
+            {
+              "name": "Shakira",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/2-NkuLjtGNY/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "TcwwJUFpnfA",
+          "title": "Sábado de Noche",
+          "artists": [
+            {
+              "name": "Esau Ortiz",
+              "id": null
+            },
+            {
+              "name": "ELMANU GOMEZ",
+              "id": null
+            },
+            {
+              "name": "Joel De La P",
+              "id": null
+            },
+            {
+              "name": "Luis R Conriquez",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/TcwwJUFpnfA/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "xrwnF3JQWGY",
+          "title": "No Me Suman",
+          "artists": [
+            {
+              "name": "Cris MJ",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/xrwnF3JQWGY/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "ZJXLJLMSc00",
+          "title": "Sin Ti",
+          "artists": [
+            {
+              "name": "LOS DOS DE TAMAULIPAS",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ZJXLJLMSc00/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "kLNwlamNawY",
+          "title": "ELLA",
+          "artists": [
+            {
+              "name": "Blessd",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/kLNwlamNawY/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "_oCrIGbeDno",
+          "title": "Pa' Bailar",
+          "artists": [
+            {
+              "name": "Elvis Crespo",
+              "id": null
+            },
+            {
+              "name": "Beéle",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/_oCrIGbeDno/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "757Up8unXQw",
+          "title": "Por Tu Maldito Amor",
+          "artists": [
+            {
+              "name": "Vicente Fernández",
+              "id": null
+            },
+            {
+              "name": "Banda MS de Sergio Lizárraga",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/757Up8unXQw/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "R3q5mVDsCYQ",
+          "title": "IA",
+          "artists": [
+            {
+              "name": "Chuyin",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/R3q5mVDsCYQ/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "ItIM5uaxZEE",
+          "title": "gaviotas de cristal",
+          "artists": [
+            {
+              "name": "Rels B",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ItIM5uaxZEE/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "PyewvF-OPQw",
+          "title": "De México Soy",
+          "artists": [
+            {
+              "name": "Los Tucanes de Tijuana",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/PyewvF-OPQw/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "F8QApOSLFr0",
+          "title": "Confundido",
+          "artists": [
+            {
+              "name": "Marca MP",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/F8QApOSLFr0/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "dCrQUOAtyJo",
+          "title": "Cómo Te Olvido",
+          "artists": [
+            {
+              "name": "Diferente Nivel",
+              "id": null
+            },
+            {
+              "name": "Grupo Arriesgado",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/dCrQUOAtyJo/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "bH_S_FsetyE",
+          "title": "Tierra de N@RCO$",
+          "artists": [
+            {
+              "name": "Zimple",
+              "id": null
+            },
+            {
+              "name": "Los Dos Carnales",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/bH_S_FsetyE/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "UqCOEO8oUV8",
+          "title": "Segunda Cita",
+          "artists": [
+            {
+              "name": "Piso 21",
+              "id": null
+            },
+            {
+              "name": "Micro TDH",
+              "id": null
+            },
+            {
+              "name": "Gangsta",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/UqCOEO8oUV8/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "g4HaSBWqqyY",
+          "title": "MENTIRAS 2",
+          "artists": [
+            {
+              "name": "Grupo Los de la O",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/g4HaSBWqqyY/hqdefault.jpg",
+          "explicit": true
+        }
+      ],
+      "everyoneListening": [
+        {
+          "id": "T_UEawa2wCk",
+          "title": "you seem pretty sad for a girl so in love",
+          "artists": [
+            {
+              "name": "Olivia Rodrigo",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/T_UEawa2wCk/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "wbstEDi0Jzw",
+          "title": "DEPR</3$$ED MFKZ",
+          "artists": [
+            {
+              "name": "Junior H",
+              "id": null
+            },
+            {
+              "name": "Gael Valenzuela",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/wbstEDi0Jzw/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "uG53V49TM4c",
+          "title": "Nunca Voy a Morir",
+          "artists": [
+            {
+              "name": "Omar Camacho",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/uG53V49TM4c/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "ve_ZyV6HNm4",
+          "title": "ACOMODO",
+          "artists": [
+            {
+              "name": "Tito Double P",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ve_ZyV6HNm4/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "WdSGEvDGZAo",
+          "title": "DeBÍ TiRAR MáS FOToS",
+          "artists": [
+            {
+              "name": "Bad Bunny",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/WdSGEvDGZAo/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "qAzWL2M1sN8",
+          "title": "LA PANTERA NEGRA",
+          "artists": [
+            {
+              "name": "Myke Towers",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/qAzWL2M1sN8/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "3BymntDAYxs",
+          "title": "Pero No Te Enamores",
+          "artists": [
+            {
+              "name": "Fuerza Regida",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/3BymntDAYxs/hqdefault.jpg",
+          "explicit": true
+        }
+      ]
+    },
+    "es": {
+      "featuredAlbums": [
+        {
+          "browseId": "MPREb_GGyqjINgWtg",
+          "playlistId": "GGyqjINgWtg",
+          "title": "COMO AGUA",
+          "artists": [
+            {
+              "name": "YEИDRY",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/GGyqjINgWtg/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLPphH56tigk4",
+          "playlistId": "PLPphH56tigk4",
+          "title": "EL GREEN PRINT: La Saga (Disc 2) - EL CLUB DE LAS 19 FLORES",
+          "artists": [
+            {
+              "name": "Feid",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/rMWWFNCPnk8/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "browseId": "PLMORtpsmycv8",
+          "playlistId": "PLMORtpsmycv8",
+          "title": "Tributo al Rey Con Banda (Grandes Duetos), Vol. 2",
+          "artists": [
+            {
+              "name": "Vicente Fernández & Banda MS",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/757Up8unXQw/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLdxYfe8lqT7w",
+          "playlistId": "PLdxYfe8lqT7w",
+          "title": "fill de la mar (2026)",
+          "artists": [
+            {
+              "name": "Rels B",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/REz_ytkQqp8/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "browseId": "PLVG_lM4yQvtg",
+          "playlistId": "PLVG_lM4yQvtg",
+          "title": "Bass Persuades",
+          "artists": [
+            {
+              "name": "Miley Cyrus",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/aWpw-Ynl0Yc/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLU5gPXS5EC_0",
+          "playlistId": "PLU5gPXS5EC_0",
+          "title": "10 de 10",
+          "artists": [
+            {
+              "name": "Banda MS de Sergio Lizárraga",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/HFy2Dxu33Y0/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLUfp9hBSsRcQ",
+          "playlistId": "PLUfp9hBSsRcQ",
+          "title": "Para Cuando Sean Mayores",
+          "artists": [
+            {
+              "name": "Camilo",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/27qc2zfDmQk/hqdefault.jpg",
+          "explicit": false
+        }
+      ],
+      "featuredNewSongs": [
+        {
+          "id": "ivX_Bule86Q",
+          "title": "VAMO A VEL",
+          "artists": [
+            {
+              "name": "ROA",
+              "id": null
+            },
+            {
+              "name": "Anuel AA",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ivX_Bule86Q/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "2-NkuLjtGNY",
+          "title": "AGUA",
+          "artists": [
+            {
+              "name": "Maluma",
+              "id": null
+            },
+            {
+              "name": "Shakira",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/2-NkuLjtGNY/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "TcwwJUFpnfA",
+          "title": "Sábado de Noche",
+          "artists": [
+            {
+              "name": "Esau Ortiz",
+              "id": null
+            },
+            {
+              "name": "ELMANU GOMEZ",
+              "id": null
+            },
+            {
+              "name": "Joel De La P",
+              "id": null
+            },
+            {
+              "name": "Luis R Conriquez",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/TcwwJUFpnfA/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "xrwnF3JQWGY",
+          "title": "No Me Suman",
+          "artists": [
+            {
+              "name": "Cris MJ",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/xrwnF3JQWGY/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "ZJXLJLMSc00",
+          "title": "Sin Ti",
+          "artists": [
+            {
+              "name": "LOS DOS DE TAMAULIPAS",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ZJXLJLMSc00/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "kLNwlamNawY",
+          "title": "ELLA",
+          "artists": [
+            {
+              "name": "Blessd",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/kLNwlamNawY/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "_oCrIGbeDno",
+          "title": "Pa' Bailar",
+          "artists": [
+            {
+              "name": "Elvis Crespo",
+              "id": null
+            },
+            {
+              "name": "Beéle",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/_oCrIGbeDno/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "757Up8unXQw",
+          "title": "Por Tu Maldito Amor",
+          "artists": [
+            {
+              "name": "Vicente Fernández",
+              "id": null
+            },
+            {
+              "name": "Banda MS de Sergio Lizárraga",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/757Up8unXQw/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "R3q5mVDsCYQ",
+          "title": "IA",
+          "artists": [
+            {
+              "name": "Chuyin",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/R3q5mVDsCYQ/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "ItIM5uaxZEE",
+          "title": "gaviotas de cristal",
+          "artists": [
+            {
+              "name": "Rels B",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ItIM5uaxZEE/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "PyewvF-OPQw",
+          "title": "De México Soy",
+          "artists": [
+            {
+              "name": "Los Tucanes de Tijuana",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/PyewvF-OPQw/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "F8QApOSLFr0",
+          "title": "Confundido",
+          "artists": [
+            {
+              "name": "Marca MP",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/F8QApOSLFr0/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "dCrQUOAtyJo",
+          "title": "Cómo Te Olvido",
+          "artists": [
+            {
+              "name": "Diferente Nivel",
+              "id": null
+            },
+            {
+              "name": "Grupo Arriesgado",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/dCrQUOAtyJo/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "bH_S_FsetyE",
+          "title": "Tierra de N@RCO$",
+          "artists": [
+            {
+              "name": "Zimple",
+              "id": null
+            },
+            {
+              "name": "Los Dos Carnales",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/bH_S_FsetyE/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "UqCOEO8oUV8",
+          "title": "Segunda Cita",
+          "artists": [
+            {
+              "name": "Piso 21",
+              "id": null
+            },
+            {
+              "name": "Micro TDH",
+              "id": null
+            },
+            {
+              "name": "Gangsta",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/UqCOEO8oUV8/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "g4HaSBWqqyY",
+          "title": "MENTIRAS 2",
+          "artists": [
+            {
+              "name": "Grupo Los de la O",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/g4HaSBWqqyY/hqdefault.jpg",
+          "explicit": true
+        }
+      ],
+      "newReleaseAlbums": [
+        {
+          "browseId": "PLPphH56tigk4",
+          "playlistId": "PLPphH56tigk4",
+          "title": "EL GREEN PRINT: La Saga (Disc 2) - EL CLUB DE LAS 19 FLORES",
+          "artists": [
+            {
+              "name": "Feid",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/rMWWFNCPnk8/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "browseId": "PLdxYfe8lqT7w",
+          "playlistId": "PLdxYfe8lqT7w",
+          "title": "fill de la mar (2026)",
+          "artists": [
+            {
+              "name": "Rels B",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/REz_ytkQqp8/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "browseId": "PLVG_lM4yQvtg",
+          "playlistId": "PLVG_lM4yQvtg",
+          "title": "Bass Persuades",
+          "artists": [
+            {
+              "name": "Miley Cyrus",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/aWpw-Ynl0Yc/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLMORtpsmycv8",
+          "playlistId": "PLMORtpsmycv8",
+          "title": "Tributo al Rey Con Banda (Grandes Duetos), Vol. 2",
+          "artists": [
+            {
+              "name": "Vicente Fernández",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/757Up8unXQw/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "MPREb_gSrV-1zDnlY",
+          "playlistId": "gSrV-1zDnlY",
+          "title": "LEY DE VIDA",
+          "artists": [
+            {
+              "name": "Grupo Los de la O",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/gSrV-1zDnlY/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "browseId": "MPREb_GGyqjINgWtg",
+          "playlistId": "GGyqjINgWtg",
+          "title": "Como agua",
+          "artists": [
+            {
+              "name": "YEИDRY",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/GGyqjINgWtg/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLTdcUK7aWXEA",
+          "playlistId": "PLTdcUK7aWXEA",
+          "title": "La Gloria",
+          "artists": [
+            {
+              "name": "Michelle Maciel",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/Fp7iKFVH7Pg/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLU5gPXS5EC_0",
+          "playlistId": "PLU5gPXS5EC_0",
+          "title": "10 de 10",
+          "artists": [
+            {
+              "name": "Banda MS de Sergio Lizárraga",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/HFy2Dxu33Y0/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLUfp9hBSsRcQ",
+          "playlistId": "PLUfp9hBSsRcQ",
+          "title": "Para Cuando Sean Mayores",
+          "artists": [
+            {
+              "name": "Camilo",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/27qc2zfDmQk/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLALAlxeJIvA4",
+          "playlistId": "PLALAlxeJIvA4",
+          "title": "Mi Hubiera Favorito",
+          "artists": [
+            {
+              "name": "Calibre 50",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/aZsI4p5ObCQ/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLAdVAUTXKwXc",
+          "playlistId": "PLAdVAUTXKwXc",
+          "title": "ReVivo - EP",
+          "artists": [
+            {
+              "name": "Ricky Martin",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/zOSGSbdB3Og/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLha_lxjdTZihUfdoEh2SfUrg7L4frCmLW",
+          "playlistId": "PLha_lxjdTZihUfdoEh2SfUrg7L4frCmLW",
+          "title": "Lo Esencial Vol.1",
+          "artists": [
+            {
+              "name": "Novato El Flow & Fuentes Prod",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/kq31g-S7Omo/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLGz8z-YcPoV8",
+          "playlistId": "PLGz8z-YcPoV8",
+          "title": "Desde La México Capítulo 4",
+          "artists": [
+            {
+              "name": "PALOMAZO NORTEÑO",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/UKFQM4TyFe4/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLHgwtiiVQzd0",
+          "playlistId": "PLHgwtiiVQzd0",
+          "title": "Una Raya Más Al Tigre",
+          "artists": [
+            {
+              "name": "Camila Fernández",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/aK-p69BQHco/hqdefault.jpg",
+          "explicit": false
+        }
+      ],
+      "trendingSongs": [
+        {
+          "id": "ivX_Bule86Q",
+          "title": "VAMO A VEL",
+          "artists": [
+            {
+              "name": "ROA",
+              "id": null
+            },
+            {
+              "name": "Anuel AA",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ivX_Bule86Q/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "2-NkuLjtGNY",
+          "title": "AGUA",
+          "artists": [
+            {
+              "name": "Maluma",
+              "id": null
+            },
+            {
+              "name": "Shakira",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/2-NkuLjtGNY/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "TcwwJUFpnfA",
+          "title": "Sábado de Noche",
+          "artists": [
+            {
+              "name": "Esau Ortiz",
+              "id": null
+            },
+            {
+              "name": "ELMANU GOMEZ",
+              "id": null
+            },
+            {
+              "name": "Joel De La P",
+              "id": null
+            },
+            {
+              "name": "Luis R Conriquez",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/TcwwJUFpnfA/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "xrwnF3JQWGY",
+          "title": "No Me Suman",
+          "artists": [
+            {
+              "name": "Cris MJ",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/xrwnF3JQWGY/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "ZJXLJLMSc00",
+          "title": "Sin Ti",
+          "artists": [
+            {
+              "name": "LOS DOS DE TAMAULIPAS",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ZJXLJLMSc00/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "kLNwlamNawY",
+          "title": "ELLA",
+          "artists": [
+            {
+              "name": "Blessd",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/kLNwlamNawY/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "_oCrIGbeDno",
+          "title": "Pa' Bailar",
+          "artists": [
+            {
+              "name": "Elvis Crespo",
+              "id": null
+            },
+            {
+              "name": "Beéle",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/_oCrIGbeDno/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "757Up8unXQw",
+          "title": "Por Tu Maldito Amor",
+          "artists": [
+            {
+              "name": "Vicente Fernández",
+              "id": null
+            },
+            {
+              "name": "Banda MS de Sergio Lizárraga",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/757Up8unXQw/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "R3q5mVDsCYQ",
+          "title": "IA",
+          "artists": [
+            {
+              "name": "Chuyin",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/R3q5mVDsCYQ/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "ItIM5uaxZEE",
+          "title": "gaviotas de cristal",
+          "artists": [
+            {
+              "name": "Rels B",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ItIM5uaxZEE/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "PyewvF-OPQw",
+          "title": "De México Soy",
+          "artists": [
+            {
+              "name": "Los Tucanes de Tijuana",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/PyewvF-OPQw/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "F8QApOSLFr0",
+          "title": "Confundido",
+          "artists": [
+            {
+              "name": "Marca MP",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/F8QApOSLFr0/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "dCrQUOAtyJo",
+          "title": "Cómo Te Olvido",
+          "artists": [
+            {
+              "name": "Diferente Nivel",
+              "id": null
+            },
+            {
+              "name": "Grupo Arriesgado",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/dCrQUOAtyJo/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "bH_S_FsetyE",
+          "title": "Tierra de N@RCO$",
+          "artists": [
+            {
+              "name": "Zimple",
+              "id": null
+            },
+            {
+              "name": "Los Dos Carnales",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/bH_S_FsetyE/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "UqCOEO8oUV8",
+          "title": "Segunda Cita",
+          "artists": [
+            {
+              "name": "Piso 21",
+              "id": null
+            },
+            {
+              "name": "Micro TDH",
+              "id": null
+            },
+            {
+              "name": "Gangsta",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/UqCOEO8oUV8/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "g4HaSBWqqyY",
+          "title": "MENTIRAS 2",
+          "artists": [
+            {
+              "name": "Grupo Los de la O",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/g4HaSBWqqyY/hqdefault.jpg",
+          "explicit": true
+        }
+      ],
+      "everyoneListening": [
+        {
+          "id": "T_UEawa2wCk",
+          "title": "you seem pretty sad for a girl so in love",
+          "artists": [
+            {
+              "name": "Olivia Rodrigo",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/T_UEawa2wCk/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "wbstEDi0Jzw",
+          "title": "DEPR</3$$ED MFKZ",
+          "artists": [
+            {
+              "name": "Junior H",
+              "id": null
+            },
+            {
+              "name": "Gael Valenzuela",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/wbstEDi0Jzw/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "uG53V49TM4c",
+          "title": "Nunca Voy a Morir",
+          "artists": [
+            {
+              "name": "Omar Camacho",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/uG53V49TM4c/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "ve_ZyV6HNm4",
+          "title": "ACOMODO",
+          "artists": [
+            {
+              "name": "Tito Double P",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ve_ZyV6HNm4/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "WdSGEvDGZAo",
+          "title": "DeBÍ TiRAR MáS FOToS",
+          "artists": [
+            {
+              "name": "Bad Bunny",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/WdSGEvDGZAo/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "qAzWL2M1sN8",
+          "title": "LA PANTERA NEGRA",
+          "artists": [
+            {
+              "name": "Myke Towers",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/qAzWL2M1sN8/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "3BymntDAYxs",
+          "title": "Pero No Te Enamores",
+          "artists": [
+            {
+              "name": "Fuerza Regida",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/3BymntDAYxs/hqdefault.jpg",
+          "explicit": true
+        }
+      ]
+    },
+    "us": {
+      "featuredAlbums": [
+        {
+          "browseId": "MPREb_GGyqjINgWtg",
+          "playlistId": "GGyqjINgWtg",
+          "title": "COMO AGUA",
+          "artists": [
+            {
+              "name": "YEИDRY",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/GGyqjINgWtg/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLPphH56tigk4",
+          "playlistId": "PLPphH56tigk4",
+          "title": "EL GREEN PRINT: La Saga (Disc 2) - EL CLUB DE LAS 19 FLORES",
+          "artists": [
+            {
+              "name": "Feid",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/rMWWFNCPnk8/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "browseId": "PLMORtpsmycv8",
+          "playlistId": "PLMORtpsmycv8",
+          "title": "Tributo al Rey Con Banda (Grandes Duetos), Vol. 2",
+          "artists": [
+            {
+              "name": "Vicente Fernández & Banda MS",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/757Up8unXQw/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLdxYfe8lqT7w",
+          "playlistId": "PLdxYfe8lqT7w",
+          "title": "fill de la mar (2026)",
+          "artists": [
+            {
+              "name": "Rels B",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/REz_ytkQqp8/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "browseId": "PLVG_lM4yQvtg",
+          "playlistId": "PLVG_lM4yQvtg",
+          "title": "Bass Persuades",
+          "artists": [
+            {
+              "name": "Miley Cyrus",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/aWpw-Ynl0Yc/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLU5gPXS5EC_0",
+          "playlistId": "PLU5gPXS5EC_0",
+          "title": "10 de 10",
+          "artists": [
+            {
+              "name": "Banda MS de Sergio Lizárraga",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/HFy2Dxu33Y0/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLUfp9hBSsRcQ",
+          "playlistId": "PLUfp9hBSsRcQ",
+          "title": "Para Cuando Sean Mayores",
+          "artists": [
+            {
+              "name": "Camilo",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/27qc2zfDmQk/hqdefault.jpg",
+          "explicit": false
+        }
+      ],
+      "featuredNewSongs": [
+        {
+          "id": "ivX_Bule86Q",
+          "title": "VAMO A VEL",
+          "artists": [
+            {
+              "name": "ROA",
+              "id": null
+            },
+            {
+              "name": "Anuel AA",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ivX_Bule86Q/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "2-NkuLjtGNY",
+          "title": "AGUA",
+          "artists": [
+            {
+              "name": "Maluma",
+              "id": null
+            },
+            {
+              "name": "Shakira",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/2-NkuLjtGNY/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "TcwwJUFpnfA",
+          "title": "Sábado de Noche",
+          "artists": [
+            {
+              "name": "Esau Ortiz",
+              "id": null
+            },
+            {
+              "name": "ELMANU GOMEZ",
+              "id": null
+            },
+            {
+              "name": "Joel De La P",
+              "id": null
+            },
+            {
+              "name": "Luis R Conriquez",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/TcwwJUFpnfA/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "xrwnF3JQWGY",
+          "title": "No Me Suman",
+          "artists": [
+            {
+              "name": "Cris MJ",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/xrwnF3JQWGY/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "ZJXLJLMSc00",
+          "title": "Sin Ti",
+          "artists": [
+            {
+              "name": "LOS DOS DE TAMAULIPAS",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ZJXLJLMSc00/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "kLNwlamNawY",
+          "title": "ELLA",
+          "artists": [
+            {
+              "name": "Blessd",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/kLNwlamNawY/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "_oCrIGbeDno",
+          "title": "Pa' Bailar",
+          "artists": [
+            {
+              "name": "Elvis Crespo",
+              "id": null
+            },
+            {
+              "name": "Beéle",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/_oCrIGbeDno/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "757Up8unXQw",
+          "title": "Por Tu Maldito Amor",
+          "artists": [
+            {
+              "name": "Vicente Fernández",
+              "id": null
+            },
+            {
+              "name": "Banda MS de Sergio Lizárraga",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/757Up8unXQw/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "R3q5mVDsCYQ",
+          "title": "IA",
+          "artists": [
+            {
+              "name": "Chuyin",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/R3q5mVDsCYQ/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "ItIM5uaxZEE",
+          "title": "gaviotas de cristal",
+          "artists": [
+            {
+              "name": "Rels B",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ItIM5uaxZEE/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "PyewvF-OPQw",
+          "title": "De México Soy",
+          "artists": [
+            {
+              "name": "Los Tucanes de Tijuana",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/PyewvF-OPQw/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "F8QApOSLFr0",
+          "title": "Confundido",
+          "artists": [
+            {
+              "name": "Marca MP",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/F8QApOSLFr0/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "dCrQUOAtyJo",
+          "title": "Cómo Te Olvido",
+          "artists": [
+            {
+              "name": "Diferente Nivel",
+              "id": null
+            },
+            {
+              "name": "Grupo Arriesgado",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/dCrQUOAtyJo/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "bH_S_FsetyE",
+          "title": "Tierra de N@RCO$",
+          "artists": [
+            {
+              "name": "Zimple",
+              "id": null
+            },
+            {
+              "name": "Los Dos Carnales",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/bH_S_FsetyE/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "UqCOEO8oUV8",
+          "title": "Segunda Cita",
+          "artists": [
+            {
+              "name": "Piso 21",
+              "id": null
+            },
+            {
+              "name": "Micro TDH",
+              "id": null
+            },
+            {
+              "name": "Gangsta",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/UqCOEO8oUV8/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "g4HaSBWqqyY",
+          "title": "MENTIRAS 2",
+          "artists": [
+            {
+              "name": "Grupo Los de la O",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/g4HaSBWqqyY/hqdefault.jpg",
+          "explicit": true
+        }
+      ],
+      "newReleaseAlbums": [
+        {
+          "browseId": "PLPphH56tigk4",
+          "playlistId": "PLPphH56tigk4",
+          "title": "EL GREEN PRINT: La Saga (Disc 2) - EL CLUB DE LAS 19 FLORES",
+          "artists": [
+            {
+              "name": "Feid",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/rMWWFNCPnk8/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "browseId": "PLdxYfe8lqT7w",
+          "playlistId": "PLdxYfe8lqT7w",
+          "title": "fill de la mar (2026)",
+          "artists": [
+            {
+              "name": "Rels B",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/REz_ytkQqp8/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "browseId": "PLVG_lM4yQvtg",
+          "playlistId": "PLVG_lM4yQvtg",
+          "title": "Bass Persuades",
+          "artists": [
+            {
+              "name": "Miley Cyrus",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/aWpw-Ynl0Yc/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLMORtpsmycv8",
+          "playlistId": "PLMORtpsmycv8",
+          "title": "Tributo al Rey Con Banda (Grandes Duetos), Vol. 2",
+          "artists": [
+            {
+              "name": "Vicente Fernández",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/757Up8unXQw/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "MPREb_gSrV-1zDnlY",
+          "playlistId": "gSrV-1zDnlY",
+          "title": "LEY DE VIDA",
+          "artists": [
+            {
+              "name": "Grupo Los de la O",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/gSrV-1zDnlY/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "browseId": "MPREb_GGyqjINgWtg",
+          "playlistId": "GGyqjINgWtg",
+          "title": "Como agua",
+          "artists": [
+            {
+              "name": "YEИDRY",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/GGyqjINgWtg/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLTdcUK7aWXEA",
+          "playlistId": "PLTdcUK7aWXEA",
+          "title": "La Gloria",
+          "artists": [
+            {
+              "name": "Michelle Maciel",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/Fp7iKFVH7Pg/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLU5gPXS5EC_0",
+          "playlistId": "PLU5gPXS5EC_0",
+          "title": "10 de 10",
+          "artists": [
+            {
+              "name": "Banda MS de Sergio Lizárraga",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/HFy2Dxu33Y0/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLUfp9hBSsRcQ",
+          "playlistId": "PLUfp9hBSsRcQ",
+          "title": "Para Cuando Sean Mayores",
+          "artists": [
+            {
+              "name": "Camilo",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/27qc2zfDmQk/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLALAlxeJIvA4",
+          "playlistId": "PLALAlxeJIvA4",
+          "title": "Mi Hubiera Favorito",
+          "artists": [
+            {
+              "name": "Calibre 50",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/aZsI4p5ObCQ/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLAdVAUTXKwXc",
+          "playlistId": "PLAdVAUTXKwXc",
+          "title": "ReVivo - EP",
+          "artists": [
+            {
+              "name": "Ricky Martin",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/zOSGSbdB3Og/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLha_lxjdTZihUfdoEh2SfUrg7L4frCmLW",
+          "playlistId": "PLha_lxjdTZihUfdoEh2SfUrg7L4frCmLW",
+          "title": "Lo Esencial Vol.1",
+          "artists": [
+            {
+              "name": "Novato El Flow & Fuentes Prod",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/kq31g-S7Omo/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLGz8z-YcPoV8",
+          "playlistId": "PLGz8z-YcPoV8",
+          "title": "Desde La México Capítulo 4",
+          "artists": [
+            {
+              "name": "PALOMAZO NORTEÑO",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/UKFQM4TyFe4/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "browseId": "PLHgwtiiVQzd0",
+          "playlistId": "PLHgwtiiVQzd0",
+          "title": "Una Raya Más Al Tigre",
+          "artists": [
+            {
+              "name": "Camila Fernández",
+              "id": null
+            }
+          ],
+          "year": 2026,
+          "thumbnail": "https://i.ytimg.com/vi/aK-p69BQHco/hqdefault.jpg",
+          "explicit": false
+        }
+      ],
+      "trendingSongs": [
+        {
+          "id": "ivX_Bule86Q",
+          "title": "VAMO A VEL",
+          "artists": [
+            {
+              "name": "ROA",
+              "id": null
+            },
+            {
+              "name": "Anuel AA",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ivX_Bule86Q/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "2-NkuLjtGNY",
+          "title": "AGUA",
+          "artists": [
+            {
+              "name": "Maluma",
+              "id": null
+            },
+            {
+              "name": "Shakira",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/2-NkuLjtGNY/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "TcwwJUFpnfA",
+          "title": "Sábado de Noche",
+          "artists": [
+            {
+              "name": "Esau Ortiz",
+              "id": null
+            },
+            {
+              "name": "ELMANU GOMEZ",
+              "id": null
+            },
+            {
+              "name": "Joel De La P",
+              "id": null
+            },
+            {
+              "name": "Luis R Conriquez",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/TcwwJUFpnfA/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "xrwnF3JQWGY",
+          "title": "No Me Suman",
+          "artists": [
+            {
+              "name": "Cris MJ",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/xrwnF3JQWGY/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "ZJXLJLMSc00",
+          "title": "Sin Ti",
+          "artists": [
+            {
+              "name": "LOS DOS DE TAMAULIPAS",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ZJXLJLMSc00/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "kLNwlamNawY",
+          "title": "ELLA",
+          "artists": [
+            {
+              "name": "Blessd",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/kLNwlamNawY/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "_oCrIGbeDno",
+          "title": "Pa' Bailar",
+          "artists": [
+            {
+              "name": "Elvis Crespo",
+              "id": null
+            },
+            {
+              "name": "Beéle",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/_oCrIGbeDno/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "757Up8unXQw",
+          "title": "Por Tu Maldito Amor",
+          "artists": [
+            {
+              "name": "Vicente Fernández",
+              "id": null
+            },
+            {
+              "name": "Banda MS de Sergio Lizárraga",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/757Up8unXQw/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "R3q5mVDsCYQ",
+          "title": "IA",
+          "artists": [
+            {
+              "name": "Chuyin",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/R3q5mVDsCYQ/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "ItIM5uaxZEE",
+          "title": "gaviotas de cristal",
+          "artists": [
+            {
+              "name": "Rels B",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ItIM5uaxZEE/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "PyewvF-OPQw",
+          "title": "De México Soy",
+          "artists": [
+            {
+              "name": "Los Tucanes de Tijuana",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/PyewvF-OPQw/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "F8QApOSLFr0",
+          "title": "Confundido",
+          "artists": [
+            {
+              "name": "Marca MP",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/F8QApOSLFr0/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "dCrQUOAtyJo",
+          "title": "Cómo Te Olvido",
+          "artists": [
+            {
+              "name": "Diferente Nivel",
+              "id": null
+            },
+            {
+              "name": "Grupo Arriesgado",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/dCrQUOAtyJo/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "bH_S_FsetyE",
+          "title": "Tierra de N@RCO$",
+          "artists": [
+            {
+              "name": "Zimple",
+              "id": null
+            },
+            {
+              "name": "Los Dos Carnales",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/bH_S_FsetyE/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "UqCOEO8oUV8",
+          "title": "Segunda Cita",
+          "artists": [
+            {
+              "name": "Piso 21",
+              "id": null
+            },
+            {
+              "name": "Micro TDH",
+              "id": null
+            },
+            {
+              "name": "Gangsta",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/UqCOEO8oUV8/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "g4HaSBWqqyY",
+          "title": "MENTIRAS 2",
+          "artists": [
+            {
+              "name": "Grupo Los de la O",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/g4HaSBWqqyY/hqdefault.jpg",
+          "explicit": true
+        }
+      ],
+      "everyoneListening": [
+        {
+          "id": "T_UEawa2wCk",
+          "title": "you seem pretty sad for a girl so in love",
+          "artists": [
+            {
+              "name": "Olivia Rodrigo",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/T_UEawa2wCk/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "wbstEDi0Jzw",
+          "title": "DEPR</3$$ED MFKZ",
+          "artists": [
+            {
+              "name": "Junior H",
+              "id": null
+            },
+            {
+              "name": "Gael Valenzuela",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/wbstEDi0Jzw/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "uG53V49TM4c",
+          "title": "Nunca Voy a Morir",
+          "artists": [
+            {
+              "name": "Omar Camacho",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/uG53V49TM4c/hqdefault.jpg",
+          "explicit": false
+        },
+        {
+          "id": "ve_ZyV6HNm4",
+          "title": "ACOMODO",
+          "artists": [
+            {
+              "name": "Tito Double P",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/ve_ZyV6HNm4/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "WdSGEvDGZAo",
+          "title": "DeBÍ TiRAR MáS FOToS",
+          "artists": [
+            {
+              "name": "Bad Bunny",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/WdSGEvDGZAo/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "qAzWL2M1sN8",
+          "title": "LA PANTERA NEGRA",
+          "artists": [
+            {
+              "name": "Myke Towers",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/qAzWL2M1sN8/hqdefault.jpg",
+          "explicit": true
+        },
+        {
+          "id": "3BymntDAYxs",
+          "title": "Pero No Te Enamores",
+          "artists": [
+            {
+              "name": "Fuerza Regida",
+              "id": null
+            }
+          ],
+          "thumbnail": "https://i.ytimg.com/vi/3BymntDAYxs/hqdefault.jpg",
+          "explicit": true
+        }
+      ]
+    }
+  },
   "featuredAlbums": [
     {
-      "browseId": "MPREb_tZC7e1H5mfm",
-      "playlistId": "OLAK5uy_tZC7e1H5mfm",
-      "title": "DeBÍ TiRAR MáS FOToS",
+      "browseId": "MPREb_GGyqjINgWtg",
+      "playlistId": "GGyqjINgWtg",
+      "title": "COMO AGUA",
       "artists": [
         {
-          "name": "Bad Bunny",
-          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
-        }
-      ],
-      "year": 2025,
-      "thumbnail": "https://yt3.googleusercontent.com/yBcpSTWxVqyJr7enMy7HFv14Yb8p1jI5AS5o49Cvbeyc6zjvCvdLn_0_iAxz50MqxLx6hQDngWBeaC26=w544-h544-l90-rj",
-      "explicit": true
-    },
-    {
-      "browseId": "MPREb_1zBJxVRBDNN",
-      "playlistId": "OLAK5uy_1zBJxVRBDNN",
-      "title": "Especial",
-      "artists": [
-        {
-          "name": "Viejas Locas",
-          "id": "UCRWg6ojsIzk2kDCx-YZ_7ig"
-        }
-      ],
-      "year": 1999,
-      "thumbnail": "https://yt3.googleusercontent.com/izrQILx27F0bnnIvQ5JJKysKpsnaEGggwOqEzwvzemQdzY451xQby5gGG9vEv-JFdGPyWySJ9DRMrbP_og=w544-h544-s-l90-rj",
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_BSQoqRT7Om3",
-      "playlistId": "OLAK5uy_BSQoqRT7Om3",
-      "title": "Renacer",
-      "artists": [
-        {
-          "name": "Edgardo Nuñez",
-          "id": "UCohgH17dyp4c_V7U9LoBLdA"
+          "name": "YEИDRY",
+          "id": null
         }
       ],
       "year": 2026,
-      "thumbnail": "https://yt3.googleusercontent.com/bCtnivQ7DRaKd9pGnubWwX-eLrfyFd7MWK9-tTm2-0uipJIyC5xWLYOl_4WjeVw571ow1TIqhAOgFK9k=w544-h544-l90-rj",
+      "thumbnail": "https://i.ytimg.com/vi/GGyqjINgWtg/hqdefault.jpg",
       "explicit": false
     },
     {
-      "browseId": "MPREb_IYfe9Etab3k",
-      "playlistId": "OLAK5uy_IYfe9Etab3k",
-      "title": "thank u, next",
+      "browseId": "PLPphH56tigk4",
+      "playlistId": "PLPphH56tigk4",
+      "title": "EL GREEN PRINT: La Saga (Disc 2) - EL CLUB DE LAS 19 FLORES",
       "artists": [
         {
-          "name": "Ariana Grande",
-          "id": "UC0076UMUgEng8HORUw_MYHA"
-        }
-      ],
-      "year": 2019,
-      "thumbnail": "https://yt3.googleusercontent.com/3LV6GoLom0Vb_oNFTXI_e2NIua0D-WocCifEFnSQattWpLfswpayWPzZ2BeClAB5QxR2EnGZkgh7QI7j=w544-h544-l90-rj",
-      "explicit": true
-    },
-    {
-      "browseId": "MPREb_G2iVd7o4Pgh",
-      "playlistId": "OLAK5uy_G2iVd7o4Pgh",
-      "title": "GUTS (spilled)",
-      "artists": [
-        {
-          "name": "Olivia Rodrigo",
-          "id": "UCE5XNpliPM-SmyFEp61tL_g"
-        }
-      ],
-      "year": 2024,
-      "thumbnail": "https://yt3.googleusercontent.com/LK1SpvU_sw-dT5MsGcDiN4Jmr7E6gIu0Xj2hYUDyrpaEW5yoJ5swueAyFUY_m-WCseB2_Eq5fsUv54E=w544-h544-l90-rj",
-      "explicit": true
-    },
-    {
-      "browseId": "MPREb_NMmY1n1NJFS",
-      "playlistId": "OLAK5uy_NMmY1n1NJFS",
-      "title": "Un Verano Sin Ti",
-      "artists": [
-        {
-          "name": "Bad Bunny",
-          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
-        }
-      ],
-      "year": 2022,
-      "thumbnail": "https://yt3.googleusercontent.com/0Ke36SSY53TQbmpqzKP4hMPoGiWYQiGI0KJ2CzcwjW4ore9vUMUmyzEi7irEU2MR3FCpNPdwIIuNslS6hg=w544-h544-l90-rj",
-      "explicit": true
-    },
-    {
-      "browseId": "MPREb_s9dlN04Ikzi",
-      "playlistId": "OLAK5uy_s9dlN04Ikzi",
-      "title": "NOCTURNO",
-      "artists": [
-        {
-          "name": "Eslabon",
-          "id": "UCQfzhcnvFjpA1wtU47_zf0g"
+          "name": "Feid",
+          "id": null
         }
       ],
       "year": 2026,
-      "thumbnail": "https://yt3.googleusercontent.com/jGfKcXStYqt4gIzE7B2cGddcLGTnNPe2nfpp_nwf3QwBLq_fOiN28CiWYZaCD2s_y6xBWKR2oFTkTiCp=w544-h544-l90-rj",
+      "thumbnail": "https://i.ytimg.com/vi/rMWWFNCPnk8/hqdefault.jpg",
+      "explicit": true
+    },
+    {
+      "browseId": "PLMORtpsmycv8",
+      "playlistId": "PLMORtpsmycv8",
+      "title": "Tributo al Rey Con Banda (Grandes Duetos), Vol. 2",
+      "artists": [
+        {
+          "name": "Vicente Fernández & Banda MS",
+          "id": null
+        }
+      ],
+      "year": 2026,
+      "thumbnail": "https://i.ytimg.com/vi/757Up8unXQw/hqdefault.jpg",
       "explicit": false
     },
     {
-      "browseId": "MPREb_7KWCAlW4pCR",
-      "playlistId": "OLAK5uy_7KWCAlW4pCR",
-      "title": "Tutankamon",
+      "browseId": "PLdxYfe8lqT7w",
+      "playlistId": "PLdxYfe8lqT7w",
+      "title": "fill de la mar (2026)",
       "artists": [
         {
-          "name": "Victor Mendivil",
-          "id": "UCB6w3YIXxmlpbGg8YDVpPgA"
+          "name": "Rels B",
+          "id": null
         }
       ],
-      "year": 2025,
-      "thumbnail": "https://yt3.googleusercontent.com/8VQw4Oi6BzBW9Oob_ILS8q0gGtxbOLdjBGECwK7sO10dKliG6rD5AM1Fdv8OCQtuXkWqyGzKZRrjIkjLyg=w544-h544-l90-rj",
+      "year": 2026,
+      "thumbnail": "https://i.ytimg.com/vi/REz_ytkQqp8/hqdefault.jpg",
       "explicit": true
     },
     {
-      "browseId": "MPREb_L1nZRJrdsEr",
-      "playlistId": "OLAK5uy_L1nZRJrdsEr",
-      "title": "Antes de Ameri",
+      "browseId": "PLVG_lM4yQvtg",
+      "playlistId": "PLVG_lM4yQvtg",
+      "title": "Bass Persuades",
       "artists": [
         {
-          "name": "DUKI",
-          "id": "UCtLchRAZex11gn-ah1_1Pgw"
+          "name": "Miley Cyrus",
+          "id": null
         }
       ],
-      "year": 2023,
-      "thumbnail": "https://yt3.googleusercontent.com/dh40jzmpleE2LLvk_Df5vE49qX-mlWKzCoapmnx6XPs9Z0YEnIbfxeMraD7aWWDlbPf4VOhtwfv9RT24=w544-h544-l90-rj",
-      "explicit": true
+      "year": 2026,
+      "thumbnail": "https://i.ytimg.com/vi/aWpw-Ynl0Yc/hqdefault.jpg",
+      "explicit": false
     },
     {
-      "browseId": "MPREb_BX5b2gJmX4c",
-      "playlistId": "OLAK5uy_BX5b2gJmX4c",
-      "title": "MAÑANA SERÁ BONITO",
+      "browseId": "PLU5gPXS5EC_0",
+      "playlistId": "PLU5gPXS5EC_0",
+      "title": "10 de 10",
       "artists": [
         {
-          "name": "KAROL G",
-          "id": "UC7n3gWRN0vQzgiOKc51aZ4w"
+          "name": "Banda MS de Sergio Lizárraga",
+          "id": null
         }
       ],
-      "year": 2023,
-      "thumbnail": "https://yt3.googleusercontent.com/Ao6HZJhSwmVZJ2TzgOtqLQ1j1iEKshnw5SA9G8aMwCpy-rNqE5UYFwVrSEEFt5nNOtPayoNJA4e20S9LmA=w544-h544-l90-rj",
-      "explicit": true
+      "year": 2026,
+      "thumbnail": "https://i.ytimg.com/vi/HFy2Dxu33Y0/hqdefault.jpg",
+      "explicit": false
+    },
+    {
+      "browseId": "PLUfp9hBSsRcQ",
+      "playlistId": "PLUfp9hBSsRcQ",
+      "title": "Para Cuando Sean Mayores",
+      "artists": [
+        {
+          "name": "Camilo",
+          "id": null
+        }
+      ],
+      "year": 2026,
+      "thumbnail": "https://i.ytimg.com/vi/27qc2zfDmQk/hqdefault.jpg",
+      "explicit": false
     }
   ],
   "featuredNewSongs": [
     {
-      "id": "MsbWsDJGo1A",
-      "title": "Te Olvido (La La)",
+      "id": "ivX_Bule86Q",
+      "title": "VAMO A VEL",
       "artists": [
         {
-          "name": "benny blanco",
-          "id": "UCzqz_ksRu_WkIzmivMdIS7A"
+          "name": "ROA",
+          "id": null
         },
-        {
-          "name": "Selena Gomez",
-          "id": "UCeBYRgPhy8kcRmIGQWKuqdQ"
-        },
-        {
-          "name": "Becky G",
-          "id": "UC5HWrwM_tGBYTeIWjcGvfZA"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/idHzCtgaHQSqUpwxPEIEnkotIM28OrEraHAfQUPgTepNTiSdi5J_hXOD8n5aZsfYWETn5kXVHLy7Ju9OQA=w120-h120-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "5xJP3p4LSKw",
-      "title": "Las mas bonitas son p#tas",
-      "artists": [
         {
           "name": "Anuel AA",
-          "id": "UCbBaYg2UToDaoOwo-R6xi4g"
+          "id": null
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/iSX0Ox29sf_SpZMr51jUbgHDKsvqQ-54KksqIlFADT9i-nFG590d6D-z61kYxMKF7r5lHX7wWvMjdqbA=w120-h120-l90-rj",
+      "thumbnail": "https://i.ytimg.com/vi/ivX_Bule86Q/hqdefault.jpg",
       "explicit": true
     },
     {
-      "id": "az3_6jmrcHY",
-      "title": "KOKO",
+      "id": "2-NkuLjtGNY",
+      "title": "AGUA",
       "artists": [
         {
-          "name": "Omar Courtz",
-          "id": "UCieB8sWI6qEOX6r_UnJU12w"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/EqBlvzNmm_B2otzdTqYJzhHguR94SVFH96sOWBUlKZ6zJ4CGeXj9YkpcI7MFYEf9DPovp-4RZssESLbv=w120-h120-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "rEPRjm4z_NE",
-      "title": "Keloke (con Peco)",
-      "artists": [
-        {
-          "name": "Dillom",
-          "id": "UC65hy5d0grCwJumfAKNBGJg"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/EONI8jXbKYcvMkR7URo9sjznWBfxDV-LpIrtiV6Lan9f8Bm3MFlHxfIteeDv_DBTE2WZSaDHlEpmWLOC=w120-h120-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "WPMujZtjEGw",
-      "title": "Edgardo Núñez - El Moscast Music | Cap. 92",
-      "artists": [
-        {
-          "name": "Episodio",
-          "id": ""
-        }
-      ],
-      "thumbnail": "https://i.ytimg.com/vi/WPMujZtjEGw/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3k9LrV1OS5nOPmh_D6WsjOnBUm_LQ",
-      "explicit": false
-    },
-    {
-      "id": "2Jgulp_Ba8Q",
-      "title": "Bad Bunny, Drake - Mia Feat. Sean Paul",
-      "artists": [
-        {
-          "name": "Sean Paul",
-          "id": ""
-        }
-      ],
-      "thumbnail": "https://i.ytimg.com/vi/2Jgulp_Ba8Q/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3kIbCjALpagAY4OmAfb-7L-g5oJ_g",
-      "explicit": false
-    },
-    {
-      "id": "pLBXk3nMVAQ",
-      "title": "we can’t be friends (wait for your love) (Live)",
-      "artists": [
-        {
-          "name": "Ariana Grande",
-          "id": "UC0076UMUgEng8HORUw_MYHA"
-        }
-      ],
-      "thumbnail": "https://i.ytimg.com/vi/pLBXk3nMVAQ/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3ky6DrlORkyWLPTanhQ2WlgMPTqtw",
-      "explicit": false
-    },
-    {
-      "id": "AKM503c2TL8",
-      "title": "Intro + yes, and? — Ariana Grande (Live from Oakland 2026-06-06)",
-      "artists": [
-        {
-          "name": "Miguel Soria",
-          "id": ""
-        }
-      ],
-      "thumbnail": "https://i.ytimg.com/vi/AKM503c2TL8/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3nDvuxR_iOlUGVf1_MgHUDwUPg_bQ",
-      "explicit": false
-    },
-    {
-      "id": "UWn9RdueB7E",
-      "title": "Gata Only",
-      "artists": [
-        {
-          "name": "FloyyMenor",
-          "id": "UCQgRygEjKPuNQWlhjXQGm6A"
+          "name": "Maluma",
+          "id": null
         },
         {
-          "name": "Cris Mj",
-          "id": "UCOykHV9q0qb0vrBsxO_5fkQ"
+          "name": "Shakira",
+          "id": null
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/diUI1hB3OleAoXadcG_L7xN3F3jEb-gpe6YsouyFpQXAdbInTHa3kmshHMVOJfCfS0Akjnqviq7lWds=w120-h120-l90-rj",
+      "thumbnail": "https://i.ytimg.com/vi/2-NkuLjtGNY/hqdefault.jpg",
+      "explicit": false
+    },
+    {
+      "id": "TcwwJUFpnfA",
+      "title": "Sábado de Noche",
+      "artists": [
+        {
+          "name": "Esau Ortiz",
+          "id": null
+        },
+        {
+          "name": "ELMANU GOMEZ",
+          "id": null
+        },
+        {
+          "name": "Joel De La P",
+          "id": null
+        },
+        {
+          "name": "Luis R Conriquez",
+          "id": null
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/TcwwJUFpnfA/hqdefault.jpg",
       "explicit": true
     },
     {
-      "id": "xT9Ym9gsNjg",
-      "title": "Si Antes Te Hubiera Conocido (Remix)",
+      "id": "xrwnF3JQWGY",
+      "title": "No Me Suman",
       "artists": [
         {
-          "name": "DJ Francisco Freites",
-          "id": "UCjsUNTMi3HzNnU4dbXNxYYA"
-        },
-        {
-          "name": "KAROL G",
-          "id": "UC7n3gWRN0vQzgiOKc51aZ4w"
+          "name": "Cris MJ",
+          "id": null
         }
       ],
-      "thumbnail": "https://i.ytimg.com/vi/xT9Ym9gsNjg/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3msmzNP0GlYcbiiRkdolHnsyn5cfA",
-      "explicit": false
-    },
-    {
-      "id": "gNoZulHH96k",
-      "title": "Luna (Remix) - Feid ft. Maluma",
-      "artists": [
-        {
-          "name": "Luna IA Music",
-          "id": ""
-        }
-      ],
-      "thumbnail": "https://i.ytimg.com/vi/gNoZulHH96k/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3koZyY7QmRiUlcf7Bi1LkIaNw_PuA",
-      "explicit": false
-    },
-    {
-      "id": "a6tgD_CsYTQ",
-      "title": "Perro Negro",
-      "artists": [
-        {
-          "name": "Bad Bunny",
-          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
-        },
-        {
-          "name": "Feid",
-          "id": "UCc3e8O2V5_7OA300ursDyFQ"
-        }
-      ],
-      "thumbnail": "https://i.ytimg.com/vi/a6tgD_CsYTQ/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3ljAKZryXghzVPITd33cNhtQJkAKA",
-      "explicit": false
-    },
-    {
-      "id": "sZygRgjKoGE",
-      "title": "Baile Inolvidable - Bad Bunny & Rubén Blades (En Vivo - Coliseo de Puerto Rico José Miguel Agrelot)",
-      "artists": [
-        {
-          "name": "CUVER",
-          "id": ""
-        }
-      ],
-      "thumbnail": "https://i.ytimg.com/vi/sZygRgjKoGE/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3lLQMAMZNGfUSMn0P4gBPhTArpLQg",
-      "explicit": false
-    },
-    {
-      "id": "BnFTPZIi-A4",
-      "title": "Peso Pluma, KAROL G - QLONA (Music Video)+ Lalo Ebrath, Dennis Fernando, Danny Deglein (REMIX)",
-      "artists": [
-        {
-          "name": "UNIONN LATINA",
-          "id": ""
-        }
-      ],
-      "thumbnail": "https://i.ytimg.com/vi/BnFTPZIi-A4/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3megyEXPiuEjIZGSnt5Yd-SHz69-A",
-      "explicit": false
-    },
-    {
-      "id": "_EofbmStkMw",
-      "title": "Un Poco Perdido",
-      "artists": [],
-      "thumbnail": "https://yt3.googleusercontent.com/idHzCtgaHQSqUpwxPEIEnkotIM28OrEraHAfQUPgTepNTiSdi5J_hXOD8n5aZsfYWETn5kXVHLy7Ju9OQA=w120-h120-l90-rj",
+      "thumbnail": "https://i.ytimg.com/vi/xrwnF3JQWGY/hqdefault.jpg",
       "explicit": true
     },
     {
-      "id": "cxC_v6_vh58",
-      "title": "Memoria De Paz (con The Marías)",
+      "id": "ZJXLJLMSc00",
+      "title": "Sin Ti",
       "artists": [
         {
-          "name": "benny blanco",
-          "id": "UCzqz_ksRu_WkIzmivMdIS7A"
+          "name": "LOS DOS DE TAMAULIPAS",
+          "id": null
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/idHzCtgaHQSqUpwxPEIEnkotIM28OrEraHAfQUPgTepNTiSdi5J_hXOD8n5aZsfYWETn5kXVHLy7Ju9OQA=w120-h120-l90-rj",
+      "thumbnail": "https://i.ytimg.com/vi/ZJXLJLMSc00/hqdefault.jpg",
       "explicit": false
     },
     {
-      "id": "CyPdQiQD9Z8",
-      "title": "Doctor (Work It Out)",
+      "id": "kLNwlamNawY",
+      "title": "ELLA",
       "artists": [
         {
-          "name": "Pharrell Williams",
-          "id": "UCJw8VyO6e3v6S0327AsgwcQ"
+          "name": "Blessd",
+          "id": null
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/kLNwlamNawY/hqdefault.jpg",
+      "explicit": true
+    },
+    {
+      "id": "_oCrIGbeDno",
+      "title": "Pa' Bailar",
+      "artists": [
+        {
+          "name": "Elvis Crespo",
+          "id": null
         },
         {
-          "name": "Miley Cyrus",
-          "id": "UCREdEwBdZcnQLIT0ThaAtmQ"
+          "name": "Beéle",
+          "id": null
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/SYLSUuiiu8S4_4u4Fd5TYPnl1fLsLGu1UD4rzumwTprU5po-yrrl6R0ByVTJSFn6rfoWrdDEk6batvk=w120-h120-l90-rj",
+      "thumbnail": "https://i.ytimg.com/vi/_oCrIGbeDno/hqdefault.jpg",
       "explicit": false
     },
     {
-      "id": "HNViGifyReQ",
-      "title": "Houdini (Live From Mexico)",
+      "id": "757Up8unXQw",
+      "title": "Por Tu Maldito Amor",
       "artists": [
         {
-          "name": "Dua Lipa",
-          "id": "UCzVb0SIXp9q9PeKCcFjsBtA"
+          "name": "Vicente Fernández",
+          "id": null
+        },
+        {
+          "name": "Banda MS de Sergio Lizárraga",
+          "id": null
         }
       ],
-      "thumbnail": "https://i.ytimg.com/vi/HNViGifyReQ/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3niytnfil-2MOONxhWKMUvb90c_0Q",
+      "thumbnail": "https://i.ytimg.com/vi/757Up8unXQw/hqdefault.jpg",
       "explicit": false
+    },
+    {
+      "id": "R3q5mVDsCYQ",
+      "title": "IA",
+      "artists": [
+        {
+          "name": "Chuyin",
+          "id": null
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/R3q5mVDsCYQ/hqdefault.jpg",
+      "explicit": true
+    },
+    {
+      "id": "ItIM5uaxZEE",
+      "title": "gaviotas de cristal",
+      "artists": [
+        {
+          "name": "Rels B",
+          "id": null
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/ItIM5uaxZEE/hqdefault.jpg",
+      "explicit": false
+    },
+    {
+      "id": "PyewvF-OPQw",
+      "title": "De México Soy",
+      "artists": [
+        {
+          "name": "Los Tucanes de Tijuana",
+          "id": null
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/PyewvF-OPQw/hqdefault.jpg",
+      "explicit": false
+    },
+    {
+      "id": "F8QApOSLFr0",
+      "title": "Confundido",
+      "artists": [
+        {
+          "name": "Marca MP",
+          "id": null
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/F8QApOSLFr0/hqdefault.jpg",
+      "explicit": false
+    },
+    {
+      "id": "dCrQUOAtyJo",
+      "title": "Cómo Te Olvido",
+      "artists": [
+        {
+          "name": "Diferente Nivel",
+          "id": null
+        },
+        {
+          "name": "Grupo Arriesgado",
+          "id": null
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/dCrQUOAtyJo/hqdefault.jpg",
+      "explicit": false
+    },
+    {
+      "id": "bH_S_FsetyE",
+      "title": "Tierra de N@RCO$",
+      "artists": [
+        {
+          "name": "Zimple",
+          "id": null
+        },
+        {
+          "name": "Los Dos Carnales",
+          "id": null
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/bH_S_FsetyE/hqdefault.jpg",
+      "explicit": true
+    },
+    {
+      "id": "UqCOEO8oUV8",
+      "title": "Segunda Cita",
+      "artists": [
+        {
+          "name": "Piso 21",
+          "id": null
+        },
+        {
+          "name": "Micro TDH",
+          "id": null
+        },
+        {
+          "name": "Gangsta",
+          "id": null
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/UqCOEO8oUV8/hqdefault.jpg",
+      "explicit": false
+    },
+    {
+      "id": "g4HaSBWqqyY",
+      "title": "MENTIRAS 2",
+      "artists": [
+        {
+          "name": "Grupo Los de la O",
+          "id": null
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/g4HaSBWqqyY/hqdefault.jpg",
+      "explicit": true
     }
   ],
   "newReleaseAlbums": [
     {
-      "browseId": "MPREb_IYfe9Etab3k",
-      "playlistId": "OLAK5uy_IYfe9Etab3k",
-      "title": "thank u, next",
+      "browseId": "PLPphH56tigk4",
+      "playlistId": "PLPphH56tigk4",
+      "title": "EL GREEN PRINT: La Saga (Disc 2) - EL CLUB DE LAS 19 FLORES",
       "artists": [
         {
-          "name": "Ariana Grande",
-          "id": "UC0076UMUgEng8HORUw_MYHA"
-        }
-      ],
-      "year": 2019,
-      "thumbnail": "https://yt3.googleusercontent.com/3LV6GoLom0Vb_oNFTXI_e2NIua0D-WocCifEFnSQattWpLfswpayWPzZ2BeClAB5QxR2EnGZkgh7QI7j=w544-h544-l90-rj",
-      "explicit": true
-    },
-    {
-      "browseId": "MPREb_1zBJxVRBDNN",
-      "playlistId": "OLAK5uy_1zBJxVRBDNN",
-      "title": "Especial",
-      "artists": [
-        {
-          "name": "Viejas Locas",
-          "id": "UCRWg6ojsIzk2kDCx-YZ_7ig"
-        }
-      ],
-      "year": 1999,
-      "thumbnail": "https://yt3.googleusercontent.com/izrQILx27F0bnnIvQ5JJKysKpsnaEGggwOqEzwvzemQdzY451xQby5gGG9vEv-JFdGPyWySJ9DRMrbP_og=w544-h544-s-l90-rj",
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_G2iVd7o4Pgh",
-      "playlistId": "OLAK5uy_G2iVd7o4Pgh",
-      "title": "GUTS (spilled)",
-      "artists": [
-        {
-          "name": "Olivia Rodrigo",
-          "id": "UCE5XNpliPM-SmyFEp61tL_g"
-        }
-      ],
-      "year": 2024,
-      "thumbnail": "https://yt3.googleusercontent.com/LK1SpvU_sw-dT5MsGcDiN4Jmr7E6gIu0Xj2hYUDyrpaEW5yoJ5swueAyFUY_m-WCseB2_Eq5fsUv54E=w544-h544-l90-rj",
-      "explicit": true
-    },
-    {
-      "browseId": "MPREb_KowXPQ8d0As",
-      "playlistId": "OLAK5uy_KowXPQ8d0As",
-      "title": "CONFESSIONS II",
-      "artists": [
-        {
-          "name": "Madonna",
-          "id": "UCo4CrqhIV_tSOGdDWfVyCsg"
+          "name": "Feid",
+          "id": null
         }
       ],
       "year": 2026,
-      "thumbnail": "https://yt3.googleusercontent.com/sCserwMJjYLKuR_jrwOeiWWN8sRfSA89i3AETEOjwwjN_--J4YIUtsOAs8B74NxTUq6jEHUWjK2MyoM3=w544-h544-l90-rj",
+      "thumbnail": "https://i.ytimg.com/vi/rMWWFNCPnk8/hqdefault.jpg",
       "explicit": true
     },
     {
-      "browseId": "MPREb_IrTVSodLnvP",
-      "playlistId": "OLAK5uy_IrTVSodLnvP",
-      "title": "Lost Weekend",
+      "browseId": "PLdxYfe8lqT7w",
+      "playlistId": "PLdxYfe8lqT7w",
+      "title": "fill de la mar (2026)",
       "artists": [
         {
-          "name": "Phoebe Bridgers",
-          "id": "UCprIJgC2-qqSHNVztFjRFmw"
+          "name": "Rels B",
+          "id": null
         }
       ],
       "year": 2026,
-      "thumbnail": "https://yt3.googleusercontent.com/SrGnL6w4JCPoeATM1Pz9eqnA15i8ZjvLzVBL-RIv0fiOxy_oRYM_4rWYQx2MbM_RSy30yMHC1WmokQTH=w544-h544-l90-rj",
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_cLAwkqCiDuK",
-      "playlistId": "OLAK5uy_cLAwkqCiDuK",
-      "title": "POR SI MAÑANA NO ESTOY",
-      "artists": [
-        {
-          "name": "Omar Courtz",
-          "id": "UCieB8sWI6qEOX6r_UnJU12w"
-        }
-      ],
-      "year": 2026,
-      "thumbnail": "https://yt3.googleusercontent.com/EqBlvzNmm_B2otzdTqYJzhHguR94SVFH96sOWBUlKZ6zJ4CGeXj9YkpcI7MFYEf9DPovp-4RZssESLbv=w544-h544-l90-rj",
+      "thumbnail": "https://i.ytimg.com/vi/REz_ytkQqp8/hqdefault.jpg",
       "explicit": true
     },
     {
-      "browseId": "MPREb_HX4JPKKRWzI",
-      "playlistId": "OLAK5uy_HX4JPKKRWzI",
-      "title": "NewJeans 2nd EP 'Get Up'",
+      "browseId": "PLVG_lM4yQvtg",
+      "playlistId": "PLVG_lM4yQvtg",
+      "title": "Bass Persuades",
       "artists": [
         {
-          "name": "NewJeans",
-          "id": "UCxOqS3cYg4FaHbobICo7nFQ"
+          "name": "Miley Cyrus",
+          "id": null
         }
       ],
-      "year": 2023,
-      "thumbnail": "https://yt3.googleusercontent.com/FzLKj6zFEJna0gRNDeZRH4nuQwEyN-YbCaC-bIGLoia6EhirHUachdvdEdR3VdB7pArgFCW8mtpLPL0=w544-h544-l90-rj",
+      "year": 2026,
+      "thumbnail": "https://i.ytimg.com/vi/aWpw-Ynl0Yc/hqdefault.jpg",
       "explicit": false
     },
     {
-      "browseId": "MPREb_NMmY1n1NJFS",
-      "playlistId": "OLAK5uy_NMmY1n1NJFS",
-      "title": "Un Verano Sin Ti",
+      "browseId": "PLMORtpsmycv8",
+      "playlistId": "PLMORtpsmycv8",
+      "title": "Tributo al Rey Con Banda (Grandes Duetos), Vol. 2",
       "artists": [
         {
-          "name": "Bad Bunny",
-          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
+          "name": "Vicente Fernández",
+          "id": null
         }
       ],
-      "year": 2022,
-      "thumbnail": "https://yt3.googleusercontent.com/0Ke36SSY53TQbmpqzKP4hMPoGiWYQiGI0KJ2CzcwjW4ore9vUMUmyzEi7irEU2MR3FCpNPdwIIuNslS6hg=w544-h544-l90-rj",
+      "year": 2026,
+      "thumbnail": "https://i.ytimg.com/vi/757Up8unXQw/hqdefault.jpg",
+      "explicit": false
+    },
+    {
+      "browseId": "MPREb_gSrV-1zDnlY",
+      "playlistId": "gSrV-1zDnlY",
+      "title": "LEY DE VIDA",
+      "artists": [
+        {
+          "name": "Grupo Los de la O",
+          "id": null
+        }
+      ],
+      "year": 2026,
+      "thumbnail": "https://i.ytimg.com/vi/gSrV-1zDnlY/hqdefault.jpg",
       "explicit": true
     },
     {
-      "browseId": "MPREb_ay3UerEHn5t",
-      "playlistId": "OLAK5uy_ay3UerEHn5t",
-      "title": "OCEAN",
+      "browseId": "MPREb_GGyqjINgWtg",
+      "playlistId": "GGyqjINgWtg",
+      "title": "Como agua",
       "artists": [
         {
-          "name": "KAROL G",
-          "id": "UC7n3gWRN0vQzgiOKc51aZ4w"
-        }
-      ],
-      "year": 2019,
-      "thumbnail": "https://yt3.googleusercontent.com/6nd0FE1ujr43AByxQFGVWB9DDDzHeMZiiAHGvl4xeU9tNTEUGRDTAwJINx1z2QOujBInhyv4elXoX-4=w544-h544-l90-rj",
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_SVBn99xIpAK",
-      "playlistId": "OLAK5uy_SVBn99xIpAK",
-      "title": "en dormir sin Madrid",
-      "artists": [
-        {
-          "name": "Bizarrap",
-          "id": "UCONiUl5u7y2bMaVZJcuRDEQ"
-        },
-        {
-          "name": "Milo j",
-          "id": "UCLabAHLHMy2MdTWaZATUmQQ"
-        }
-      ],
-      "year": 2023,
-      "thumbnail": "https://yt3.googleusercontent.com/6P-ylxWdVQW9t_z_49rC7GkDsSJVJ6iXm9dddwKWtnZykzQbvHOj1XmyCOuzqsB-W6QIpwHbo9r8jibS=w544-h544-l90-rj",
-      "explicit": true
-    },
-    {
-      "browseId": "MPREb_PeiujkKB6WE",
-      "playlistId": "OLAK5uy_PeiujkKB6WE",
-      "title": "ARIRANG: Piano Instrumental Tribute to BTS",
-      "artists": [
-        {
-          "name": "Piano Echoes",
-          "id": "UChnPI1xXBpWvCDZ55OCCfYQ"
+          "name": "YEИDRY",
+          "id": null
         }
       ],
       "year": 2026,
-      "thumbnail": "https://yt3.googleusercontent.com/EFh6eeLXdjIS55VuCc49ipnulq-IC4QRZaSAaAh77rCZLuVr8mRdnqQs98S7z9ryVHwU8eL1vYtgJmaF6w=w544-h544-l90-rj",
+      "thumbnail": "https://i.ytimg.com/vi/GGyqjINgWtg/hqdefault.jpg",
       "explicit": false
     },
     {
-      "browseId": "MPREb_tZC7e1H5mfm",
-      "playlistId": "OLAK5uy_tZC7e1H5mfm",
-      "title": "DeBÍ TiRAR MáS FOToS",
+      "browseId": "PLTdcUK7aWXEA",
+      "playlistId": "PLTdcUK7aWXEA",
+      "title": "La Gloria",
       "artists": [
         {
-          "name": "Bad Bunny",
-          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
-        }
-      ],
-      "year": 2025,
-      "thumbnail": "https://yt3.googleusercontent.com/yBcpSTWxVqyJr7enMy7HFv14Yb8p1jI5AS5o49Cvbeyc6zjvCvdLn_0_iAxz50MqxLx6hQDngWBeaC26=w544-h544-l90-rj",
-      "explicit": true
-    },
-    {
-      "browseId": "MPREb_Kw7dvFVmzU0",
-      "playlistId": "OLAK5uy_Kw7dvFVmzU0",
-      "title": "Wuthering Heights",
-      "artists": [
-        {
-          "name": "Charli xcx",
-          "id": "UCI4YNnmHjXFaaKvfdmpWvJQ"
+          "name": "Michelle Maciel",
+          "id": null
         }
       ],
       "year": 2026,
-      "thumbnail": "https://yt3.googleusercontent.com/inyPgzFkfcxbN_XAKWE2MvGh3uKyVpLtRgg0Ogpbq27_dCpdH0iSq_Gx9rBhAP2kYo6_bG3Ffd6v6zAG=w544-h544-l90-rj",
+      "thumbnail": "https://i.ytimg.com/vi/Fp7iKFVH7Pg/hqdefault.jpg",
       "explicit": false
     },
     {
-      "browseId": "MPREb_HOCJNhTbimb",
-      "playlistId": "OLAK5uy_HOCJNhTbimb",
-      "title": "Sunshine",
-      "artists": [],
-      "year": 2026,
-      "thumbnail": "https://yt3.googleusercontent.com/4SO364uiQP3znMipyUkyL3i-ln8XEP2CODeRq90pxnhhVAJZSruhO2gTNNgPIUvTZ38Q23mHEn0rKqo73A=w544-h544-l90-rj",
-      "explicit": false
-    },
-    {
-      "browseId": "MPREb_zh5uc9IzRx3",
-      "playlistId": "OLAK5uy_zh5uc9IzRx3",
-      "title": "EL BAIFO",
+      "browseId": "PLU5gPXS5EC_0",
+      "playlistId": "PLU5gPXS5EC_0",
+      "title": "10 de 10",
       "artists": [
         {
-          "name": "Quevedo",
-          "id": "UC7PL9aor5qNRhvhWWVXyOqA"
+          "name": "Banda MS de Sergio Lizárraga",
+          "id": null
         }
       ],
       "year": 2026,
-      "thumbnail": "https://yt3.googleusercontent.com/nVCZmnacT8ffaAzaBKj5zrTxNJfwSB3RPKAZXANxWuRQy15OHujO9E-P7gM9j64eXsermkgTTPM2hGmq=w544-h544-l90-rj",
+      "thumbnail": "https://i.ytimg.com/vi/HFy2Dxu33Y0/hqdefault.jpg",
       "explicit": false
     },
     {
-      "browseId": "MPREb_ZU3au63U3gn",
-      "playlistId": "OLAK5uy_ZU3au63U3gn",
-      "title": "LUX (Complete Works)",
+      "browseId": "PLUfp9hBSsRcQ",
+      "playlistId": "PLUfp9hBSsRcQ",
+      "title": "Para Cuando Sean Mayores",
       "artists": [
         {
-          "name": "ROSALÍA",
-          "id": "UCeYz6rzUGhVwqxRM37FUo8w"
+          "name": "Camilo",
+          "id": null
         }
       ],
       "year": 2026,
-      "thumbnail": "https://yt3.googleusercontent.com/refwsqDZACYO9U0QbvT2NJQbKiHuzBn_N8yrR5gBSSBRa0ZzPvhkBO5owzOiqdo722TVFHtx6_VRGrU=w544-h544-l90-rj",
-      "explicit": true
+      "thumbnail": "https://i.ytimg.com/vi/27qc2zfDmQk/hqdefault.jpg",
+      "explicit": false
+    },
+    {
+      "browseId": "PLALAlxeJIvA4",
+      "playlistId": "PLALAlxeJIvA4",
+      "title": "Mi Hubiera Favorito",
+      "artists": [
+        {
+          "name": "Calibre 50",
+          "id": null
+        }
+      ],
+      "year": 2026,
+      "thumbnail": "https://i.ytimg.com/vi/aZsI4p5ObCQ/hqdefault.jpg",
+      "explicit": false
+    },
+    {
+      "browseId": "PLAdVAUTXKwXc",
+      "playlistId": "PLAdVAUTXKwXc",
+      "title": "ReVivo - EP",
+      "artists": [
+        {
+          "name": "Ricky Martin",
+          "id": null
+        }
+      ],
+      "year": 2026,
+      "thumbnail": "https://i.ytimg.com/vi/zOSGSbdB3Og/hqdefault.jpg",
+      "explicit": false
+    },
+    {
+      "browseId": "PLha_lxjdTZihUfdoEh2SfUrg7L4frCmLW",
+      "playlistId": "PLha_lxjdTZihUfdoEh2SfUrg7L4frCmLW",
+      "title": "Lo Esencial Vol.1",
+      "artists": [
+        {
+          "name": "Novato El Flow & Fuentes Prod",
+          "id": null
+        }
+      ],
+      "year": 2026,
+      "thumbnail": "https://i.ytimg.com/vi/kq31g-S7Omo/hqdefault.jpg",
+      "explicit": false
+    },
+    {
+      "browseId": "PLGz8z-YcPoV8",
+      "playlistId": "PLGz8z-YcPoV8",
+      "title": "Desde La México Capítulo 4",
+      "artists": [
+        {
+          "name": "PALOMAZO NORTEÑO",
+          "id": null
+        }
+      ],
+      "year": 2026,
+      "thumbnail": "https://i.ytimg.com/vi/UKFQM4TyFe4/hqdefault.jpg",
+      "explicit": false
+    },
+    {
+      "browseId": "PLHgwtiiVQzd0",
+      "playlistId": "PLHgwtiiVQzd0",
+      "title": "Una Raya Más Al Tigre",
+      "artists": [
+        {
+          "name": "Camila Fernández",
+          "id": null
+        }
+      ],
+      "year": 2026,
+      "thumbnail": "https://i.ytimg.com/vi/aK-p69BQHco/hqdefault.jpg",
+      "explicit": false
     }
   ],
   "trendingSongs": [
     {
-      "id": "5xJP3p4LSKw",
-      "title": "Las mas bonitas son p#tas",
+      "id": "ivX_Bule86Q",
+      "title": "VAMO A VEL",
       "artists": [
         {
-          "name": "Anuel AA",
-          "id": "UCbBaYg2UToDaoOwo-R6xi4g"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/iSX0Ox29sf_SpZMr51jUbgHDKsvqQ-54KksqIlFADT9i-nFG590d6D-z61kYxMKF7r5lHX7wWvMjdqbA=w120-h120-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "az3_6jmrcHY",
-      "title": "KOKO",
-      "artists": [
-        {
-          "name": "Omar Courtz",
-          "id": "UCieB8sWI6qEOX6r_UnJU12w"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/EqBlvzNmm_B2otzdTqYJzhHguR94SVFH96sOWBUlKZ6zJ4CGeXj9YkpcI7MFYEf9DPovp-4RZssESLbv=w120-h120-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "2Jgulp_Ba8Q",
-      "title": "Bad Bunny, Drake - Mia Feat. Sean Paul",
-      "artists": [
-        {
-          "name": "Sean Paul",
-          "id": ""
-        }
-      ],
-      "thumbnail": "https://i.ytimg.com/vi/2Jgulp_Ba8Q/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3kIbCjALpagAY4OmAfb-7L-g5oJ_g",
-      "explicit": false
-    },
-    {
-      "id": "7GDp7S1HgSk",
-      "title": "Ojitos Lindos",
-      "artists": [
-        {
-          "name": "Bad Bunny",
-          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
-        },
-        {
-          "name": "Bomba Estéreo",
-          "id": "UCt7E5esO1UIPkZifW08r9hA"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/0Ke36SSY53TQbmpqzKP4hMPoGiWYQiGI0KJ2CzcwjW4ore9vUMUmyzEi7irEU2MR3FCpNPdwIIuNslS6hg=w120-h120-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "BBUrPlgHWMo",
-      "title": "Sensualidad (con Mambo Kingz y DJ Luian)",
-      "artists": [
-        {
-          "name": "Hear This Music",
-          "id": "UC8cUny_5O6m0yTMSnBmjKnw"
-        },
-        {
-          "name": "Bad Bunny",
-          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
-        },
-        {
-          "name": "Prince Royce",
-          "id": "UC1amDmVt3wHmB7zKpkmf3rg"
-        },
-        {
-          "name": "J Balvin",
-          "id": "UCWw-Guyr5ul9B-d5kJlHMng"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/SG1imNVLLrYUDXmAv7AS4iSFbt-3IjYaI7y7myg2Kurjl2eF_AVlCpoj_paRklYDcgLak7aboFPYCgk=w120-h120-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "llZJ-9e4Yeo",
-      "title": "SUPERESTRELLA (Live Edit)",
-      "artists": [
-        {
-          "name": "Aitana",
-          "id": "UCkyzcFsGWVYSUGaR7YB9OYQ"
-        }
-      ],
-      "thumbnail": "https://i.ytimg.com/vi/llZJ-9e4Yeo/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3mdN6x9CnLRfN-2FjfvHVrk_ft_Gw",
-      "explicit": false
-    },
-    {
-      "id": "fuBMrVffb84",
-      "title": "petal",
-      "artists": [
-        {
-          "name": "Ariana Grande",
-          "id": "UC0076UMUgEng8HORUw_MYHA"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/6LDZTIjk3nbSSsG8J0M2_ME4KWzt4MTZ7oqrZlWg-uZ1gRWnBKt9ySPibZ5l7GJ_-j6gB6hv-qLNaPE=w120-h120-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "hhB4PNkw6DI",
-      "title": "Hate That I Made You Love Me - LIVE from The Eternal Sunshine Tour (edit by Monster Films)",
-      "artists": [
-        {
-          "name": "Andrés Zamora",
-          "id": ""
-        }
-      ],
-      "thumbnail": "https://i.ytimg.com/vi/hhB4PNkw6DI/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3lW_5_fe1pkqcqfcOm3OPrDwMtuKw",
-      "explicit": false
-    },
-    {
-      "id": "gGmJPGVWh7w",
-      "title": "Hasta Que Dios Diga",
-      "artists": [
-        {
-          "name": "Anuel AA",
-          "id": "UCbBaYg2UToDaoOwo-R6xi4g"
-        },
-        {
-          "name": "Bad Bunny",
-          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/YMZykrPBM5idYg5PW8bUlKJS6usZzbVmJYHqEufzJN88195TeoPvwxiD1eL19sIHQH3BlLVmhEjsCEUp=w120-h120-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "oGZXQEK4dcU",
-      "title": "Jay Wheeler x Omar Courtz - De Lejitos Remix (Visualizer)",
-      "artists": [
-        {
-          "name": "Team Of Kingz",
-          "id": ""
-        }
-      ],
-      "thumbnail": "https://i.ytimg.com/vi/oGZXQEK4dcU/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3niUYaa13ci0un21pfYP6O5OTWtUw",
-      "explicit": false
-    },
-    {
-      "id": "FPELTXZBnrg",
-      "title": "AL GOLPITO",
-      "artists": [
-        {
-          "name": "Quevedo",
-          "id": "UC7PL9aor5qNRhvhWWVXyOqA"
-        },
-        {
-          "name": "Nueva Línea",
-          "id": "UCQa89yOPPyOyXHZc3rcJ6ow"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/nVCZmnacT8ffaAzaBKj5zrTxNJfwSB3RPKAZXANxWuRQy15OHujO9E-P7gM9j64eXsermkgTTPM2hGmq=w120-h120-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "PCBGDvmQUVw",
-      "title": "ZIZI",
-      "artists": [
-        {
-          "name": "Ozuna",
-          "id": "UCKEFjh4JL-OyMI8z3h5Coaw"
-        },
-        {
-          "name": "Omar Courtz",
-          "id": "UCieB8sWI6qEOX6r_UnJU12w"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/Y993cOAb1TiVc5uY3uz83amsHFpuk9TGtr4v5EtgUq6W0kyMjYV8w_hI2CetiEmaTYwMCS8KDEhS228Z-Q=w120-h120-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "2x9aY0QJR04",
-      "title": "DÁKITI",
-      "artists": [
-        {
-          "name": "Bad Bunny",
-          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
-        },
-        {
-          "name": "Jhayco",
-          "id": "UChZEzxer-QvRMbADJJGOMuQ"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/Iysj4pTBhx_j4Uk2xzUoq6IN9rfnb6GlaZp9g4rvLndsJXLY5IxpIlX3YHC_at2h6lVdMNkoLplmWvhfkQ=w120-h120-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "g5dLe5VPAAo",
-      "title": "Callaita",
-      "artists": [
-        {
-          "name": "Bad Bunny",
-          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
-        },
-        {
-          "name": "Tainy",
-          "id": "UCeN6GRz4bN054slorYxms0w"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/0Ke36SSY53TQbmpqzKP4hMPoGiWYQiGI0KJ2CzcwjW4ore9vUMUmyzEi7irEU2MR3FCpNPdwIIuNslS6hg=w120-h120-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "K0vXF7lJcWY",
-      "title": "Me Porto Bonito",
-      "artists": [
-        {
-          "name": "Bad Bunny",
-          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
-        },
-        {
-          "name": "Chencho Corleone",
-          "id": "UC4_xgMYQfEUnKTAuuys62JQ"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/0Ke36SSY53TQbmpqzKP4hMPoGiWYQiGI0KJ2CzcwjW4ore9vUMUmyzEi7irEU2MR3FCpNPdwIIuNslS6hg=w120-h120-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "JbVP_aZiFSY",
-      "title": "Se Preparó",
-      "artists": [
-        {
-          "name": "Ozuna",
-          "id": "UCKEFjh4JL-OyMI8z3h5Coaw"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/ux07P9XtdxQNM2Lt5v-tmitc_Ts6wi-4ajQUXyWYLym2-dVdCcyENZy3MECKwGu1tx0lRbfulxYArm5e=w120-h120-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "4LkSB5xm5Sg",
-      "title": "Q U E V A S H A C E R H O Y ?",
-      "artists": [
-        {
-          "name": "Omar Courtz",
-          "id": "UCieB8sWI6qEOX6r_UnJU12w"
-        },
-        {
-          "name": "De La Rose",
-          "id": "UC2-PV0lS78r65j_3f5_vPvA"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/xGZFBAYha4wjuPZoY_vZTNDFg8ouyBcQWa1-yuW-Poso2p7kKO6oemtD5LixCSTJlPhOZVI523lziUYZdw=w120-h120-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "6sE5F9Y8f1o",
-      "title": "Cuando No Era Cantante (Remix)",
-      "artists": [
-        {
-          "name": "El Bogueto",
-          "id": "UC8r_j-qnSCj1t4h6EVN5TrQ"
+          "name": "ROA",
+          "id": null
         },
         {
           "name": "Anuel AA",
-          "id": "UCbBaYg2UToDaoOwo-R6xi4g"
-        },
-        {
-          "name": "fuerza regida",
-          "id": "UC0kxNxFQCK6d2spPz5Sme7Q"
-        },
-        {
-          "name": "Yung Beef",
-          "id": "UCfodAOnzAk1TpuPDRmZ8NjQ"
+          "id": null
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/IxzfmcUdsRg50lnGnb2iFVid0mWOiBNx-4uwV6A1ElDQIjOHXRt6M3XhLqWcZbRE7J19oUzeHBkPbUo=w120-h120-l90-rj",
+      "thumbnail": "https://i.ytimg.com/vi/ivX_Bule86Q/hqdefault.jpg",
       "explicit": true
     },
     {
-      "id": "xi8dBKVQCo8",
-      "title": "LA GRACIOSA REMIX  - Quevedo, Elvis Crespo , Bad Bunny (MASHUP DIEGO RIOS)",
+      "id": "2-NkuLjtGNY",
+      "title": "AGUA",
       "artists": [
         {
-          "name": "DIEGO RIOS & JAVIKI",
-          "id": ""
+          "name": "Maluma",
+          "id": null
+        },
+        {
+          "name": "Shakira",
+          "id": null
         }
       ],
-      "thumbnail": "https://i.ytimg.com/vi/xi8dBKVQCo8/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3kbrqm59svtKHkfkBbQo-qy9ZwzZw",
+      "thumbnail": "https://i.ytimg.com/vi/2-NkuLjtGNY/hqdefault.jpg",
       "explicit": false
     },
     {
-      "id": "yIQ2VtGPt_E",
-      "title": "VeLDÁ",
+      "id": "TcwwJUFpnfA",
+      "title": "Sábado de Noche",
       "artists": [
         {
-          "name": "Bad Bunny",
-          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
+          "name": "Esau Ortiz",
+          "id": null
         },
         {
-          "name": "Omar Courtz",
-          "id": "UCieB8sWI6qEOX6r_UnJU12w"
+          "name": "ELMANU GOMEZ",
+          "id": null
         },
         {
-          "name": "Dei V",
-          "id": "UC5zqJWKjXuHZYT8SU_gPgmQ"
+          "name": "Joel De La P",
+          "id": null
+        },
+        {
+          "name": "Luis R Conriquez",
+          "id": null
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/yBcpSTWxVqyJr7enMy7HFv14Yb8p1jI5AS5o49Cvbeyc6zjvCvdLn_0_iAxz50MqxLx6hQDngWBeaC26=w120-h120-l90-rj",
+      "thumbnail": "https://i.ytimg.com/vi/TcwwJUFpnfA/hqdefault.jpg",
+      "explicit": true
+    },
+    {
+      "id": "xrwnF3JQWGY",
+      "title": "No Me Suman",
+      "artists": [
+        {
+          "name": "Cris MJ",
+          "id": null
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/xrwnF3JQWGY/hqdefault.jpg",
+      "explicit": true
+    },
+    {
+      "id": "ZJXLJLMSc00",
+      "title": "Sin Ti",
+      "artists": [
+        {
+          "name": "LOS DOS DE TAMAULIPAS",
+          "id": null
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/ZJXLJLMSc00/hqdefault.jpg",
+      "explicit": false
+    },
+    {
+      "id": "kLNwlamNawY",
+      "title": "ELLA",
+      "artists": [
+        {
+          "name": "Blessd",
+          "id": null
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/kLNwlamNawY/hqdefault.jpg",
+      "explicit": true
+    },
+    {
+      "id": "_oCrIGbeDno",
+      "title": "Pa' Bailar",
+      "artists": [
+        {
+          "name": "Elvis Crespo",
+          "id": null
+        },
+        {
+          "name": "Beéle",
+          "id": null
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/_oCrIGbeDno/hqdefault.jpg",
+      "explicit": false
+    },
+    {
+      "id": "757Up8unXQw",
+      "title": "Por Tu Maldito Amor",
+      "artists": [
+        {
+          "name": "Vicente Fernández",
+          "id": null
+        },
+        {
+          "name": "Banda MS de Sergio Lizárraga",
+          "id": null
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/757Up8unXQw/hqdefault.jpg",
+      "explicit": false
+    },
+    {
+      "id": "R3q5mVDsCYQ",
+      "title": "IA",
+      "artists": [
+        {
+          "name": "Chuyin",
+          "id": null
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/R3q5mVDsCYQ/hqdefault.jpg",
+      "explicit": true
+    },
+    {
+      "id": "ItIM5uaxZEE",
+      "title": "gaviotas de cristal",
+      "artists": [
+        {
+          "name": "Rels B",
+          "id": null
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/ItIM5uaxZEE/hqdefault.jpg",
+      "explicit": false
+    },
+    {
+      "id": "PyewvF-OPQw",
+      "title": "De México Soy",
+      "artists": [
+        {
+          "name": "Los Tucanes de Tijuana",
+          "id": null
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/PyewvF-OPQw/hqdefault.jpg",
+      "explicit": false
+    },
+    {
+      "id": "F8QApOSLFr0",
+      "title": "Confundido",
+      "artists": [
+        {
+          "name": "Marca MP",
+          "id": null
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/F8QApOSLFr0/hqdefault.jpg",
+      "explicit": false
+    },
+    {
+      "id": "dCrQUOAtyJo",
+      "title": "Cómo Te Olvido",
+      "artists": [
+        {
+          "name": "Diferente Nivel",
+          "id": null
+        },
+        {
+          "name": "Grupo Arriesgado",
+          "id": null
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/dCrQUOAtyJo/hqdefault.jpg",
+      "explicit": false
+    },
+    {
+      "id": "bH_S_FsetyE",
+      "title": "Tierra de N@RCO$",
+      "artists": [
+        {
+          "name": "Zimple",
+          "id": null
+        },
+        {
+          "name": "Los Dos Carnales",
+          "id": null
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/bH_S_FsetyE/hqdefault.jpg",
+      "explicit": true
+    },
+    {
+      "id": "UqCOEO8oUV8",
+      "title": "Segunda Cita",
+      "artists": [
+        {
+          "name": "Piso 21",
+          "id": null
+        },
+        {
+          "name": "Micro TDH",
+          "id": null
+        },
+        {
+          "name": "Gangsta",
+          "id": null
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/UqCOEO8oUV8/hqdefault.jpg",
+      "explicit": false
+    },
+    {
+      "id": "g4HaSBWqqyY",
+      "title": "MENTIRAS 2",
+      "artists": [
+        {
+          "name": "Grupo Los de la O",
+          "id": null
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/g4HaSBWqqyY/hqdefault.jpg",
       "explicit": true
     }
   ],
   "everyoneListening": [
     {
-      "id": "B88eLylKYHo",
-      "title": "FOREVER TU GANTEL",
+      "id": "T_UEawa2wCk",
+      "title": "you seem pretty sad for a girl so in love",
       "artists": [
         {
-          "name": "Omar Courtz",
-          "id": "UCieB8sWI6qEOX6r_UnJU12w"
-        },
-        {
-          "name": "Ñengo Flow",
-          "id": "UCeNt9djCuN7-Vr5J3kK_GkQ"
+          "name": "Olivia Rodrigo",
+          "id": null
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/EqBlvzNmm_B2otzdTqYJzhHguR94SVFH96sOWBUlKZ6zJ4CGeXj9YkpcI7MFYEf9DPovp-4RZssESLbv=w120-h120-l90-rj",
+      "thumbnail": "https://i.ytimg.com/vi/T_UEawa2wCk/hqdefault.jpg",
       "explicit": true
     },
     {
-      "id": "sZygRgjKoGE",
-      "title": "Baile Inolvidable - Bad Bunny & Rubén Blades (En Vivo - Coliseo de Puerto Rico José Miguel Agrelot)",
+      "id": "wbstEDi0Jzw",
+      "title": "DEPR</3$$ED MFKZ",
       "artists": [
         {
-          "name": "CUVER",
-          "id": ""
-        }
-      ],
-      "thumbnail": "https://i.ytimg.com/vi/sZygRgjKoGE/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3lLQMAMZNGfUSMn0P4gBPhTArpLQg",
-      "explicit": false
-    },
-    {
-      "id": "9-JyUbzrZbA",
-      "title": "Amanece",
-      "artists": [
-        {
-          "name": "Anuel Aa",
-          "id": "UCbBaYg2UToDaoOwo-R6xi4g"
+          "name": "Junior H",
+          "id": null
         },
         {
-          "name": "Haze",
-          "id": "UCFV8pv7slPIV_ebs6j6SPHw"
+          "name": "Gael Valenzuela",
+          "id": null
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/F_lfnHIS_IB53vkQdtyD_pdKSFUJdPspymlTxGCkXGBcGVL6VFDpna1G9yZj8vNrsKMiOnVqRctLrdaRcA=w120-h120-l90-rj",
+      "thumbnail": "https://i.ytimg.com/vi/wbstEDi0Jzw/hqdefault.jpg",
+      "explicit": true
+    },
+    {
+      "id": "uG53V49TM4c",
+      "title": "Nunca Voy a Morir",
+      "artists": [
+        {
+          "name": "Omar Camacho",
+          "id": null
+        }
+      ],
+      "thumbnail": "https://i.ytimg.com/vi/uG53V49TM4c/hqdefault.jpg",
       "explicit": false
     },
     {
-      "id": "QFyL7QnJTXU",
-      "title": "Dile a él-Raw Alejandro Remix CarAudio",
+      "id": "ve_ZyV6HNm4",
+      "title": "ACOMODO",
       "artists": [
         {
-          "name": "Dj Emotion DeVenezuela",
-          "id": ""
+          "name": "Tito Double P",
+          "id": null
         }
       ],
-      "thumbnail": "https://i.ytimg.com/vi/QFyL7QnJTXU/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3kUTYVgYHbMLpxCHA7kpZLPRm-6hA",
-      "explicit": false
+      "thumbnail": "https://i.ytimg.com/vi/ve_ZyV6HNm4/hqdefault.jpg",
+      "explicit": true
     },
     {
-      "id": "l1T1fvkMEoc",
-      "title": "Dichavate",
+      "id": "WdSGEvDGZAo",
+      "title": "DeBÍ TiRAR MáS FOToS",
       "artists": [
-        {
-          "name": "Ya Ice Dilan",
-          "id": "UC9aJbR9Q8nscvZaMw_cH4Ww"
-        },
-        {
-          "name": "Rey Tony",
-          "id": "UCDhExL0uVtumv_DEjPPq5qg"
-        },
-        {
-          "name": "Helabusador",
-          "id": "UC89ct8d1ZKEXS03nSpntgPg"
-        },
-        {
-          "name": "JipMusic Global",
-          "id": "UC1Fc1q7TOSnVmvUNSmL3oIw"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/S8qDdDfjr5dPQOhs47VUcQWKJa76q7wwEz1Sp31_5TNa1GlqzXbXj59W8PEDVp07nTd-3m1aTqjEVcA=w120-h120-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "4YQ06rGPfOc",
-      "title": "oh well",
-      "artists": [
-        {
-          "name": "Ariana Grande",
-          "id": "UC0076UMUgEng8HORUw_MYHA"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/6LDZTIjk3nbSSsG8J0M2_ME4KWzt4MTZ7oqrZlWg-uZ1gRWnBKt9ySPibZ5l7GJ_-j6gB6hv-qLNaPE=w120-h120-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "j0ZPw3pScew",
-      "title": "⁠LUCES DE COLORES",
-      "artists": [
-        {
-          "name": "Omar Courtz",
-          "id": "UCieB8sWI6qEOX6r_UnJU12w"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/xGZFBAYha4wjuPZoY_vZTNDFg8ouyBcQWa1-yuW-Poso2p7kKO6oemtD5LixCSTJlPhOZVI523lziUYZdw=w120-h120-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "is8UDe2PhKQ",
-      "title": "KATSEYE (캣츠아이) 'Hootie Frutti' Official MV",
-      "artists": [
-        {
-          "name": "Vídeo",
-          "id": ""
-        }
-      ],
-      "thumbnail": "https://i.ytimg.com/vi/is8UDe2PhKQ/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3nE5_DFLerZ4A2bjnpLLR4NKn6xwA",
-      "explicit": false
-    },
-    {
-      "id": "WsGnCt-gT44",
-      "title": "LA CANCIÓN",
-      "artists": [
-        {
-          "name": "J Balvin",
-          "id": "UCWw-Guyr5ul9B-d5kJlHMng"
-        },
         {
           "name": "Bad Bunny",
-          "id": "UCiY3z8HAGD6BlSNKVn2kSvQ"
+          "id": null
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/Rw2pqT1wp-Qp1J-Mex8gS1z1OZEy9fFF-OL4gULrMD9aW64bRkikpKr9qLcJeJK_ktsobZk57ZUjO7Br=w120-h120-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "2WaPoIQLJYs",
-      "title": "POR SI MAÑANA NO ESTOY",
-      "artists": [
-        {
-          "name": "Omar Courtz",
-          "id": "UCieB8sWI6qEOX6r_UnJU12w"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/EqBlvzNmm_B2otzdTqYJzhHguR94SVFH96sOWBUlKZ6zJ4CGeXj9YkpcI7MFYEf9DPovp-4RZssESLbv=w120-h120-l90-rj",
+      "thumbnail": "https://i.ytimg.com/vi/WdSGEvDGZAo/hqdefault.jpg",
       "explicit": true
     },
     {
-      "id": "dTP19ZcGngY",
-      "title": "stupid song",
+      "id": "qAzWL2M1sN8",
+      "title": "LA PANTERA NEGRA",
       "artists": [
         {
-          "name": "Olivia Rodrigo",
-          "id": "UCE5XNpliPM-SmyFEp61tL_g"
+          "name": "Myke Towers",
+          "id": null
         }
       ],
-      "thumbnail": "https://i.ytimg.com/vi/dTP19ZcGngY/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3lR0-0xUjbtI6mopVqUcDP0lMYKew",
-      "explicit": false
-    },
-    {
-      "id": "_SPsjENFqbc",
-      "title": "like i do",
-      "artists": [
-        {
-          "name": "Ariana Grande",
-          "id": "UC0076UMUgEng8HORUw_MYHA"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/6LDZTIjk3nbSSsG8J0M2_ME4KWzt4MTZ7oqrZlWg-uZ1gRWnBKt9ySPibZ5l7GJ_-j6gB6hv-qLNaPE=w120-h120-l90-rj",
+      "thumbnail": "https://i.ytimg.com/vi/qAzWL2M1sN8/hqdefault.jpg",
       "explicit": true
     },
     {
-      "id": "pGrRcXM6Qxg",
-      "title": "Adicto",
+      "id": "3BymntDAYxs",
+      "title": "Pero No Te Enamores",
       "artists": [
         {
-          "name": "Tainy",
-          "id": "UCeN6GRz4bN054slorYxms0w"
-        },
-        {
-          "name": "Anuel AA",
-          "id": "UCbBaYg2UToDaoOwo-R6xi4g"
-        },
-        {
-          "name": "Ozuna",
-          "id": "UCKEFjh4JL-OyMI8z3h5Coaw"
+          "name": "Fuerza Regida",
+          "id": null
         }
       ],
-      "thumbnail": "https://yt3.googleusercontent.com/hWUNXLhYIQAB9N1wv1SCDjWROgHhZjfgGGcLPBMXyMxypWvPLK3nViUYt7hZP2e2JZA_t1FUYkmEMFI=w120-h120-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "DRvWE82NuG8",
-      "title": "Bad Bunny - Amorfoda (XOVOX & BIZARRAP Remix)",
-      "artists": [
-        {
-          "name": "Bizarrap",
-          "id": "UCONiUl5u7y2bMaVZJcuRDEQ"
-        },
-        {
-          "name": "Nicki Nicole",
-          "id": "UCei_d3N_YJKny96V_5-dO9w"
-        }
-      ],
-      "thumbnail": "https://i.ytimg.com/vi/DRvWE82NuG8/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3lwBOCrtM5E5oEJ_6LsEk7iweVizg",
-      "explicit": false
-    },
-    {
-      "id": "LJTZXZWxEAY",
-      "title": "the cure in the Live Lounge",
-      "artists": [
-        {
-          "name": "Olivia Rodrigo",
-          "id": "UCE5XNpliPM-SmyFEp61tL_g"
-        }
-      ],
-      "thumbnail": "https://i.ytimg.com/vi/LJTZXZWxEAY/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3ky8P9UlqKd0w0wUa8jK2bmzBxpIA",
-      "explicit": false
-    },
-    {
-      "id": "HtVNgNIr1KE",
-      "title": "L a k e n o s h i",
-      "artists": [
-        {
-          "name": "Omar Courtz",
-          "id": "UCieB8sWI6qEOX6r_UnJU12w"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/EqBlvzNmm_B2otzdTqYJzhHguR94SVFH96sOWBUlKZ6zJ4CGeXj9YkpcI7MFYEf9DPovp-4RZssESLbv=w120-h120-l90-rj",
+      "thumbnail": "https://i.ytimg.com/vi/3BymntDAYxs/hqdefault.jpg",
       "explicit": true
-    },
-    {
-      "id": "uRgJGnwHofM",
-      "title": "Donde Hubo Fuego Cenizas Quedan",
-      "artists": [
-        {
-          "name": "Anuel AA",
-          "id": "UCbBaYg2UToDaoOwo-R6xi4g"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/lFceI5z3upCDt0ld0fL3fHQBaAtdhwUbAwTxCwPnoq8D9N_Y8jcjIKaah5UXJ76g_EhIraEvvyzeV9rmlA=w120-h120-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "Uv6F0wKOlMU",
-      "title": "Little Demon Remix - Anuel AA X Cdobleta X Yovngchimi",
-      "artists": [
-        {
-          "name": "ProodbyNG",
-          "id": ""
-        }
-      ],
-      "thumbnail": "https://i.ytimg.com/vi/Uv6F0wKOlMU/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3lHvDrcPu01O2PEFeVXOff2amRYRg",
-      "explicit": false
-    },
-    {
-      "id": "KtGuUP3Dmss",
-      "title": "Dile Que Tu Me Quieres",
-      "artists": [
-        {
-          "name": "Ozuna",
-          "id": "UCKEFjh4JL-OyMI8z3h5Coaw"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/ux07P9XtdxQNM2Lt5v-tmitc_Ts6wi-4ajQUXyWYLym2-dVdCcyENZy3MECKwGu1tx0lRbfulxYArm5e=w120-h120-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "NKLvoqQTpqE",
-      "title": "The Kid LAROI, Justin Bieber, Ariana Grande - STAY (Remix)",
-      "artists": [
-        {
-          "name": "LeakGrande",
-          "id": ""
-        }
-      ],
-      "thumbnail": "https://i.ytimg.com/vi/NKLvoqQTpqE/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3ldB89N2g_4UHfL81NSyKe4eq1_cg",
-      "explicit": false
-    },
-    {
-      "id": "tc24N9-dp1w",
-      "title": "Bad Bunny-Eoo Live on Amazon Prime",
-      "artists": [
-        {
-          "name": "CUEROLIFE🆑",
-          "id": ""
-        }
-      ],
-      "thumbnail": "https://i.ytimg.com/vi/tc24N9-dp1w/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3nhLD8HV18o5-Sv-hN-1_XJ1sg_rw",
-      "explicit": false
-    },
-    {
-      "id": "fUZVwTQF3LQ",
-      "title": "kiss me",
-      "artists": [
-        {
-          "name": "Ariana Grande",
-          "id": "UC0076UMUgEng8HORUw_MYHA"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/6LDZTIjk3nbSSsG8J0M2_ME4KWzt4MTZ7oqrZlWg-uZ1gRWnBKt9ySPibZ5l7GJ_-j6gB6hv-qLNaPE=w120-h120-l90-rj",
-      "explicit": false
-    },
-    {
-      "id": "om6HdemgTKQ",
-      "title": "SWIM (Live)",
-      "artists": [
-        {
-          "name": "BTS",
-          "id": "UC9vrvNSL3xcWGSkV86REBSg"
-        }
-      ],
-      "thumbnail": "https://i.ytimg.com/vi/om6HdemgTKQ/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3l5-CFgwGt7MLPsEvK-jYbI-wctpA",
-      "explicit": false
-    },
-    {
-      "id": "5XvHpU0Fdm0",
-      "title": "EL NENE",
-      "artists": [
-        {
-          "name": "Anuel AA",
-          "id": "UCbBaYg2UToDaoOwo-R6xi4g"
-        },
-        {
-          "name": "Foreign Teck",
-          "id": "UC6R8VJBHXvKdsrRf1N1tj1Q"
-        }
-      ],
-      "thumbnail": "https://yt3.googleusercontent.com/jhda1ytwSS36b1A0Kajp0LvpCTt_RvIUjRg-PV3RW7qnqBraDpL0Hmj9ajW43IAkP18hB9KgaYKLN7Md=w120-h120-l90-rj",
-      "explicit": true
-    },
-    {
-      "id": "HMt4uQL3Ta4",
-      "title": "DILLOM - LA NUEVA VIOLENCIA (FULL ALBUM)‎",
-      "artists": [
-        {
-          "name": "Vídeo",
-          "id": ""
-        }
-      ],
-      "thumbnail": "https://i.ytimg.com/vi/HMt4uQL3Ta4/hqdefault.jpg?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3mt4ogITt_AyLlI-cOPFJqapsR9Ow",
-      "explicit": false
     }
   ]
 }

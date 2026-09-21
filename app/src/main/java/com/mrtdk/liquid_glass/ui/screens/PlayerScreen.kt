@@ -1227,11 +1227,8 @@ fun PlayerScreen(
         visible = isVisible,
 
         enter = androidx.compose.animation.slideInVertically(
-
                initialOffsetY = { it },
-
                animationSpec = androidx.compose.animation.core.tween(380, easing = androidx.compose.animation.core.FastOutSlowInEasing)
-
            ) + androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(250)),
 
         exit = androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(100))
@@ -1541,7 +1538,7 @@ fun PlayerScreen(
 
         var isAutomixEnabled by remember {
             mutableStateOf(
-                com.mrtdk.liquid_glass.data.LibraryManager.getString("automix_enabled", "true") == "true"
+                com.mrtdk.liquid_glass.data.LibraryManager.getString("automix_enabled", "false") == "true"
             )
         }
 
@@ -2312,9 +2309,9 @@ fun PlayerScreen(
             val isAccordActive = fullArtworkBackdropStyle == "accord" && !isNormalArtwork
 
             val detailsOffsetXTarget = if (isOverlayActive) {
-                if (p > 0f) androidx.compose.ui.unit.lerp(startOffsetX + lyricsImageSize + 14.dp, targetOffsetX + 48.dp, p) else (startOffsetX + lyricsImageSize + 14.dp)
+                startOffsetX + lyricsImageSize + 14.dp
             } else {
-                if (p > 0f) androidx.compose.ui.unit.lerp(34.dp, targetOffsetX + 48.dp, p) else 34.dp
+                34.dp
             }
 
             val animatedDetailsOffsetX by androidx.compose.animation.core.animateDpAsState(
@@ -2438,13 +2435,9 @@ fun PlayerScreen(
                         if (currentOffsetY > with(density) { 150.dp.toPx() }) {
 
                             dragOffsetY.animateTo(
-
                                 targetValue = maxDragDistance,
-
                                 animationSpec = tween(300, easing = FastOutSlowInEasing)
-
                             )
-
                             onClose()
 
                         } else {
@@ -3956,20 +3949,58 @@ fun PlayerScreen(
                     .heightIn(min = 48.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                var dragAccumulator by remember { mutableStateOf(0f) }
+                val titleDragOffsetX = remember { androidx.compose.animation.core.Animatable(0f) }
+                var totalDragDistance by remember { mutableFloatStateOf(0f) }
+                var dragStartTime by remember { mutableLongStateOf(0L) }
                 Box(
                     modifier = Modifier
                         .weight(1f)
+                        .offset { androidx.compose.ui.unit.IntOffset(titleDragOffsetX.value.roundToInt(), 0) }
                         .pointerInput(playerState) {
                             detectHorizontalDragGestures(
-                                onDragEnd = {
-                                    if (dragAccumulator < -60f) { swipeDirection = 1; onSkipNext() }
-                                    else if (dragAccumulator > 60f) { swipeDirection = -1; onSkipPrevious() }
-                                    dragAccumulator = 0f
+                                onDragStart = {
+                                    dragStartTime = System.currentTimeMillis()
+                                    totalDragDistance = 0f
+                                },
+                                onDragCancel = {
+                                    scope.launch {
+                                        titleDragOffsetX.animateTo(0f, spring())
+                                    }
                                 },
                                 onHorizontalDrag = { change, dragAmount ->
-                                    dragAccumulator += dragAmount
+                                    totalDragDistance += kotlin.math.abs(dragAmount)
+                                    scope.launch {
+                                        titleDragOffsetX.snapTo(titleDragOffsetX.value + dragAmount * 0.75f)
+                                    }
                                     change.consume()
+                                },
+                                onDragEnd = {
+                                    val dragDuration = System.currentTimeMillis() - dragStartTime
+                                    val velocity = if (dragDuration > 0) totalDragDistance / dragDuration else 0f
+                                    val currentVal = titleDragOffsetX.value
+                                    val thresholdPx = with(density) { 38.dp.toPx() }
+
+                                    val shouldSkip = kotlin.math.abs(currentVal) > thresholdPx ||
+                                            (velocity > 0.45f && kotlin.math.abs(currentVal) > thresholdPx * 0.35f)
+
+                                    if (shouldSkip) {
+                                        if (currentVal < 0) {
+                                            swipeDirection = 1
+                                            onSkipNext()
+                                        } else {
+                                            swipeDirection = -1
+                                            onSkipPrevious()
+                                        }
+                                    }
+                                    scope.launch {
+                                        titleDragOffsetX.animateTo(
+                                            0f,
+                                            spring(
+                                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                                stiffness = Spring.StiffnessMediumLow
+                                            )
+                                        )
+                                    }
                                 }
                             )
                         }
@@ -5560,7 +5591,7 @@ data class LandscapePlayerCallbacks(
     val onShowPlaylistMenu: () -> Unit,
     val onShowArtistMenu: (List<String>, androidx.compose.ui.geometry.Rect?) -> Unit,
     val onAutoScrollChange: (Boolean) -> Unit = {},
-    val isAutomixEnabled: Boolean = true,
+    val isAutomixEnabled: Boolean = false,
     val onToggleAutomix: () -> Unit = {},
     val onToggleAutoplay: (() -> Unit)? = null
 )

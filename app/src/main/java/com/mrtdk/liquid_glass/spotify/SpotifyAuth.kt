@@ -19,8 +19,7 @@ object SpotifyAuth {
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 
     const val LOGIN_URL =
-        "https://accounts.spotify.com/en/login?continue=https%3A%2F%2Fopen.spotify.com%2F" +
-            "&method=password&allow_password=1&allow_signup=1"
+        "https://accounts.spotify.com/login?continue=https%3A%2F%2Fopen.spotify.com%2F"
 
     const val SIGNUP_URL = "https://www.spotify.com/signup"
 

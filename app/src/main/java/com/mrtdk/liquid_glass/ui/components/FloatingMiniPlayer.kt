@@ -164,58 +164,18 @@ fun FloatingMiniPlayer(
             .clipToBounds()
             .then(interactiveHighlight.modifier)
             .then(interactiveHighlight.gestureModifier)
-            .pointerInput(Unit) {
-                detectHorizontalDragGestures(
-                    onDragStart = {
-                        dragStartTime = System.currentTimeMillis()
-                        totalDragDistance = 0f
-                    },
-                    onDragCancel = {
-                        coroutineScope.launch {
-                            offsetXAnimatable.animateTo(0f, animationSpec)
-                        }
-                    },
-                    onHorizontalDrag = { _, dragAmount ->
-                        totalDragDistance += abs(dragAmount)
-                        coroutineScope.launch {
-                            offsetXAnimatable.snapTo(offsetXAnimatable.value + dragAmount)
-                        }
-                    },
-                    onDragEnd = {
-                        val dragDuration = System.currentTimeMillis() - dragStartTime
-                        val velocity = if (dragDuration > 0) totalDragDistance / dragDuration else 0f
-                        val currentOffset = offsetXAnimatable.value
-                        val dragged = abs(currentOffset)
-
-                        val shouldChangeSong = dragged > autoSwipeThreshold ||
-                                (velocity > 0.55f && dragged > autoSwipeThreshold * 0.25f)
-
-                        if (shouldChangeSong) {
-                            if (currentOffset > 0) {
-                                onPrevious()
-                            } else {
-                                onNext()
-                            }
-                        }
-                        coroutineScope.launch {
-                            offsetXAnimatable.animateTo(0f, animationSpec)
-                        }
-                    }
-                )
-            }
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxSize()
-                .offset { IntOffset(offsetXAnimatable.value.roundToInt(), 0) }
                 .clickable(
                     interactionSource = pressInteractionSource,
                     indication = null,
                     onClick = onClick,
                 )
                 .padding(
-                    horizontal = if (isInline) 8.dp else 14.dp,
+                    horizontal = if (isInline) 8.dp else 12.dp,
                     vertical = if (isInline) 4.dp else 6.dp,
                 ),
         ) {
@@ -233,7 +193,49 @@ fun FloatingMiniPlayer(
             Spacer(Modifier.width(10.dp))
 
             Column(
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .offset { IntOffset(offsetXAnimatable.value.roundToInt(), 0) }
+                    .pointerInput(Unit) {
+                        detectHorizontalDragGestures(
+                            onDragStart = {
+                                dragStartTime = System.currentTimeMillis()
+                                totalDragDistance = 0f
+                            },
+                            onDragCancel = {
+                                coroutineScope.launch {
+                                    offsetXAnimatable.animateTo(0f, animationSpec)
+                                }
+                            },
+                            onHorizontalDrag = { _, dragAmount ->
+                                totalDragDistance += abs(dragAmount)
+                                coroutineScope.launch {
+                                    offsetXAnimatable.snapTo(offsetXAnimatable.value + dragAmount)
+                                }
+                            },
+                            onDragEnd = {
+                                val dragDuration = System.currentTimeMillis() - dragStartTime
+                                val velocity = if (dragDuration > 0) totalDragDistance / dragDuration else 0f
+                                val currentOffset = offsetXAnimatable.value
+                                val dragged = abs(currentOffset)
+
+                                val threshold = 36f * densityScale
+                                val shouldChangeSong = dragged > threshold ||
+                                        (velocity > 0.4f && dragged > 16f * densityScale)
+
+                                if (shouldChangeSong) {
+                                    if (currentOffset > 0) {
+                                        onPrevious()
+                                    } else {
+                                        onNext()
+                                    }
+                                }
+                                coroutineScope.launch {
+                                    offsetXAnimatable.animateTo(0f, animationSpec)
+                                }
+                            }
+                        )
+                    }
             ) {
                 Text(
                     text = playerState.title.ifEmpty { "Reproduciendo" },
@@ -256,9 +258,24 @@ fun FloatingMiniPlayer(
                 )
             }
 
+            if (!isInline) {
+                IconButton(
+                    onClick = onPrevious,
+                    modifier = Modifier.size(34.dp),
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.previous),
+                        contentDescription = "Previous",
+                        tint = effectiveIconColor,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                Spacer(Modifier.width(2.dp))
+            }
+
             IconButton(
                 onClick = onTogglePlayPause,
-                modifier = Modifier.size(if (isInline) 32.dp else 40.dp),
+                modifier = Modifier.size(if (isInline) 32.dp else 38.dp),
             ) {
                 AnimatedContent(
                     targetState = isPlaying,
@@ -273,7 +290,7 @@ fun FloatingMiniPlayer(
                         contentDescription = if (playing) "Pause" else "Play",
                         tint = effectiveIconColor,
                         modifier = Modifier
-                            .size(if (isInline) 20.dp else 34.dp)
+                            .size(if (isInline) 20.dp else 28.dp)
                             .graphicsLayer {
                                 rotationZ = playPauseRotation
                             }
@@ -281,16 +298,16 @@ fun FloatingMiniPlayer(
                 }
             }
 
-            Spacer(Modifier.width(if (isInline) 2.dp else 6.dp))
+            Spacer(Modifier.width(if (isInline) 2.dp else 2.dp))
             IconButton(
                 onClick = onNext,
-                modifier = Modifier.size(if (isInline) 30.dp else 40.dp),
+                modifier = Modifier.size(if (isInline) 30.dp else 34.dp),
             ) {
                 Icon(
                     painter = painterResource(id = R.drawable.forward),
                     contentDescription = "Next",
                     tint = effectiveIconColor,
-                    modifier = Modifier.size(if (isInline) 20.dp else 32.dp)
+                    modifier = Modifier.size(if (isInline) 20.dp else 22.dp)
                 )
             }
         }

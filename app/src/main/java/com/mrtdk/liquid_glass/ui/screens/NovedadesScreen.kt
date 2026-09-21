@@ -160,32 +160,49 @@ fun NovedadesScreen(
                     val jsonStr = inputStream.bufferedReader().use { it.readText() }
                     val root = JSONObject(jsonStr)
                     
+                    // Detección automática de región por país y lectura de preferencia de usuario
+                    val detectedCountry = try {
+                        context.resources.configuration.locales[0].country.lowercase()
+                    } catch (_: Exception) {
+                        java.util.Locale.getDefault().country.lowercase()
+                    }.ifBlank { "ar" }
+                    
+                    val currentRegion = com.mrtdk.liquid_glass.data.LibraryManager.getString("novedades_region") ?: detectedCountry
+                    val regionsObj = root.optJSONObject("regions")
+                    val dataObj = (if (regionsObj != null && regionsObj.has(currentRegion)) {
+                        regionsObj.getJSONObject(currentRegion)
+                    } else if (regionsObj != null && regionsObj.has("ar")) {
+                        regionsObj.getJSONObject("ar")
+                    } else {
+                        root
+                    })
+                    
                     val fAlbums = mutableListOf<AlbumItem>()
-                    val fAlbumsArray = root.getJSONArray("featuredAlbums")
+                    val fAlbumsArray = dataObj.getJSONArray("featuredAlbums")
                     for (i in 0 until fAlbumsArray.length()) {
                         fAlbums.add(parseAlbumItem(fAlbumsArray.getJSONObject(i)))
                     }
                     
                     val fSongs = mutableListOf<SongItem>()
-                    val fSongsArray = root.getJSONArray("featuredNewSongs")
+                    val fSongsArray = dataObj.getJSONArray("featuredNewSongs")
                     for (i in 0 until fSongsArray.length()) {
                         fSongs.add(parseSongItem(fSongsArray.getJSONObject(i)))
                     }
                     
                     val nrAlbums = mutableListOf<AlbumItem>()
-                    val nrAlbumsArray = root.getJSONArray("newReleaseAlbums")
+                    val nrAlbumsArray = dataObj.getJSONArray("newReleaseAlbums")
                     for (i in 0 until nrAlbumsArray.length()) {
                         nrAlbums.add(parseAlbumItem(nrAlbumsArray.getJSONObject(i)))
                     }
                     
                     val tSongs = mutableListOf<SongItem>()
-                    val tSongsArray = root.getJSONArray("trendingSongs")
+                    val tSongsArray = dataObj.getJSONArray("trendingSongs")
                     for (i in 0 until tSongsArray.length()) {
                         tSongs.add(parseSongItem(tSongsArray.getJSONObject(i)))
                     }
                     
                     val elSongs = mutableListOf<SongItem>()
-                    val elSongsArray = root.getJSONArray("everyoneListening")
+                    val elSongsArray = dataObj.getJSONArray("everyoneListening")
                     for (i in 0 until elSongsArray.length()) {
                         elSongs.add(parseSongItem(elSongsArray.getJSONObject(i)))
                     }
@@ -313,7 +330,8 @@ fun NovedadesScreen(
                     pageSpacing = 12.dp
                 ) { page ->
                     val album = state.featuredAlbums[page]
-                    val hdThumb = album.thumbnail?.replace("=w226-h226", "=w720-h720")?.replace("=w120-h120", "=w720-h720")
+                    val hdThumb = album.thumbnail?.replace("hqdefault.jpg", "maxresdefault.jpg")
+                        ?.replace("=w226-h226", "=w720-h720")?.replace("=w120-h120", "=w720-h720")
                     val artistText = album.artists?.joinToString { it.name } ?: "Varios"
 
                     Box(
@@ -325,7 +343,7 @@ fun NovedadesScreen(
                             }
                     ) {
                         AsyncImage(
-                            model = ImageRequest.Builder(context).data(hdThumb).size(600).crossfade(false).build(),
+                            model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
                             contentDescription = album.title, contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize()
                         )

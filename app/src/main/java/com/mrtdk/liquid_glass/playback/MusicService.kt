@@ -79,14 +79,19 @@ class MusicService : MediaSessionService() {
             state.artUrl?.toString()?.let { setArtworkUri(android.net.Uri.parse(it)) }
         }.build()
 
-        return if (state.contentUri != null) {
+        val isLocal = state.contentUri != null && state.contentUri.scheme != "yt"
+        return if (isLocal) {
             androidx.media3.common.MediaItem.Builder()
                 .setUri(state.contentUri)
                 .setMediaMetadata(metadata)
                 .build()
         } else {
-            val videoId = state.videoId ?: ""
-            com.mrtdk.liquid_glass.playback.MusicPlayer.songMetadataCache[videoId] = Pair(state.title, state.artist)
+            val videoId = state.videoId?.takeIf { it.isNotBlank() }
+                ?: state.contentUri?.toString()?.removePrefix("yt://")?.takeIf { it.isNotBlank() }
+                ?: ""
+            if (videoId.isNotBlank()) {
+                com.mrtdk.liquid_glass.playback.MusicPlayer.songMetadataCache[videoId] = Pair(state.title, state.artist)
+            }
             androidx.media3.common.MediaItem.Builder()
                 .setMediaId(videoId)
                 .setUri(android.net.Uri.parse("yt://$videoId"))
@@ -298,12 +303,17 @@ class MusicService : MediaSessionService() {
     private fun handleNewMediaItem(mediaItem: androidx.media3.common.MediaItem, startPositionMs: Long = 0L) {
         val automix = com.mrtdk.liquid_glass.playback.PlaybackQueue.isAutomixEnabled
         if (automix && activePlayer.isPlaying) {
+            val videoId = mediaItem.mediaId.takeIf { it.isNotBlank() }
+                ?: mediaItem.localConfiguration?.uri?.let { uri ->
+                    if (uri.scheme == "yt") uri.toString().removePrefix("yt://") else null
+                }
+            val isLocal = mediaItem.localConfiguration?.uri?.scheme != "yt" && mediaItem.localConfiguration?.uri != null
             val state = com.mrtdk.liquid_glass.ui.screens.PlayerState(
                 title = mediaItem.mediaMetadata.title?.toString() ?: "",
                 artist = mediaItem.mediaMetadata.artist?.toString() ?: "",
                 artUrl = mediaItem.mediaMetadata.artworkUri?.toString(),
-                videoId = mediaItem.mediaId.takeIf { it.isNotBlank() },
-                contentUri = mediaItem.requestMetadata.mediaUri ?: mediaItem.localConfiguration?.uri
+                videoId = videoId,
+                contentUri = if (isLocal) (mediaItem.requestMetadata.mediaUri ?: mediaItem.localConfiguration?.uri) else null
             )
             startCrossfadeTransition(durationMs = 1500L, targetState = state, isNaturalEnding = false)
         } else {
@@ -625,7 +635,7 @@ class MusicService : MediaSessionService() {
         
         com.mrtdk.liquid_glass.data.LibraryManager.init(applicationContext)
         com.mrtdk.liquid_glass.playback.PlaybackQueue.isAutomixEnabled =
-            com.mrtdk.liquid_glass.data.LibraryManager.getString("automix_enabled", "true") == "true"
+            com.mrtdk.liquid_glass.data.LibraryManager.getString("automix_enabled", "false") == "true"
         com.mrtdk.liquid_glass.playback.eq.EqualizerService.init(applicationContext)
         eqProcessorA = com.mrtdk.liquid_glass.playback.eq.CustomEqualizerAudioProcessor()
         eqProcessorB = com.mrtdk.liquid_glass.playback.eq.CustomEqualizerAudioProcessor()
@@ -1008,38 +1018,40 @@ class MusicService : MediaSessionService() {
         return androidx.media3.datasource.ResolvingDataSource.Factory(createCacheDataSource(okHttpClient)) { dataSpec ->
             val mediaId = dataSpec.key ?: dataSpec.uri.host ?: dataSpec.uri.toString().removePrefix("yt://")
 
-            // 1. If cached in downloadCache or playerCache, play immediately without network
-            if (downloadCache.isCached(
-                    mediaId,
-                    dataSpec.position,
-                    if (dataSpec.length >= 0) dataSpec.length else 1
-                ) ||
-                playerCache.isCached(mediaId, dataSpec.position, CHUNK_LENGTH)
-            ) {
-                return@Factory dataSpec
+            // 1. If fully downloaded offline, play immediately without network
+            val isFullyDownloaded = downloadCache.isCached(mediaId, 0, -1) || downloadUtil.downloads.value[mediaId]?.state == androidx.media3.exoplayer.offline.Download.STATE_COMPLETED
+            if (isFullyDownloaded) {
+                return@Factory dataSpec.buildUpon()
+                    .setKey(mediaId)
+                    .build()
             }
 
             // 2. If valid stream URL is cached in memory, use it with 512KB chunking
-            com.mrtdk.liquid_glass.playback.MusicPlayer.getCachedUrl(mediaId)?.let { streamUrl ->
-                return@Factory dataSpec.withUri(android.net.Uri.parse(streamUrl)).subrange(dataSpec.uriPositionOffset, CHUNK_LENGTH)
-            }
+            val cachedUrl = com.mrtdk.liquid_glass.playback.MusicPlayer.getCachedUrl(mediaId)
+            val streamUrl = if (!cachedUrl.isNullOrBlank()) {
+                cachedUrl
+            } else {
+                activeResolutions.incrementAndGet()
+                acquireLocks()
 
-            activeResolutions.incrementAndGet()
-            acquireLocks()
-
-            val streamUrl = try {
-                kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
-                    com.mrtdk.liquid_glass.playback.MusicPlayer.resolveUrl(mediaId)
+                try {
+                    kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
+                        com.mrtdk.liquid_glass.playback.MusicPlayer.resolveUrl(mediaId)
+                    }
+                } catch (e: Exception) {
+                    null
+                } finally {
+                    activeResolutions.decrementAndGet()
+                    mainHandler.post { updateWakeLocks() }
                 }
-            } catch (e: Exception) {
-                null
-            } finally {
-                activeResolutions.decrementAndGet()
-                mainHandler.post { updateWakeLocks() }
             }
 
             if (!streamUrl.isNullOrBlank()) {
-                dataSpec.withUri(android.net.Uri.parse(streamUrl)).subrange(dataSpec.uriPositionOffset, CHUNK_LENGTH)
+                dataSpec.buildUpon()
+                    .setUri(android.net.Uri.parse(streamUrl))
+                    .setKey(mediaId)
+                    .build()
+                    .subrange(dataSpec.uriPositionOffset, CHUNK_LENGTH)
             } else {
                 throw java.io.IOException("No se pudo obtener el flujo de reproducción para $mediaId")
             }

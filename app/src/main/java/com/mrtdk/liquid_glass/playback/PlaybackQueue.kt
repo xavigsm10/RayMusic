@@ -18,7 +18,7 @@ object PlaybackQueue {
     var isExclusiveQueue: Boolean = false
 
     @Volatile
-    var isAutomixEnabled: Boolean = true
+    var isAutomixEnabled: Boolean = false
 
     val songHistory = mutableListOf<PlayerState>()
 

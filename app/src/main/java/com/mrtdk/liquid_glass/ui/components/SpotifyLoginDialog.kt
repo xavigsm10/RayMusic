@@ -1,7 +1,10 @@
 package com.mrtdk.liquid_glass.ui.components
 
 import android.annotation.SuppressLint
+import android.graphics.Bitmap
 import android.webkit.CookieManager
+import android.webkit.PermissionRequest
+import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -31,7 +34,7 @@ import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Spotify login dialog — replicates Spotui's finishLogin() pattern exactly:
+ * Spotify login dialog — replicates Spotui's finishLogin() pattern:
  *   1. Poll for sp_dc cookie
  *   2. Stop WebView
  *   3. fetchAccessToken (with retries)
@@ -46,6 +49,7 @@ fun SpotifyLoginDialog(
 ) {
     val scope = rememberCoroutineScope()
     var isProcessing by remember { mutableStateOf(false) }
+    var isLoadingPage by remember { mutableStateOf(true) }
     var statusMessage by remember { mutableStateOf("") }
     var hasError by remember { mutableStateOf(false) }
     val tokenFetchStarted = remember { AtomicBoolean(false) }
@@ -53,24 +57,28 @@ fun SpotifyLoginDialog(
 
     fun extractCookie(cookieName: String): String? {
         val cookieManager = CookieManager.getInstance()
-        val cookies = cookieManager.getCookie("https://open.spotify.com") ?: return null
-        return cookies.split(";")
-            .mapNotNull {
-                val parts = it.trim().split("=", limit = 2)
-                if (parts.size == 2) parts[0].trim() to parts[1].trim() else null
-            }
-            .firstOrNull { it.first == cookieName && it.second.isNotBlank() }
-            ?.second
+        val domains = listOf("https://open.spotify.com", "https://accounts.spotify.com", "https://spotify.com")
+        for (domain in domains) {
+            val cookies = cookieManager.getCookie(domain) ?: continue
+            val match = cookies.split(";")
+                .mapNotNull {
+                    val parts = it.trim().split("=", limit = 2)
+                    if (parts.size == 2) parts[0].trim() to parts[1].trim() else null
+                }
+                .firstOrNull { it.first == cookieName && it.second.isNotBlank() }
+                ?.second
+            if (!match.isNullOrBlank()) return match
+        }
+        return null
     }
 
-    // Poll for sp_dc cookie — exactly like Spotui's LaunchedEffect
+    // Poll for sp_dc cookie
     LaunchedEffect(Unit) {
         while (true) {
             delay(1000)
             if (tokenFetchStarted.get()) continue
             val spDc = extractCookie("sp_dc")
             if (!spDc.isNullOrBlank() && tokenFetchStarted.compareAndSet(false, true)) {
-                // Replicate Spotui's finishLogin() exactly
                 isProcessing = true
                 hasError = false
                 statusMessage = "Conectando..."
@@ -79,18 +87,15 @@ fun SpotifyLoginDialog(
                 scope.launch(Dispatchers.IO) {
                     var lastError: Throwable? = null
 
-                    // Retry up to 3 times (Spotui does exactly this)
                     repeat(3) { attempt ->
                         val result = SpotifyAuth.fetchAccessToken(spDc)
                         result.onSuccess { token ->
-                            // Save session with token — Spotui sets Spotify.accessToken directly
                             SpotifySession.saveSession(spDc, token, "", "")
 
                             withContext(Dispatchers.Main) { statusMessage = "¡Sesión iniciada!" }
                             delay(300)
                             withContext(Dispatchers.Main) { onSuccess() }
 
-                            // After dialog closes, fetch profile name + sync library asynchronously
                             scope.launch(Dispatchers.IO) {
                                 try {
                                     val user = Spotify.me().getOrNull()
@@ -118,7 +123,6 @@ fun SpotifyLoginDialog(
                         }
                     }
 
-                    // All 3 retries failed
                     withContext(Dispatchers.Main) {
                         statusMessage = "Error: ${lastError?.message ?: "Error desconocido"}"
                         hasError = true
@@ -136,9 +140,9 @@ fun SpotifyLoginDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black)
+                .background(Color(0xFF121212))
         ) {
-            // Full-screen WebView with a slim top bar — exactly like Spotui
+            // Full-screen WebView with a slim top bar
             AndroidView(
                 modifier = Modifier
                     .fillMaxSize()
@@ -150,29 +154,79 @@ fun SpotifyLoginDialog(
 
                     WebView(ctx).apply {
                         webViewRef = this
+                        setBackgroundColor(android.graphics.Color.parseColor("#121212"))
                         cookieManager.setAcceptThirdPartyCookies(this, true)
-                        settings.javaScriptEnabled = true
-                        settings.domStorageEnabled = true
-                        @Suppress("DEPRECATION")
-                        settings.databaseEnabled = true
-                        settings.loadWithOverviewMode = true
-                        settings.useWideViewPort = true
-                        settings.mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-                        settings.javaScriptCanOpenWindowsAutomatically = true
 
-                        webViewClient = WebViewClient()
+                        settings.apply {
+                            javaScriptEnabled = true
+                            domStorageEnabled = true
+                            @Suppress("DEPRECATION")
+                            databaseEnabled = true
+                            loadWithOverviewMode = true
+                            useWideViewPort = true
+                            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                            javaScriptCanOpenWindowsAutomatically = true
+                            setSupportMultipleWindows(false)
+                            cacheMode = WebSettings.LOAD_DEFAULT
+
+                            // Strip "; wv" and "Version/X.X " so Google reCAPTCHA Enterprise and
+                            // Spotify do not detect WebView and block storage access / form display
+                            val defaultUa = userAgentString
+                            userAgentString = defaultUa.replace("; wv", "").replace(Regex("Version/[0-9.]+ "), "")
+                        }
+
+                        webChromeClient = object : WebChromeClient() {
+                            override fun onPermissionRequest(request: PermissionRequest?) {
+                                request?.grant(request.resources)
+                            }
+                        }
+
+                        webViewClient = object : WebViewClient() {
+                            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                                super.onPageStarted(view, url, favicon)
+                                isLoadingPage = true
+                            }
+
+                            override fun onPageFinished(view: WebView?, url: String?) {
+                                super.onPageFinished(view, url)
+                                isLoadingPage = false
+                                cookieManager.flush()
+                            }
+
+                            @Deprecated("Deprecated in Java")
+                            override fun onReceivedError(view: WebView?, errorCode: Int, description: String?, failingUrl: String?) {
+                                @Suppress("DEPRECATION")
+                                super.onReceivedError(view, errorCode, description, failingUrl)
+                                isLoadingPage = false
+                            }
+                        }
+
                         loadUrl(SpotifyAuth.LOGIN_URL)
                     }
                 }
             )
 
-            // Slim top bar: title or status — exactly like Spotui
+            // Center loading spinner while web page is loading
+            if (isLoadingPage && !isProcessing) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        color = Color(0xFF1DB954),
+                        strokeWidth = 3.dp,
+                        modifier = Modifier.size(40.dp)
+                    )
+                }
+            }
+
+            // Slim top bar: title or status
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
                     .height(40.dp)
-                    .background(Color.Black),
+                    .background(Color(0xFF121212)),
                 contentAlignment = Alignment.Center,
             ) {
                 Row(
