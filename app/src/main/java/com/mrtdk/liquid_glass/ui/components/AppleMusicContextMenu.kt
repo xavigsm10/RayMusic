@@ -2536,8 +2536,8 @@ fun GlassBoxScope.AppleMusicArtistMenu(
             modifier = Modifier.fillMaxSize()
         ) {
             val density = LocalDensity.current
-            val menuWidth = 260.dp
-            val estimatedHeight = 245.dp
+            val menuWidth = 265.dp
+            val estimatedHeight = 290.dp
 
             val screenWidthDp = maxWidth
             val screenHeightDp = maxHeight
@@ -2617,7 +2617,7 @@ fun GlassBoxScope.AppleMusicArtistMenu(
                     if (menuContentAlpha > 0.001f) {
                         Column(
                             modifier = Modifier
-                                .fillMaxSize()
+                                .fillMaxWidth()
                                 .graphicsLayer {
                                     alpha = menuContentAlpha
                                     translationY = with(density) { menuContentOffsetY.toPx() }
