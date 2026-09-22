@@ -20,6 +20,11 @@ import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.geometry.Rect
 import androidx.activity.compose.BackHandler
 import androidx.compose.material3.Divider
 import androidx.compose.material3.OutlinedTextField
@@ -133,6 +138,8 @@ fun AlbumScreen(
 ) {
     val context = LocalContext.current
     var activeSongForMenu by remember { mutableStateOf<ContextMenuSong?>(null) }
+    var activeSongPivotBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    var albumScreenRootCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
     var showAlbumMenu by remember { mutableStateOf(false) }
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
     var tracks by remember { mutableStateOf<List<SongItem>>(emptyList()) }
@@ -512,6 +519,7 @@ fun AlbumScreen(
             com.mrtdk.glass.GlassContainer(
                 modifier = Modifier
                     .fillMaxSize()
+                    .onGloballyPositioned { albumScreenRootCoords = it }
                     .graphicsLayer {
                         alpha = contentAlpha
                         translationY = translationYVal
@@ -1048,19 +1056,49 @@ fun AlbumScreen(
                                             )
                                         }
                                     }
-                                    IconButton(
-                                        onClick = {
-                                            val songArtistNames = song.artists.joinToString { it.name }
-                                            activeSongForMenu = ContextMenuSong(
-                                                id = song.id,
-                                                title = song.title,
-                                                artist = songArtistNames,
-                                                thumbnail = songArtUrl,
-                                                album = albumState.title,
-                                                artistId = song.artists.firstOrNull()?.id
-                                            )
-                                        },
-                                        modifier = Modifier.size(28.dp)
+                                    var songDotsCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
+                                    val isThisSongActive = activeSongForMenu?.id == song.id
+                                    val dotsInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                                    val isDotsPressed by dotsInteractionSource.collectIsPressedAsState()
+                                    val dotsPressScale by androidx.compose.animation.core.animateFloatAsState(
+                                        targetValue = if (isDotsPressed) 0.86f else 1f,
+                                        animationSpec = androidx.compose.animation.core.spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow),
+                                        label = "albumSongDotsPressScale"
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .onGloballyPositioned { songDotsCoords = it }
+                                            .size(32.dp)
+                                            .graphicsLayer {
+                                                scaleX = dotsPressScale
+                                                scaleY = dotsPressScale
+                                                alpha = if (isThisSongActive) 0f else 1f
+                                            }
+                                            .clip(CircleShape)
+                                            .clickable(
+                                                interactionSource = dotsInteractionSource,
+                                                indication = null,
+                                                enabled = !isThisSongActive
+                                            ) {
+                                                val rootCoords = albumScreenRootCoords
+                                                if (rootCoords != null && songDotsCoords != null && rootCoords.isAttached && songDotsCoords!!.isAttached) {
+                                                    val localOffset = rootCoords.localPositionOf(songDotsCoords!!, androidx.compose.ui.geometry.Offset.Zero)
+                                                    val size = songDotsCoords!!.size
+                                                    activeSongPivotBounds = androidx.compose.ui.geometry.Rect(localOffset, androidx.compose.ui.geometry.Size(size.width.toFloat(), size.height.toFloat()))
+                                                } else {
+                                                    activeSongPivotBounds = songDotsCoords?.boundsInRoot()
+                                                }
+                                                val songArtistNames = song.artists.joinToString { it.name }
+                                                activeSongForMenu = ContextMenuSong(
+                                                    id = song.id,
+                                                    title = song.title,
+                                                    artist = songArtistNames,
+                                                    thumbnail = songArtUrl,
+                                                    album = albumState.title,
+                                                    artistId = song.artists.firstOrNull()?.id
+                                                )
+                                            },
+                                        contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             Icons.Default.MoreHoriz,
@@ -1569,7 +1607,10 @@ fun AlbumScreen(
                     activeSongForMenu?.let { song ->
                         AppleMusicSongMenu(
                             song = song,
-                            onDismiss = { activeSongForMenu = null },
+                            onDismiss = {
+                                activeSongForMenu = null
+                                activeSongPivotBounds = null
+                            },
                             onGoToArtist = {
                                 val aId = song.artistId ?: song.artist
                                 onArtistSelected(
@@ -1581,7 +1622,8 @@ fun AlbumScreen(
                                 )
                             },
                             onGoToAlbum = null,
-                            onSongSelected = onSongSelected
+                            onSongSelected = onSongSelected,
+                            pivotBounds = activeSongPivotBounds
                         )
                     }
                 }

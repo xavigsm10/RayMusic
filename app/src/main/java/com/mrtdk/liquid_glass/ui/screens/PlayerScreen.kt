@@ -4143,13 +4143,30 @@ fun PlayerScreen(
                     }
 
                     var threeDotsCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
+                    val isOptionsMenuActive = showOptionsMenu || showLyricsOptionsMenu
+                    val dotsInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                    val isDotsPressed by dotsInteractionSource.collectIsPressedAsState()
+                    val dotsPressScale by androidx.compose.animation.core.animateFloatAsState(
+                        targetValue = if (isDotsPressed) 0.88f else 1f,
+                        animationSpec = androidx.compose.animation.core.spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow),
+                        label = "dotsPressScale"
+                    )
                     Box(
                         modifier = Modifier
                             .onGloballyPositioned { threeDotsCoords = it }
                             .size(36.dp)
+                            .graphicsLayer {
+                                scaleX = dotsPressScale
+                                scaleY = dotsPressScale
+                                alpha = if (isOptionsMenuActive) 0f else 1f
+                            }
                             .clip(CircleShape)
-                            .background(contentColor.copy(alpha = 0.15f))
-                            .clickable { 
+                            .background(contentColor.copy(alpha = if (isOptionsMenuActive) 0f else 0.15f))
+                            .clickable(
+                                interactionSource = dotsInteractionSource,
+                                indication = null,
+                                enabled = !isOptionsMenuActive
+                            ) { 
                                 val parentCoords = parentCoordinates
                                 if (parentCoords != null && threeDotsCoords != null && parentCoords.isAttached && threeDotsCoords!!.isAttached) {
                                     val localOffset = parentCoords.localPositionOf(threeDotsCoords!!, Offset.Zero)
@@ -6345,17 +6362,29 @@ fun LandscapePlayerLayout(
                             }
                         }
 
-                                                var threeDotsCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
+                        var threeDotsCoords by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
+                        val landscapeInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                        val isLandscapePressed by landscapeInteractionSource.collectIsPressedAsState()
+                        val landscapePressScale by androidx.compose.animation.core.animateFloatAsState(
+                            targetValue = if (isLandscapePressed) 0.88f else 1f,
+                            animationSpec = androidx.compose.animation.core.spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow),
+                            label = "landscapeDotsPressScale"
+                        )
                         Box(
                             modifier = Modifier
                                 .onGloballyPositioned { threeDotsCoords = it }
                                 .size(32.dp)
+                                .graphicsLayer {
+                                    scaleX = landscapePressScale
+                                    scaleY = landscapePressScale
+                                }
                                 .clip(CircleShape)
                                 .background(contentColor.copy(alpha = 0.15f))
-                                .clickable { onShowOptionsMenu(threeDotsCoords?.boundsInRoot()) },
-
+                                .clickable(
+                                    interactionSource = landscapeInteractionSource,
+                                    indication = null
+                                ) { onShowOptionsMenu(threeDotsCoords?.boundsInRoot()) },
                             contentAlignment = Alignment.Center
-
                         ) {
 
                             Canvas(modifier = Modifier.size(18.dp)) {

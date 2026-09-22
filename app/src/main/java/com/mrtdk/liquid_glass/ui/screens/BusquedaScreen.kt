@@ -20,6 +20,10 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,9 +33,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -131,6 +140,9 @@ fun BusquedaScreen(
     val coroutineScope = rememberCoroutineScope()
     var activeSongForMenu by remember { mutableStateOf<ContextMenuSong?>(null) }
     var activeAlbumForMenu by remember { mutableStateOf<ContextMenuAlbum?>(null) }
+    var activeSongPivotBounds by remember { mutableStateOf<Rect?>(null) }
+    var activeAlbumPivotBounds by remember { mutableStateOf<Rect?>(null) }
+    var busquedaRootCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
     val tabNames = listOf(
         stringResource(R.string.search_tab_top),
         stringResource(R.string.search_tab_artists),
@@ -304,7 +316,9 @@ fun BusquedaScreen(
     }
 
     GlassContainer(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .onGloballyPositioned { busquedaRootCoords = it },
         useShader = true,
         content = {
             Column(
@@ -461,8 +475,12 @@ fun BusquedaScreen(
                                 }
 
                                 items(recentSearches, key = { "${it.type}_${it.id}_${it.timestamp}" }) { recentItem ->
+                                    val isThisRecentActive = (recentItem.type == "SONG" && activeSongForMenu?.id == recentItem.id) ||
+                                            (recentItem.type == "ALBUM" && activeAlbumForMenu?.id == recentItem.id)
                                     RecentSearchRow(
                                         item = recentItem,
+                                        isActive = isThisRecentActive,
+                                        rootCoords = busquedaRootCoords,
                                         onClick = {
                                             dismissKeyboardAndClearFocus()
                                             when (recentItem.type) {
@@ -500,8 +518,9 @@ fun BusquedaScreen(
                                                 }
                                             }
                                         },
-                                        onMoreClick = {
+                                        onMoreClick = { bounds ->
                                             if (recentItem.type == "SONG") {
+                                                activeSongPivotBounds = bounds
                                                 activeSongForMenu = ContextMenuSong(
                                                     id = recentItem.id,
                                                     title = recentItem.title,
@@ -509,6 +528,16 @@ fun BusquedaScreen(
                                                     thumbnail = recentItem.thumbnail,
                                                     album = recentItem.album,
                                                     albumId = recentItem.albumId
+                                                )
+                                            } else if (recentItem.type == "ALBUM") {
+                                                activeAlbumPivotBounds = bounds
+                                                activeAlbumForMenu = ContextMenuAlbum(
+                                                    id = recentItem.id,
+                                                    playlistId = recentItem.albumId ?: recentItem.id,
+                                                    title = recentItem.title,
+                                                    artist = recentItem.subtitle,
+                                                    thumbnail = recentItem.thumbnail,
+                                                    year = null
                                                 )
                                             }
                                         }
@@ -811,17 +840,52 @@ fun BusquedaScreen(
                                             overflow = TextOverflow.Ellipsis
                                         )
                                     }
-                                    IconButton(onClick = {
-                                        activeSongForMenu = ContextMenuSong(
-                                            id = song.id,
-                                            title = song.title,
-                                            artist = song.artists.joinToString { it.name },
-                                            thumbnail = hdThumb,
-                                            album = song.album?.name,
-                                            artistId = song.artists.firstOrNull()?.id,
-                                            albumId = song.album?.id
-                                        )
-                                    }) {
+                                    val isThisSongActive = activeSongForMenu?.id == song.id
+                                    var songDotsCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+                                    val buttonInteractionSource = remember { MutableInteractionSource() }
+                                    val isPressed by buttonInteractionSource.collectIsPressedAsState()
+                                    val buttonScale by animateFloatAsState(
+                                        targetValue = if (isPressed) 0.86f else 1f,
+                                        animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
+                                        label = "quickSongDotsPressScale"
+                                    )
+
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .graphicsLayer {
+                                                scaleX = buttonScale
+                                                scaleY = buttonScale
+                                                alpha = if (isThisSongActive) 0f else 1f
+                                            }
+                                            .onGloballyPositioned { songDotsCoords = it }
+                                            .clickable(
+                                                interactionSource = buttonInteractionSource,
+                                                indication = null
+                                            ) {
+                                                val root = busquedaRootCoords
+                                                val itemCoords = songDotsCoords
+                                                if (root != null && itemCoords != null && itemCoords.isAttached && root.isAttached) {
+                                                    val localPos = root.localPositionOf(itemCoords, Offset.Zero)
+                                                    activeSongPivotBounds = Rect(
+                                                        left = localPos.x,
+                                                        top = localPos.y,
+                                                        right = localPos.x + itemCoords.size.width,
+                                                        bottom = localPos.y + itemCoords.size.height
+                                                    )
+                                                }
+                                                activeSongForMenu = ContextMenuSong(
+                                                    id = song.id,
+                                                    title = song.title,
+                                                    artist = song.artists.joinToString { it.name },
+                                                    thumbnail = hdThumb,
+                                                    album = song.album?.name,
+                                                    artistId = song.artists.firstOrNull()?.id,
+                                                    albumId = song.album?.id
+                                                )
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
                                         Icon(Icons.Default.MoreHoriz, null, tint = ThemeManager.subtextColor)
                                     }
                                 }
@@ -1000,17 +1064,52 @@ fun BusquedaScreen(
                                                     overflow = TextOverflow.Ellipsis
                                                 )
                                             }
-                                            IconButton(onClick = {
-                                                activeSongForMenu = ContextMenuSong(
-                                                    id = item.id,
-                                                    title = item.title,
-                                                    artist = item.artists.joinToString { it.name },
-                                                    thumbnail = hdThumb,
-                                                    album = item.album?.name,
-                                                    artistId = item.artists.firstOrNull()?.id,
-                                                    albumId = item.album?.id
-                                                )
-                                            }) {
+                                            val isThisSongActive = activeSongForMenu?.id == item.id
+                                            var songDotsCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+                                            val buttonInteractionSource = remember { MutableInteractionSource() }
+                                            val isPressed by buttonInteractionSource.collectIsPressedAsState()
+                                            val buttonScale by animateFloatAsState(
+                                                targetValue = if (isPressed) 0.86f else 1f,
+                                                animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
+                                                label = "songItemDotsPressScale"
+                                            )
+
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(40.dp)
+                                                    .graphicsLayer {
+                                                        scaleX = buttonScale
+                                                        scaleY = buttonScale
+                                                        alpha = if (isThisSongActive) 0f else 1f
+                                                    }
+                                                    .onGloballyPositioned { songDotsCoords = it }
+                                                    .clickable(
+                                                        interactionSource = buttonInteractionSource,
+                                                        indication = null
+                                                    ) {
+                                                        val root = busquedaRootCoords
+                                                        val itemCoords = songDotsCoords
+                                                        if (root != null && itemCoords != null && itemCoords.isAttached && root.isAttached) {
+                                                            val localPos = root.localPositionOf(itemCoords, Offset.Zero)
+                                                            activeSongPivotBounds = Rect(
+                                                                left = localPos.x,
+                                                                top = localPos.y,
+                                                                right = localPos.x + itemCoords.size.width,
+                                                                bottom = localPos.y + itemCoords.size.height
+                                                            )
+                                                        }
+                                                        activeSongForMenu = ContextMenuSong(
+                                                            id = item.id,
+                                                            title = item.title,
+                                                            artist = item.artists.joinToString { it.name },
+                                                            thumbnail = hdThumb,
+                                                            album = item.album?.name,
+                                                            artistId = item.artists.firstOrNull()?.id,
+                                                            albumId = item.album?.id
+                                                        )
+                                                    },
+                                                contentAlignment = Alignment.Center
+                                            ) {
                                                 Icon(Icons.Default.MoreVert, null, tint = ThemeManager.subtextColor)
                                             }
                                         }
@@ -1146,16 +1245,51 @@ fun BusquedaScreen(
                                                     overflow = TextOverflow.Ellipsis
                                                 )
                                             }
-                                            IconButton(onClick = {
-                                                activeAlbumForMenu = ContextMenuAlbum(
-                                                    id = item.id,
-                                                    playlistId = item.playlistId,
-                                                    title = item.title,
-                                                    artist = item.artists?.joinToString { it.name } ?: "",
-                                                    thumbnail = hdThumb,
-                                                    year = item.year
-                                                )
-                                            }) {
+                                            val isThisAlbumActive = activeAlbumForMenu?.id == item.id
+                                            var albumDotsCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+                                            val buttonInteractionSource = remember { MutableInteractionSource() }
+                                            val isPressed by buttonInteractionSource.collectIsPressedAsState()
+                                            val buttonScale by animateFloatAsState(
+                                                targetValue = if (isPressed) 0.86f else 1f,
+                                                animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
+                                                label = "albumItemDotsPressScale"
+                                            )
+
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(40.dp)
+                                                    .graphicsLayer {
+                                                        scaleX = buttonScale
+                                                        scaleY = buttonScale
+                                                        alpha = if (isThisAlbumActive) 0f else 1f
+                                                    }
+                                                    .onGloballyPositioned { albumDotsCoords = it }
+                                                    .clickable(
+                                                        interactionSource = buttonInteractionSource,
+                                                        indication = null
+                                                    ) {
+                                                        val root = busquedaRootCoords
+                                                        val itemCoords = albumDotsCoords
+                                                        if (root != null && itemCoords != null && itemCoords.isAttached && root.isAttached) {
+                                                            val localPos = root.localPositionOf(itemCoords, Offset.Zero)
+                                                            activeAlbumPivotBounds = Rect(
+                                                                left = localPos.x,
+                                                                top = localPos.y,
+                                                                right = localPos.x + itemCoords.size.width,
+                                                                bottom = localPos.y + itemCoords.size.height
+                                                            )
+                                                        }
+                                                        activeAlbumForMenu = ContextMenuAlbum(
+                                                            id = item.id,
+                                                            playlistId = item.playlistId,
+                                                            title = item.title,
+                                                            artist = item.artists?.joinToString { it.name } ?: "",
+                                                            thumbnail = hdThumb,
+                                                            year = item.year
+                                                        )
+                                                    },
+                                                contentAlignment = Alignment.Center
+                                            ) {
                                                 Icon(Icons.Default.MoreVert, null, tint = ThemeManager.subtextColor)
                                             }
                                         }
@@ -1188,7 +1322,10 @@ fun BusquedaScreen(
                 val song = activeSongForMenu!!
                 AppleMusicSongMenu(
                     song = song,
-                    onDismiss = { activeSongForMenu = null },
+                    onDismiss = {
+                        activeSongForMenu = null
+                        activeSongPivotBounds = null
+                    },
                     onGoToArtist = {
                         if (song.artistId != null) {
                             onArtistSelected(
@@ -1257,7 +1394,8 @@ fun BusquedaScreen(
                             }
                         }
                     },
-                    onSongSelected = onSongSelected
+                    onSongSelected = onSongSelected,
+                    pivotBounds = activeSongPivotBounds
                 )
             }
 
@@ -1265,7 +1403,10 @@ fun BusquedaScreen(
                 val album = activeAlbumForMenu!!
                 AppleMusicAlbumMenu(
                     album = album,
-                    onDismiss = { activeAlbumForMenu = null },
+                    onDismiss = {
+                        activeAlbumForMenu = null
+                        activeAlbumPivotBounds = null
+                    },
                     onAddAlbumToQueue = {
                         coroutineScope.launch(Dispatchers.IO) {
                             val albumPage = YouTube.album(album.id).getOrNull()
@@ -1325,7 +1466,8 @@ fun BusquedaScreen(
                                 }
                             }
                         }
-                    }
+                    },
+                    pivotBounds = activeAlbumPivotBounds
                 )
             }
         }
@@ -1459,7 +1601,9 @@ private fun Ios27SearchBar(
 private fun RecentSearchRow(
     item: RecentSearchItem,
     onClick: () -> Unit,
-    onMoreClick: () -> Unit
+    onMoreClick: (Rect?) -> Unit,
+    isActive: Boolean = false,
+    rootCoords: LayoutCoordinates? = null
 ) {
     val context = LocalContext.current
     Row(
@@ -1539,7 +1683,42 @@ private fun RecentSearchRow(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            IconButton(onClick = onMoreClick) {
+            var dotsCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+            val buttonInteractionSource = remember { MutableInteractionSource() }
+            val isPressed by buttonInteractionSource.collectIsPressedAsState()
+            val buttonScale by animateFloatAsState(
+                targetValue = if (isPressed) 0.86f else 1f,
+                animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
+                label = "recentDotsPressScale"
+            )
+
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .graphicsLayer {
+                        scaleX = buttonScale
+                        scaleY = buttonScale
+                        alpha = if (isActive) 0f else 1f
+                    }
+                    .onGloballyPositioned { dotsCoords = it }
+                    .clickable(
+                        interactionSource = buttonInteractionSource,
+                        indication = null
+                    ) {
+                        val coords = dotsCoords
+                        val bounds = if (rootCoords != null && coords != null && coords.isAttached && rootCoords.isAttached) {
+                            val localPos = rootCoords.localPositionOf(coords, Offset.Zero)
+                            Rect(
+                                left = localPos.x,
+                                top = localPos.y,
+                                right = localPos.x + coords.size.width,
+                                bottom = localPos.y + coords.size.height
+                            )
+                        } else null
+                        onMoreClick(bounds)
+                    },
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(Icons.Default.MoreHoriz, null, tint = ThemeManager.subtextColor)
             }
         }

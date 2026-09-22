@@ -17,6 +17,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.*
@@ -97,12 +99,346 @@ data class ContextMenuAlbum(
 )
 
 @Composable
+private fun SongMenuInnerContent(
+    context: Context,
+    song: ContextMenuSong,
+    libraryItem: LibraryItem,
+    isSaved: Boolean,
+    isPlaylistsScreen: Boolean,
+    onPlaylistsScreenChange: (Boolean) -> Unit,
+    onDismiss: () -> Unit,
+    onGoToAlbum: (() -> Unit)?,
+    onGoToArtist: (() -> Unit)?,
+    onSongSelected: (PlayerState) -> Unit,
+    onShowNewPlaylistDialog: () -> Unit,
+    onShowCreditsDialog: () -> Unit,
+    scope: kotlinx.coroutines.CoroutineScope
+) {
+    if (!isPlaylistsScreen) {
+        // Song Details Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(song.thumbnail)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = song.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(60.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.DarkGray)
+            )
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = song.title,
+                    color = Color.White,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = song.artist,
+                    color = Color.Gray,
+                    fontSize = 14.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            // Like / Favorite toggle
+            IconButton(onClick = {
+                if (isSaved) {
+                    LibraryManager.removeItem(song.id)
+                    Toast.makeText(context, context.getString(R.string.menu_removed_from_favorites), Toast.LENGTH_SHORT).show()
+                } else {
+                    LibraryManager.saveItem(libraryItem)
+                    Toast.makeText(context, context.getString(R.string.menu_added_to_favorites), Toast.LENGTH_SHORT).show()
+                }
+            }) {
+                Icon(
+                    imageVector = if (isSaved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = stringResource(R.string.dialog_favorite),
+                    tint = if (isSaved) Color(0xFFFA243C) else Color.White
+                )
+            }
+
+            // Close button
+            IconButton(onClick = { onDismiss() }) {
+                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close_action), tint = Color.Gray)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Divider(color = Color.White.copy(alpha = 0.1f))
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Horizontal Action Row (Play Next, Save to Playlist, Share)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            HorizontalActionButton(
+                icon = Icons.Default.QueuePlayNext,
+                label = stringResource(R.string.menu_play_next),
+                onClick = {
+                    val current = PlaybackQueue.currentSong
+                    val qItem = QueueItem(song.title, song.artist, song.thumbnail, song.id, song.album)
+                    if (current == null) {
+                        onSongSelected(PlayerState(song.title, song.artist, song.thumbnail, song.id, album = song.album))
+                    } else {
+                        PlaybackQueue.queue = listOf(qItem) + PlaybackQueue.queue
+                        PlaybackQueue.onQueueChanged?.invoke()
+                        Toast.makeText(context, context.getString(R.string.menu_play_next_toast), Toast.LENGTH_SHORT).show()
+                    }
+                    onDismiss()
+                }
+            )
+
+            HorizontalActionButton(
+                icon = Icons.Default.PlaylistAdd,
+                label = stringResource(R.string.playlists),
+                onClick = { onPlaylistsScreenChange(true) }
+            )
+
+            HorizontalActionButton(
+                icon = Icons.Default.Share,
+                label = stringResource(R.string.compartir),
+                onClick = {
+                    val shareUrl = "https://music.youtube.com/watch?v=${song.id}"
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_SUBJECT, song.title)
+                        putExtra(Intent.EXTRA_TEXT, shareUrl)
+                    }
+                    context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.menu_share_song)))
+                    onDismiss()
+                }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Divider(color = Color.White.copy(alpha = 0.1f))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Vertical Actions List
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 280.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            VerticalMenuActionItem(
+                icon = Icons.Default.Radio,
+                label = stringResource(R.string.menu_iniciar_radio),
+                onClick = {
+                    startRadioStation(
+                        scope = scope,
+                        context = context,
+                        targetState = PlayerState(
+                            title = song.title,
+                            artist = song.artist,
+                            artUrl = song.thumbnail,
+                            videoId = song.id,
+                            queue = emptyList(),
+                            isExclusiveQueue = false,
+                            album = song.album
+                        ),
+                        onSongSelected = onSongSelected
+                    )
+                    onDismiss()
+                }
+            )
+
+            VerticalMenuActionItem(
+                icon = Icons.Default.Queue,
+                label = stringResource(R.string.menu_agregar_a_fila),
+                onClick = {
+                    val current = PlaybackQueue.currentSong
+                    val qItem = QueueItem(song.title, song.artist, song.thumbnail, song.id, song.album)
+                    if (current == null) {
+                        onSongSelected(PlayerState(song.title, song.artist, song.thumbnail, song.id, album = song.album))
+                    } else {
+                        PlaybackQueue.queue = PlaybackQueue.queue + listOf(qItem)
+                        PlaybackQueue.onQueueChanged?.invoke()
+                        Toast.makeText(context, context.getString(R.string.menu_added_to_queue), Toast.LENGTH_SHORT).show()
+                    }
+                    onDismiss()
+                }
+            )
+
+            VerticalMenuActionItem(
+                icon = if (isSaved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                label = stringResource(if (isSaved) R.string.menu_eliminar_de_biblioteca else R.string.menu_guardar_en_biblioteca),
+                onClick = {
+                    if (isSaved) {
+                        LibraryManager.removeItem(song.id)
+                        Toast.makeText(context, context.getString(R.string.menu_eliminado_de_biblioteca), Toast.LENGTH_SHORT).show()
+                    } else {
+                        LibraryManager.saveItem(libraryItem)
+                        Toast.makeText(context, context.getString(R.string.menu_anadido_a_biblioteca), Toast.LENGTH_SHORT).show()
+                    }
+                    onDismiss()
+                }
+            )
+
+            VerticalMenuActionItem(
+                icon = Icons.Default.ArrowDownward,
+                label = stringResource(R.string.descargar),
+                onClick = {
+                    downloadSong(context, song.id, song.title, song.artist, song.thumbnail, song.album)
+                    onDismiss()
+                }
+            )
+
+            if (onGoToAlbum != null && !song.album.isNullOrBlank()) {
+                VerticalMenuActionItem(
+                    icon = Icons.Default.Album,
+                    label = stringResource(R.string.menu_ir_al_album),
+                    onClick = {
+                        onGoToAlbum()
+                        onDismiss()
+                    }
+                )
+            }
+
+            if (onGoToArtist != null) {
+                VerticalMenuActionItem(
+                    icon = Icons.Default.Mic,
+                    label = stringResource(R.string.menu_ir_al_artista),
+                    onClick = {
+                        onGoToArtist()
+                        onDismiss()
+                    }
+                )
+            }
+
+            VerticalMenuActionItem(
+                icon = Icons.Default.Info,
+                label = stringResource(R.string.menu_ver_creditos),
+                onClick = { onShowCreditsDialog() }
+            )
+
+            VerticalMenuActionItem(
+                icon = Icons.Default.PushPin,
+                label = stringResource(R.string.menu_fijar_accesos_directos),
+                onClick = {
+                    LibraryManager.saveItem(libraryItem)
+                    Toast.makeText(context, context.getString(R.string.menu_fijado_accesos_directos), Toast.LENGTH_SHORT).show()
+                    onDismiss()
+                }
+            )
+        }
+    } else {
+        // Playlists Selection Screen
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = { onPlaylistsScreenChange(false) }) {
+                Icon(Icons.Default.ArrowBackIosNew, contentDescription = stringResource(R.string.lyrics_menu_back), tint = Color(0xFFFA243C))
+            }
+            Text(
+                text = stringResource(R.string.menu_anadir_a_playlist),
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = { onDismiss() }) {
+                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close_action), tint = Color.Gray)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        val playlists by LibraryManager.playlists.collectAsState()
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 350.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            // "Create new playlist" action
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onShowNewPlaylistDialog() }
+                    .padding(vertical = 14.dp, horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    tint = Color(0xFFFA243C),
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text = stringResource(R.string.menu_nueva_playlist_btn),
+                    color = Color(0xFFFA243C),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+            Divider(color = Color.White.copy(alpha = 0.08f))
+
+            playlists.forEach { playlist ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            LibraryManager.addSongToPlaylist(playlist.id, libraryItem)
+                            Toast.makeText(context, context.getString(R.string.menu_anadido_a_playlist_format, playlist.name), Toast.LENGTH_SHORT).show()
+                            onDismiss()
+                        }
+                        .padding(vertical = 14.dp, horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.QueueMusic,
+                        contentDescription = null,
+                        tint = Color.Gray,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text(
+                            text = playlist.name,
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = stringResource(R.string.menu_canciones_count_format, playlist.items.size),
+                            color = Color.Gray,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+                Divider(color = Color.White.copy(alpha = 0.08f))
+            }
+        }
+    }
+}
+
+@Composable
 fun GlassBoxScope.AppleMusicSongMenu(
     song: ContextMenuSong,
     onDismiss: () -> Unit,
     onGoToAlbum: (() -> Unit)? = null,
     onGoToArtist: (() -> Unit)? = null,
-    onSongSelected: (PlayerState) -> Unit
+    onSongSelected: (PlayerState) -> Unit,
+    pivotBounds: androidx.compose.ui.geometry.Rect? = null
 ) {
     val glassScope = this
     val context = LocalContext.current
@@ -126,376 +462,259 @@ fun GlassBoxScope.AppleMusicSongMenu(
         )
     }
 
+    val morphAnim = remember { androidx.compose.animation.core.Animatable(0f) }
     LaunchedEffect(Unit) {
         visible = true
+        if (pivotBounds != null) {
+            morphAnim.animateTo(
+                targetValue = 1f,
+                animationSpec = androidx.compose.animation.core.spring(
+                    dampingRatio = 0.76f,
+                    stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
+                )
+            )
+        }
     }
+    val morphProgress = if (pivotBounds != null) morphAnim.value else 1f
 
+    var isDismissing by remember { mutableStateOf(false) }
     fun handleDismiss() {
-        visible = false
-        onDismiss()
+        if (isDismissing) return
+        isDismissing = true
+        if (pivotBounds != null) {
+            scope.launch {
+                morphAnim.animateTo(
+                    targetValue = 0f,
+                    animationSpec = androidx.compose.animation.core.spring(
+                        dampingRatio = 0.82f,
+                        stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
+                    )
+                )
+                onDismiss()
+            }
+        } else {
+            visible = false
+            scope.launch {
+                kotlinx.coroutines.delay(160L)
+                onDismiss()
+            }
+        }
     }
 
-    BackHandler(enabled = visible) {
-        handleDismiss()
+    BackHandler(enabled = true) {
+        if (isPlaylistsScreen) {
+            isPlaylistsScreen = false
+        } else {
+            handleDismiss()
+        }
     }
+
+    val scrimAlpha by animateFloatAsState(
+        targetValue = if (visible) 0.38f else 0f,
+        animationSpec = tween(durationMillis = 180),
+        label = "songMenuScrimAlpha"
+    )
+    val currentScrimAlpha = if (pivotBounds != null) (morphProgress * 0.38f).coerceIn(0f, 0.38f) else scrimAlpha
 
     // Semi-transparent overlay to tap and dismiss
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.4f))
+            .background(Color.Black.copy(alpha = currentScrimAlpha))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { handleDismiss() }
     )
 
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.BottomCenter
-    ) {
-        AnimatedVisibility(
-            visible = visible,
-            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-            modifier = Modifier.fillMaxWidth()
+    if (pivotBounds != null) {
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxSize()
         ) {
-            val currentQueueSong = PlaybackQueue.currentSong
-            val bottomPadding = if (currentQueueSong != null) 176.dp else 100.dp
+            val density = LocalDensity.current
+            val menuWidth = 280.dp
+            val estimatedHeight = if (isPlaylistsScreen) 380.dp else 460.dp
+
+            val screenWidthDp = maxWidth
+            val screenHeightDp = maxHeight
+
+            val startLeft = with(density) { pivotBounds.left.toDp() }
+            val startTop = with(density) { pivotBounds.top.toDp() }
+            val startWidth = with(density) { pivotBounds.width.toDp() }
+            val startHeight = with(density) { pivotBounds.height.toDp() }
+            val startCorner = startHeight / 2
+
+            val startRight = startLeft + startWidth
+            val targetLeft = (startRight - menuWidth).coerceIn(16.dp, (screenWidthDp - menuWidth - 16.dp).coerceAtLeast(16.dp))
+
+            val targetTop = if (startTop + estimatedHeight > screenHeightDp - 24.dp) {
+                (startTop + startHeight - estimatedHeight).coerceIn(48.dp, (screenHeightDp - estimatedHeight - 24.dp).coerceAtLeast(48.dp))
+            } else {
+                startTop.coerceIn(48.dp, (screenHeightDp - estimatedHeight - 24.dp).coerceAtLeast(48.dp))
+            }
+
+            val currentLeft = androidx.compose.ui.unit.lerp(startLeft, targetLeft, morphProgress)
+            val currentTop = androidx.compose.ui.unit.lerp(startTop, targetTop, morphProgress)
+            val currentWidth = androidx.compose.ui.unit.lerp(startWidth, menuWidth, morphProgress)
+            val currentHeight = androidx.compose.ui.unit.lerp(startHeight, estimatedHeight, morphProgress)
+            val currentCorner = androidx.compose.ui.unit.lerp(startCorner, 24.dp, morphProgress)
+
+            val threeDotsAlpha = ((0.22f - morphProgress) / 0.22f).coerceIn(0f, 1f)
+            val threeDotsScale = 1f - (morphProgress / 0.22f).coerceIn(0f, 1f) * 0.15f
+
+            val menuContentAlpha = ((morphProgress - 0.25f) / 0.75f).coerceIn(0f, 1f)
+            val menuContentOffsetY = (14 * (1f - menuContentAlpha)).dp
 
             glassScope.GlassBox(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 16.dp)
-                    .padding(top = 24.dp, bottom = bottomPadding),
-                blur = 0.9f,
+                    .align(Alignment.TopStart)
+                    .offset(x = currentLeft, y = currentTop)
+                    .size(width = currentWidth, height = currentHeight)
+                    .clip(RoundedCornerShape(currentCorner)),
+                blur = 0.85f,
                 scale = 0.02f,
+                centerDistortion = 0.1f,
+                warpEdges = 0.4f,
+                elevation = (16 * morphProgress).dp,
+                shape = RoundedCornerShape(currentCorner),
                 tint = Color.Unspecified,
                 darkness = 0f,
-                shape = RoundedCornerShape(24.dp),
-                elevation = 16.dp,
                 depthEffect = false
             ) {
-                Column(
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(currentCorner))
+                ) {
+                    // 1. Initial 3-dots icon pinned to exact physical position
+                    if (threeDotsAlpha > 0.001f) {
+                        Box(
+                            modifier = Modifier
+                                .offset(x = startLeft - currentLeft, y = startTop - currentTop)
+                                .size(startWidth, startHeight)
+                                .graphicsLayer {
+                                    alpha = threeDotsAlpha
+                                    scaleX = threeDotsScale
+                                    scaleY = threeDotsScale
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Canvas(modifier = Modifier.size(18.dp)) {
+                                val r = 1.8.dp.toPx()
+                                val space = 3.5.dp.toPx()
+                                val cx = size.width / 2f
+                                val cy = size.height / 2f
+                                drawCircle(Color.White, radius = r, center = Offset(cx - space - r * 2, cy))
+                                drawCircle(Color.White, radius = r, center = Offset(cx, cy))
+                                drawCircle(Color.White, radius = r, center = Offset(cx + space + r * 2, cy))
+                            }
+                        }
+                    }
+
+                    // 2. Menu content emerging smoothly as container blooms
+                    if (menuContentAlpha > 0.001f) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer {
+                                    alpha = menuContentAlpha
+                                    translationY = with(density) { menuContentOffsetY.toPx() }
+                                }
+                                .padding(16.dp)
+                        ) {
+                            SongMenuInnerContent(
+                                context = context,
+                                song = song,
+                                libraryItem = libraryItem,
+                                isSaved = isSaved,
+                                isPlaylistsScreen = isPlaylistsScreen,
+                                onPlaylistsScreenChange = { isPlaylistsScreen = it },
+                                onDismiss = { handleDismiss() },
+                                onGoToAlbum = onGoToAlbum,
+                                onGoToArtist = onGoToArtist,
+                                onSongSelected = onSongSelected,
+                                onShowNewPlaylistDialog = { showNewPlaylistDialog = true },
+                                onShowCreditsDialog = { showCreditsDialog = true },
+                                scope = scope
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        // Fallback bottom sheet if pivotBounds is null
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            AnimatedVisibility(
+                visible = visible,
+                enter = androidx.compose.animation.scaleIn(
+                    initialScale = 0.88f,
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 1.0f),
+                    animationSpec = androidx.compose.animation.core.spring(
+                        dampingRatio = 0.76f,
+                        stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
+                    )
+                ) + androidx.compose.animation.slideInVertically(
+                    initialOffsetY = { it / 6 },
+                    animationSpec = androidx.compose.animation.core.spring(
+                        dampingRatio = 0.76f,
+                        stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
+                    )
+                ) + fadeIn(
+                    animationSpec = androidx.compose.animation.core.tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                ),
+                exit = androidx.compose.animation.scaleOut(
+                    targetScale = 0.88f,
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 1.0f),
+                    animationSpec = androidx.compose.animation.core.tween(160, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                ) + androidx.compose.animation.slideOutVertically(
+                    targetOffsetY = { it / 6 },
+                    animationSpec = androidx.compose.animation.core.tween(160, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                ) + fadeOut(
+                    animationSpec = androidx.compose.animation.core.tween(140)
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                val currentQueueSong = PlaybackQueue.currentSong
+                val bottomPadding = if (currentQueueSong != null) 176.dp else 100.dp
+
+                glassScope.GlassBox(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .navigationBarsPadding()
+                        .padding(horizontal = 16.dp)
+                        .padding(top = 24.dp, bottom = bottomPadding),
+                    blur = 0.9f,
+                    scale = 0.02f,
+                    tint = Color.Unspecified,
+                    darkness = 0f,
+                    shape = RoundedCornerShape(24.dp),
+                    elevation = 16.dp,
+                    depthEffect = false
                 ) {
-                    if (!isPlaylistsScreen) {
-                        // Song Details Header
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(song.thumbnail)
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = song.title,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(60.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(Color.DarkGray)
-                            )
-
-                            Spacer(modifier = Modifier.width(16.dp))
-
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = song.title,
-                                    color = Color.White,
-                                    fontSize = 17.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = song.artist,
-                                    color = Color.Gray,
-                                    fontSize = 14.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-
-                            // Like / Favorite toggle
-                            IconButton(onClick = {
-                                if (isSaved) {
-                                    LibraryManager.removeItem(song.id)
-                                    Toast.makeText(context, context.getString(R.string.menu_removed_from_favorites), Toast.LENGTH_SHORT).show()
-                                } else {
-                                    LibraryManager.saveItem(libraryItem)
-                                    Toast.makeText(context, context.getString(R.string.menu_added_to_favorites), Toast.LENGTH_SHORT).show()
-                                }
-                            }) {
-                                Icon(
-                                    imageVector = if (isSaved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                    contentDescription = stringResource(R.string.dialog_favorite),
-                                    tint = if (isSaved) Color(0xFFFA243C) else Color.White
-                                )
-                            }
-
-                            // Close button
-                            IconButton(onClick = { handleDismiss() }) {
-                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close_action), tint = Color.Gray)
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Divider(color = Color.White.copy(alpha = 0.1f))
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Horizontal Action Row (Play Next, Save to Playlist, Share)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            HorizontalActionButton(
-                                icon = Icons.Default.QueuePlayNext,
-                                label = stringResource(R.string.menu_play_next),
-                                onClick = {
-                                    val current = PlaybackQueue.currentSong
-                                    val qItem = QueueItem(song.title, song.artist, song.thumbnail, song.id, song.album)
-                                    if (current == null) {
-                                        onSongSelected(PlayerState(song.title, song.artist, song.thumbnail, song.id, album = song.album))
-                                    } else {
-                                        PlaybackQueue.queue = listOf(qItem) + PlaybackQueue.queue
-                                        PlaybackQueue.onQueueChanged?.invoke()
-                                        Toast.makeText(context, context.getString(R.string.menu_play_next_toast), Toast.LENGTH_SHORT).show()
-                                    }
-                                    handleDismiss()
-                                }
-                            )
-
-                            HorizontalActionButton(
-                                icon = Icons.Default.PlaylistAdd,
-                                label = stringResource(R.string.playlists),
-                                onClick = { isPlaylistsScreen = true }
-                            )
-
-                            HorizontalActionButton(
-                                icon = Icons.Default.Share,
-                                label = stringResource(R.string.compartir),
-                                onClick = {
-                                    val shareUrl = "https://music.youtube.com/watch?v=${song.id}"
-                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                        type = "text/plain"
-                                        putExtra(Intent.EXTRA_SUBJECT, song.title)
-                                        putExtra(Intent.EXTRA_TEXT, shareUrl)
-                                    }
-                                    context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.menu_share_song)))
-                                    handleDismiss()
-                                }
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Divider(color = Color.White.copy(alpha = 0.1f))
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Vertical Actions List
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 280.dp)
-                                .verticalScroll(rememberScrollState())
-                        ) {
-                            VerticalMenuActionItem(
-                                icon = Icons.Default.Radio,
-                                label = stringResource(R.string.menu_iniciar_radio),
-                                onClick = {
-                                    startRadioStation(
-                                        scope = scope,
-                                        context = context,
-                                        targetState = PlayerState(
-                                            title = song.title,
-                                            artist = song.artist,
-                                            artUrl = song.thumbnail,
-                                            videoId = song.id,
-                                            queue = emptyList(),
-                                            isExclusiveQueue = false,
-                                            album = song.album
-                                        ),
-                                        onSongSelected = onSongSelected
-                                    )
-                                    handleDismiss()
-                                }
-                            )
-
-                            VerticalMenuActionItem(
-                                icon = Icons.Default.Queue,
-                                label = stringResource(R.string.menu_agregar_a_fila),
-                                onClick = {
-                                    val current = PlaybackQueue.currentSong
-                                    val qItem = QueueItem(song.title, song.artist, song.thumbnail, song.id, song.album)
-                                    if (current == null) {
-                                        onSongSelected(PlayerState(song.title, song.artist, song.thumbnail, song.id, album = song.album))
-                                    } else {
-                                        PlaybackQueue.queue = PlaybackQueue.queue + listOf(qItem)
-                                        PlaybackQueue.onQueueChanged?.invoke()
-                                        Toast.makeText(context, context.getString(R.string.menu_added_to_queue), Toast.LENGTH_SHORT).show()
-                                    }
-                                    handleDismiss()
-                                }
-                            )
-
-                            VerticalMenuActionItem(
-                                icon = if (isSaved) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                label = stringResource(if (isSaved) R.string.menu_eliminar_de_biblioteca else R.string.menu_guardar_en_biblioteca),
-                                onClick = {
-                                    if (isSaved) {
-                                        LibraryManager.removeItem(song.id)
-                                        Toast.makeText(context, context.getString(R.string.menu_eliminado_de_biblioteca), Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        LibraryManager.saveItem(libraryItem)
-                                        Toast.makeText(context, context.getString(R.string.menu_anadido_a_biblioteca), Toast.LENGTH_SHORT).show()
-                                    }
-                                    handleDismiss()
-                                }
-                            )
-
-                            VerticalMenuActionItem(
-                                icon = Icons.Default.ArrowDownward,
-                                label = stringResource(R.string.descargar),
-                                onClick = {
-                                    downloadSong(context, song.id, song.title, song.artist, song.thumbnail, song.album)
-                                    handleDismiss()
-                                }
-                            )
-
-                            if (onGoToAlbum != null && !song.album.isNullOrBlank()) {
-                                VerticalMenuActionItem(
-                                    icon = Icons.Default.Album,
-                                    label = stringResource(R.string.menu_ir_al_album),
-                                    onClick = {
-                                        onGoToAlbum()
-                                        handleDismiss()
-                                    }
-                                )
-                            }
-
-                            if (onGoToArtist != null) {
-                                VerticalMenuActionItem(
-                                    icon = Icons.Default.Mic,
-                                    label = stringResource(R.string.menu_ir_al_artista),
-                                    onClick = {
-                                        onGoToArtist()
-                                        handleDismiss()
-                                    }
-                                )
-                            }
-
-                            VerticalMenuActionItem(
-                                icon = Icons.Default.Info,
-                                label = stringResource(R.string.menu_ver_creditos),
-                                onClick = { showCreditsDialog = true }
-                            )
-
-                            VerticalMenuActionItem(
-                                icon = Icons.Default.PushPin,
-                                label = stringResource(R.string.menu_fijar_accesos_directos),
-                                onClick = {
-                                    LibraryManager.saveItem(libraryItem)
-                                    Toast.makeText(context, context.getString(R.string.menu_fijado_accesos_directos), Toast.LENGTH_SHORT).show()
-                                    handleDismiss()
-                                }
-                            )
-                        }
-                    } else {
-                        // Playlists Selection Screen
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(onClick = { isPlaylistsScreen = false }) {
-                                Icon(Icons.Default.ArrowBackIosNew, contentDescription = stringResource(R.string.lyrics_menu_back), tint = Color(0xFFFA243C))
-                            }
-                            Text(
-                                text = stringResource(R.string.menu_anadir_a_playlist),
-                                color = Color.White,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.weight(1f)
-                            )
-                            IconButton(onClick = { handleDismiss() }) {
-                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.close_action), tint = Color.Gray)
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        val playlists by LibraryManager.playlists.collectAsState()
-
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 350.dp)
-                                .verticalScroll(rememberScrollState())
-                        ) {
-                            // "Create new playlist" action
-                            Row(
-                                modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showNewPlaylistDialog = true }
-                                .padding(vertical = 14.dp, horizontal = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = null,
-                                    tint = Color(0xFFFA243C),
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Text(
-                                    text = stringResource(R.string.menu_nueva_playlist_btn),
-                                    color = Color(0xFFFA243C),
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                            Divider(color = Color.White.copy(alpha = 0.08f))
-
-                            playlists.forEach { playlist ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            LibraryManager.addSongToPlaylist(playlist.id, libraryItem)
-                                            Toast.makeText(context, context.getString(R.string.menu_anadido_a_playlist_format, playlist.name), Toast.LENGTH_SHORT).show()
-                                            handleDismiss()
-                                        }
-                                        .padding(vertical = 14.dp, horizontal = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.QueueMusic,
-                                        contentDescription = null,
-                                        tint = Color.Gray,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(16.dp))
-                                    Column {
-                                        Text(
-                                            text = playlist.name,
-                                            color = Color.White,
-                                            fontSize = 16.sp,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                        Text(
-                                            text = stringResource(R.string.menu_canciones_count_format, playlist.items.size),
-                                            color = Color.Gray,
-                                            fontSize = 12.sp
-                                        )
-                                    }
-                                }
-                                Divider(color = Color.White.copy(alpha = 0.08f))
-                            }
-                        }
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        SongMenuInnerContent(
+                            context = context,
+                            song = song,
+                            libraryItem = libraryItem,
+                            isSaved = isSaved,
+                            isPlaylistsScreen = isPlaylistsScreen,
+                            onPlaylistsScreenChange = { isPlaylistsScreen = it },
+                            onDismiss = { handleDismiss() },
+                            onGoToAlbum = onGoToAlbum,
+                            onGoToArtist = onGoToArtist,
+                            onSongSelected = onSongSelected,
+                            onShowNewPlaylistDialog = { showNewPlaylistDialog = true },
+                            onShowCreditsDialog = { showCreditsDialog = true },
+                            scope = scope
+                        )
                     }
                 }
             }
@@ -622,7 +841,8 @@ fun GlassBoxScope.AppleMusicAlbumMenu(
     onAddAlbumToQueue: () -> Unit,
     onSaveAlbumToLibrary: () -> Unit,
     tracks: List<com.echo.innertube.models.SongItem>? = null,
-    onGoToArtist: (() -> Unit)? = null
+    onGoToArtist: (() -> Unit)? = null,
+    pivotBounds: androidx.compose.ui.geometry.Rect? = null
 ) {
     val glassScope = this
     val context = LocalContext.current
@@ -645,16 +865,46 @@ fun GlassBoxScope.AppleMusicAlbumMenu(
         )
     }
 
+    val morphAnim = remember { androidx.compose.animation.core.Animatable(0f) }
     LaunchedEffect(Unit) {
         visible = true
+        if (pivotBounds != null) {
+            morphAnim.animateTo(
+                targetValue = 1f,
+                animationSpec = androidx.compose.animation.core.spring(
+                    dampingRatio = 0.76f,
+                    stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
+                )
+            )
+        }
     }
+    val morphProgress = if (pivotBounds != null) morphAnim.value else 1f
 
+    var isDismissing by remember { mutableStateOf(false) }
     fun handleDismiss() {
-        visible = false
-        onDismiss()
+        if (isDismissing) return
+        isDismissing = true
+        if (pivotBounds != null) {
+            scope.launch {
+                morphAnim.animateTo(
+                    targetValue = 0f,
+                    animationSpec = androidx.compose.animation.core.spring(
+                        dampingRatio = 0.82f,
+                        stiffness = androidx.compose.animation.core.Spring.StiffnessMedium
+                    )
+                )
+                onDismiss()
+            }
+        } else {
+            visible = false
+            scope.launch {
+                kotlinx.coroutines.delay(160L)
+                onDismiss()
+            }
+        }
     }
 
-    BackHandler(enabled = visible) {
+    BackHandler(enabled = true) {
         if (isPlaylistsScreen) {
             isPlaylistsScreen = false
         } else {
@@ -662,537 +912,202 @@ fun GlassBoxScope.AppleMusicAlbumMenu(
         }
     }
 
+    val scrimAlpha by animateFloatAsState(
+        targetValue = if (visible) 0.35f else 0f,
+        animationSpec = tween(durationMillis = 180),
+        label = "albumMenuScrimAlpha"
+    )
+    val currentScrimAlpha = if (pivotBounds != null) (morphProgress * 0.35f).coerceIn(0f, 0.35f) else scrimAlpha
+
     // Full screen overlay with subtle dimming
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.35f))
+            .background(Color.Black.copy(alpha = currentScrimAlpha))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { handleDismiss() }
     )
 
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.TopEnd
-    ) {
-        AnimatedVisibility(
-            visible = visible,
-            enter = androidx.compose.animation.scaleIn(
-                initialScale = 0.15f,
-                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.92f, 0.04f),
-                animationSpec = androidx.compose.animation.core.spring(
-                    dampingRatio = 0.72f,
-                    stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
-                )
-            ) + fadeIn(animationSpec = androidx.compose.animation.core.tween(150)),
-            exit = androidx.compose.animation.scaleOut(
-                targetScale = 0.15f,
-                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.92f, 0.04f),
-                animationSpec = androidx.compose.animation.core.tween(160)
-            ) + fadeOut(animationSpec = androidx.compose.animation.core.tween(140)),
-            modifier = Modifier
-                .statusBarsPadding()
-                .padding(top = 58.dp, end = 16.dp)
-                .wrapContentSize()
+    if (pivotBounds != null) {
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxSize()
         ) {
+            val density = LocalDensity.current
+            val menuWidth = 268.dp
+            val estimatedHeight = if (isPlaylistsScreen) 360.dp else 420.dp
+
+            val screenWidthDp = maxWidth
+            val screenHeightDp = maxHeight
+
+            val startLeft = with(density) { pivotBounds.left.toDp() }
+            val startTop = with(density) { pivotBounds.top.toDp() }
+            val startWidth = with(density) { pivotBounds.width.toDp() }
+            val startHeight = with(density) { pivotBounds.height.toDp() }
+            val startCorner = startHeight / 2
+
+            val startRight = startLeft + startWidth
+            val targetLeft = (startRight - menuWidth).coerceIn(16.dp, (screenWidthDp - menuWidth - 16.dp).coerceAtLeast(16.dp))
+
+            val targetTop = if (startTop + estimatedHeight > screenHeightDp - 24.dp) {
+                (startTop + startHeight - estimatedHeight).coerceIn(48.dp, (screenHeightDp - estimatedHeight - 24.dp).coerceAtLeast(48.dp))
+            } else {
+                startTop.coerceIn(48.dp, (screenHeightDp - estimatedHeight - 24.dp).coerceAtLeast(48.dp))
+            }
+
+            val currentLeft = androidx.compose.ui.unit.lerp(startLeft, targetLeft, morphProgress)
+            val currentTop = androidx.compose.ui.unit.lerp(startTop, targetTop, morphProgress)
+            val currentWidth = androidx.compose.ui.unit.lerp(startWidth, menuWidth, morphProgress)
+            val currentHeight = androidx.compose.ui.unit.lerp(startHeight, estimatedHeight, morphProgress)
+            val currentCorner = androidx.compose.ui.unit.lerp(startCorner, 24.dp, morphProgress)
+
+            val threeDotsAlpha = ((0.22f - morphProgress) / 0.22f).coerceIn(0f, 1f)
+            val threeDotsScale = 1f - (morphProgress / 0.22f).coerceIn(0f, 1f) * 0.15f
+
+            val menuContentAlpha = ((morphProgress - 0.25f) / 0.75f).coerceIn(0f, 1f)
+            val menuContentOffsetY = (14 * (1f - menuContentAlpha)).dp
+
             glassScope.GlassBox(
                 modifier = Modifier
-                    .width(268.dp)
-                    .wrapContentHeight()
-                    .border(
-                        width = 0.8.dp,
-                        brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                            listOf(
-                                Color.White.copy(alpha = 0.35f),
-                                Color.White.copy(alpha = 0.08f)
-                            )
-                        ),
-                        shape = RoundedCornerShape(24.dp)
-                    ),
-                blur = 0.95f,
-                centerDistortion = 0.1f,
+                    .align(Alignment.TopStart)
+                    .offset(x = currentLeft, y = currentTop)
+                    .size(width = currentWidth, height = currentHeight)
+                    .clip(RoundedCornerShape(currentCorner)),
+                blur = 0.85f,
                 scale = 0.02f,
+                centerDistortion = 0.1f,
                 warpEdges = 0.4f,
+                elevation = (16 * morphProgress).dp,
+                shape = RoundedCornerShape(currentCorner),
                 tint = Color.Unspecified,
                 darkness = 0f,
-                shape = RoundedCornerShape(24.dp),
-                elevation = 16.dp,
                 depthEffect = false
             ) {
-                if (!isPlaylistsScreen) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 6.dp)
-                    ) {
-                        // ── Top Horizontal 3-Action Grid ──
-                        Row(
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(currentCorner))
+                ) {
+                    if (threeDotsAlpha > 0.001f) {
+                        Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 8.dp, vertical = 6.dp),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                            verticalAlignment = Alignment.CenterVertically
+                                .offset(x = startLeft - currentLeft, y = startTop - currentTop)
+                                .size(startWidth, startHeight)
+                                .graphicsLayer {
+                                    alpha = threeDotsAlpha
+                                    scaleX = threeDotsScale
+                                    scaleY = threeDotsScale
+                                },
+                            contentAlignment = Alignment.Center
                         ) {
-                            // 1. Agregar / Agregado
-                            Column(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable {
-                                        if (isSaved) {
-                                            LibraryManager.removeItem(album.id)
-                                            Toast.makeText(context, "Eliminado de la biblioteca", Toast.LENGTH_SHORT).show()
-                                        } else {
-                                            onSaveAlbumToLibrary()
-                                        }
-                                    }
-                                    .padding(vertical = 6.dp, horizontal = 4.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Icon(
-                                    imageVector = if (isSaved) Icons.Default.CheckCircle else Icons.Default.AddCircleOutline,
-                                    contentDescription = null,
-                                    tint = if (isSaved) Color(0xFFFA243C) else Color.White,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = if (isSaved) "Agregado" else "Agregar",
-                                    color = Color.White,
-                                    fontSize = 11.5.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    maxLines = 1
-                                )
-                            }
-
-                            // 2. Agregar a Favoritos
-                            Column(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable {
-                                        isFavorite = !isFavorite
-                                        if (isFavorite) {
-                                            LibraryManager.saveItem(libraryAlbumItem)
-                                            Toast.makeText(context, "Añadido a favoritos", Toast.LENGTH_SHORT).show()
-                                        } else {
-                                            Toast.makeText(context, "Eliminado de favoritos", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                    .padding(vertical = 6.dp, horizontal = 4.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Icon(
-                                    imageVector = if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
-                                    contentDescription = null,
-                                    tint = if (isFavorite) Color(0xFFFA243C) else Color.White,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = if (isFavorite) "En Favoritos" else "Favorito",
-                                    color = Color.White,
-                                    fontSize = 11.5.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    maxLines = 1
-                                )
-                            }
-
-                            // 3. Compartir
-                            Column(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable {
-                                        val pId = album.playlistId.ifEmpty { album.id }.removePrefix("VL")
-                                        val shareUrl = "https://music.youtube.com/playlist?list=$pId"
-                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                            type = "text/plain"
-                                            putExtra(Intent.EXTRA_SUBJECT, album.title)
-                                            putExtra(Intent.EXTRA_TEXT, shareUrl)
-                                        }
-                                        context.startActivity(Intent.createChooser(shareIntent, "Compartir álbum"))
-                                        handleDismiss()
-                                    }
-                                    .padding(vertical = 6.dp, horizontal = 4.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.IosShare,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Compartir",
-                                    color = Color.White,
-                                    fontSize = 11.5.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    maxLines = 1
-                                )
-                            }
-                        }
-
-                        Divider(color = Color.White.copy(alpha = 0.12f), thickness = 0.6.dp)
-
-                        // ── Vertical Action Options ──
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .verticalScroll(rememberScrollState())
-                        ) {
-                            // 1. Agregar a playlist
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { isPlaylistsScreen = true }
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                                Spacer(modifier = Modifier.width(14.dp))
-                                Text(
-                                    text = "Agregar a playlist",
-                                    color = Color.White,
-                                    fontSize = 15.sp
-                                )
-                            }
-
-                            Divider(color = Color.White.copy(alpha = 0.08f), thickness = 0.5.dp)
-
-                            // 2. Poner a continuación
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        onAddAlbumToQueue()
-                                        handleDismiss()
-                                    }
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.QueuePlayNext,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                                Spacer(modifier = Modifier.width(14.dp))
-                                Text(
-                                    text = "Poner a continuación",
-                                    color = Color.White,
-                                    fontSize = 15.sp
-                                )
-                            }
-
-                            Divider(color = Color.White.copy(alpha = 0.08f), thickness = 0.5.dp)
-
-                            // 3. Poner después
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        onAddAlbumToQueue()
-                                        handleDismiss()
-                                    }
-                                    .padding(horizontal = 16.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Queue,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                                Spacer(modifier = Modifier.width(14.dp))
-                                Column {
-                                    Text(
-                                        text = "Poner después",
-                                        color = Color.White,
-                                        fontSize = 15.sp
-                                    )
-                                    Text(
-                                        text = album.title,
-                                        color = Color.White.copy(alpha = 0.55f),
-                                        fontSize = 12.sp,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                            }
-
-                            Divider(color = Color.White.copy(alpha = 0.08f), thickness = 0.5.dp)
-
-                            // 4. Descargar
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        handleDismiss()
-                                        Toast.makeText(context, "Obteniendo pistas para descargar...", Toast.LENGTH_SHORT).show()
-                                        scope.launch {
-                                            try {
-                                                withContext(Dispatchers.IO) {
-                                                    val tracksToDownload = if (!tracks.isNullOrEmpty()) {
-                                                        tracks
-                                                    } else {
-                                                        val isAlbum = album.id.startsWith("MPREb") || album.id.startsWith("FEmusic")
-                                                        if (isAlbum) {
-                                                            YouTube.album(album.id).getOrNull()?.songs
-                                                                ?: run {
-                                                                    val pId = album.playlistId.ifEmpty { album.id }.removePrefix("VL")
-                                                                    YouTube.playlist(pId).getOrNull()?.songs
-                                                                }
-                                                        } else {
-                                                            val pId = album.playlistId.ifEmpty { album.id }.removePrefix("VL")
-                                                            YouTube.playlist(pId).getOrNull()?.songs
-                                                                ?: run {
-                                                                    YouTube.album(album.id).getOrNull()?.songs
-                                                                }
-                                                        }
-                                                    }
-
-                                                    withContext(Dispatchers.Main) {
-                                                        if (tracksToDownload.isNullOrEmpty()) {
-                                                            Toast.makeText(context, "No se encontraron pistas para descargar", Toast.LENGTH_SHORT).show()
-                                                        } else {
-                                                            Toast.makeText(context, "Iniciando descarga de ${tracksToDownload.size} canciones...", Toast.LENGTH_SHORT).show()
-                                                            tracksToDownload.forEach { track ->
-                                                                downloadSong(
-                                                                    context = context,
-                                                                    videoId = track.id,
-                                                                    title = track.title,
-                                                                    artist = track.artists.joinToString { it.name },
-                                                                    artUrl = track.thumbnail,
-                                                                    album = album.title,
-                                                                    silent = true
-                                                                )
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            } catch (e: Exception) {
-                                                Toast.makeText(context, "Error al descargar: ${e.localizedMessage ?: e.message}", Toast.LENGTH_LONG).show()
-                                            }
-                                        }
-                                    }
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Download,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                                Spacer(modifier = Modifier.width(14.dp))
-                                Text(
-                                    text = "Descargar",
-                                    color = Color.White,
-                                    fontSize = 15.sp
-                                )
-                            }
-
-                            if (onGoToArtist != null) {
-                                Divider(color = Color.White.copy(alpha = 0.08f), thickness = 0.5.dp)
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            onGoToArtist()
-                                            handleDismiss()
-                                        }
-                                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Person,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(22.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(14.dp))
-                                    Column {
-                                        Text(
-                                            text = "Ver artista",
-                                            color = Color.White,
-                                            fontSize = 15.sp
-                                        )
-                                        Text(
-                                            text = album.artist,
-                                            color = Color.White.copy(alpha = 0.55f),
-                                            fontSize = 12.sp,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                }
-                            }
-
-                            Divider(color = Color.White.copy(alpha = 0.08f), thickness = 0.5.dp)
-
-                            // 5. Sugerir menos
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        Toast.makeText(context, "Se sugerirá menos contenido similar", Toast.LENGTH_SHORT).show()
-                                        handleDismiss()
-                                    }
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.ThumbDownOffAlt,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                                Spacer(modifier = Modifier.width(14.dp))
-                                Text(
-                                    text = "Sugerir menos",
-                                    color = Color.White,
-                                    fontSize = 15.sp
-                                )
+                            Canvas(modifier = Modifier.size(18.dp)) {
+                                val r = 1.8.dp.toPx()
+                                val space = 3.5.dp.toPx()
+                                val cx = size.width / 2f
+                                val cy = size.height / 2f
+                                drawCircle(Color.White, radius = r, center = Offset(cx - space - r * 2, cy))
+                                drawCircle(Color.White, radius = r, center = Offset(cx, cy))
+                                drawCircle(Color.White, radius = r, center = Offset(cx + space + r * 2, cy))
                             }
                         }
                     }
-                } else {
-                    // Playlists Selector Sub-screen
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(14.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
+
+                    if (menuContentAlpha > 0.001f) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer {
+                                    alpha = menuContentAlpha
+                                    translationY = menuContentOffsetY.toPx()
+                                }
                         ) {
-                            IconButton(
-                                onClick = { isPlaylistsScreen = false },
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.ArrowBackIosNew,
-                                    contentDescription = "Volver",
-                                    tint = Color(0xFFFA243C),
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Agregar a playlist",
-                                color = Color.White,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.weight(1f)
+                            AlbumMenuInnerContent(
+                                album = album,
+                                isSaved = isSaved,
+                                isFavorite = isFavorite,
+                                libraryAlbumItem = libraryAlbumItem,
+                                isPlaylistsScreen = isPlaylistsScreen,
+                                onFavoriteToggle = { isFavorite = !isFavorite },
+                                onSaveAlbumToLibrary = onSaveAlbumToLibrary,
+                                onAddAlbumToQueue = onAddAlbumToQueue,
+                                onGoToArtist = onGoToArtist,
+                                onDismiss = { handleDismiss() },
+                                onNavigateToPlaylists = { isPlaylistsScreen = true },
+                                onBackFromPlaylists = { isPlaylistsScreen = false },
+                                onShowNewPlaylistDialog = { showNewPlaylistDialog = true },
+                                tracks = tracks
                             )
                         }
-
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Divider(color = Color.White.copy(alpha = 0.1f))
-
-                        val playlists by LibraryManager.playlists.collectAsState()
-
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 260.dp)
-                                .verticalScroll(rememberScrollState())
-                        ) {
-                            // Crear nueva playlist
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { showNewPlaylistDialog = true }
-                                    .padding(vertical = 12.dp, horizontal = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    Icons.Default.Add,
-                                    contentDescription = null,
-                                    tint = Color(0xFFFA243C),
-                                    modifier = Modifier.size(22.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = "Nueva playlist...",
-                                    color = Color(0xFFFA243C),
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-
-                            Divider(color = Color.White.copy(alpha = 0.08f))
-
-                            playlists.forEach { playlist ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            scope.launch {
-                                                val tracksToAdd = if (!tracks.isNullOrEmpty()) {
-                                                    tracks
-                                                } else {
-                                                    val isAlbum = album.id.startsWith("MPREb") || album.id.startsWith("FEmusic")
-                                                    withContext(Dispatchers.IO) {
-                                                        if (isAlbum) YouTube.album(album.id).getOrNull()?.songs
-                                                        else YouTube.playlist(album.playlistId.ifEmpty { album.id }.removePrefix("VL")).getOrNull()?.songs
-                                                    }
-                                                }
-                                                if (!tracksToAdd.isNullOrEmpty()) {
-                                                    tracksToAdd.forEach { track ->
-                                                        val trackLibItem = LibraryItem(
-                                                            id = track.id,
-                                                            title = track.title,
-                                                            subtitle = track.artists.joinToString { it.name },
-                                                            thumbnail = track.thumbnail,
-                                                            type = ItemType.SONG,
-                                                            album = album.title
-                                                        )
-                                                        LibraryManager.addSongToPlaylist(playlist.id, trackLibItem)
-                                                    }
-                                                    Toast.makeText(context, "Se agregaron las canciones a ${playlist.name}", Toast.LENGTH_SHORT).show()
-                                                }
-                                                handleDismiss()
-                                            }
-                                        }
-                                        .padding(vertical = 10.dp, horizontal = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        Icons.Default.QueueMusic,
-                                        contentDescription = null,
-                                        tint = Color.Gray,
-                                        modifier = Modifier.size(22.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
-                                        Text(
-                                            text = playlist.name,
-                                            color = Color.White,
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                        Text(
-                                            text = "${playlist.items.size} canciones",
-                                            color = Color.Gray,
-                                            fontSize = 12.sp
-                                        )
-                                    }
-                                }
-                                Divider(color = Color.White.copy(alpha = 0.06f))
-                            }
-                        }
                     }
+                }
+            }
+        }
+    } else {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.TopEnd
+        ) {
+            AnimatedVisibility(
+                visible = visible,
+                enter = androidx.compose.animation.scaleIn(
+                    initialScale = 0.85f,
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.92f, 0.04f),
+                    animationSpec = androidx.compose.animation.core.spring(
+                        dampingRatio = 0.76f,
+                        stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
+                    )
+                ) + fadeIn(animationSpec = androidx.compose.animation.core.tween(180, easing = androidx.compose.animation.core.FastOutSlowInEasing)),
+                exit = androidx.compose.animation.scaleOut(
+                    targetScale = 0.85f,
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.92f, 0.04f),
+                    animationSpec = androidx.compose.animation.core.tween(160, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                ) + fadeOut(animationSpec = androidx.compose.animation.core.tween(140)),
+                modifier = Modifier
+                    .statusBarsPadding()
+                    .padding(top = 58.dp, end = 16.dp)
+                    .wrapContentSize()
+            ) {
+                glassScope.GlassBox(
+                    modifier = Modifier
+                        .width(268.dp)
+                        .wrapContentHeight()
+                        .border(
+                            width = 0.8.dp,
+                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.35f),
+                                    Color.White.copy(alpha = 0.08f)
+                                )
+                            ),
+                            shape = RoundedCornerShape(24.dp)
+                        ),
+                    blur = 0.95f,
+                    centerDistortion = 0.1f,
+                    scale = 0.02f,
+                    warpEdges = 0.4f,
+                    tint = Color.Unspecified,
+                    darkness = 0f,
+                    shape = RoundedCornerShape(24.dp),
+                    elevation = 16.dp,
+                    depthEffect = false
+                ) {
+                    AlbumMenuInnerContent(
+                        album = album,
+                        isSaved = isSaved,
+                        isFavorite = isFavorite,
+                        libraryAlbumItem = libraryAlbumItem,
+                        isPlaylistsScreen = isPlaylistsScreen,
+                        onFavoriteToggle = { isFavorite = !isFavorite },
+                        onSaveAlbumToLibrary = onSaveAlbumToLibrary,
+                        onAddAlbumToQueue = onAddAlbumToQueue,
+                        onGoToArtist = onGoToArtist,
+                        onDismiss = { handleDismiss() },
+                        onNavigateToPlaylists = { isPlaylistsScreen = true },
+                        onBackFromPlaylists = { isPlaylistsScreen = false },
+                        onShowNewPlaylistDialog = { showNewPlaylistDialog = true },
+                        tracks = tracks
+                    )
                 }
             }
         }
@@ -1275,6 +1190,500 @@ fun GlassBoxScope.AppleMusicAlbumMenu(
             }
         }
     }
+}
+
+@Composable
+private fun AlbumMenuInnerContent(
+    album: ContextMenuAlbum,
+    isSaved: Boolean,
+    isFavorite: Boolean,
+    libraryAlbumItem: LibraryItem,
+    isPlaylistsScreen: Boolean,
+    onFavoriteToggle: () -> Unit,
+    onSaveAlbumToLibrary: () -> Unit,
+    onAddAlbumToQueue: () -> Unit,
+    onGoToArtist: (() -> Unit)?,
+    onDismiss: () -> Unit,
+    onNavigateToPlaylists: () -> Unit,
+    onBackFromPlaylists: () -> Unit,
+    onShowNewPlaylistDialog: () -> Unit,
+    tracks: List<com.echo.innertube.models.SongItem>?
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    if (!isPlaylistsScreen) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 6.dp)
+        ) {
+                        // ── Top Horizontal 3-Action Grid ──
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // 1. Agregar / Agregado
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        if (isSaved) {
+                                            LibraryManager.removeItem(album.id)
+                                            Toast.makeText(context, "Eliminado de la biblioteca", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            onSaveAlbumToLibrary()
+                                        }
+                                    }
+                                    .padding(vertical = 6.dp, horizontal = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = if (isSaved) Icons.Default.CheckCircle else Icons.Default.AddCircleOutline,
+                                    contentDescription = null,
+                                    tint = if (isSaved) Color(0xFFFA243C) else Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = if (isSaved) "Agregado" else "Agregar",
+                                    color = Color.White,
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1
+                                )
+                            }
+
+                            // 2. Agregar a Favoritos
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        onFavoriteToggle()
+                                        if (!isFavorite) {
+                                            LibraryManager.saveItem(libraryAlbumItem)
+                                            Toast.makeText(context, "Añadido a favoritos", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            Toast.makeText(context, "Eliminado de favoritos", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                    .padding(vertical = 6.dp, horizontal = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                                    contentDescription = null,
+                                    tint = if (isFavorite) Color(0xFFFA243C) else Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = if (isFavorite) "En Favoritos" else "Favorito",
+                                    color = Color.White,
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1
+                                )
+                            }
+
+                            // 3. Compartir
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        val pId = album.playlistId.ifEmpty { album.id }.removePrefix("VL")
+                                        val shareUrl = "https://music.youtube.com/playlist?list=$pId"
+                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(Intent.EXTRA_SUBJECT, album.title)
+                                            putExtra(Intent.EXTRA_TEXT, shareUrl)
+                                        }
+                                        context.startActivity(Intent.createChooser(shareIntent, "Compartir álbum"))
+                                        onDismiss()
+                                    }
+                                    .padding(vertical = 6.dp, horizontal = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.IosShare,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Compartir",
+                                    color = Color.White,
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+
+                        Divider(color = Color.White.copy(alpha = 0.12f), thickness = 0.6.dp)
+
+                        // ── Vertical Action Options ──
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            // 1. Agregar a playlist
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onNavigateToPlaylists() }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.PlaylistAdd,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(modifier = Modifier.width(14.dp))
+                                Text(
+                                    text = "Agregar a playlist",
+                                    color = Color.White,
+                                    fontSize = 15.sp
+                                )
+                            }
+
+                            Divider(color = Color.White.copy(alpha = 0.08f), thickness = 0.5.dp)
+
+                            // 2. Poner a continuación
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onAddAlbumToQueue()
+                                        onDismiss()
+                                    }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.QueuePlayNext,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(modifier = Modifier.width(14.dp))
+                                Text(
+                                    text = "Poner a continuación",
+                                    color = Color.White,
+                                    fontSize = 15.sp
+                                )
+                            }
+
+                            Divider(color = Color.White.copy(alpha = 0.08f), thickness = 0.5.dp)
+
+                            // 3. Poner después
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onAddAlbumToQueue()
+                                        onDismiss()
+                                    }
+                                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Queue,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(modifier = Modifier.width(14.dp))
+                                Column {
+                                    Text(
+                                        text = "Poner después",
+                                        color = Color.White,
+                                        fontSize = 15.sp
+                                    )
+                                    Text(
+                                        text = album.title,
+                                        color = Color.White.copy(alpha = 0.55f),
+                                        fontSize = 12.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+
+                            Divider(color = Color.White.copy(alpha = 0.08f), thickness = 0.5.dp)
+
+                            // 4. Descargar
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onDismiss()
+                                        Toast.makeText(context, "Obteniendo pistas para descargar...", Toast.LENGTH_SHORT).show()
+                                        scope.launch {
+                                            try {
+                                                withContext(Dispatchers.IO) {
+                                                    val tracksToDownload = if (!tracks.isNullOrEmpty()) {
+                                                        tracks
+                                                    } else {
+                                                        val isAlbum = album.id.startsWith("MPREb") || album.id.startsWith("FEmusic")
+                                                        if (isAlbum) {
+                                                            YouTube.album(album.id).getOrNull()?.songs
+                                                                ?: run {
+                                                                    val pId = album.playlistId.ifEmpty { album.id }.removePrefix("VL")
+                                                                    YouTube.playlist(pId).getOrNull()?.songs
+                                                                }
+                                                        } else {
+                                                            val pId = album.playlistId.ifEmpty { album.id }.removePrefix("VL")
+                                                            YouTube.playlist(pId).getOrNull()?.songs
+                                                                ?: run {
+                                                                    YouTube.album(album.id).getOrNull()?.songs
+                                                                }
+                                                        }
+                                                    }
+
+                                                    withContext(Dispatchers.Main) {
+                                                        if (tracksToDownload.isNullOrEmpty()) {
+                                                            Toast.makeText(context, "No se encontraron pistas para descargar", Toast.LENGTH_SHORT).show()
+                                                        } else {
+                                                            Toast.makeText(context, "Iniciando descarga de ${tracksToDownload.size} canciones...", Toast.LENGTH_SHORT).show()
+                                                            tracksToDownload.forEach { track ->
+                                                                downloadSong(
+                                                                    context = context,
+                                                                    videoId = track.id,
+                                                                    title = track.title,
+                                                                    artist = track.artists.joinToString { it.name },
+                                                                    artUrl = track.thumbnail,
+                                                                    album = album.title,
+                                                                    silent = true
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            } catch (e: Exception) {
+                                                Toast.makeText(context, "Error al descargar: ${e.localizedMessage ?: e.message}", Toast.LENGTH_LONG).show()
+                                            }
+                                        }
+                                    }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Download,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(modifier = Modifier.width(14.dp))
+                                Text(
+                                    text = "Descargar",
+                                    color = Color.White,
+                                    fontSize = 15.sp
+                                )
+                            }
+
+                            if (onGoToArtist != null) {
+                                Divider(color = Color.White.copy(alpha = 0.08f), thickness = 0.5.dp)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            onGoToArtist()
+                                            onDismiss()
+                                        }
+                                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Person,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(14.dp))
+                                    Column {
+                                        Text(
+                                            text = "Ver artista",
+                                            color = Color.White,
+                                            fontSize = 15.sp
+                                        )
+                                        Text(
+                                            text = album.artist,
+                                            color = Color.White.copy(alpha = 0.55f),
+                                            fontSize = 12.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                            }
+
+                            Divider(color = Color.White.copy(alpha = 0.08f), thickness = 0.5.dp)
+
+                            // 5. Sugerir menos
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        Toast.makeText(context, "Se sugerirá menos contenido similar", Toast.LENGTH_SHORT).show()
+                                        onDismiss()
+                                    }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ThumbDownOffAlt,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(modifier = Modifier.width(14.dp))
+                                Text(
+                                    text = "Sugerir menos",
+                                    color = Color.White,
+                                    fontSize = 15.sp
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    // Playlists Selector Sub-screen
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(
+                                onClick = onBackFromPlaylists,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.ArrowBackIosNew,
+                                    contentDescription = "Volver",
+                                    tint = Color(0xFFFA243C),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Agregar a playlist",
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Divider(color = Color.White.copy(alpha = 0.1f))
+
+                        val playlists by LibraryManager.playlists.collectAsState()
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 260.dp)
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            // Crear nueva playlist
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onShowNewPlaylistDialog() }
+                                    .padding(vertical = 12.dp, horizontal = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Add,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFA243C),
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = "Nueva playlist...",
+                                    color = Color(0xFFFA243C),
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+
+                            Divider(color = Color.White.copy(alpha = 0.08f))
+
+                            playlists.forEach { playlist ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            scope.launch {
+                                                val tracksToAdd = if (!tracks.isNullOrEmpty()) {
+                                                    tracks
+                                                } else {
+                                                    val isAlbum = album.id.startsWith("MPREb") || album.id.startsWith("FEmusic")
+                                                    withContext(Dispatchers.IO) {
+                                                        if (isAlbum) YouTube.album(album.id).getOrNull()?.songs
+                                                        else YouTube.playlist(album.playlistId.ifEmpty { album.id }.removePrefix("VL")).getOrNull()?.songs
+                                                    }
+                                                }
+                                                if (!tracksToAdd.isNullOrEmpty()) {
+                                                    tracksToAdd.forEach { track ->
+                                                        val trackLibItem = LibraryItem(
+                                                            id = track.id,
+                                                            title = track.title,
+                                                            subtitle = track.artists.joinToString { it.name },
+                                                            thumbnail = track.thumbnail,
+                                                            type = ItemType.SONG,
+                                                            album = album.title
+                                                        )
+                                                        LibraryManager.addSongToPlaylist(playlist.id, trackLibItem)
+                                                    }
+                                                    Toast.makeText(context, "Se agregaron las canciones a ${playlist.name}", Toast.LENGTH_SHORT).show()
+                                                }
+                                                onDismiss()
+                                            }
+                                        }
+                                        .padding(vertical = 10.dp, horizontal = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Default.QueueMusic,
+                                        contentDescription = null,
+                                        tint = Color.Gray,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Text(
+                                            text = playlist.name,
+                                            color = Color.White,
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                        Text(
+                                            text = "${playlist.items.size} canciones",
+                                            color = Color.Gray,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                }
+                                Divider(color = Color.White.copy(alpha = 0.06f))
+                            }
+                        }
+                    }
+                }
 }
 
 @Composable
@@ -2073,195 +2482,313 @@ fun GlassBoxScope.AppleMusicArtistMenu(
     dominantColor: Color,
     onDismiss: () -> Unit,
     onSongSelected: (PlayerState) -> Unit,
-    topSongs: List<com.echo.innertube.models.SongItem>
+    topSongs: List<com.echo.innertube.models.SongItem>,
+    pivotBounds: androidx.compose.ui.geometry.Rect? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var visible by remember { mutableStateOf(false) }
+    var isDismissing by remember { mutableStateOf(false) }
 
     val savedItems by LibraryManager.savedItems.collectAsState()
     val isFavorite = remember(savedItems, artistId) { savedItems.any { it.id == artistId } }
 
+    val morphAnim = remember { androidx.compose.animation.core.Animatable(0f) }
     LaunchedEffect(Unit) {
-        visible = true
+        morphAnim.animateTo(
+            targetValue = 1f,
+            animationSpec = spring(dampingRatio = 0.76f, stiffness = Spring.StiffnessMediumLow)
+        )
+    }
+    val morphProgress = morphAnim.value
+
+    val blurPx = (15f * (1f - morphProgress)).coerceIn(0f, 15f)
+    val currentScrimAlpha = (morphProgress * 0.38f).coerceIn(0f, 0.38f)
+
+    fun handleDismiss(action: (() -> Unit)? = null) {
+        if (isDismissing) return
+        isDismissing = true
+        scope.launch {
+            morphAnim.animateTo(
+                targetValue = 0f,
+                animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMedium)
+            )
+            action?.invoke()
+            onDismiss()
+        }
     }
 
-    val scale by animateFloatAsState(
-        targetValue = if (visible) 1f else 0.4f,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
-        label = "menuScale"
-    )
-    val alpha by animateFloatAsState(
-        targetValue = if (visible) 1f else 0f,
-        animationSpec = tween(durationMillis = 200),
-        label = "menuAlpha"
-    )
-
-    val blurPx by animateFloatAsState(
-        targetValue = if (visible) 0f else 15f,
-        animationSpec = tween(durationMillis = 180),
-        label = "menuContentBlur"
-    )
-    val isLightweight = com.mrtdk.glass.LocalLightweightGlass.current
-    val glassStyle = com.mrtdk.glass.LocalGlassStyle.current
-    val isSolid = glassStyle == "solid" || com.mrtdk.liquid_glass.data.LibraryManager.isUltraPerformanceMode()
-
-    fun handleDismiss() {
-        visible = false
-        onDismiss()
-    }
-
-    BackHandler(enabled = visible) {
+    BackHandler(enabled = true) {
         handleDismiss()
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.4f))
+            .background(Color.Black.copy(alpha = currentScrimAlpha))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { handleDismiss() }
     )
 
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.TopEnd
-    ) {
-        Box(
-            modifier = Modifier
-                .statusBarsPadding()
-                .padding(top = 60.dp, end = 16.dp)
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                    this.alpha = alpha
-                }
-                .width(260.dp)
-                .wrapContentHeight()
-                .let {
-                    if (isSolid) {
-                        it.background(Color(0xFF202022).copy(alpha = 0.95f), RoundedCornerShape(24.dp))
-                    } else {
-                        it.drawBackdrop(
-                            backdrop = backdrop,
-                            shape = { RoundedCornerShape(24.dp) },
-                            effects = {
-                                if (!isLightweight) {
-                                    vibrancy()
-                                    blur(12f.dp.toPx())
-                                    lens(2f.dp.toPx(), 3f.dp.toPx(), depthEffect = false, chromaticAberration = false)
-                                } else {
-                                    blur(3f.dp.toPx())
-                                }
-                            },
-                            highlight = { Highlight(width = 0.8.dp, alpha = 0.45f) },
-                            shadow = { Shadow(radius = 16.dp, color = Color.Black.copy(alpha = 0.25f)) },
-                            onDrawSurface = { /* Untinted Frosted Glass */ }
-                        )
-                        .border(
-                            width = 0.8.dp,
-                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                                listOf(
-                                    Color.White.copy(alpha = 0.35f),
-                                    Color.White.copy(alpha = 0.08f)
-                                )
-                            ),
-                            shape = RoundedCornerShape(24.dp)
-                        )
-                    }
-                }
-                .clip(RoundedCornerShape(24.dp))
+    if (pivotBounds != null) {
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxSize()
         ) {
-            Column(
+            val density = LocalDensity.current
+            val menuWidth = 260.dp
+            val estimatedHeight = 245.dp
+
+            val screenWidthDp = maxWidth
+            val screenHeightDp = maxHeight
+
+            val startLeft = with(density) { pivotBounds.left.toDp() }
+            val startTop = with(density) { pivotBounds.top.toDp() }
+            val startWidth = with(density) { pivotBounds.width.toDp() }
+            val startHeight = with(density) { pivotBounds.height.toDp() }
+            val startCorner = startHeight / 2
+
+            val startRight = startLeft + startWidth
+            val targetLeft = (startRight - menuWidth).coerceIn(16.dp, (screenWidthDp - menuWidth - 16.dp).coerceAtLeast(16.dp))
+
+            val preferredTop = startTop + startHeight + 8.dp
+            val targetTop = preferredTop.coerceIn(48.dp, (screenHeightDp - estimatedHeight - 24.dp).coerceAtLeast(48.dp))
+
+            val currentLeft = androidx.compose.ui.unit.lerp(startLeft, targetLeft, morphProgress)
+            val currentTop = androidx.compose.ui.unit.lerp(startTop, targetTop, morphProgress)
+            val currentWidth = androidx.compose.ui.unit.lerp(startWidth, menuWidth, morphProgress)
+            val currentHeight = androidx.compose.ui.unit.lerp(startHeight, estimatedHeight, morphProgress)
+            val currentCorner = androidx.compose.ui.unit.lerp(startCorner, 24.dp, morphProgress)
+
+            val threeDotsAlpha = ((0.22f - morphProgress) / 0.22f).coerceIn(0f, 1f)
+            val threeDotsScale = 1f - (morphProgress / 0.22f).coerceIn(0f, 1f) * 0.15f
+
+            val menuContentAlpha = ((morphProgress - 0.26f) / 0.74f).coerceIn(0f, 1f)
+            val menuContentOffsetY = (14 * (1f - menuContentAlpha)).dp
+
+            this@AppleMusicArtistMenu.GlassBox(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .let { if (blurPx > 0.1f && !com.mrtdk.glass.LocalLightweightGlass.current) it.blur(blurPx.dp) else it }
-                    .padding(vertical = 8.dp)
+                    .align(Alignment.TopStart)
+                    .offset(x = currentLeft, y = currentTop)
+                    .size(width = currentWidth, height = currentHeight)
+                    .clip(RoundedCornerShape(currentCorner)),
+                blur = 0.85f,
+                scale = 0.02f,
+                centerDistortion = 0.1f,
+                warpEdges = 0.4f,
+                elevation = (16 * morphProgress).dp,
+                shape = RoundedCornerShape(currentCorner),
+                tint = Color.Unspecified,
+                darkness = 0f,
+                backdrop = backdrop,
+                depthEffect = false
             ) {
-                // Horizontal actions: Favorito & Compartir
-                Row(
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(currentCorner))
                 ) {
-                    HorizontalActionButton(
-                        icon = if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
-                        label = if (isFavorite) stringResource(R.string.menu_artist_remove_favorite) else stringResource(R.string.menu_artist_add_favorite),
-                        tint = if (isFavorite) Color(0xFFFA243C) else Color.White
-                    ) {
-                        if (isFavorite) {
-                            LibraryManager.removeItem(artistId)
-                            Toast.makeText(context, context.getString(R.string.menu_artist_toast_removed), Toast.LENGTH_SHORT).show()
-                        } else {
-                            LibraryManager.saveItem(LibraryItem(id = artistId, title = artistName, subtitle = "Artist", thumbnail = artistThumb, type = ItemType.ARTIST))
-                            Toast.makeText(context, context.getString(R.string.menu_artist_toast_added), Toast.LENGTH_SHORT).show()
+                    // 1. Initial 3-dots icon pinned to the exact physical screen position
+                    if (threeDotsAlpha > 0.001f) {
+                        Box(
+                            modifier = Modifier
+                                .offset(x = startLeft - currentLeft, y = startTop - currentTop)
+                                .size(startWidth, startHeight)
+                                .graphicsLayer {
+                                    alpha = threeDotsAlpha
+                                    scaleX = threeDotsScale
+                                    scaleY = threeDotsScale
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Canvas(modifier = Modifier.size(22.dp)) {
+                                val r = 1.8.dp.toPx()
+                                val space = 3.5.dp.toPx()
+                                val cx = size.width / 2f
+                                val cy = size.height / 2f
+                                drawCircle(Color.White, radius = r, center = Offset(cx, cy - space - r * 2))
+                                drawCircle(Color.White, radius = r, center = Offset(cx, cy))
+                                drawCircle(Color.White, radius = r, center = Offset(cx, cy + space + r * 2))
+                            }
                         }
                     }
 
-                    HorizontalActionButton(
-                        icon = Icons.Default.IosShare,
-                        label = stringResource(R.string.menu_artist_share)
-                    ) {
-                        val shareUrl = "https://music.youtube.com/channel/$artistId"
-                        val intent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_SUBJECT, artistName)
-                            putExtra(Intent.EXTRA_TEXT, shareUrl)
+                    // 2. Menu content emerging smoothly as the container expands
+                    if (menuContentAlpha > 0.001f) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer {
+                                    alpha = menuContentAlpha
+                                    translationY = with(density) { menuContentOffsetY.toPx() }
+                                }
+                                .let { if (blurPx > 0.1f && !com.mrtdk.glass.LocalLightweightGlass.current) it.blur(blurPx.dp) else it }
+                                .padding(vertical = 8.dp)
+                        ) {
+                            ArtistMenuInnerContent(
+                                context = context,
+                                artistId = artistId,
+                                artistName = artistName,
+                                artistThumb = artistThumb,
+                                isFavorite = isFavorite,
+                                topSongs = topSongs,
+                                onSongSelected = onSongSelected,
+                                scope = scope,
+                                onDismiss = { handleDismiss() }
+                            )
                         }
-                        context.startActivity(Intent.createChooser(intent, context.getString(R.string.compartir)))
-                        handleDismiss()
                     }
-                }
-
-                Divider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 4.dp))
-
-                // Vertical actions: Crear Emisora, Abrir en Clásica, Sugerir menos
-                VerticalMenuActionItem(
-                    icon = Icons.Default.Radio,
-                    label = stringResource(R.string.menu_artist_create_radio)
-                ) {
-                    val firstSong = topSongs.firstOrNull()
-                    if (firstSong != null) {
-                        startRadioStation(
-                            scope = scope,
-                            context = context,
-                            targetState = PlayerState(
-                                title = firstSong.title,
-                                artist = firstSong.artists.joinToString { it.name },
-                                artUrl = firstSong.thumbnail,
-                                videoId = firstSong.id,
-                                isExclusiveQueue = false,
-                                queue = emptyList()
-                            ),
-                            onSongSelected = onSongSelected
-                        )
-                    } else {
-                        Toast.makeText(context, "No hay canciones populares para crear emisora", Toast.LENGTH_SHORT).show()
-                    }
-                    handleDismiss()
-                }
-
-                VerticalMenuActionItem(
-                    icon = Icons.Default.OpenInNew,
-                    label = stringResource(R.string.menu_artist_open_classical)
-                ) {
-                    Toast.makeText(context, context.getString(R.string.menu_artist_toast_classical), Toast.LENGTH_SHORT).show()
-                    handleDismiss()
-                }
-
-                VerticalMenuActionItem(
-                    icon = Icons.Default.ThumbDown,
-                    label = stringResource(R.string.menu_artist_suggest_less)
-                ) {
-                    LibraryManager.saveString("suggest_less_artist_$artistId", "true")
-                    Toast.makeText(context, context.getString(R.string.menu_artist_toast_suggest_less), Toast.LENGTH_SHORT).show()
-                    handleDismiss()
                 }
             }
         }
+    } else {
+        // Fallback popup if pivotBounds is null
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.TopEnd
+        ) {
+            Box(
+                modifier = Modifier
+                    .statusBarsPadding()
+                    .padding(top = 60.dp, end = 16.dp)
+                    .graphicsLayer {
+                        scaleX = morphProgress
+                        scaleY = morphProgress
+                        alpha = morphProgress
+                    }
+                    .width(260.dp)
+                    .wrapContentHeight()
+            ) {
+                this@AppleMusicArtistMenu.GlassBox(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(24.dp)),
+                    blur = 0.85f,
+                    scale = 0.02f,
+                    centerDistortion = 0.1f,
+                    warpEdges = 0.4f,
+                    elevation = 16.dp,
+                    shape = RoundedCornerShape(24.dp),
+                    tint = Color.Unspecified,
+                    darkness = 0f,
+                    backdrop = backdrop,
+                    depthEffect = false
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .let { if (blurPx > 0.1f && !com.mrtdk.glass.LocalLightweightGlass.current) it.blur(blurPx.dp) else it }
+                            .padding(vertical = 8.dp)
+                    ) {
+                        ArtistMenuInnerContent(
+                            context = context,
+                            artistId = artistId,
+                            artistName = artistName,
+                            artistThumb = artistThumb,
+                            isFavorite = isFavorite,
+                            topSongs = topSongs,
+                            onSongSelected = onSongSelected,
+                            scope = scope,
+                            onDismiss = { handleDismiss() }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ArtistMenuInnerContent(
+    context: android.content.Context,
+    artistId: String,
+    artistName: String,
+    artistThumb: String?,
+    isFavorite: Boolean,
+    topSongs: List<com.echo.innertube.models.SongItem>,
+    onSongSelected: (PlayerState) -> Unit,
+    scope: kotlinx.coroutines.CoroutineScope,
+    onDismiss: () -> Unit
+) {
+    // Horizontal actions: Favorito & Compartir
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        HorizontalActionButton(
+            icon = if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+            label = if (isFavorite) stringResource(R.string.menu_artist_remove_favorite) else stringResource(R.string.menu_artist_add_favorite),
+            tint = if (isFavorite) Color(0xFFFA243C) else Color.White
+        ) {
+            if (isFavorite) {
+                LibraryManager.removeItem(artistId)
+                Toast.makeText(context, context.getString(R.string.menu_artist_toast_removed), Toast.LENGTH_SHORT).show()
+            } else {
+                LibraryManager.saveItem(LibraryItem(id = artistId, title = artistName, subtitle = "Artist", thumbnail = artistThumb, type = ItemType.ARTIST))
+                Toast.makeText(context, context.getString(R.string.menu_artist_toast_added), Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        HorizontalActionButton(
+            icon = Icons.Default.IosShare,
+            label = stringResource(R.string.menu_artist_share)
+        ) {
+            val shareUrl = "https://music.youtube.com/channel/$artistId"
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_SUBJECT, artistName)
+                putExtra(Intent.EXTRA_TEXT, shareUrl)
+            }
+            context.startActivity(Intent.createChooser(intent, context.getString(R.string.compartir)))
+            onDismiss()
+        }
+    }
+
+    Divider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 4.dp))
+
+    // Vertical actions: Crear Emisora, Abrir en Clásica, Sugerir menos
+    VerticalMenuActionItem(
+        icon = Icons.Default.Radio,
+        label = stringResource(R.string.menu_artist_create_radio)
+    ) {
+        val firstSong = topSongs.firstOrNull()
+        if (firstSong != null) {
+            startRadioStation(
+                scope = scope,
+                context = context,
+                targetState = PlayerState(
+                    title = firstSong.title,
+                    artist = firstSong.artists.joinToString { it.name },
+                    artUrl = firstSong.thumbnail,
+                    videoId = firstSong.id,
+                    isExclusiveQueue = false,
+                    queue = emptyList()
+                ),
+                onSongSelected = onSongSelected
+            )
+        } else {
+            Toast.makeText(context, "No hay canciones populares para crear emisora", Toast.LENGTH_SHORT).show()
+        }
+        onDismiss()
+    }
+
+    VerticalMenuActionItem(
+        icon = Icons.Default.OpenInNew,
+        label = stringResource(R.string.menu_artist_open_classical)
+    ) {
+        Toast.makeText(context, context.getString(R.string.menu_artist_toast_classical), Toast.LENGTH_SHORT).show()
+        onDismiss()
+    }
+
+    VerticalMenuActionItem(
+        icon = Icons.Default.ThumbDown,
+        label = stringResource(R.string.menu_artist_suggest_less)
+    ) {
+        LibraryManager.saveString("suggest_less_artist_$artistId", "true")
+        Toast.makeText(context, context.getString(R.string.menu_artist_toast_suggest_less), Toast.LENGTH_SHORT).show()
+        onDismiss()
     }
 }
 
@@ -2744,49 +3271,31 @@ fun GlassBoxScope.PlayerOptionsMenu(
     pivotBounds: androidx.compose.ui.geometry.Rect? = null,
     onArtistSelected: ((com.mrtdk.liquid_glass.ui.screens.ArtistState) -> Unit)? = null
 ) {
-    var visible by remember { mutableStateOf(false) }
     var isDismissing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
+    val morphAnim = remember { androidx.compose.animation.core.Animatable(0f) }
     LaunchedEffect(Unit) {
-        visible = true
+        morphAnim.animateTo(
+            targetValue = 1f,
+            animationSpec = spring(dampingRatio = 0.76f, stiffness = Spring.StiffnessMediumLow)
+        )
     }
+    val morphProgress = morphAnim.value
 
-    val scale by animateFloatAsState(
-        targetValue = if (visible) 1f else 0.35f,
-        animationSpec = if (visible) {
-            spring(dampingRatio = 0.80f, stiffness = Spring.StiffnessMediumLow)
-        } else {
-            tween(durationMillis = 180, easing = FastOutSlowInEasing)
-        },
-        label = "menuScale"
-    )
-    val alpha by animateFloatAsState(
-        targetValue = if (visible) 1f else 0f,
-        animationSpec = tween(durationMillis = if (visible) 160 else 140, easing = FastOutSlowInEasing),
-        label = "menuAlpha"
-    )
-
-    val blurPx by animateFloatAsState(
-        targetValue = if (visible) 0f else 15f,
-        animationSpec = tween(durationMillis = 180),
-        label = "menuContentBlur"
-    )
-
-    val scrimAlpha by animateFloatAsState(
-        targetValue = if (visible) 0.35f else 0f,
-        animationSpec = tween(durationMillis = 180),
-        label = "menuScrimAlpha"
-    )
+    val blurPx = (15f * (1f - morphProgress)).coerceIn(0f, 15f)
+    val currentScrimAlpha = (morphProgress * 0.38f).coerceIn(0f, 0.38f)
 
     val context = LocalContext.current
 
     fun handleDismiss(action: (() -> Unit)? = null) {
         if (isDismissing) return
         isDismissing = true
-        visible = false
         scope.launch {
-            kotlinx.coroutines.delay(180L)
+            morphAnim.animateTo(
+                targetValue = 0f,
+                animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMedium)
+            )
             action?.invoke()
             onDismiss()
         }
@@ -2803,7 +3312,7 @@ fun GlassBoxScope.PlayerOptionsMenu(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = scrimAlpha))
+            .background(Color.Black.copy(alpha = currentScrimAlpha))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -2815,64 +3324,104 @@ fun GlassBoxScope.PlayerOptionsMenu(
     ) {
         val density = LocalDensity.current
         val menuWidth = 275.dp
-        val estimatedHeight = 450.dp
+        val estimatedHeight = 410.dp
 
         val screenWidthDp = maxWidth
         val screenHeightDp = maxHeight
 
-        val targetLeft: androidx.compose.ui.unit.Dp
-        val targetTop: androidx.compose.ui.unit.Dp
-        val transformOrigin: androidx.compose.ui.graphics.TransformOrigin
+        val startLeft = if (pivotBounds != null) with(density) { pivotBounds.left.toDp() } else (screenWidthDp - menuWidth) / 2
+        val startTop = if (pivotBounds != null) with(density) { pivotBounds.top.toDp() } else (screenHeightDp - estimatedHeight) / 2
+        val startWidth = if (pivotBounds != null) with(density) { pivotBounds.width.toDp() } else 36.dp
+        val startHeight = if (pivotBounds != null) with(density) { pivotBounds.height.toDp() } else 36.dp
+        val startCorner = startHeight / 2
 
-        if (pivotBounds != null) {
-            val pivotCenterXDp = with(density) { pivotBounds.center.x.toDp() }
-            val pivotCenterYDp = with(density) { pivotBounds.center.y.toDp() }
-
-            // Align menu to the right side where 3 dots button is located
-            targetLeft = (screenWidthDp - menuWidth - 16.dp).coerceAtLeast(16.dp)
-
-            // In Apple Music, menu appears directly above or centered on 3-dots button
-            val preferredTop = pivotCenterYDp - estimatedHeight * 0.72f
-            targetTop = preferredTop.coerceIn(48.dp, screenHeightDp - estimatedHeight - 24.dp)
-
-            val originX = if (menuWidth.value > 0) ((pivotCenterXDp - targetLeft) / menuWidth).coerceIn(0f, 1f) else 1f
-            val originY = if (estimatedHeight.value > 0) ((pivotCenterYDp - targetTop) / estimatedHeight).coerceIn(0f, 1f) else 0.8f
-            transformOrigin = androidx.compose.ui.graphics.TransformOrigin(originX, originY)
+        val startRight = startLeft + startWidth
+        val targetLeft = if (pivotBounds != null) {
+            (startRight - menuWidth).coerceIn(16.dp, (screenWidthDp - menuWidth - 16.dp).coerceAtLeast(16.dp))
         } else {
-            targetLeft = (screenWidthDp - menuWidth) / 2
-            targetTop = (screenHeightDp - estimatedHeight) / 2
-            transformOrigin = androidx.compose.ui.graphics.TransformOrigin.Center
+            (screenWidthDp - menuWidth) / 2
         }
+
+        val targetTop = if (pivotBounds != null) {
+            val pivotCenterYDp = startTop + startHeight / 2
+            val preferredTop = pivotCenterYDp - estimatedHeight * 0.65f
+            preferredTop.coerceIn(48.dp, screenHeightDp - estimatedHeight - 24.dp)
+        } else {
+            (screenHeightDp - estimatedHeight) / 2
+        }
+
+        val currentLeft = androidx.compose.ui.unit.lerp(startLeft, targetLeft, morphProgress)
+        val currentTop = androidx.compose.ui.unit.lerp(startTop, targetTop, morphProgress)
+        val currentWidth = androidx.compose.ui.unit.lerp(startWidth, menuWidth, morphProgress)
+        val currentHeight = androidx.compose.ui.unit.lerp(startHeight, estimatedHeight, morphProgress)
+        val currentCorner = androidx.compose.ui.unit.lerp(startCorner, 24.dp, morphProgress)
+
+        // Stationary 3-dots icon dissolving during the first 22% of morph (Music OS iconFade spec)
+        val threeDotsAlpha = if (pivotBounds != null) ((0.22f - morphProgress) / 0.22f).coerceIn(0f, 1f) else 0f
+        val threeDotsScale = 1f - (morphProgress / 0.22f).coerceIn(0f, 1f) * 0.15f
+
+        val menuContentAlpha = if (pivotBounds != null) ((morphProgress - 0.26f) / 0.74f).coerceIn(0f, 1f) else morphProgress
+        val menuContentOffsetY = (14 * (1f - menuContentAlpha)).dp
 
         this@PlayerOptionsMenu.GlassBox(
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .offset(x = targetLeft, y = targetTop)
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                    this.alpha = alpha
-                    this.transformOrigin = transformOrigin
-                }
-                .width(menuWidth)
-                .wrapContentHeight(),
+                .offset(x = currentLeft, y = currentTop)
+                .size(width = currentWidth, height = currentHeight)
+                .clip(RoundedCornerShape(currentCorner)),
             blur = 0.85f,
             scale = 0.02f,
             centerDistortion = 0.1f,
             warpEdges = 0.4f,
-            elevation = 16.dp,
-            shape = RoundedCornerShape(22.dp),
+            elevation = (16 * morphProgress).dp,
+            shape = RoundedCornerShape(currentCorner),
             tint = Color.Unspecified,
             darkness = 0f,
             backdrop = backdrop,
             depthEffect = false
         ) {
-            Column(
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .let { if (blurPx > 0.1f && !com.mrtdk.glass.LocalLightweightGlass.current) it.blur(blurPx.dp) else it }
-                    .padding(vertical = 12.dp)
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(currentCorner))
             ) {
+                // 1. Initial 3-dots icon pinned to the exact physical screen position
+                if (threeDotsAlpha > 0.001f) {
+                    Box(
+                        modifier = Modifier
+                            .offset(x = startLeft - currentLeft, y = startTop - currentTop)
+                            .size(startWidth, startHeight)
+                            .graphicsLayer {
+                                alpha = threeDotsAlpha
+                                scaleX = threeDotsScale
+                                scaleY = threeDotsScale
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Canvas(modifier = Modifier.size(18.dp)) {
+                            val r = 1.8.dp.toPx()
+                            val space = 3.5.dp.toPx()
+                            val cx = size.width / 2f
+                            val cy = size.height / 2f
+                            drawCircle(Color.White, radius = r, center = Offset(cx - space - r * 2, cy))
+                            drawCircle(Color.White, radius = r, center = Offset(cx, cy))
+                            drawCircle(Color.White, radius = r, center = Offset(cx + space + r * 2, cy))
+                        }
+                    }
+                }
+
+                // 2. Menu content emerging smoothly as the container expands
+                if (menuContentAlpha > 0.001f) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                alpha = menuContentAlpha
+                                translationY = with(density) { menuContentOffsetY.toPx() }
+                            }
+                            .let { if (blurPx > 0.1f && !com.mrtdk.glass.LocalLightweightGlass.current) it.blur(blurPx.dp) else it }
+                            .padding(vertical = 12.dp)
+                    ) {
                 // Horizontal row of action buttons
                 Row(
                     modifier = Modifier
@@ -3157,7 +3706,9 @@ fun GlassBoxScope.PlayerOptionsMenu(
                 }
             }
         }
+        }
     }
+}
 }
 
 @Composable
@@ -3192,47 +3743,33 @@ fun GlassBoxScope.LyricsOptionsMenu(
     pivotBounds: androidx.compose.ui.geometry.Rect? = null,
     initialShowProviderSelection: Boolean = false
 ) {
-    var visible by remember { mutableStateOf(false) }
     var showProviderSelection by remember { mutableStateOf(initialShowProviderSelection) }
     var showExportFormatSelection by remember { mutableStateOf(false) }
+    var isDismissing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
+    val morphAnim = remember { androidx.compose.animation.core.Animatable(0f) }
     LaunchedEffect(Unit) {
-        visible = true
+        morphAnim.animateTo(
+            targetValue = 1f,
+            animationSpec = spring(dampingRatio = 0.76f, stiffness = Spring.StiffnessMediumLow)
+        )
     }
+    val morphProgress = morphAnim.value
 
-    val scale by animateFloatAsState(
-        targetValue = if (visible) 1f else 0.4f,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
-        label = "menuScale"
-    )
-    val alpha by animateFloatAsState(
-        targetValue = if (visible) 1f else 0f,
-        animationSpec = tween(durationMillis = 200),
-        label = "menuAlpha"
-    )
-
-    val blurPx by animateFloatAsState(
-        targetValue = if (visible) 0f else 15f,
-        animationSpec = tween(durationMillis = 180),
-        label = "menuContentBlur"
-    )
-
-    var isDismissing by remember { mutableStateOf(false) }
-    val scrimAlpha by animateFloatAsState(
-        targetValue = if (visible) 0.45f else 0f,
-        animationSpec = tween(durationMillis = 180),
-        label = "menuScrimAlpha"
-    )
+    val blurPx = (15f * (1f - morphProgress)).coerceIn(0f, 15f)
+    val currentScrimAlpha = (morphProgress * 0.38f).coerceIn(0f, 0.38f)
 
     val context = LocalContext.current
 
     fun handleDismiss(action: (() -> Unit)? = null) {
         if (isDismissing) return
         isDismissing = true
-        visible = false
         scope.launch {
-            kotlinx.coroutines.delay(180L)
+            morphAnim.animateTo(
+                targetValue = 0f,
+                animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMedium)
+            )
             action?.invoke()
             onDismiss()
         }
@@ -3253,7 +3790,7 @@ fun GlassBoxScope.LyricsOptionsMenu(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = scrimAlpha))
+            .background(Color.Black.copy(alpha = currentScrimAlpha))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -3265,72 +3802,102 @@ fun GlassBoxScope.LyricsOptionsMenu(
     ) {
         val density = LocalDensity.current
         val menuWidth = 300.dp
-        val padding = 16.dp
         val estimatedHeight = 440.dp
 
         val screenWidthDp = maxWidth
         val screenHeightDp = maxHeight
 
-        var targetLeft = (screenWidthDp - menuWidth) / 2
-        var targetTop = (screenHeightDp - estimatedHeight) / 2
+        val startLeft = if (pivotBounds != null) with(density) { pivotBounds.left.toDp() } else (screenWidthDp - menuWidth) / 2
+        val startTop = if (pivotBounds != null) with(density) { pivotBounds.top.toDp() } else (screenHeightDp - estimatedHeight) / 2
+        val startWidth = if (pivotBounds != null) with(density) { pivotBounds.width.toDp() } else 36.dp
+        val startHeight = if (pivotBounds != null) with(density) { pivotBounds.height.toDp() } else 36.dp
+        val startCorner = startHeight / 2
 
-        if (pivotBounds != null) {
-            with(density) {
-                val pivotLeftDp = pivotBounds.left.toDp()
-                val pivotRightDp = pivotBounds.right.toDp()
-                val pivotTopDp = pivotBounds.top.toDp()
-                val pivotBottomDp = pivotBounds.bottom.toDp()
-
-                targetLeft = (pivotRightDp - menuWidth).coerceIn(padding, screenWidthDp - menuWidth - padding)
-
-                targetTop = pivotBottomDp + 8.dp
-                if (targetTop + estimatedHeight > screenHeightDp - padding) {
-                    targetTop = pivotTopDp - estimatedHeight - 8.dp
-                }
-                targetTop = targetTop.coerceIn(padding, screenHeightDp - estimatedHeight - padding)
-            }
+        val startRight = startLeft + startWidth
+        val targetLeft = if (pivotBounds != null) {
+            (startRight - menuWidth).coerceIn(16.dp, (screenWidthDp - menuWidth - 16.dp).coerceAtLeast(16.dp))
+        } else {
+            (screenWidthDp - menuWidth) / 2
         }
+
+        val targetTop = if (pivotBounds != null) {
+            val pivotCenterYDp = startTop + startHeight / 2
+            val preferredTop = pivotCenterYDp - estimatedHeight * 0.65f
+            preferredTop.coerceIn(48.dp, screenHeightDp - estimatedHeight - 24.dp)
+        } else {
+            (screenHeightDp - estimatedHeight) / 2
+        }
+
+        val currentLeft = androidx.compose.ui.unit.lerp(startLeft, targetLeft, morphProgress)
+        val currentTop = androidx.compose.ui.unit.lerp(startTop, targetTop, morphProgress)
+        val currentWidth = androidx.compose.ui.unit.lerp(startWidth, menuWidth, morphProgress)
+        val currentHeight = androidx.compose.ui.unit.lerp(startHeight, estimatedHeight, morphProgress)
+        val currentCorner = androidx.compose.ui.unit.lerp(startCorner, 24.dp, morphProgress)
+
+        val threeDotsAlpha = if (pivotBounds != null) ((0.22f - morphProgress) / 0.22f).coerceIn(0f, 1f) else 0f
+        val threeDotsScale = 1f - (morphProgress / 0.22f).coerceIn(0f, 1f) * 0.15f
+
+        val menuContentAlpha = if (pivotBounds != null) ((morphProgress - 0.26f) / 0.74f).coerceIn(0f, 1f) else morphProgress
+        val menuContentOffsetY = (14 * (1f - menuContentAlpha)).dp
 
         this@LyricsOptionsMenu.GlassBox(
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .offset(x = targetLeft, y = targetTop)
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                    this.alpha = alpha
-                    if (pivotBounds != null) {
-                        val menuWidthPx = if (size.width > 0f) size.width else with(density) { menuWidth.toPx() }
-                        val menuHeightPx = if (size.height > 0f) size.height else with(density) { estimatedHeight.toPx() }
-
-                        val targetLeftPx = with(density) { targetLeft.toPx() }
-                        val targetTopPx = with(density) { targetTop.toPx() }
-
-                        val pivotFractionX = ((pivotBounds.center.x - targetLeftPx) / menuWidthPx).coerceIn(0f, 1f)
-                        val pivotFractionY = ((pivotBounds.center.y - targetTopPx) / menuHeightPx).coerceIn(0f, 1f)
-                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(pivotFractionX, pivotFractionY)
-                    }
-                }
-                .width(menuWidth)
-                .heightIn(max = screenHeightDp - 60.dp),
+                .offset(x = currentLeft, y = currentTop)
+                .size(width = currentWidth, height = currentHeight)
+                .clip(RoundedCornerShape(currentCorner)),
             blur = 0.8f,
             scale = 0.02f,
             centerDistortion = 0.1f,
             warpEdges = 0.4f,
-            elevation = 16.dp,
-            shape = RoundedCornerShape(24.dp),
+            elevation = (16 * morphProgress).dp,
+            shape = RoundedCornerShape(currentCorner),
             tint = Color.Unspecified,
             darkness = 0f,
             backdrop = backdrop,
             depthEffect = false
         ) {
-            Column(
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .let { if (blurPx > 0.1f && !com.mrtdk.glass.LocalLightweightGlass.current) it.blur(blurPx.dp) else it }
-                    .padding(vertical = 12.dp)
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(currentCorner))
             ) {
+                if (threeDotsAlpha > 0.001f) {
+                    Box(
+                        modifier = Modifier
+                            .offset(x = startLeft - currentLeft, y = startTop - currentTop)
+                            .size(startWidth, startHeight)
+                            .graphicsLayer {
+                                alpha = threeDotsAlpha
+                                scaleX = threeDotsScale
+                                scaleY = threeDotsScale
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Canvas(modifier = Modifier.size(18.dp)) {
+                            val r = 1.8.dp.toPx()
+                            val space = 3.5.dp.toPx()
+                            val cx = size.width / 2f
+                            val cy = size.height / 2f
+                            drawCircle(Color.White, radius = r, center = Offset(cx - space - r * 2, cy))
+                            drawCircle(Color.White, radius = r, center = Offset(cx, cy))
+                            drawCircle(Color.White, radius = r, center = Offset(cx + space + r * 2, cy))
+                        }
+                    }
+                }
+
+                if (menuContentAlpha > 0.001f) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                alpha = menuContentAlpha
+                                translationY = with(density) { menuContentOffsetY.toPx() }
+                            }
+                            .verticalScroll(rememberScrollState())
+                            .let { if (blurPx > 0.1f && !com.mrtdk.glass.LocalLightweightGlass.current) it.blur(blurPx.dp) else it }
+                            .padding(vertical = 12.dp)
+                    ) {
                 if (showProviderSelection) {
                     Row(
                         modifier = Modifier
@@ -3808,6 +4375,8 @@ fun GlassBoxScope.LyricsOptionsMenu(
         }
     }
 }
+}
+}
 
 @Composable
 fun GlassBoxScope.ArtistOptionsMenu(
@@ -3817,45 +4386,31 @@ fun GlassBoxScope.ArtistOptionsMenu(
     onArtistSelected: (String) -> Unit,
     pivotBounds: androidx.compose.ui.geometry.Rect? = null
 ) {
-    var visible by remember { mutableStateOf(false) }
+    var isDismissing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
+    val morphAnim = remember { androidx.compose.animation.core.Animatable(0f) }
     LaunchedEffect(Unit) {
-        visible = true
+        morphAnim.animateTo(
+            targetValue = 1f,
+            animationSpec = spring(dampingRatio = 0.76f, stiffness = Spring.StiffnessMediumLow)
+        )
     }
+    val morphProgress = morphAnim.value
 
-    val scale by animateFloatAsState(
-        targetValue = if (visible) 1f else 0.4f,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
-        label = "menuScale"
-    )
-    val alpha by animateFloatAsState(
-        targetValue = if (visible) 1f else 0f,
-        animationSpec = tween(durationMillis = 200),
-        label = "menuAlpha"
-    )
-
-    val blurPx by animateFloatAsState(
-        targetValue = if (visible) 0f else 15f,
-        animationSpec = tween(durationMillis = 180),
-        label = "menuContentBlur"
-    )
-
-    var isDismissing by remember { mutableStateOf(false) }
-    val scrimAlpha by animateFloatAsState(
-        targetValue = if (visible) 0.35f else 0f,
-        animationSpec = tween(durationMillis = 180),
-        label = "menuScrimAlpha"
-    )
+    val blurPx = (15f * (1f - morphProgress)).coerceIn(0f, 15f)
+    val currentScrimAlpha = (morphProgress * 0.38f).coerceIn(0f, 0.38f)
 
     val context = LocalContext.current
 
     fun handleDismiss(action: (() -> Unit)? = null) {
         if (isDismissing) return
         isDismissing = true
-        visible = false
         scope.launch {
-            kotlinx.coroutines.delay(180L)
+            morphAnim.animateTo(
+                targetValue = 0f,
+                animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMedium)
+            )
             action?.invoke()
             onDismiss()
         }
@@ -3870,7 +4425,7 @@ fun GlassBoxScope.ArtistOptionsMenu(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = scrimAlpha))
+            .background(Color.Black.copy(alpha = currentScrimAlpha))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -3882,72 +4437,101 @@ fun GlassBoxScope.ArtistOptionsMenu(
     ) {
         val density = LocalDensity.current
         val menuWidth = 280.dp
-        val padding = 16.dp
         val estimatedHeight = (88 + artists.size * 48).dp
 
         val screenWidthDp = maxWidth
         val screenHeightDp = maxHeight
 
-        var targetLeft = (screenWidthDp - menuWidth) / 2
-        var targetTop = (screenHeightDp - estimatedHeight) / 2
+        val startLeft = if (pivotBounds != null) with(density) { pivotBounds.left.toDp() } else (screenWidthDp - menuWidth) / 2
+        val startTop = if (pivotBounds != null) with(density) { pivotBounds.top.toDp() } else (screenHeightDp - estimatedHeight) / 2
+        val startWidth = if (pivotBounds != null) with(density) { pivotBounds.width.toDp() } else 36.dp
+        val startHeight = if (pivotBounds != null) with(density) { pivotBounds.height.toDp() } else 36.dp
+        val startCorner = startHeight / 2
 
-        if (pivotBounds != null) {
-            with(density) {
-                val pivotLeftDp = pivotBounds.left.toDp()
-                val pivotRightDp = pivotBounds.right.toDp()
-                val pivotTopDp = pivotBounds.top.toDp()
-                val pivotBottomDp = pivotBounds.bottom.toDp()
-                val pivotCenterXDp = (pivotLeftDp + pivotRightDp) / 2f
-
-                targetLeft = (pivotCenterXDp - menuWidth / 2).coerceIn(padding, screenWidthDp - menuWidth - padding)
-
-                targetTop = pivotBottomDp + 8.dp
-                if (targetTop + estimatedHeight > screenHeightDp - padding) {
-                    targetTop = pivotTopDp - estimatedHeight - 8.dp
-                }
-                targetTop = targetTop.coerceIn(padding, screenHeightDp - estimatedHeight - padding)
-            }
+        val startRight = startLeft + startWidth
+        val targetLeft = if (pivotBounds != null) {
+            (startRight - menuWidth).coerceIn(16.dp, (screenWidthDp - menuWidth - 16.dp).coerceAtLeast(16.dp))
+        } else {
+            (screenWidthDp - menuWidth) / 2
         }
+
+        val targetTop = if (pivotBounds != null) {
+            val pivotCenterYDp = startTop + startHeight / 2
+            val preferredTop = pivotCenterYDp - estimatedHeight * 0.65f
+            preferredTop.coerceIn(48.dp, screenHeightDp - estimatedHeight - 24.dp)
+        } else {
+            (screenHeightDp - estimatedHeight) / 2
+        }
+
+        val currentLeft = androidx.compose.ui.unit.lerp(startLeft, targetLeft, morphProgress)
+        val currentTop = androidx.compose.ui.unit.lerp(startTop, targetTop, morphProgress)
+        val currentWidth = androidx.compose.ui.unit.lerp(startWidth, menuWidth, morphProgress)
+        val currentHeight = androidx.compose.ui.unit.lerp(startHeight, estimatedHeight, morphProgress)
+        val currentCorner = androidx.compose.ui.unit.lerp(startCorner, 24.dp, morphProgress)
+
+        val threeDotsAlpha = if (pivotBounds != null) ((0.22f - morphProgress) / 0.22f).coerceIn(0f, 1f) else 0f
+        val threeDotsScale = 1f - (morphProgress / 0.22f).coerceIn(0f, 1f) * 0.15f
+
+        val menuContentAlpha = if (pivotBounds != null) ((morphProgress - 0.26f) / 0.74f).coerceIn(0f, 1f) else morphProgress
+        val menuContentOffsetY = (14 * (1f - menuContentAlpha)).dp
 
         this@ArtistOptionsMenu.GlassBox(
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .offset(x = targetLeft, y = targetTop)
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                    this.alpha = alpha
-                    if (pivotBounds != null) {
-                        val menuWidthPx = if (size.width > 0f) size.width else with(density) { menuWidth.toPx() }
-                        val menuHeightPx = if (size.height > 0f) size.height else with(density) { estimatedHeight.toPx() }
-
-                        val targetLeftPx = with(density) { targetLeft.toPx() }
-                        val targetTopPx = with(density) { targetTop.toPx() }
-
-                        val pivotFractionX = ((pivotBounds.center.x - targetLeftPx) / menuWidthPx).coerceIn(0f, 1f)
-                        val pivotFractionY = ((pivotBounds.center.y - targetTopPx) / menuHeightPx).coerceIn(0f, 1f)
-                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(pivotFractionX, pivotFractionY)
-                    }
-                }
-                .width(menuWidth)
-                .wrapContentHeight(),
+                .offset(x = currentLeft, y = currentTop)
+                .size(width = currentWidth, height = currentHeight)
+                .clip(RoundedCornerShape(currentCorner)),
             blur = 0.8f,
             scale = 0.02f,
             centerDistortion = 0.1f,
             warpEdges = 0.4f,
-            elevation = 16.dp,
-            shape = RoundedCornerShape(24.dp),
+            elevation = (16 * morphProgress).dp,
+            shape = RoundedCornerShape(currentCorner),
             tint = Color.Unspecified,
             darkness = 0f,
             backdrop = backdrop,
             depthEffect = false
         ) {
-            Column(
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .let { if (blurPx > 0.1f && !com.mrtdk.glass.LocalLightweightGlass.current) it.blur(blurPx.dp) else it }
-                    .padding(vertical = 12.dp)
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(currentCorner))
             ) {
+                if (threeDotsAlpha > 0.001f) {
+                    Box(
+                        modifier = Modifier
+                            .offset(x = startLeft - currentLeft, y = startTop - currentTop)
+                            .size(startWidth, startHeight)
+                            .graphicsLayer {
+                                alpha = threeDotsAlpha
+                                scaleX = threeDotsScale
+                                scaleY = threeDotsScale
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Canvas(modifier = Modifier.size(18.dp)) {
+                            val r = 1.8.dp.toPx()
+                            val space = 3.5.dp.toPx()
+                            val cx = size.width / 2f
+                            val cy = size.height / 2f
+                            drawCircle(Color.White, radius = r, center = Offset(cx - space - r * 2, cy))
+                            drawCircle(Color.White, radius = r, center = Offset(cx, cy))
+                            drawCircle(Color.White, radius = r, center = Offset(cx + space + r * 2, cy))
+                        }
+                    }
+                }
+
+                if (menuContentAlpha > 0.001f) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                alpha = menuContentAlpha
+                                translationY = with(density) { menuContentOffsetY.toPx() }
+                            }
+                            .let { if (blurPx > 0.1f && !com.mrtdk.glass.LocalLightweightGlass.current) it.blur(blurPx.dp) else it }
+                            .padding(vertical = 12.dp)
+                    ) {
                 // Header Title
                 Text(
                     text = if (artists.size > 1) stringResource(R.string.artist_menu_select_title) else stringResource(R.string.artist_menu_single_title),
@@ -3981,6 +4565,8 @@ fun GlassBoxScope.ArtistOptionsMenu(
             }
         }
     }
+}
+}
 }
 
 private fun startRadioStation(

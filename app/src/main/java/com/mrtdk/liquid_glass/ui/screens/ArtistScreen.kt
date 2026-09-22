@@ -1,10 +1,13 @@
 package com.mrtdk.liquid_glass.ui.screens
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -25,11 +28,16 @@ import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.layout.boundsInRoot
 import com.mrtdk.liquid_glass.ui.components.LiquidButton
 import com.mrtdk.glass.GlassContainer
 import com.mrtdk.glass.GlassBox
 import com.mrtdk.glass.DarkGrayGlassTint
 import com.mrtdk.liquid_glass.ui.components.AppleMusicArtistMenu
+import com.mrtdk.liquid_glass.ui.components.AppleMusicSongMenu
+import com.mrtdk.liquid_glass.ui.components.ContextMenuSong
 import android.os.Build
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.TileMode
@@ -164,6 +172,10 @@ fun ArtistScreen(
     // Generic "show all" overlay for videos / remaining sections
     var showAllSectionOverlay by remember { mutableStateOf(false) }
     var showArtistMenu by remember { mutableStateOf(false) }
+    var artistScreenRootCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    var artistMenuPivotBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    var activeSongForMenu by remember { mutableStateOf<ContextMenuSong?>(null) }
+    var activeSongPivotBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
     var allSectionData by remember { mutableStateOf<ArtistSection?>(null) }
     var allSectionTitle by remember { mutableStateOf("") }
     var allSectionIsVideo by remember { mutableStateOf(false) }
@@ -518,7 +530,9 @@ fun ArtistScreen(
 
 
     GlassContainer(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .onGloballyPositioned { artistScreenRootCoords = it },
         useShader = true,
         content = {
             Box(modifier = Modifier.fillMaxSize().background(finalBackgroundColor)) {
@@ -914,7 +928,58 @@ fun ArtistScreen(
                             Text(song.title, color = Color.White, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(song.artists.joinToString { it.name }, color = Color.White.copy(alpha = 0.75f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-                        IconButton(onClick = { }) { Icon(Icons.Default.MoreHoriz, null, tint = Color.White.copy(alpha = 0.7f)) }
+                        var songDotsCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+                        val dotsInteractionSource = remember { MutableInteractionSource() }
+                        val isDotsPressed by dotsInteractionSource.collectIsPressedAsState()
+                        val dotsPressScale by animateFloatAsState(
+                            targetValue = if (isDotsPressed) 0.86f else 1f,
+                            animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
+                            label = "topSongDotsPress"
+                        )
+                        val isThisSongActive = activeSongForMenu?.id == song.id
+
+                        Box(
+                            modifier = Modifier
+                                .onGloballyPositioned { songDotsCoords = it }
+                                .size(36.dp)
+                                .graphicsLayer {
+                                    scaleX = dotsPressScale
+                                    scaleY = dotsPressScale
+                                    alpha = if (isThisSongActive) 0f else 1f
+                                }
+                                .clip(CircleShape)
+                                .clickable(
+                                    interactionSource = dotsInteractionSource,
+                                    indication = null,
+                                    enabled = !isThisSongActive
+                                ) {
+                                    val rootCoords = artistScreenRootCoords
+                                    if (rootCoords != null && songDotsCoords != null && rootCoords.isAttached && songDotsCoords!!.isAttached) {
+                                        val localOffset = rootCoords.localPositionOf(songDotsCoords!!, Offset.Zero)
+                                        val size = songDotsCoords!!.size
+                                        activeSongPivotBounds = Rect(localOffset, Size(size.width.toFloat(), size.height.toFloat()))
+                                    } else {
+                                        activeSongPivotBounds = songDotsCoords?.boundsInRoot()
+                                    }
+                                    activeSongForMenu = ContextMenuSong(
+                                        id = song.id,
+                                        title = song.title,
+                                        artist = song.artists.joinToString { it.name },
+                                        thumbnail = song.thumbnail,
+                                        album = song.album?.name,
+                                        artistId = song.artists.firstOrNull()?.id ?: artistState.id,
+                                        albumId = song.album?.id
+                                    )
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.MoreHoriz,
+                                null,
+                                tint = Color.White.copy(alpha = 0.7f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -1716,7 +1781,58 @@ fun ArtistScreen(
                                 Text(song.title, color = Color.White, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Text(song.artists.joinToString { it.name }, color = Color.White.copy(alpha = 0.75f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
-                            IconButton(onClick = { }) { Icon(Icons.Default.MoreVert, null, tint = Color.White.copy(alpha = 0.7f)) }
+                            var songDotsCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+                            val dotsInteractionSource = remember { MutableInteractionSource() }
+                            val isDotsPressed by dotsInteractionSource.collectIsPressedAsState()
+                            val dotsPressScale by animateFloatAsState(
+                                targetValue = if (isDotsPressed) 0.86f else 1f,
+                                animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
+                                label = "allSongDotsPress"
+                            )
+                            val isThisSongActive = activeSongForMenu?.id == song.id
+
+                            Box(
+                                modifier = Modifier
+                                    .onGloballyPositioned { songDotsCoords = it }
+                                    .size(36.dp)
+                                    .graphicsLayer {
+                                        scaleX = dotsPressScale
+                                        scaleY = dotsPressScale
+                                        alpha = if (isThisSongActive) 0f else 1f
+                                    }
+                                    .clip(CircleShape)
+                                    .clickable(
+                                        interactionSource = dotsInteractionSource,
+                                        indication = null,
+                                        enabled = !isThisSongActive
+                                    ) {
+                                        val rootCoords = artistScreenRootCoords
+                                        if (rootCoords != null && songDotsCoords != null && rootCoords.isAttached && songDotsCoords!!.isAttached) {
+                                            val localOffset = rootCoords.localPositionOf(songDotsCoords!!, Offset.Zero)
+                                            val size = songDotsCoords!!.size
+                                            activeSongPivotBounds = Rect(localOffset, Size(size.width.toFloat(), size.height.toFloat()))
+                                        } else {
+                                            activeSongPivotBounds = songDotsCoords?.boundsInRoot()
+                                        }
+                                        activeSongForMenu = ContextMenuSong(
+                                            id = song.id,
+                                            title = song.title,
+                                            artist = song.artists.joinToString { it.name },
+                                            thumbnail = song.thumbnail,
+                                            album = song.album?.name,
+                                            artistId = song.artists.firstOrNull()?.id ?: artistState.id,
+                                            albumId = song.album?.id
+                                        )
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.MoreVert,
+                                    null,
+                                    tint = Color.White.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                         }
                     }
                     item { Spacer(modifier = Modifier.height(80.dp)) }
@@ -1797,9 +1913,41 @@ fun ArtistScreen(
                             modifier = Modifier.size(22.dp)
                         )
                     }
-                    IconButton(
-                        onClick = { showArtistMenu = true },
-                        modifier = Modifier.size(40.dp)
+                    var artistDotsCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+                    val artistDotsInteractionSource = remember { MutableInteractionSource() }
+                    val isArtistDotsPressed by artistDotsInteractionSource.collectIsPressedAsState()
+                    val artistDotsPressScale by animateFloatAsState(
+                        targetValue = if (isArtistDotsPressed) 0.86f else 1f,
+                        animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
+                        label = "artistDotsPress"
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .onGloballyPositioned { artistDotsCoords = it }
+                            .size(40.dp)
+                            .graphicsLayer {
+                                scaleX = artistDotsPressScale
+                                scaleY = artistDotsPressScale
+                                alpha = if (showArtistMenu) 0f else 1f
+                            }
+                            .clip(CircleShape)
+                            .clickable(
+                                interactionSource = artistDotsInteractionSource,
+                                indication = null,
+                                enabled = !showArtistMenu
+                            ) {
+                                val rootCoords = artistScreenRootCoords
+                                if (rootCoords != null && artistDotsCoords != null && rootCoords.isAttached && artistDotsCoords!!.isAttached) {
+                                    val localOffset = rootCoords.localPositionOf(artistDotsCoords!!, Offset.Zero)
+                                    val size = artistDotsCoords!!.size
+                                    artistMenuPivotBounds = Rect(localOffset, Size(size.width.toFloat(), size.height.toFloat()))
+                                } else {
+                                    artistMenuPivotBounds = artistDotsCoords?.boundsInRoot()
+                                }
+                                showArtistMenu = true
+                            },
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.MoreVert,
@@ -1820,9 +1968,39 @@ fun ArtistScreen(
                 artistThumb = artistThumb,
                 backdrop = (expo.modules.androidglassview.LocalBackdrop.current as? com.kyant.backdrop.backdrops.LayerBackdrop) ?: rememberLayerBackdrop(),
                 dominantColor = dominantColor,
-                onDismiss = { showArtistMenu = false },
+                onDismiss = {
+                    showArtistMenu = false
+                    artistMenuPivotBounds = null
+                },
                 onSongSelected = onSongSelected,
-                topSongs = topSongsSection?.items?.filterIsInstance<SongItem>()?.let { l -> l.filterNot { it.isVideoSong }.ifEmpty { l } } ?: emptyList()
+                topSongs = topSongsSection?.items?.filterIsInstance<SongItem>()?.let { l -> l.filterNot { it.isVideoSong }.ifEmpty { l } } ?: emptyList(),
+                pivotBounds = artistMenuPivotBounds
+            )
+        }
+
+        activeSongForMenu?.let { cSong ->
+            AppleMusicSongMenu(
+                song = cSong,
+                onDismiss = {
+                    activeSongForMenu = null
+                    activeSongPivotBounds = null
+                },
+                onGoToArtist = null,
+                onGoToAlbum = if (cSong.albumId != null && cSong.album != null) {
+                    {
+                        onAlbumSelected(
+                            AlbumState(
+                                id = cSong.albumId,
+                                playlistId = cSong.albumId,
+                                title = cSong.album,
+                                artist = cSong.artist,
+                                thumbnail = null
+                            )
+                        )
+                    }
+                } else null,
+                onSongSelected = onSongSelected,
+                pivotBounds = activeSongPivotBounds
             )
         }
 
