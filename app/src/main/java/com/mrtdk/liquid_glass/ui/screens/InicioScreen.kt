@@ -2486,7 +2486,7 @@ private fun ArtistStationCard(
 }
 
 private object SuggestionCardCache {
-    val dominantColorCache = object : android.util.LruCache<String, Color>(60) {}
+    val horizontalColorsCache = object : android.util.LruCache<String, List<Color>>(60) {}
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -2551,7 +2551,84 @@ private fun FeaturedSuggestionCard(
 
     val hdThumb = upgradeThumb(thumbUrl)
 
-    // Card container (sin ningún filtro oscuro)
+    // Muestreo horizontal de colores de la franja inferior para el difuminado horizontal
+    val cachedColors = remember(hdThumb) {
+        hdThumb?.let { SuggestionCardCache.horizontalColorsCache.get(it) }
+    }
+    var horizontalColors by remember(hdThumb) { mutableStateOf(cachedColors) }
+
+    LaunchedEffect(hdThumb) {
+        if (hdThumb != null && horizontalColors == null) {
+            withContext(Dispatchers.IO) {
+                try {
+                    val loader = coil.Coil.imageLoader(context)
+                    val req = ImageRequest.Builder(context)
+                        .data(hdThumb)
+                        .allowHardware(false)
+                        .size(64, 64)
+                        .build()
+                    val result = loader.execute(req)
+                    if (result is coil.request.SuccessResult) {
+                        val bmp = (result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                        if (bmp != null) {
+                            val w = bmp.width
+                            val h = bmp.height
+                            val startY = (h * 0.65f).toInt().coerceIn(0, h - 1)
+                            val numBins = 5
+                            val binWidth = w.toFloat() / numBins
+                            val sampled = mutableListOf<Color>()
+
+                            for (i in 0 until numBins) {
+                                val startX = (i * binWidth).toInt().coerceIn(0, w - 1)
+                                val endX = ((i + 1) * binWidth).toInt().coerceIn(startX + 1, w)
+                                var r = 0L; var g = 0L; var b = 0L; var cnt = 0
+                                for (y in startY until h) {
+                                    for (x in startX until endX) {
+                                        val px = bmp.getPixel(x, y)
+                                        r += (px shr 16 and 0xFF)
+                                        g += (px shr 8 and 0xFF)
+                                        b += (px and 0xFF)
+                                        cnt++
+                                    }
+                                }
+                                if (cnt > 0) {
+                                    val raw = Color((r / cnt).toInt(), (g / cnt).toInt(), (b / cnt).toInt())
+                                    val lum = raw.luminance()
+                                    // Atenuar suavemente solo si es excesivamente claro para legibilidad
+                                    val finalColor = if (lum > 0.70f) {
+                                        val factor = 0.70f / lum
+                                        Color(
+                                            red = (raw.red * factor).coerceIn(0f, 1f),
+                                            green = (raw.green * factor).coerceIn(0f, 1f),
+                                            blue = (raw.blue * factor).coerceIn(0f, 1f)
+                                        )
+                                    } else {
+                                        raw
+                                    }
+                                    sampled.add(finalColor)
+                                }
+                            }
+
+                            if (sampled.size >= 2) {
+                                SuggestionCardCache.horizontalColorsCache.put(hdThumb, sampled)
+                                withContext(Dispatchers.Main) {
+                                    horizontalColors = sampled
+                                }
+                            }
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
+    val difuminadoAlpha by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (horizontalColors != null) 1f else 0f,
+        animationSpec = androidx.compose.animation.core.tween(300),
+        label = "difuminadoAlpha"
+    )
+
+    // Card container
     var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
     Box(
         modifier = Modifier
@@ -2588,6 +2665,7 @@ private fun FeaturedSuggestionCard(
         val verticalScale = -4.0f
         val pivotY = 0f
 
+        // 1. Reflejo invertido con desenfoque en blur
         Box(
             modifier = Modifier
                 .offset(x = reflectionX, y = reflectionY)
@@ -2631,12 +2709,25 @@ private fun FeaturedSuggestionCard(
             }
         }
 
-        // Portada Principal (Nítida, sin blur y sin filtros oscuros)
+        // 2. Portada Principal (Nítida arriba, con transición progresiva suave hacia el reflejo en su borde inferior)
         Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .size(width = 280.dp, height = 270.dp)
                 .onGloballyPositioned { imageCoords = it }
+                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                .drawWithContent {
+                    drawContent()
+                    val featherPx = 32.dp.toPx()
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(Color.Black, Color.Transparent),
+                            startY = size.height - featherPx,
+                            endY = size.height
+                        ),
+                        blendMode = BlendMode.DstIn
+                    )
+                }
         ) {
             AsyncImage(
                 model = ImageRequest.Builder(context)
@@ -2650,7 +2741,54 @@ private fun FeaturedSuggestionCard(
             )
         }
 
-        // 3. Contenido de Texto
+        // 3. Difuminado de colores horizontalmente a partir del nombre de la canción
+        val activeColors = horizontalColors ?: listOf(
+            Color(0xFF2C3E50),
+            Color(0xFF34495E),
+            Color(0xFF2C3E50)
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(110.dp)
+                .graphicsLayer {
+                    alpha = difuminadoAlpha
+                    compositingStrategy = CompositingStrategy.Offscreen
+                }
+                .drawWithContent {
+                    val w = size.width
+                    val h = size.height
+
+                    // 1. Difuminado de colores horizontal
+                    drawRect(
+                        brush = Brush.horizontalGradient(
+                            colors = activeColors,
+                            startX = 0f,
+                            endX = w
+                        )
+                    )
+
+                    // 2. Máscara vertical progresiva: transparente hasta el nombre de la canción,
+                    // y luego se intensifica suavemente hacia la base
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0.0f to Color.Transparent,
+                                0.20f to Color.Transparent,
+                                0.38f to Color.Black.copy(alpha = 0.40f),
+                                0.65f to Color.Black.copy(alpha = 0.75f),
+                                1.0f to Color.Black.copy(alpha = 0.92f)
+                            ),
+                            startY = 0f,
+                            endY = h
+                        ),
+                        blendMode = BlendMode.DstIn
+                    )
+                }
+        )
+
+        // 4. Contenido de Texto
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)

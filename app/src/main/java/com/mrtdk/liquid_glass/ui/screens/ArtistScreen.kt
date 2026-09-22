@@ -154,6 +154,7 @@ fun ArtistScreen(
     onVideoSelected: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
+    val isDarkMode by com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState()
     var artistPage by remember { mutableStateOf<ArtistPage?>(null) }
     var isLoading by remember { mutableStateOf(true) }
     var artistError by remember { mutableStateOf<String?>(null) }
@@ -1637,9 +1638,7 @@ fun ArtistScreen(
                     // Pill back button
                     item {
                         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.12f)).clickable { dismiss() }, contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.ArrowBackIosNew, "Back", tint = Color(0xFFFA243C), modifier = Modifier.size(22.dp))
-                            }
+                            DetailBackPillButton(isDarkMode = isDarkMode, onClick = dismiss)
                             Spacer(modifier = Modifier.width(16.dp))
                             Text(stringResource(R.string.albumes), color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                         }
@@ -1679,11 +1678,9 @@ fun ArtistScreen(
                     item { Spacer(modifier = Modifier.statusBarsPadding().height(16.dp)) }
                     item {
                         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.12f)).clickable { dismiss() }, contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.ArrowBackIosNew, "Back", tint = Color(0xFFFA243C), modifier = Modifier.size(22.dp))
-                            }
+                            DetailBackPillButton(isDarkMode = isDarkMode, onClick = dismiss)
                             Spacer(modifier = Modifier.width(16.dp))
-                            Text(allSectionTitle, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                            Text(allSectionTitle, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                     }
@@ -1733,11 +1730,9 @@ fun ArtistScreen(
                     // Pill back button
                     item {
                         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.12f)).clickable { showAllSongsOverlay = false }, contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.ArrowBackIosNew, "Back", tint = Color(0xFFFA243C), modifier = Modifier.size(22.dp))
-                            }
+                            DetailBackPillButton(isDarkMode = isDarkMode, onClick = { showAllSongsOverlay = false })
                             Spacer(modifier = Modifier.width(16.dp))
-                            Text(stringResource(R.string.top_songs), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.top_songs), color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                     }
@@ -2375,6 +2370,50 @@ private fun lerpFloat(start: Float, stop: Float, fraction: Float): Float {
 }
 
 @Composable
+private fun DetailBackPillButton(
+    isDarkMode: Boolean,
+    onClick: () -> Unit
+) {
+    val arrowColor = if (isDarkMode) Color.White else Color.Black
+    val borderColor = if (isDarkMode) Color.White.copy(alpha = 0.75f) else Color.Black.copy(alpha = 0.5f)
+    val bgColor = if (isDarkMode) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.04f)
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.90f else 1f,
+        animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
+        label = "pillPress"
+    )
+
+    Box(
+        modifier = Modifier
+            .size(42.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clip(CircleShape)
+            .border(width = 1.dp, color = borderColor, shape = CircleShape)
+            .background(bgColor)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.ArrowBackIosNew,
+            contentDescription = "Back",
+            tint = arrowColor,
+            modifier = Modifier
+                .size(19.dp)
+                .offset(x = (-1).dp)
+        )
+    }
+}
+
+@Composable
 fun CarouselToGridTransitionOverlay(
     visible: Boolean,
     title: String,
@@ -2399,8 +2438,8 @@ fun CarouselToGridTransitionOverlay(
             progress.animateTo(
                 targetValue = 1f,
                 animationSpec = spring(
-                    dampingRatio = 0.88f,
-                    stiffness = 380f
+                    dampingRatio = 0.86f,
+                    stiffness = 190f
                 )
             )
         }
@@ -2415,7 +2454,7 @@ fun CarouselToGridTransitionOverlay(
                         targetValue = 0f,
                         animationSpec = spring(
                             dampingRatio = 0.88f,
-                            stiffness = 380f
+                            stiffness = 220f
                         )
                     )
                     isOverlayVisible = false
