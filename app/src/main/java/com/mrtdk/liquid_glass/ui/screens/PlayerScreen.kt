@@ -1453,24 +1453,38 @@ fun PlayerScreen(
 
     var isMounted by remember { mutableStateOf(isVisible) }
     var isClosingAnim by remember { mutableStateOf(false) }
+    var collapseJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     val scope = rememberCoroutineScope()
     val dragOffsetY = remember { Animatable(if (isVisible) 0f else screenHeightPx) }
 
-    val triggerCollapse = remember(scope, screenHeightPx, onClose) {
+    val currentIsVisible by androidx.compose.runtime.rememberUpdatedState(isVisible)
+    val currentOnClose by androidx.compose.runtime.rememberUpdatedState(onClose)
+
+    val triggerCollapse: () -> Unit = remember(scope, screenHeightPx) {
         {
             if (!isClosingAnim) {
                 isClosingAnim = true
-                scope.launch {
-                    dragOffsetY.animateTo(
-                        screenHeightPx,
-                        spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessMediumLow
+                currentOnClose()
+                collapseJob?.cancel()
+                collapseJob = scope.launch {
+                    try {
+                        dragOffsetY.animateTo(
+                            screenHeightPx,
+                            spring(
+                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            )
                         )
-                    )
-                    onClose()
-                    isMounted = false
-                    isClosingAnim = false
+                    } catch (_: kotlinx.coroutines.CancellationException) {
+                        return@launch
+                    } catch (_: Exception) {
+                        try { dragOffsetY.snapTo(screenHeightPx) } catch (_: Exception) {}
+                    } finally {
+                        if (!currentIsVisible) {
+                            isMounted = false
+                        }
+                        isClosingAnim = false
+                    }
                 }
             }
         }
@@ -1478,10 +1492,12 @@ fun PlayerScreen(
 
     LaunchedEffect(isVisible) {
         if (isVisible) {
-            isMounted = true
+            collapseJob?.cancel()
             isClosingAnim = false
-            if (dragOffsetY.value >= screenHeightPx * 0.7f || dragOffsetY.value == 0f) {
-                dragOffsetY.snapTo(screenHeightPx)
+            val wasMounted = isMounted
+            isMounted = true
+            if (!wasMounted) {
+                try { dragOffsetY.snapTo(screenHeightPx) } catch (_: Exception) {}
             }
             dragOffsetY.animateTo(
                 0f,
@@ -1773,7 +1789,7 @@ fun PlayerScreen(
 
 
         var lyricsLines by remember { mutableStateOf<List<com.mocharealm.accompanist.lyrics.core.model.ISyncedLine>?>(null) }
-        var bitChordLyrics by remember { mutableStateOf<List<com.mrtdk.liquid_glass.data.lyrics.LyricLine>?>(null) }
+        var rayMusicLyrics by remember { mutableStateOf<List<com.mrtdk.liquid_glass.data.lyrics.LyricLine>?>(null) }
         var isLyricsLoading by remember { mutableStateOf(false) }
         var isLyricsNotFound by remember { mutableStateOf(false) }
 
@@ -1826,7 +1842,7 @@ fun PlayerScreen(
             val songArtist = playerState?.artist
 
             if (playerState != null && songTitle != null && songArtist != null) {
-                bitChordLyrics = null
+                rayMusicLyrics = null
                 lyricsLines = null
                 isLyricsLoading = true
                 isLyricsNotFound = false
@@ -1843,14 +1859,14 @@ fun PlayerScreen(
                     )
                     withContext(kotlinx.coroutines.Dispatchers.Main) {
                         if (result != null && result.lines.isNotEmpty()) {
-                            bitChordLyrics = result.lines
+                            rayMusicLyrics = result.lines
                             lyricsLines = result.lines.map { com.mocharealm.accompanist.lyrics.core.model.synced.SyncedLine(it.text, null, it.timeMs.toInt(), (it.timeMs + 5000L).toInt()) }
                             currentLyricsProviderName = result.source.name
                             currentLyricsSyncType = if (result.lines.any { it.isWordSynced }) "syllable" else "line"
                             isLyricsLoading = false
                             isLyricsNotFound = false
                         } else {
-                            bitChordLyrics = emptyList()
+                            rayMusicLyrics = emptyList()
                             lyricsLines = emptyList()
                             isLyricsLoading = false
                             isLyricsNotFound = true
@@ -2145,26 +2161,58 @@ fun PlayerScreen(
                 }
                 .pointerInput(showLyrics, showQueue) {
                     if (!showLyrics && !showQueue) {
+                        var dragStartTime = 0L
+                        var totalDragDistance = 0f
                         detectVerticalDragGestures(
-                            onDragEnd = {
-                                val currentOffsetY = dragOffsetY.value
-                                val thresholdPx = with(density) { 120.dp.toPx() }
-                                if (currentOffsetY > thresholdPx) {
-                                    triggerCollapse()
-                                } else {
-                                    scope.launch {
-                                        dragOffsetY.animateTo(
-                                            0f,
-                                            spring(
-                                                dampingRatio = 0.85f,
-                                                stiffness = Spring.StiffnessMediumLow
+                            onDragStart = {
+                                dragStartTime = System.currentTimeMillis()
+                                totalDragDistance = 0f
+                            },
+                            onDragCancel = {
+                                if (!isClosingAnim) {
+                                    val currentOffsetY = dragOffsetY.value
+                                    val thresholdPx = with(density) { 120.dp.toPx() }
+                                    if (currentOffsetY > thresholdPx) {
+                                        triggerCollapse()
+                                    } else {
+                                        scope.launch {
+                                            dragOffsetY.animateTo(
+                                                0f,
+                                                spring(
+                                                    dampingRatio = 0.85f,
+                                                    stiffness = Spring.StiffnessMediumLow
+                                                )
                                             )
-                                        )
+                                        }
+                                    }
+                                }
+                            },
+                            onDragEnd = {
+                                if (!isClosingAnim) {
+                                    val dragDuration = System.currentTimeMillis() - dragStartTime
+                                    val velocity = if (dragDuration > 0) totalDragDistance / dragDuration else 0f
+                                    val currentOffsetY = dragOffsetY.value
+                                    val thresholdPx = with(density) { 120.dp.toPx() }
+                                    val flickThresholdPx = with(density) { 36.dp.toPx() }
+                                    if (currentOffsetY > thresholdPx || (velocity > 0.6f && currentOffsetY > flickThresholdPx)) {
+                                        triggerCollapse()
+                                    } else {
+                                        scope.launch {
+                                            dragOffsetY.animateTo(
+                                                0f,
+                                                spring(
+                                                    dampingRatio = 0.85f,
+                                                    stiffness = Spring.StiffnessMediumLow
+                                                )
+                                            )
+                                        }
                                     }
                                 }
                             }
                         ) { change, dragAmount ->
-                            if (dragAmount > 0f || dragOffsetY.value > 0f) {
+                            if (!isClosingAnim && (dragAmount > 0f || dragOffsetY.value > 0f)) {
+                                change.consume()
+                                totalDragDistance += dragAmount
                                 val newOffset = (dragOffsetY.value + dragAmount).coerceAtLeast(0f)
                                 scope.launch { dragOffsetY.snapTo(newOffset) }
                             }
@@ -2218,7 +2266,7 @@ fun PlayerScreen(
                     volumePosition = volumePosition,
                     coverBitmap = coverBitmap,
                     hdArtUrl = hdArtUrl,
-                    bitChordLyrics = bitChordLyrics,
+                    rayMusicLyrics = rayMusicLyrics,
                     isLyricsLoading = isLyricsLoading,
                     lyricsLines = lyricsLines,
                     isRomajiEnabled = isRomajiEnabled,
@@ -2593,7 +2641,7 @@ fun PlayerScreen(
 
                     override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
 
-                        if (showLyrics || showQueue) return Offset.Zero
+                        if (isClosingAnim || showLyrics || showQueue) return Offset.Zero
 
                         val delta = available.y
 
@@ -2627,7 +2675,7 @@ fun PlayerScreen(
 
                     ): Offset {
 
-                        if (showLyrics || showQueue) return Offset.Zero
+                        if (isClosingAnim || showLyrics || showQueue) return Offset.Zero
 
                         val delta = available.y
 
@@ -2661,7 +2709,7 @@ fun PlayerScreen(
 
                     override suspend fun onPreFling(available: Velocity): Velocity {
 
-                        if (showLyrics || showQueue) return Velocity.Zero
+                        if (isClosingAnim || showLyrics || showQueue) return Velocity.Zero
 
                         val currentOffsetY = dragOffsetY.value
 
@@ -3480,10 +3528,10 @@ fun PlayerScreen(
                                   }
                                   val effectivePosition = if (musicPlayer != null) livePosition else currentPosition
 
-                                  val currentLyrics = bitChordLyrics
+                                  val currentLyrics = rayMusicLyrics
 
                                   if (currentLyrics != null && currentLyrics.isNotEmpty()) {
-                                      com.mrtdk.liquid_glass.ui.lyrics.BitChordLyricsView(
+                                      com.mrtdk.liquid_glass.ui.lyrics.RayMusicLyrics(
                                           lines = currentLyrics,
                                           positionMs = (effectivePosition + lyricsOffset).coerceAtLeast(0L),
                                           isPlaying = isPlaying,
@@ -3504,7 +3552,7 @@ fun PlayerScreen(
                                           modifier = Modifier.fillMaxSize()
                                       )
                                   } else if (isLyricsLoading) {
-                                      com.mrtdk.liquid_glass.ui.lyrics.BitChordLyricsView(
+                                      com.mrtdk.liquid_glass.ui.lyrics.RayMusicLyrics(
                                           lines = emptyList(),
                                           positionMs = effectivePosition,
                                           isPlaying = isPlaying,
@@ -4078,31 +4126,6 @@ fun PlayerScreen(
 
 
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .pointerInput(showLyrics, showQueue) {
-                            if (!showLyrics && !showQueue) {
-                                detectVerticalDragGestures(
-                                    onDragEnd = {
-                                        val currentOffsetY = dragOffsetY.value
-                                        if (currentOffsetY > with(density) { 120.dp.toPx() }) {
-                                            triggerCollapse()
-                                        } else {
-                                            scope.launch {
-                                                dragOffsetY.animateTo(0f, spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessMediumLow))
-                                            }
-                                        }
-                                    }
-                                ) { change, dragAmount ->
-                                    if (dragAmount > 0f || dragOffsetY.value > 0f) {
-                                        val newOffset = (dragOffsetY.value + dragAmount).coerceAtLeast(0f)
-                                        scope.launch { dragOffsetY.snapTo(newOffset) }
-                                    }
-                                }
-                            }
-                        }
-                )
             }
 
             // GLOBAL PLAYBACK CONTROLS (Unified bottom controls with fixed height relative to cover image)
@@ -5072,13 +5095,13 @@ fun PlayerScreen(
                         currentLyricsSyncType = activeResult.syncType
                         val lines = activeResult.lyrics
                         lyricsLines = lines?.lines
-                        bitChordLyrics = lines?.lines?.map { com.mrtdk.liquid_glass.data.lyrics.LyricLine(it.timeMs, it.text) }
+                        rayMusicLyrics = lines?.lines?.map { com.mrtdk.liquid_glass.data.lyrics.LyricLine(it.timeMs, it.text) }
                         if (isRomajiEnabled && lines != null) {
                             lyricsMenuScope.launch {
                                 val prefs = com.mrtdk.liquid_glass.utils.LyricsRomanizationPreferences(true, true, true, true, true)
                                 val processed = com.mrtdk.liquid_glass.utils.LyricsUtils.romanizeSyncedLyrics(lines, prefs)
                                 lyricsLines = processed.lines
-                                bitChordLyrics = processed.lines.map { com.mrtdk.liquid_glass.data.lyrics.LyricLine(it.timeMs, it.text) }
+                                rayMusicLyrics = processed.lines.map { com.mrtdk.liquid_glass.data.lyrics.LyricLine(it.timeMs, it.text) }
                             }
                         }
                     }
@@ -5852,7 +5875,7 @@ fun LandscapePlayerLayout(
     volumePosition: Float,
     coverBitmap: ImageBitmap?,
     hdArtUrl: Any?,
-    bitChordLyrics: List<com.mrtdk.liquid_glass.data.lyrics.LyricLine>? = null,
+    rayMusicLyrics: List<com.mrtdk.liquid_glass.data.lyrics.LyricLine>? = null,
     isLyricsLoading: Boolean = false,
     lyricsLines: List<com.mocharealm.accompanist.lyrics.core.model.ISyncedLine>? = null,
     isRomajiEnabled: Boolean,
@@ -6623,7 +6646,7 @@ fun LandscapePlayerLayout(
                 Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                     if (showLyrics) {
                         LandscapeLyricsView(
-                            lyrics = bitChordLyrics,
+                            lyrics = rayMusicLyrics,
                             isLoading = isLyricsLoading,
                             isPlaying = isPlaying,
                             currentPosition = currentPosition,
@@ -6806,7 +6829,7 @@ private fun LandscapeLyricsView(
     Box(modifier = Modifier.fillMaxSize()) {
         val currentLyrics = lyrics
         if (currentLyrics != null && currentLyrics.isNotEmpty()) {
-            com.mrtdk.liquid_glass.ui.lyrics.BitChordLyricsView(
+            com.mrtdk.liquid_glass.ui.lyrics.RayMusicLyrics(
                 lines = currentLyrics,
                 positionMs = (currentPosition + lyricsOffset).coerceAtLeast(0L),
                 isPlaying = isPlaying,
@@ -6815,7 +6838,7 @@ private fun LandscapeLyricsView(
                 modifier = Modifier.fillMaxSize()
             )
         } else if (isLoading) {
-            com.mrtdk.liquid_glass.ui.lyrics.BitChordLyricsView(
+            com.mrtdk.liquid_glass.ui.lyrics.RayMusicLyrics(
                 lines = emptyList(),
                 positionMs = currentPosition,
                 isPlaying = isPlaying,

@@ -6,7 +6,7 @@ package com.mrtdk.liquid_glass.data.lyrics
  * The counterpart to [LrcLib.parseLrc], and the only writer in this package —
  * everything else here reads. It exists for the download path, which embeds
  * what it gets into the saved file's own metadata (see
- * `com.music.bitchord.download.LyricsTag`), and LRC is what that field is read
+ * `com.mrtdk.liquid_glass.download.LyricsTag`), and LRC is what that field is read
  * as: whatever a track's lyrics arrived as, they leave here as `[mm:ss.xx]`
  * stamps, which is the one synced-lyric syntax every other player understands.
  *
@@ -56,7 +56,7 @@ private fun LyricLine.flattened(): String =
  * documents: a reader without A2 does not ignore a word stamp, it shows it, so
  * a file carrying only this reads as angle-bracket noise everywhere else. The
  * two are written to different fields — plain LRC to the container's own lyrics
- * atom, where every other player looks, and this to a BitChord-specific one
+ * atom, where every other player looks, and this to a RayMusicLyrics-specific one
  * they don't read (see `Mp4Tagger`, `FlacTagger`, `WebmTagger`). Other players
  * are unaffected; this app gets the timings back off the file instead of the
  * network, which is what lets a downloaded song light up word by word offline.
@@ -69,7 +69,7 @@ private fun LyricLine.flattened(): String =
  * [LyricLine.endMs] across — without it the last word of every line would come
  * back with no end, and the player reads a silence out of that.
  */
-internal const val WORD_LYRICS_FIELD = "BITCHORD_LYRICS"
+internal const val WORD_LYRICS_FIELD = "RAYMUSIC_LYRICS"
 
 internal fun List<LyricLine>.toEnhancedLrc(): String {
     if (isEmpty()) return ""

@@ -228,7 +228,7 @@ object LyricsTranslation {
             .build()
         val request = Request.Builder()
             .url(ENDPOINT)
-            .header("User-Agent", "BitChord/1.5.2")
+            .header("User-Agent", "RayMusicLyrics/1.0.0")
             .header("Accept", "application/json")
             .post(body)
             .build()

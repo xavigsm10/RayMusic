@@ -109,7 +109,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlin.math.abs
 
-// ── Visual Constants from BitChord ──────────────────────────────────────────
+// ── Visual Constants from RayMusic Lyrics ──────────────────────────────────────────
 private val GLOW_RADIUS = 6.dp
 private val GLOW_ROOM = 10.dp
 private val BACKING_FONT_SIZE = 23.sp
@@ -216,10 +216,10 @@ fun rememberLyricClock(positionMs: Long, isPlaying: Boolean): MutableLongState {
 }
 
 /**
- * Main BitChord Lyrics Panel Composable.
+ * Main RayMusic Lyrics Panel Composable.
  */
 @Composable
-fun BitChordLyricsView(
+fun RayMusicLyrics(
     lines: List<LyricLine>,
     positionMs: Long,
     isPlaying: Boolean,
@@ -614,6 +614,34 @@ fun BitChordLyricsView(
             }
         }
     }
+}
+
+/**
+ * Convenience alias for RayMusicLyrics.
+ */
+@Composable
+fun RayMusic(
+    lines: List<LyricLine>,
+    positionMs: Long,
+    isPlaying: Boolean,
+    looking: Boolean = false,
+    onSeekToLine: (Long) -> Unit = {},
+    controlsOpen: Boolean = true,
+    onRevealControls: () -> Unit = {},
+    onHideControls: () -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
+    RayMusicLyrics(
+        lines = lines,
+        positionMs = positionMs,
+        isPlaying = isPlaying,
+        looking = looking,
+        onSeekToLine = onSeekToLine,
+        controlsOpen = controlsOpen,
+        onRevealControls = onRevealControls,
+        onHideControls = onHideControls,
+        modifier = modifier,
+    )
 }
 
 @Composable
