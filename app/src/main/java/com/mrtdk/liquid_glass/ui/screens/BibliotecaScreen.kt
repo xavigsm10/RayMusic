@@ -20,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -53,6 +54,7 @@ import com.mrtdk.liquid_glass.ui.components.trackClickBounds
 import com.mrtdk.liquid_glass.ui.components.trackTapBounds
 import com.mrtdk.liquid_glass.ui.components.wiggleOnScroll
 import com.mrtdk.liquid_glass.ui.components.sharedTransitionElement
+import com.mrtdk.liquid_glass.ui.components.DetailBackPillButton
 import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.ui.platform.LocalUriHandler
@@ -241,18 +243,16 @@ fun BibliotecaScreen(
         ) {
             if (selectedCategoryKey != "Playlists") {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    androidx.compose.material3.IconButton(onClick = { showCategoryDetail = false }) {
-                        Icon(Icons.Default.ArrowBackIosNew, contentDescription = stringResource(R.string.back_action), tint = Color(0xFFFA243C))
-                    }
+                    DetailBackPillButton(onClick = { showCategoryDetail = false })
+                    Spacer(modifier = Modifier.width(16.dp))
                     Text(
                         text = selectedCategoryName,
                         color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                         fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(start = 8.dp)
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
@@ -343,9 +343,9 @@ fun BibliotecaScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .aspectRatio(1f)
+                                        .sharedTransitionElement(entity.id)
                                         .clip(if (isArtist) androidx.compose.foundation.shape.CircleShape else RoundedCornerShape(12.dp))
                                         .background(Color(0xFF1C1C1E))
-                                        .sharedTransitionElement(entity.id)
                                 ) {
                                     val thumb = entity.thumbnail
                                     if (!thumb.isNullOrBlank()) {
@@ -464,9 +464,9 @@ fun BibliotecaScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .aspectRatio(1f)
+                                        .sharedTransitionElement(item.id)
                                         .clip(if (item.type == ItemType.ARTIST) androidx.compose.foundation.shape.CircleShape else RoundedCornerShape(12.dp))
                                         .background(Color(0xFF1C1C1E))
-                                        .sharedTransitionElement(item.id)
                                 ) {
                                     AsyncImage(
                                         model = ImageRequest.Builder(context)
@@ -546,41 +546,36 @@ fun BibliotecaScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable {
-                            selectedCategory = null
-                            selectedCategoryName = context.getString(R.string.pinned_title)
-                            selectedCategoryKey = "Fijados"
-                            showCategoryDetail = true
-                        }
-                        .padding(vertical = 4.dp),
+                        .padding(bottom = 6.dp),
                     horizontalArrangement = Arrangement.Start,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = stringResource(R.string.pinned_title),
-                        color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = stringResource(R.string.pinned_title),
-                        tint = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor.copy(alpha = 0.7f),
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                val pinnedRowState = androidx.compose.foundation.lazy.rememberLazyListState()
-                Box(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    androidx.compose.foundation.lazy.LazyRow(
-                        state = pinnedRowState,
-                        modifier = Modifier.wrapContentWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .clickable {
+                                selectedCategory = null
+                                selectedCategoryName = context.getString(R.string.pinned_title)
+                                selectedCategoryKey = "Fijados"
+                                showCategoryDetail = true
+                            },
+                        contentAlignment = Alignment.CenterStart
                     ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = stringResource(R.string.pinned_title),
+                            tint = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor.copy(alpha = 0.85f),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+                val pinnedRowState = androidx.compose.foundation.lazy.rememberLazyListState()
+                androidx.compose.foundation.lazy.LazyRow(
+                    state = pinnedRowState,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
                     items(
                         count = pinnedEntities.size,
                         key = { i -> "pinned_${pinnedEntities[i].id}" },
@@ -692,7 +687,6 @@ fun BibliotecaScreen(
                 }
             }
         }
-    }
         
         item(span = { GridItemSpan(2) }) {
             Column {
@@ -817,9 +811,9 @@ fun BibliotecaScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .aspectRatio(1f)
+                            .sharedTransitionElement(item.id)
                             .clip(if (item.type == ItemType.ARTIST) androidx.compose.foundation.shape.CircleShape else RoundedCornerShape(12.dp))
                             .background(Color(0xFF1C1C1E))
-                            .sharedTransitionElement(item.id)
                     ) {
                         AsyncImage(
                             model = ImageRequest.Builder(context)

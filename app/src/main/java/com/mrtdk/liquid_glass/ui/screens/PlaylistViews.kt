@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
 import com.mrtdk.glass.GlassContainer
 import com.mrtdk.glass.GlassBox
 import com.mrtdk.liquid_glass.ui.components.LiquidButton
@@ -47,6 +48,7 @@ import com.mrtdk.liquid_glass.ui.components.AppleMusicPlaylistMenu
 import com.mrtdk.liquid_glass.ui.components.AppleMusicCreateMenu
 import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
 import com.mrtdk.liquid_glass.ui.components.sharedTransitionElement
+import com.mrtdk.liquid_glass.ui.components.DetailBackPillButton
 import com.mrtdk.liquid_glass.ui.components.PlaylistsPageMoreMenu
 import com.mrtdk.liquid_glass.ui.components.PlaylistsPageSortMenu
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -211,9 +213,7 @@ fun PlaylistsListScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                IconButton(onClick = onBack) {
-                                    Icon(Icons.Default.ArrowBackIosNew, contentDescription = "Back", tint = Color(0xFFFA243C))
-                                }
+                                DetailBackPillButton(onClick = onBack)
                                 
                                 // Add, Sort, More pill with glass effect
                                 Box(
@@ -281,14 +281,14 @@ fun PlaylistsListScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .aspectRatio(1f)
+                                        .onGloballyPositioned { imageCoords = it }
+                                        .sharedTransitionElement("favorite_songs")
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(
                                             Brush.linearGradient(
                                                 colors = listOf(Color(0xFF8B0000), Color(0xFFFA243C))
                                             )
-                                        )
-                                        .onGloballyPositioned { imageCoords = it }
-                                        .sharedTransitionElement("favorite_songs"),
+                                        ),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(Icons.Default.Star, contentDescription = null, tint = Color.White, modifier = Modifier.size(56.dp))
@@ -341,10 +341,10 @@ fun PlaylistsListScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .aspectRatio(1f)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(Color(0xFF1C1C1E))
                                         .onGloballyPositioned { imageCoords = it }
-                                        .sharedTransitionElement(pl.id),
+                                        .sharedTransitionElement(pl.id)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color(0xFF1C1C1E)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     val imageUrl = pl.coverUrl ?: (if (pl.items.isNotEmpty()) pl.items.first().thumbnail else null)
@@ -399,9 +399,7 @@ fun PlaylistsListScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                IconButton(onClick = onBack) {
-                                    Icon(Icons.Default.ArrowBackIosNew, contentDescription = "Back", tint = Color(0xFFFA243C))
-                                }
+                                DetailBackPillButton(onClick = onBack)
                                 
                                 // Add, Sort, More pill
                                 Box(
@@ -470,14 +468,14 @@ fun PlaylistsListScreen(
                                 Box(
                                     modifier = Modifier
                                         .onGloballyPositioned { imageCoords = it }
+                                        .sharedTransitionElement("favorite_songs")
                                         .size(64.dp)
                                         .clip(RoundedCornerShape(8.dp))
                                         .background(
                                             Brush.linearGradient(
                                                 colors = listOf(Color(0xFF8B0000), Color(0xFFFA243C))
                                             )
-                                        )
-                                        .sharedTransitionElement("favorite_songs"),
+                                        ),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(Icons.Default.Star, contentDescription = null, tint = Color.White, modifier = Modifier.size(36.dp))
@@ -528,10 +526,10 @@ fun PlaylistsListScreen(
                                 Box(
                                     modifier = Modifier
                                         .onGloballyPositioned { imageCoords = it }
+                                        .sharedTransitionElement(pl.id)
                                         .size(64.dp)
                                         .clip(RoundedCornerShape(8.dp))
-                                        .background(Color(0xFF1C1C1E))
-                                        .sharedTransitionElement(pl.id),
+                                        .background(Color(0xFF1C1C1E)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     val imageUrl = pl.coverUrl ?: (if (pl.items.isNotEmpty()) pl.items.first().thumbnail else null)
@@ -962,7 +960,7 @@ fun PlaylistDetailScreen(
             val curY = sourceY + progress * (0f - sourceY)
             val curW = sourceW + progress * (screenWidth - sourceW)
             val curH = sourceH + progress * (screenHeight - sourceH)
-            val curCorner = (if (isMadeForYou) 18f else 24f) * (1f - progress)
+            val curCorner = (if (isMadeForYou) 18f else 12f) * (1f - progress)
             var showPlaylistMenu by remember { mutableStateOf(false) }
             var currentSort by remember { mutableStateOf("default") }
 
@@ -1085,7 +1083,7 @@ fun PlaylistDetailScreen(
                                         modifier = Modifier.size(40.dp)
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.IosShare,
+                                            painter = painterResource(id = R.drawable.compartir),
                                             contentDescription = "Share",
                                             tint = Color.White,
                                             modifier = Modifier.size(22.dp)
@@ -1332,7 +1330,7 @@ fun PlaylistDetailScreen(
                                             modifier = Modifier.size(40.dp)
                                         ) {
                                             Icon(
-                                                imageVector = Icons.Default.IosShare,
+                                                painter = painterResource(id = R.drawable.compartir),
                                                 contentDescription = "Share",
                                                 tint = Color.White,
                                                 modifier = Modifier.size(22.dp)
@@ -1673,7 +1671,7 @@ fun PlaylistDetailScreen(
                             .offset { IntOffset(curX.roundToInt(), curY.roundToInt()) }
                             .size(with(density) { curW.toDp() }, with(density) { curH.toDp() })
                             .clip(RoundedCornerShape(curCorner.dp))
-                            .background(dominantColor)
+                            .background(dominantColor.copy(alpha = progress.coerceIn(0f, 1f)))
                     ) {
                         Column(
                             modifier = Modifier.fillMaxSize(),
@@ -1937,7 +1935,7 @@ fun PlaylistDetailScreen(
                                         modifier = Modifier.size(40.dp)
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.IosShare,
+                                            painter = painterResource(id = R.drawable.compartir),
                                             contentDescription = "Share",
                                             tint = Color.White,
                                             modifier = Modifier.size(22.dp)

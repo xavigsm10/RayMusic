@@ -59,6 +59,7 @@ import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 import androidx.compose.material.icons.filled.IosShare
+import androidx.compose.ui.res.painterResource
 
 import android.widget.Toast
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -74,6 +75,7 @@ import com.mrtdk.liquid_glass.ui.components.trackTapBounds
 import com.mrtdk.liquid_glass.ui.components.wiggleOnScroll
 import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
 import com.mrtdk.liquid_glass.ui.components.sharedTransitionElement
+import com.mrtdk.liquid_glass.ui.components.DetailBackPillButton
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.LayoutCoordinates
 import com.mrtdk.liquid_glass.ui.components.unclippedBoundsInRoot
@@ -1902,7 +1904,7 @@ fun ArtistScreen(
                         modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.IosShare,
+                            painter = painterResource(id = R.drawable.compartir),
                             contentDescription = "Share",
                             tint = Color.White,
                             modifier = Modifier.size(22.dp)
@@ -2100,17 +2102,15 @@ private fun ItemCard(
                             }
                         }
                     }
+                    .let { if (!fillWidth) it.sharedTransitionElement(item.id) else it }
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color.DarkGray)
-                    .let { if (!fillWidth) it.sharedTransitionElement(item.id) else it }
                 ) {
                     AsyncImage(
                         model = ImageRequest.Builder(context).data(hdThumb).size(360).crossfade(true).build(),
                         contentDescription = item.title,
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize().graphicsLayer {
-                            alpha = if (!fillWidth && SharedTransitionState.animatingItemIds.contains(item.id)) 0f else 1f
-                        }
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -2145,9 +2145,7 @@ private fun ItemCard(
                         model = ImageRequest.Builder(context).data(hdThumb).size(360).crossfade(true).build(),
                         contentDescription = item.title,
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize().graphicsLayer {
-                            alpha = if (!fillWidth && SharedTransitionState.animatingItemIds.contains(item.id)) 0f else 1f
-                        }
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -2176,17 +2174,15 @@ private fun ItemCard(
                             }
                         }
                     }
+                    .let { if (!fillWidth) it.sharedTransitionElement(item.id) else it }
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color.DarkGray)
-                    .let { if (!fillWidth) it.sharedTransitionElement(item.id) else it }
                 ) {
                     AsyncImage(
                         model = ImageRequest.Builder(context).data(hdThumb).size(360).crossfade(true).build(),
                         contentDescription = item.title,
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize().graphicsLayer {
-                            alpha = if (!fillWidth && SharedTransitionState.animatingItemIds.contains(item.id)) 0f else 1f
-                        }
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -2370,50 +2366,6 @@ private fun lerpFloat(start: Float, stop: Float, fraction: Float): Float {
 }
 
 @Composable
-private fun DetailBackPillButton(
-    isDarkMode: Boolean,
-    onClick: () -> Unit
-) {
-    val arrowColor = if (isDarkMode) Color.White else Color.Black
-    val borderColor = if (isDarkMode) Color.White.copy(alpha = 0.75f) else Color.Black.copy(alpha = 0.5f)
-    val bgColor = if (isDarkMode) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.04f)
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.90f else 1f,
-        animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
-        label = "pillPress"
-    )
-
-    Box(
-        modifier = Modifier
-            .size(42.dp)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
-            .clip(CircleShape)
-            .border(width = 1.dp, color = borderColor, shape = CircleShape)
-            .background(bgColor)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = Icons.Default.ArrowBackIosNew,
-            contentDescription = "Back",
-            tint = arrowColor,
-            modifier = Modifier
-                .size(19.dp)
-                .offset(x = (-1).dp)
-        )
-    }
-}
-
-@Composable
 fun CarouselToGridTransitionOverlay(
     visible: Boolean,
     title: String,
@@ -2453,8 +2405,8 @@ fun CarouselToGridTransitionOverlay(
                     progress.animateTo(
                         targetValue = 0f,
                         animationSpec = spring(
-                            dampingRatio = 0.88f,
-                            stiffness = 220f
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = 300f
                         )
                     )
                     isOverlayVisible = false

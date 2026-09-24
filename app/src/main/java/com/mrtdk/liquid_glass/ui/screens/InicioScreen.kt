@@ -32,6 +32,7 @@ import com.mrtdk.liquid_glass.ui.components.trackClickBounds
 import com.mrtdk.liquid_glass.ui.components.trackTapBounds
 import com.mrtdk.liquid_glass.ui.components.wiggleOnScroll
 import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
+import com.mrtdk.liquid_glass.ui.components.DetailBackPillButton
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.LayoutCoordinates
 import com.mrtdk.liquid_glass.ui.components.unclippedBoundsInRoot
@@ -1797,22 +1798,16 @@ fun InicioScreen(
         Box(modifier = Modifier.fillMaxSize().background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize().padding(top = innerPadding.calculateTopPadding())) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    androidx.compose.material3.IconButton(onClick = { dismiss() }) {
-                        Icon(
-                            imageVector = androidx.compose.material.icons.Icons.Default.ArrowBackIosNew,
-                            contentDescription = stringResource(R.string.back_action),
-                            tint = Color(0xFFFA243C)
-                        )
-                    }
+                    DetailBackPillButton(onClick = dismiss)
+                    Spacer(modifier = Modifier.width(16.dp))
                     Text(
                         text = activeSection.artistName,
                         color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                         fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(start = 8.dp)
+                        fontWeight = FontWeight.Bold
                     )
                 }
 
@@ -1960,22 +1955,16 @@ fun InicioScreen(
         Box(modifier = Modifier.fillMaxSize().background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize().padding(top = innerPadding.calculateTopPadding())) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    androidx.compose.material3.IconButton(onClick = { dismiss() }) {
-                        Icon(
-                            imageVector = androidx.compose.material.icons.Icons.Default.ArrowBackIosNew,
-                            contentDescription = stringResource(R.string.back_action),
-                            tint = Color(0xFFFA243C)
-                        )
-                    }
+                    DetailBackPillButton(onClick = dismiss)
+                    Spacer(modifier = Modifier.width(16.dp))
                     Text(
                         text = stringResource(R.string.sigue_escuchando),
                         color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
                         fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(start = 8.dp)
+                        fontWeight = FontWeight.Bold
                     )
                 }
 
@@ -2085,17 +2074,12 @@ fun InicioScreen(
         Box(modifier = Modifier.fillMaxSize().background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize().padding(top = innerPadding.calculateTopPadding())) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    androidx.compose.material3.IconButton(onClick = { dismiss() }) {
-                        Icon(
-                            imageVector = androidx.compose.material.icons.Icons.Default.ArrowBackIosNew,
-                            contentDescription = stringResource(R.string.back_action),
-                            tint = Color(0xFFFA243C)
-                        )
-                    }
-                    Column(modifier = Modifier.padding(start = 8.dp)) {
+                    DetailBackPillButton(onClick = dismiss)
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
                         Text(
                             text = stringResource(R.string.porque_escuchaste),
                             color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor,
@@ -2193,17 +2177,12 @@ fun InicioScreen(
         Box(modifier = Modifier.fillMaxSize().background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.backgroundColor)) {
             Column(modifier = Modifier.fillMaxSize().padding(top = innerPadding.calculateTopPadding())) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    androidx.compose.material3.IconButton(onClick = { dismiss() }) {
-                        Icon(
-                            imageVector = androidx.compose.material.icons.Icons.Default.ArrowBackIosNew,
-                            contentDescription = stringResource(R.string.back_action),
-                            tint = Color(0xFFFA243C)
-                        )
-                    }
-                    Column(modifier = Modifier.padding(start = 8.dp)) {
+                    DetailBackPillButton(onClick = dismiss)
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
                         Text(
                             text = stringResource(R.string.porque_escuchaste),
                             color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor,

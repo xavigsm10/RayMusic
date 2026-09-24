@@ -112,6 +112,7 @@ val MainNavTabs = listOf(
 )
 
 private val MiniPlayerShape = ContinuousRoundedRectangle(percent = 50)
+private const val NAV_BACKDROP_SCALE = 0.33f
 
 private enum class LiquidNavVisualState {
     INLINE,
@@ -223,7 +224,7 @@ fun LiquidBottomNavBar(
         }
     }
 
-    val capsuleBackdropModifier = remember(isSolid, isLightweight, backdrop, solidBgColor, actualTintColor) {
+    val capsuleGlassModifier: @Composable () -> Modifier = {
         if (isSolid) {
             Modifier
                 .clip(Capsule())
@@ -235,20 +236,23 @@ fun LiquidBottomNavBar(
                 effects = {
                     if (!isLightweight) {
                         vibrancy()
-                        blur(8.dp.toPx())
-                        lens(24.dp.toPx(), 24.dp.toPx())
+                        blur(8.dp.toPx() * NAV_BACKDROP_SCALE)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            lens(24.dp.toPx() * NAV_BACKDROP_SCALE, 24.dp.toPx() * NAV_BACKDROP_SCALE)
+                        }
                     } else {
-                        blur(3.dp.toPx())
+                        blur(3.dp.toPx() * NAV_BACKDROP_SCALE)
                     }
                 },
                 highlight = { Highlight.Default.copy(alpha = 0.35f) },
                 shadow = { Shadow.Default },
-                onDrawSurface = { drawRect(actualTintColor) }
+                onDrawSurface = { drawRect(actualTintColor) },
+                backdropScale = NAV_BACKDROP_SCALE
             )
         }
     }
 
-    val miniPlayerBackdropModifier = remember(isSolid, isLightweight, backdrop, solidBgColor, actualTintColor) {
+    val miniPlayerGlassModifier: @Composable () -> Modifier = {
         if (isSolid) {
             Modifier
                 .clip(MiniPlayerShape)
@@ -260,22 +264,23 @@ fun LiquidBottomNavBar(
                 effects = {
                     if (!isLightweight) {
                         vibrancy()
-                        blur(6.dp.toPx())
-                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                        blur(6.dp.toPx() * NAV_BACKDROP_SCALE)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                             lens(
-                                refractionHeight = 16.dp.toPx(),
-                                refractionAmount = 24.dp.toPx(),
+                                refractionHeight = 16.dp.toPx() * NAV_BACKDROP_SCALE,
+                                refractionAmount = 24.dp.toPx() * NAV_BACKDROP_SCALE,
                                 depthEffect = true,
                                 chromaticAberration = false
                             )
                         }
                     } else {
-                        blur(3.dp.toPx())
+                        blur(3.dp.toPx() * NAV_BACKDROP_SCALE)
                     }
                 },
                 highlight = { Highlight.Default.copy(alpha = 0.25f) },
                 shadow = { Shadow.Default },
-                onDrawSurface = { drawRect(actualTintColor) }
+                onDrawSurface = { drawRect(actualTintColor) },
+                backdropScale = NAV_BACKDROP_SCALE
             )
         }
     }
@@ -314,7 +319,7 @@ fun LiquidBottomNavBar(
                                     zIndexInOverlay = 1f
                                 )
                                 .size(48.dp)
-                                .then(capsuleBackdropModifier)
+                                .then(capsuleGlassModifier())
                                 .clip(Capsule())
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
@@ -379,7 +384,7 @@ fun LiquidBottomNavBar(
                                     landingTrigger = landingTrigger,
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .then(miniPlayerBackdropModifier)
+                                        .then(miniPlayerGlassModifier())
                                 )
                             }
                         } else {
@@ -399,7 +404,7 @@ fun LiquidBottomNavBar(
                                     boundsTransform = morphBoundsTransform,
                                     zIndexInOverlay = 1f
                                 )
-                                .then(capsuleBackdropModifier)
+                                .then(capsuleGlassModifier())
                                 .clip(Capsule())
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
@@ -467,7 +472,7 @@ fun LiquidBottomNavBar(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .skipToLookaheadSize()
-                                        .then(miniPlayerBackdropModifier)
+                                        .then(miniPlayerGlassModifier())
                                 )
                             }
                         }
@@ -504,6 +509,7 @@ fun LiquidBottomNavBar(
                                     tabsCount = expandedTabs.size,
                                     accentColor = activeAccentColor,
                                     containerColor = if (isSolid) solidBgColor else actualTintColor,
+                                    backdropScale = NAV_BACKDROP_SCALE,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .skipToLookaheadSize()
@@ -598,7 +604,7 @@ fun LiquidBottomNavBar(
                                             zIndexInOverlay = 1f
                                         )
                                         .size(64.dp)
-                                        .then(capsuleBackdropModifier)
+                                        .then(capsuleGlassModifier())
                                         .clip(Capsule())
                                         .clickable(
                                             interactionSource = remember { MutableInteractionSource() },
@@ -665,7 +671,7 @@ fun LiquidBottomNavBar(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .skipToLookaheadSize()
-                                        .then(miniPlayerBackdropModifier)
+                                        .then(miniPlayerGlassModifier())
                                 )
                             }
                         }
@@ -688,7 +694,7 @@ fun LiquidBottomNavBar(
                                         zIndexInOverlay = 1f
                                     )
                                     .size(48.dp)
-                                    .then(capsuleBackdropModifier)
+                                    .then(capsuleGlassModifier())
                                     .clip(Capsule())
                                     .clickable(
                                         interactionSource = remember { MutableInteractionSource() },
@@ -728,7 +734,7 @@ fun LiquidBottomNavBar(
                                         boundsTransform = morphBoundsTransform,
                                         zIndexInOverlay = 1f
                                     )
-                                    .then(capsuleBackdropModifier)
+                                    .then(capsuleGlassModifier())
                                     .clip(Capsule())
                                     .clickable(
                                         interactionSource = remember { MutableInteractionSource() },
@@ -840,8 +846,8 @@ fun LiquidBottomNavBar(
 
 private val morphBoundsTransform = BoundsTransform { _, _ ->
     spring(
-        dampingRatio = Spring.DampingRatioNoBouncy,
-        stiffness = 950f
+        dampingRatio = 0.85f,
+        stiffness = 500f
     )
 }
 

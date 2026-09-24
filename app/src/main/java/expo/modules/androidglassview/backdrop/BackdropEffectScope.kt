@@ -43,10 +43,10 @@ internal abstract class BackdropEffectScopeImpl : BackdropEffectScope, RuntimeSh
         return runtimeShaderCache.obtainRuntimeShader(key, string)
     }
 
-    fun update(scope: DrawScope): Boolean {
+    fun update(scope: DrawScope, contentScale: Float = 1f): Boolean {
         val newDensity = scope.density
         val newFontScale = scope.fontScale
-        val newSize = scope.size
+        val newSize = if (contentScale != 1f) scope.size * contentScale else scope.size
         val newLayoutDirection = scope.layoutDirection
 
         val changed = newDensity != density ||

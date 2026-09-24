@@ -1191,7 +1191,7 @@ fun ReplayScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.IosShare,
+                        painter = painterResource(id = R.drawable.compartir),
                         contentDescription = stringResource(R.string.compartir),
                         tint = if (currentView != ReplayView.MAIN) Color(0xFFFA243C) else Color.White,
                         modifier = Modifier.size(22.dp)

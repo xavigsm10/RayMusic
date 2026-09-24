@@ -15,10 +15,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.neverEqualPolicy
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
@@ -61,7 +63,8 @@ fun Modifier.drawPlainBackdrop(
     onDrawBackdrop: DrawScope.(drawBackdrop: DrawScope.() -> Unit) -> Unit = DefaultOnDrawBackdrop,
     onDrawSurface: (DrawScope.() -> Unit)? = null,
     onDrawFront: (DrawScope.() -> Unit)? = null,
-    clipToShape: Boolean = true
+    clipToShape: Boolean = true,
+    backdropScale: Float = 1f
 ): Modifier {
     val shapeProvider = ShapeProvider(shape)
     return this
@@ -83,7 +86,8 @@ fun Modifier.drawPlainBackdrop(
                 onDrawBackdrop = onDrawBackdrop,
                 onDrawSurface = onDrawSurface,
                 onDrawFront = onDrawFront,
-                clipToShape = clipToShape
+                clipToShape = clipToShape,
+                backdropScale = backdropScale.coerceIn(0.05f, 1f)
             )
         )
 }
@@ -101,7 +105,8 @@ fun Modifier.drawBackdrop(
     onDrawBackdrop: DrawScope.(drawBackdrop: DrawScope.() -> Unit) -> Unit = DefaultOnDrawBackdrop,
     onDrawSurface: (DrawScope.() -> Unit)? = null,
     onDrawFront: (DrawScope.() -> Unit)? = null,
-    clipToShape: Boolean = true
+    clipToShape: Boolean = true,
+    backdropScale: Float = 1f
 ): Modifier {
     val shapeProvider = ShapeProvider(shape)
     return this
@@ -153,7 +158,8 @@ fun Modifier.drawBackdrop(
                 onDrawBackdrop = onDrawBackdrop,
                 onDrawSurface = onDrawSurface,
                 onDrawFront = onDrawFront,
-                clipToShape = clipToShape
+                clipToShape = clipToShape,
+                backdropScale = backdropScale.coerceIn(0.05f, 1f)
             )
         )
 }
@@ -168,7 +174,8 @@ private class DrawBackdropElement(
     val onDrawBackdrop: DrawScope.(drawBackdrop: DrawScope.() -> Unit) -> Unit,
     val onDrawSurface: (DrawScope.() -> Unit)?,
     val onDrawFront: (DrawScope.() -> Unit)?,
-    val clipToShape: Boolean
+    val clipToShape: Boolean,
+    val backdropScale: Float
 ) : ModifierNodeElement<DrawBackdropNode>() {
 
     override fun create(): DrawBackdropNode {
@@ -182,7 +189,8 @@ private class DrawBackdropElement(
             onDrawBackdrop = onDrawBackdrop,
             onDrawSurface = onDrawSurface,
             onDrawFront = onDrawFront,
-            clipToShape = clipToShape
+            clipToShape = clipToShape,
+            backdropScale = backdropScale
         )
     }
 
@@ -200,6 +208,7 @@ private class DrawBackdropElement(
         node.onDrawSurface = onDrawSurface
         node.onDrawFront = onDrawFront
         node.clipToShape = clipToShape
+        node.backdropScale = backdropScale
         node.invalidateDrawCache()
     }
 
@@ -215,6 +224,7 @@ private class DrawBackdropElement(
         properties["onDrawSurface"] = onDrawSurface
         properties["onDrawFront"] = onDrawFront
         properties["clipToShape"] = clipToShape
+        properties["backdropScale"] = backdropScale
     }
 
     override fun equals(other: Any?): Boolean {
@@ -231,6 +241,7 @@ private class DrawBackdropElement(
         if (onDrawSurface != other.onDrawSurface) return false
         if (onDrawFront != other.onDrawFront) return false
         if (clipToShape != other.clipToShape) return false
+        if (backdropScale != other.backdropScale) return false
 
         return true
     }
@@ -246,6 +257,7 @@ private class DrawBackdropElement(
         result = 31 * result + (onDrawSurface?.hashCode() ?: 0)
         result = 31 * result + (onDrawFront?.hashCode() ?: 0)
         result = 31 * result + clipToShape.hashCode()
+        result = 31 * result + backdropScale.hashCode()
         return result
     }
 }
@@ -260,7 +272,8 @@ private class DrawBackdropNode(
     var onDrawBackdrop: DrawScope.(drawBackdrop: DrawScope.() -> Unit) -> Unit,
     var onDrawSurface: (DrawScope.() -> Unit)?,
     var onDrawFront: (DrawScope.() -> Unit)?,
-    var clipToShape: Boolean
+    var clipToShape: Boolean,
+    var backdropScale: Float
 ) : LayoutModifierNode, DrawModifierNode, GlobalPositionAwareModifierNode, ObserverModifierNode, Modifier.Node() {
 
     private val effectScope =
@@ -284,9 +297,13 @@ private class DrawBackdropNode(
     private val recordBackdropBlock: (DrawScope.() -> Unit) = {
         val canvas = drawContext.canvas
         val padding = padding
+        val scale = backdropScale
 
         if (padding != 0f) {
             canvas.translate(padding, padding)
+        }
+        if (scale != 1f) {
+            canvas.scale(scale, scale)
         }
         onDrawBackdrop {
             with(backdrop) {
@@ -297,6 +314,9 @@ private class DrawBackdropNode(
                 )
             }
         }
+        if (scale != 1f) {
+            canvas.scale(1f / scale, 1f / scale)
+        }
         if (padding != 0f) {
             canvas.translate(-padding, -padding)
         }
@@ -306,13 +326,14 @@ private class DrawBackdropNode(
         val layer = graphicsLayer
         if (layer != null) {
             val padding = padding
+            val scale = backdropScale
 
             recordLayer(
                 this@DrawBackdropNode,
                 layer,
                 size = IntSize(
-                    size.width.toInt() + padding.toInt() * 2,
-                    size.height.toInt() + padding.toInt() * 2
+                    ((size.width * scale).toInt() + padding.toInt() * 2).coerceAtLeast(1),
+                    ((size.height * scale).toInt() + padding.toInt() * 2).coerceAtLeast(1)
                 ),
                 block = recordBackdropBlock
             )
@@ -320,7 +341,13 @@ private class DrawBackdropNode(
             layer.topLeft =
                 if (padding != 0f) IntOffset(-padding.toInt(), -padding.toInt())
                 else IntOffset.Zero
-            drawLayer(layer)
+            if (scale != 1f) {
+                scale(1f / scale, pivot = Offset.Zero) {
+                    drawLayer(layer)
+                }
+            } else {
+                drawLayer(layer)
+            }
         }
     }
 
@@ -335,7 +362,7 @@ private class DrawBackdropNode(
     }
 
     override fun ContentDrawScope.draw() {
-        if (effectScope.update(this)) {
+        if (effectScope.update(this, backdropScale)) {
             updateEffects()
         }
 

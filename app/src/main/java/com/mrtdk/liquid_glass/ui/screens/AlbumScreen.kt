@@ -485,7 +485,7 @@ fun AlbumScreen(
         val curY = sourceY + progress * (0f - sourceY)
         val curW = sourceW + progress * (screenWidth - sourceW)
         val curH = sourceH + progress * (screenHeight - sourceH)
-        val initialCorner = if (isMadeForYou) 18f else 24f
+        val initialCorner = if (isMadeForYou) 18f else 12f
         val curCorner = initialCorner * (1f - progress)
 
         val popScaleBack by animateFloatAsState(
@@ -1640,7 +1640,7 @@ fun AlbumScreen(
                                 compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen
                             }
                             .clip(RoundedCornerShape(curCorner.dp))
-                            .background(dominantColor)
+                            .background(dominantColor.copy(alpha = progress.coerceIn(0f, 1f)))
                     ) {
                         Column(
                             modifier = Modifier.fillMaxSize(),
@@ -1869,7 +1869,7 @@ fun AlbumScreen(
                                         modifier = Modifier.size(40.dp)
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.IosShare,
+                                            painter = painterResource(id = R.drawable.compartir),
                                             contentDescription = "Share",
                                             tint = glassIconTint,
                                             modifier = Modifier.size(22.dp)
@@ -2080,7 +2080,7 @@ fun AlbumTopRightMorphingPill(
                         modifier = Modifier.size(36.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.IosShare,
+                            painter = painterResource(id = R.drawable.compartir),
                             contentDescription = "Share",
                             tint = glassIconTint,
                             modifier = Modifier.size(20.dp)
@@ -2206,7 +2206,7 @@ fun AlbumTopRightMorphingPill(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.IosShare,
+                                    painter = painterResource(id = R.drawable.compartir),
                                     contentDescription = null,
                                     tint = Color.White,
                                     modifier = Modifier.size(24.dp)

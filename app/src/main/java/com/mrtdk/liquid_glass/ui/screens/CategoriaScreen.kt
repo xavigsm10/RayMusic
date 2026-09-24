@@ -38,6 +38,7 @@ import com.mrtdk.liquid_glass.ui.components.trackTapBounds
 import com.mrtdk.liquid_glass.ui.components.wiggleOnScroll
 import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
 import com.mrtdk.liquid_glass.ui.components.SharedElementTransitionContainer
+import com.mrtdk.liquid_glass.ui.components.DetailBackPillButton
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.LayoutCoordinates
 import com.mrtdk.liquid_glass.ui.components.unclippedBoundsInRoot
@@ -297,18 +298,16 @@ fun CategoriaScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.Default.ArrowBackIosNew, contentDescription = "Atrás", tint = Color(0xFFFA243C))
-            }
+            DetailBackPillButton(onClick = onBack)
+            Spacer(modifier = Modifier.width(16.dp))
             Text(
                 text = category.name,
                 color = Color.White,
                 fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = 8.dp)
+                fontWeight = FontWeight.Bold
             )
         }
 

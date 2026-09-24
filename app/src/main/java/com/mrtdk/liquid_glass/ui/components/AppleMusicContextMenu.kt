@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -210,7 +211,7 @@ private fun SongMenuInnerContent(
             )
 
             HorizontalActionButton(
-                icon = Icons.Default.Share,
+                painter = painterResource(id = R.drawable.compartir),
                 label = stringResource(R.string.compartir),
                 onClick = {
                     val shareUrl = "https://music.youtube.com/watch?v=${song.id}"
@@ -1311,7 +1312,7 @@ private fun AlbumMenuInnerContent(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.IosShare,
+                                    painter = painterResource(id = R.drawable.compartir),
                                     contentDescription = null,
                                     tint = Color.White,
                                     modifier = Modifier.size(24.dp)
@@ -1729,7 +1730,8 @@ private fun CreditItem(label: String, value: String) {
 
 @Composable
 private fun HorizontalActionButton(
-    icon: ImageVector,
+    icon: ImageVector? = null,
+    painter: androidx.compose.ui.graphics.painter.Painter? = null,
     label: String,
     tint: Color = Color.White,
     onClick: () -> Unit
@@ -1748,7 +1750,11 @@ private fun HorizontalActionButton(
                 .background(Color.White.copy(alpha = 0.08f)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(imageVector = icon, contentDescription = label, tint = tint)
+            if (painter != null) {
+                Icon(painter = painter, contentDescription = label, tint = tint, modifier = Modifier.size(24.dp))
+            } else if (icon != null) {
+                Icon(imageVector = icon, contentDescription = label, tint = tint)
+            }
         }
         Spacer(modifier = Modifier.height(6.dp))
         Text(
@@ -1973,7 +1979,7 @@ fun GlassBoxScope.AppleMusicPlaylistMenu(
                                     }
 
                                     HorizontalActionButton(
-                                        icon = Icons.Default.IosShare,
+                                        painter = painterResource(id = R.drawable.compartir),
                                         label = stringResource(R.string.menu_share)
                                     ) {
                                         val shareUrl = if (playlist.id.startsWith("VL") || playlist.id.startsWith("PL")) {
@@ -2765,7 +2771,7 @@ private fun ArtistMenuInnerContent(
         }
 
         HorizontalActionButton(
-            icon = Icons.Default.IosShare,
+            painter = painterResource(id = R.drawable.compartir),
             label = stringResource(R.string.menu_artist_share)
         ) {
             val shareUrl = "https://music.youtube.com/channel/$artistId"
@@ -3538,7 +3544,7 @@ fun GlassBoxScope.PlayerOptionsMenu(
                             .padding(vertical = 8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(Icons.Default.IosShare, contentDescription = stringResource(R.string.player_menu_share), tint = Color.White, modifier = Modifier.size(24.dp))
+                        Icon(painter = painterResource(id = R.drawable.compartir), contentDescription = stringResource(R.string.player_menu_share), tint = Color.White, modifier = Modifier.size(24.dp))
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(stringResource(R.string.player_menu_share), color = Color.White, fontSize = 11.sp, textAlign = TextAlign.Center)
                     }

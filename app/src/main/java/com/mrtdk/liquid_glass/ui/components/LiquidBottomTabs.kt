@@ -1,5 +1,6 @@
 package com.mrtdk.liquid_glass.ui.components
 
+import android.os.Build
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.spring
@@ -68,6 +69,7 @@ fun LiquidBottomTabs(
     containerColor: Color? = null,
     accentColor: Color? = null,
     tabPosition: (() -> Float?)? = null,
+    backdropScale: Float = 0.33f,
     content: @Composable RowScope.() -> Unit
 ) {
     val isDarkMode by com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState()
@@ -213,7 +215,7 @@ fun LiquidBottomTabs(
                         backdrop = backdrop,
                         shape = { Capsule() },
                         effects = {
-                            blur(3f.dp.toPx())
+                            blur(3f.dp.toPx() * backdropScale)
                         },
                         layerBlock = {
                             val progress = dampedDragAnimation.pressProgress
@@ -223,7 +225,8 @@ fun LiquidBottomTabs(
                         },
                         highlight = { Highlight.Default.copy(alpha = 0.35f) },
                         shadow = { Shadow.Default },
-                        onDrawSurface = { drawRect(actualContainerColor) }
+                        onDrawSurface = { drawRect(actualContainerColor) },
+                        backdropScale = backdropScale
                     )
                     .then(interactiveHighlight.modifier)
                     .height(64f.dp)
@@ -277,8 +280,10 @@ fun LiquidBottomTabs(
                         shape = { Capsule() },
                         effects = {
                             vibrancy()
-                            blur(8f.dp.toPx())
-                            lens(24f.dp.toPx(), 24f.dp.toPx())
+                            blur(8f.dp.toPx() * backdropScale)
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                lens(24f.dp.toPx() * backdropScale, 24f.dp.toPx() * backdropScale)
+                            }
                         },
                         layerBlock = {
                             val progress = dampedDragAnimation.pressProgress
@@ -288,7 +293,8 @@ fun LiquidBottomTabs(
                         },
                         highlight = { Highlight.Default.copy(alpha = 0.35f) },
                         shadow = { Shadow.Default },
-                        onDrawSurface = { drawRect(actualContainerColor) }
+                        onDrawSurface = { drawRect(actualContainerColor) },
+                        backdropScale = backdropScale
                     )
                     .then(interactiveHighlight.modifier)
                     .height(64f.dp)
@@ -318,19 +324,22 @@ fun LiquidBottomTabs(
                             effects = {
                                 val progress = dampedDragAnimation.pressProgress
                                 vibrancy()
-                                blur(8f.dp.toPx())
+                                blur(8f.dp.toPx() * backdropScale)
                                 if (progress > 0.01f) {
-                                    lens(
-                                        24f.dp.toPx() * progress,
-                                        24f.dp.toPx() * progress
-                                    )
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        lens(
+                                            24f.dp.toPx() * backdropScale * progress,
+                                            24f.dp.toPx() * backdropScale * progress
+                                        )
+                                    }
                                 }
                             },
                             highlight = {
                                 val progress = dampedDragAnimation.pressProgress
                                 Highlight.Default.copy(alpha = progress)
                             },
-                            onDrawSurface = { drawRect(actualContainerColor) }
+                            onDrawSurface = { drawRect(actualContainerColor) },
+                            backdropScale = backdropScale
                         )
                         .then(interactiveHighlight.modifier)
                         .height(56f.dp)
@@ -359,11 +368,13 @@ fun LiquidBottomTabs(
                         effects = {
                             val progress = dampedDragAnimation.pressProgress
                             if (progress > 0.01f) {
-                                lens(
-                                    10f.dp.toPx() * progress,
-                                    14f.dp.toPx() * progress,
-                                    chromaticAberration = true
-                                )
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    lens(
+                                        10f.dp.toPx() * backdropScale * progress,
+                                        14f.dp.toPx() * backdropScale * progress,
+                                        chromaticAberration = true
+                                    )
+                                }
                             }
                         },
                         highlight = {
@@ -396,7 +407,8 @@ fun LiquidBottomTabs(
                                 alpha = 1f - progress
                             )
                             drawRect(Color.Black.copy(alpha = 0.03f * progress))
-                        }
+                        },
+                        backdropScale = backdropScale
                     )
                     .height(56f.dp)
                     .fillMaxWidth(1f / tabsCount)

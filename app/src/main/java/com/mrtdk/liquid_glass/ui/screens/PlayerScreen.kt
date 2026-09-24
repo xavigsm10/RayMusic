@@ -10,6 +10,9 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.zIndex
+import android.content.Context
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.ui.layout.positionInRoot
 
 import androidx.compose.animation.AnimatedVisibility
@@ -378,12 +381,45 @@ data class QueueItem(
 
 
 
+enum class AudioOutputIcon(
+    val id: String,
+    val title: String,
+    val assetPath: String,
+    val drawableRes: Int
+) {
+    SELECCION_BOCINA("seleccion_bocina", "Selección bocina", "file:///android_asset/img reproductor/seleccion bocina.png", R.drawable.ic_seleccion_bocina),
+    PARLANTE("parlante", "Parlante", "file:///android_asset/img reproductor/parlante.png", R.drawable.ic_parlante),
+    AUDIFONOS("audifonos", "Audífonos", "file:///android_asset/img reproductor/audifonos.png", R.drawable.ic_audifonos),
+    HOMEPOD("homepod", "HomePod", "file:///android_asset/img reproductor/homepod.png", R.drawable.ic_homepod);
+
+    companion object {
+        fun fromId(id: String?): AudioOutputIcon {
+            return entries.firstOrNull { it.id == id } ?: SELECCION_BOCINA
+        }
+    }
+}
+
 object AudioRoutingState {
-
     var connectedDeviceName: String? by mutableStateOf(null)
-
     var showAudioRoutingMenu by mutableStateOf(false)
+    var showIconPickerMenu by mutableStateOf(false)
+    var selectedOutputIcon by mutableStateOf(AudioOutputIcon.SELECCION_BOCINA)
+    private var isInitialized = false
 
+    fun init(context: Context) {
+        if (!isInitialized) {
+            val prefs = context.getSharedPreferences("audio_routing_prefs", Context.MODE_PRIVATE)
+            val savedId = prefs.getString("output_icon", AudioOutputIcon.SELECCION_BOCINA.id)
+            selectedOutputIcon = AudioOutputIcon.fromId(savedId)
+            isInitialized = true
+        }
+    }
+
+    fun setOutputIcon(context: Context, icon: AudioOutputIcon) {
+        selectedOutputIcon = icon
+        val prefs = context.getSharedPreferences("audio_routing_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putString("output_icon", icon.id).apply()
+    }
 }
 
 
@@ -423,51 +459,34 @@ fun BluetoothIcon(modifier: Modifier = Modifier, tint: Color = Color.White) {
 @Composable
 
 fun RoutingDeviceRow(
-
     icon: @Composable (tint: Color) -> Unit,
-
     text: String,
-
     isActive: Boolean,
-
     volumePosition: Float,
-
     onVolumeChange: (Float) -> Unit,
-
-    onClick: () -> Unit
-
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null
 ) {
-
     val currentVolumePosition by rememberUpdatedState(volumePosition)
-
     val currentOnVolumeChange by rememberUpdatedState(onVolumeChange)
 
-    
-
     if (isActive) {
-
         BoxWithConstraints(
-
             modifier = Modifier
-
                 .fillMaxWidth()
-
                 .height(48.dp)
-
                 .clip(RoundedCornerShape(24.dp))
-
                 .background(Color.White.copy(alpha = 0.08f))
-
                 .pointerInput(Unit) {
-
-                    detectTapGestures { offset ->
-
-                        val progress = (offset.x / size.width).coerceIn(0f, 1f)
-
-                        currentOnVolumeChange(progress)
-
-                    }
-
+                    detectTapGestures(
+                        onTap = { offset ->
+                            val progress = (offset.x / size.width).coerceIn(0f, 1f)
+                            currentOnVolumeChange(progress)
+                        },
+                        onLongPress = {
+                            onLongClick?.invoke()
+                        }
+                    )
                 }
 
                 .pointerInput(Unit) {
@@ -557,23 +576,19 @@ fun RoutingDeviceRow(
     } else {
 
         Row(
-
             modifier = Modifier
-
                 .fillMaxWidth()
-
                 .height(48.dp)
-
                 .clip(RoundedCornerShape(24.dp))
-
                 .background(Color.White.copy(alpha = 0.04f))
-
-                .clickable { onClick() }
-
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = { onClick() },
+                        onLongPress = { onLongClick?.invoke() }
+                    )
+                }
                 .padding(horizontal = 16.dp),
-
             verticalAlignment = Alignment.CenterVertically
-
         ) {
 
             icon(Color.White.copy(alpha = 0.7f))
@@ -894,21 +909,36 @@ fun GlassBoxScope.AudioRoutingMenu(
             ) {
 
                 // 1. Cellular Speaker row
-
                 RoutingDeviceRow(
-
-                    icon = { tint -> Icon(Icons.Default.Smartphone, null, tint = tint, modifier = Modifier.size(20.dp)) },
-
+                    icon = { tint ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .clickable { AudioRoutingState.showIconPickerMenu = true }
+                                .padding(end = 4.dp)
+                        ) {
+                            AsyncImage(
+                                model = AudioRoutingState.selectedOutputIcon.assetPath,
+                                contentDescription = null,
+                                colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(tint),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Icon(
+                                Icons.Default.KeyboardArrowDown,
+                                contentDescription = "Cambiar icono",
+                                tint = tint.copy(alpha = 0.75f),
+                                modifier = Modifier.size(15.dp)
+                            )
+                        }
+                    },
                     text = stringResource(R.string.celular_speaker),
-
                     isActive = AudioRoutingState.connectedDeviceName == null,
-
                     volumePosition = volumePosition,
-
                     onVolumeChange = onVolumeChange,
-
-                    onClick = { AudioRoutingState.connectedDeviceName = null }
-
+                    onClick = { AudioRoutingState.connectedDeviceName = null },
+                    onLongClick = { AudioRoutingState.showIconPickerMenu = true }
                 )
 
 
@@ -1059,12 +1089,227 @@ fun GlassBoxScope.AudioRoutingMenu(
 
                 }
 
+                HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 4.dp))
+
+                // 5. Change Audio Icon action
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .clickable { AudioRoutingState.showIconPickerMenu = true }
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    AsyncImage(
+                        model = AudioRoutingState.selectedOutputIcon.assetPath,
+                        contentDescription = null,
+                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(Color.White.copy(alpha = 0.85f)),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Icono: ${AudioRoutingState.selectedOutputIcon.title}",
+                        color = Color.White.copy(alpha = 0.85f),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = Color.White.copy(alpha = 0.5f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
             }
 
         }
 
     }
 
+}
+
+@Composable
+fun GlassBoxScope.AudioIconPickerDialog(
+    backdrop: com.kyant.backdrop.backdrops.LayerBackdrop,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val isLightweight = com.mrtdk.glass.LocalLightweightGlass.current
+    val dominantColor by LibraryManager.currentDominantColor.collectAsState()
+    val tintColor = remember(dominantColor) { dominantColor.copy(alpha = 0.35f) }
+
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        visible = true
+    }
+
+    val scale by animateFloatAsState(
+        targetValue = if (visible) 1f else 0.8f,
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow),
+        label = "iconPickerScale"
+    )
+    val alpha by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(durationMillis = 180),
+        label = "iconPickerAlpha"
+    )
+
+    fun handleDismiss() {
+        visible = false
+        onDismiss()
+    }
+
+    BackHandler(enabled = visible) {
+        handleDismiss()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.45f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { handleDismiss() }
+    )
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    this.alpha = alpha
+                }
+                .width(310.dp)
+                .wrapContentHeight()
+                .drawBackdrop(
+                    backdrop = backdrop,
+                    shape = { RoundedCornerShape(28.dp) },
+                    effects = {
+                        if (!isLightweight) {
+                            vibrancy()
+                            blur(10f.dp.toPx())
+                            lens(24f.dp.toPx(), 24f.dp.toPx())
+                        } else {
+                            blur(2f.dp.toPx())
+                        }
+                    },
+                    onDrawSurface = {
+                        drawRect(tintColor)
+                    }
+                )
+                .clip(RoundedCornerShape(28.dp))
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Icono de reproducción",
+                    color = Color.White,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Selecciona el icono para la salida de audio",
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 12.5.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    AudioOutputIcon.entries.forEach { iconOption ->
+                        val isSelected = AudioRoutingState.selectedOutputIcon == iconOption
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(
+                                    if (isSelected) Color.White.copy(alpha = 0.22f)
+                                    else Color.White.copy(alpha = 0.07f)
+                                )
+                                .clickable {
+                                    AudioRoutingState.setOutputIcon(context, iconOption)
+                                    handleDismiss()
+                                }
+                                .padding(horizontal = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White.copy(alpha = if (isSelected) 0.25f else 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                AsyncImage(
+                                    model = iconOption.assetPath,
+                                    contentDescription = iconOption.title,
+                                    colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(Color.White),
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(14.dp))
+
+                            Text(
+                                text = iconOption.title,
+                                color = Color.White,
+                                fontSize = 15.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Seleccionado",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(Color.White.copy(alpha = 0.12f))
+                        .clickable { handleDismiss() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Listo",
+                        color = Color.White,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        }
+    }
 }
 
 
@@ -1221,6 +1466,9 @@ fun PlayerScreen(
     onToggleAutoplay: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        AudioRoutingState.init(context)
+    }
     val density = androidx.compose.ui.platform.LocalDensity.current
     val screenHeightPx = remember(context) { context.resources.displayMetrics.heightPixels.toFloat() }
 
@@ -4969,6 +5217,13 @@ fun PlayerScreen(
 
         }
 
+        if (AudioRoutingState.showIconPickerMenu) {
+            AudioIconPickerDialog(
+                backdrop = localBackdrop,
+                onDismiss = { AudioRoutingState.showIconPickerMenu = false }
+            )
+        }
+
     }
 
 )
@@ -5272,15 +5527,17 @@ fun PlayerBottomControls(
                 Box(
                     modifier = Modifier
                         .size(48.dp)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) { AudioRoutingState.showAudioRoutingMenu = true },
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onTap = { AudioRoutingState.showAudioRoutingMenu = true },
+                                onLongPress = { AudioRoutingState.showIconPickerMenu = true }
+                            )
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     AsyncImage(
-                        model = "file:///android_asset/img reproductor/parlante.png",
-                        contentDescription = "Format",
+                        model = AudioRoutingState.selectedOutputIcon.assetPath,
+                        contentDescription = "Audio output",
                         colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(contentColor.copy(alpha = 0.65f)),
                         modifier = Modifier.size(26.dp)
                     )
@@ -6480,16 +6737,18 @@ fun LandscapePlayerLayout(
 
 
                     AsyncImage(
-                        model = "file:///android_asset/img reproductor/parlante.png",
-                        contentDescription = "Format",
+                        model = AudioRoutingState.selectedOutputIcon.assetPath,
+                        contentDescription = "Audio output",
                         colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(contentColor),
                         modifier = Modifier
                             .height(20.dp)
                             .padding(horizontal = 8.dp)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) { AudioRoutingState.showAudioRoutingMenu = true }
+                            .pointerInput(Unit) {
+                                detectTapGestures(
+                                    onTap = { AudioRoutingState.showAudioRoutingMenu = true },
+                                    onLongPress = { AudioRoutingState.showIconPickerMenu = true }
+                                )
+                            }
                     )
 
 

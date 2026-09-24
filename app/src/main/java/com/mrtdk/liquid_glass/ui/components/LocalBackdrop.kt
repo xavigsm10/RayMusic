@@ -30,6 +30,20 @@ import com.kyant.backdrop.backdrops.emptyBackdrop
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBackIosNew
+import androidx.compose.material3.Icon
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import com.mrtdk.liquid_glass.ui.theme.ThemeManager
 
 val LocalBackdrop = staticCompositionLocalOf<Backdrop> { emptyBackdrop() }
 
@@ -134,9 +148,12 @@ fun Modifier.trackTapBounds(
 fun Modifier.sharedTransitionElement(itemId: String): Modifier = composed {
     val isDetailOpen = SharedTransitionState.isDetailOpen
     val lastOpenedId = SharedTransitionState.lastOpenedId
-    val isOpened = isDetailOpen && lastOpenedId == itemId
+    val isAnimating = (isDetailOpen && lastOpenedId == itemId) || SharedTransitionState.animatingItemIds.contains(itemId)
     
     this
+        .graphicsLayer {
+            alpha = if (isAnimating) 0f else 1f
+        }
         .onGloballyPositioned { coords ->
             if (!SharedTransitionState.isDetailOpen) {
                 val bounds = coords.unclippedBoundsInRoot()
@@ -144,9 +161,6 @@ fun Modifier.sharedTransitionElement(itemId: String): Modifier = composed {
                     SharedTransitionState.carouselItemBounds[itemId] = bounds
                 }
             }
-        }
-        .graphicsLayer {
-            alpha = if (isOpened) 0f else 1f
         }
 }
 
@@ -160,9 +174,53 @@ val DetailEntrySpringSpec = spring<Float>(
 )
 
 val DetailExitSpringSpec = spring<Float>(
-    dampingRatio = 0.78f,
-    stiffness = 165f
+    dampingRatio = Spring.DampingRatioNoBouncy,
+    stiffness = 320f
 )
+
+@Composable
+fun DetailBackPillButton(
+    isDarkMode: Boolean = ThemeManager.isDarkMode.collectAsState().value,
+    onClick: () -> Unit
+) {
+    val arrowColor = if (isDarkMode) Color.White else Color.Black
+    val borderColor = if (isDarkMode) Color.White.copy(alpha = 0.75f) else Color.Black.copy(alpha = 0.5f)
+    val bgColor = if (isDarkMode) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.04f)
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.90f else 1f,
+        animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
+        label = "pillPress"
+    )
+
+    Box(
+        modifier = Modifier
+            .size(42.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clip(CircleShape)
+            .border(width = 1.dp, color = borderColor, shape = CircleShape)
+            .background(bgColor)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.ArrowBackIosNew,
+            contentDescription = "Back",
+            tint = arrowColor,
+            modifier = Modifier
+                .size(19.dp)
+                .offset(x = (-1).dp)
+        )
+    }
+}
 
 @Composable
 fun SharedElementTransitionContainer(

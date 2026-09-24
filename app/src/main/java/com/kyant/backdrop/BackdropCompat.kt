@@ -38,7 +38,8 @@ fun Modifier.drawBackdrop(
     onDrawBackdrop: DrawScope.(drawBackdrop: DrawScope.() -> Unit) -> Unit = { it() },
     onDrawSurface: (DrawScope.() -> Unit)? = null,
     onDrawFront: (DrawScope.() -> Unit)? = null,
-    clipToShape: Boolean = true
+    clipToShape: Boolean = true,
+    backdropScale: Float = 1f
 ): Modifier = expoDrawBackdrop(
     backdrop = backdrop,
     shape = shape,
@@ -52,5 +53,6 @@ fun Modifier.drawBackdrop(
     onDrawBackdrop = onDrawBackdrop,
     onDrawSurface = onDrawSurface,
     onDrawFront = onDrawFront,
-    clipToShape = clipToShape
+    clipToShape = clipToShape,
+    backdropScale = backdropScale
 )
