@@ -211,13 +211,15 @@ fun AlbumScreen(
         coil.Coil.imageLoader(context)
     }
 
+    var isVideoPlaying by remember(albumState.id) { mutableStateOf(false) }
+
     var animatedArtworkUrl by remember(albumState.artist, albumState.title) {
         val cached = if (isAnimatedArtworkBlocked) null
                      else com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.get(albumState.artist, albumState.title)
         mutableStateOf(cached)
     }
 
-    val hasAnimatedCover = !isAnimatedArtworkBlocked && !animatedArtworkUrl.isNullOrBlank()
+    val hasAnimatedCover = !isAnimatedArtworkBlocked && isVideoPlaying
     val isNormalArtwork = when (playerArtworkStyle) {
         "normal" -> true
         "animated_fullartwork" -> !hasAnimatedCover
@@ -238,7 +240,7 @@ fun AlbumScreen(
                 firstSongTitle = firstSong
             )
 
-            if (!streamUrl.isNullOrBlank()) {
+            if (!streamUrl.isNullOrBlank() && com.mrtdk.liquid_glass.canvas.CanvasArtwork.isValidVideoUrl(streamUrl)) {
                 withContext(Dispatchers.Main) {
                     animatedArtworkUrl = streamUrl
                     com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.put(artist, album, streamUrl)
@@ -598,7 +600,6 @@ fun AlbumScreen(
                                         modifier = Modifier.fillMaxSize()
                                     )
 
-                                    var isVideoPlaying by remember(albumState.id) { mutableStateOf(false) }
                                     val currentAnimatedUrl = animatedArtworkUrl
 
                                     if (!currentAnimatedUrl.isNullOrBlank()) {
@@ -606,7 +607,12 @@ fun AlbumScreen(
                                             videoUrl = currentAnimatedUrl,
                                             modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (isVideoPlaying) 1f else 0f },
                                             isPaused = isPaused || progress < 0.85f || isHeroOffscreen,
-                                            onPlaybackStarted = { isVideoPlaying = true }
+                                            onPlaybackStarted = { isVideoPlaying = true },
+                                            onPlaybackFailed = {
+                                                isVideoPlaying = false
+                                                animatedArtworkUrl = null
+                                                com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.remove(albumState.artist, albumState.title)
+                                            }
                                         )
                                     }
                                 }

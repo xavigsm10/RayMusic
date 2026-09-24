@@ -127,7 +127,7 @@
     <string name="semitransparente">Semitransparente</string>
     <string name="apariencia_dialog_title">Selecciona el estilo de Liquid Glass</string>
     <string name="user_playlist_label">Playlist</string>
-    <string name="bottom_tabs_style_title">Bottom tabs</string>
+    <string name="bottom_tabs_style_title">Estilo de pestañas inferiores</string>
     <string name="bottom_tabs_style_ios26">Estilo iOS 26</string>
     <string name="bottom_tabs_style_ios27">Estilo iOS 27</string>
     <string name="search_field_hint">Artistas, canciones, letras y más</string>
@@ -607,7 +607,7 @@
     <string name="player_artwork_style_animated">Portadas animadas solamente con fullartwork</string>
     <string name="full_artwork_backdrop_style_title">Efecto de fondo Fullartwork</string>
     <string name="full_artwork_backdrop_style_apple_music">Apple Music (Desenfoque original)</string>
-    <string name="full_artwork_backdrop_style_accord">Difuminado suave (Gama baja)</string>
+    <string name="full_artwork_backdrop_style_accord">Fondo completo</string>
     <string name="estilo_solido_material3">Sólido (Material 3)</string>
     <string name="ultra_performance_mode_title">Modo Ultra Rendimiento (Gama Baja)</string>
     <string name="ultra_performance_mode_desc">Optimiza la app para dispositivos modestos desactivando desenfoques pesados y fondos de cristal líquido</string>

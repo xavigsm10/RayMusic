@@ -95,38 +95,6 @@ fun MiniPlayer(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // Landing animation: triggers when full player closes (hideImage: true -> false)
-    var previousHideImage by remember { mutableStateOf(hideImage) }
-    val landingTranslateY = remember { Animatable(0f) }
-    val landingScale = remember { Animatable(1f) }
-
-    LaunchedEffect(hideImage) {
-        if (previousHideImage && !hideImage) {
-            // Full player just closed — animate the mini player "landing" with bounce
-            launch {
-                landingTranslateY.snapTo(-60f)
-                landingTranslateY.animateTo(
-                    targetValue = 0f,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessLow
-                    )
-                )
-            }
-            launch {
-                landingScale.snapTo(0.80f)
-                landingScale.animateTo(
-                    targetValue = 1f,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessLow
-                    )
-                )
-            }
-        }
-        previousHideImage = hideImage
-    }
-
     val swipeOffsetX = remember { Animatable(0f) }
     val backdrop = LocalBackdrop.current
     val isCollapsing = collapseProgress > 0.001f && collapseProgress < 0.999f
@@ -162,11 +130,6 @@ fun MiniPlayer(
         modifier = modifier
             .fillMaxWidth()
             .height(52.dp)
-            .graphicsLayer {
-                translationY = landingTranslateY.value
-                scaleX = landingScale.value
-                scaleY = landingScale.value
-            }
             .then(backdropModifier)
             .clip(Capsule())
             .clickable { onClick() }

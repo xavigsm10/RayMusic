@@ -83,11 +83,12 @@ object AnimatedArtworkCache {
     fun get(artist: String, albumOrTitle: String): String? {
         val cleanArtist = com.mrtdk.liquid_glass.canvas.UnifiedCanvasProvider.normalizeCanvasArtistName(artist)
         val cleanTitle = cleanTerm(albumOrTitle)
-        val key = "echo_motion_v3_${cleanArtist}_${cleanTitle}".lowercase().trim().replace(Regex("[^a-zA-Z0-9_]"), "_")
+        if (cleanArtist.isBlank() || cleanTitle.isBlank()) return null
+        val key = "echo_motion_v4_${cleanArtist}_${cleanTitle}".lowercase().trim().replace(Regex("[^a-zA-Z0-9_]"), "_")
         memoryCache[key]?.let { return it }
         val persisted = com.mrtdk.liquid_glass.data.LibraryManager.getString(key)
         if (!persisted.isNullOrBlank()) {
-            if (persisted.contains("m8tec.top")) {
+            if (persisted.contains("m8tec.top") || !com.mrtdk.liquid_glass.canvas.CanvasArtwork.isValidVideoUrl(persisted)) {
                 com.mrtdk.liquid_glass.data.LibraryManager.saveString(key, "")
                 return null
             }
@@ -99,25 +100,39 @@ object AnimatedArtworkCache {
 
     fun getForSong(artist: String, title: String, album: String? = null): String? {
         get(artist, title)?.let { return it }
-        if (!album.isNullOrBlank()) {
+        if (!album.isNullOrBlank() && title.equals(album, ignoreCase = true)) {
             get(artist, album)?.let { return it }
         }
         return null
     }
 
     fun put(artist: String, albumOrTitle: String, url: String) {
-        if (url.isBlank() || url.contains("m8tec.top")) return
+        if (url.isBlank() || url.contains("m8tec.top") || !com.mrtdk.liquid_glass.canvas.CanvasArtwork.isValidVideoUrl(url)) return
         val cleanArtist = com.mrtdk.liquid_glass.canvas.UnifiedCanvasProvider.normalizeCanvasArtistName(artist)
         val cleanTitle = cleanTerm(albumOrTitle)
-        val key = "echo_motion_v3_${cleanArtist}_${cleanTitle}".lowercase().trim().replace(Regex("[^a-zA-Z0-9_]"), "_")
+        if (cleanArtist.isBlank() || cleanTitle.isBlank()) return
+        val key = "echo_motion_v4_${cleanArtist}_${cleanTitle}".lowercase().trim().replace(Regex("[^a-zA-Z0-9_]"), "_")
         memoryCache[key] = url
         com.mrtdk.liquid_glass.data.LibraryManager.saveString(key, url)
     }
 
     fun putForSong(artist: String, title: String, album: String? = null, url: String) {
         put(artist, title, url)
+    }
+
+    fun remove(artist: String, albumOrTitle: String) {
+        val cleanArtist = com.mrtdk.liquid_glass.canvas.UnifiedCanvasProvider.normalizeCanvasArtistName(artist)
+        val cleanTitle = cleanTerm(albumOrTitle)
+        if (cleanArtist.isBlank() || cleanTitle.isBlank()) return
+        val key = "echo_motion_v4_${cleanArtist}_${cleanTitle}".lowercase().trim().replace(Regex("[^a-zA-Z0-9_]"), "_")
+        memoryCache.remove(key)
+        com.mrtdk.liquid_glass.data.LibraryManager.saveString(key, "")
+    }
+
+    fun removeForSong(artist: String, title: String, album: String? = null) {
+        remove(artist, title)
         if (!album.isNullOrBlank()) {
-            put(artist, album, url)
+            remove(artist, album)
         }
     }
 }
@@ -132,6 +147,7 @@ fun AnimatedArtworkPlayer(
     syncWithPlayer: ExoPlayer? = null,
     onPlayerCreated: (ExoPlayer) -> Unit = {},
     onPlaybackStarted: () -> Unit = {},
+    onPlaybackFailed: () -> Unit = {},
     onFrameCaptured: ((android.graphics.Bitmap) -> Unit)? = null,
     cornerRadius: Dp = 0.dp,
     clipToBounds: Boolean = false
@@ -249,6 +265,11 @@ fun AnimatedArtworkPlayer(
                 isFirstFrameRendered = true
                 onPlaybackStarted()
             }
+
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                isFirstFrameRendered = false
+                onPlaybackFailed()
+            }
         }
         exoPlayer.addListener(listener)
         onDispose {
@@ -260,10 +281,18 @@ fun AnimatedArtworkPlayer(
     // Set media source when URL changes
     LaunchedEffect(videoUrl) {
         isFirstFrameRendered = false
-        exoPlayer.setMediaItem(MediaItem.fromUri(videoUrl))
-        exoPlayer.prepare()
-        if (syncWithPlayer != null) {
-            exoPlayer.seekTo(syncWithPlayer.currentPosition)
+        if (!com.mrtdk.liquid_glass.canvas.CanvasArtwork.isValidVideoUrl(videoUrl)) {
+            onPlaybackFailed()
+            return@LaunchedEffect
+        }
+        try {
+            exoPlayer.setMediaItem(MediaItem.fromUri(videoUrl))
+            exoPlayer.prepare()
+            if (syncWithPlayer != null) {
+                exoPlayer.seekTo(syncWithPlayer.currentPosition)
+            }
+        } catch (e: Exception) {
+            onPlaybackFailed()
         }
     }
 

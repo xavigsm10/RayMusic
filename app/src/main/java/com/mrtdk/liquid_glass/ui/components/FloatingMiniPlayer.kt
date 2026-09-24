@@ -93,7 +93,6 @@ fun FloatingMiniPlayer(
     modifier: Modifier = Modifier,
     playbackProgress: () -> Float = { 0f },
     onSeek: (Float) -> Unit = {},
-    landingTrigger: Long = 0L,
 ) {
     if (playerState == null) return
 
@@ -123,52 +122,6 @@ fun FloatingMiniPlayer(
 
     val currentOnNext by androidx.compose.runtime.rememberUpdatedState(onNext)
     val currentOnPrevious by androidx.compose.runtime.rememberUpdatedState(onPrevious)
-
-    val jumpOffsetY = remember { Animatable(0f) }
-    val jumpScale = remember { Animatable(1f) }
-    val artScale = remember { Animatable(1f) }
-
-    var lastArtUrl by remember { mutableStateOf(playerState.artUrl) }
-    var lastTrigger by remember { mutableLongStateOf(landingTrigger) }
-
-    LaunchedEffect(playerState.artUrl, landingTrigger) {
-        val artChanged = lastArtUrl != null && lastArtUrl != playerState.artUrl
-        val triggered = landingTrigger > 0L && landingTrigger != lastTrigger
-        if (artChanged || triggered) {
-            coroutineScope.launch {
-                jumpOffsetY.snapTo(-14f * densityScale)
-                jumpOffsetY.animateTo(
-                    targetValue = 0f,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessMediumLow
-                    )
-                )
-            }
-            coroutineScope.launch {
-                jumpScale.snapTo(1.07f)
-                jumpScale.animateTo(
-                    targetValue = 1f,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessMediumLow
-                    )
-                )
-            }
-            coroutineScope.launch {
-                artScale.snapTo(0.82f)
-                artScale.animateTo(
-                    targetValue = 1f,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessMediumLow
-                    )
-                )
-            }
-        }
-        lastArtUrl = playerState.artUrl
-        lastTrigger = landingTrigger
-    }
 
     val offsetXAnimatable = remember { Animatable(0f) }
     var dragStartTime by remember { mutableLongStateOf(0L) }
@@ -215,9 +168,8 @@ fun FloatingMiniPlayer(
         modifier = modifier
             .height(containerHeight)
             .graphicsLayer {
-                scaleX = pressScale * jumpScale.value
-                scaleY = pressScale * jumpScale.value
-                translationY = jumpOffsetY.value
+                scaleX = pressScale
+                scaleY = pressScale
             }
             .clip(pillShape)
             .clipToBounds()
@@ -246,10 +198,6 @@ fun FloatingMiniPlayer(
                 error = painterResource(R.drawable.nav_inicio),
                 modifier = Modifier
                     .size(artSize)
-                    .graphicsLayer {
-                        scaleX = artScale.value
-                        scaleY = artScale.value
-                    }
                     .clip(RoundedCornerShape(artCornerRadius)),
             )
 

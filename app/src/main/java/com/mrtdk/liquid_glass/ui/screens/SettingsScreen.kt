@@ -56,7 +56,8 @@ enum class SettingsSubScreen {
     SPOTIFY,
     CONTENT,
     PRIVACY,
-    ABOUT
+    ABOUT,
+    WELCOME
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -117,6 +118,9 @@ fun SettingsScreen(
             SettingsSubScreen.ABOUT -> AboutSettingsScreen(
                 onBack = { activeSubScreen = null },
                 onUpdateAvailable = onUpdateAvailable
+            )
+            SettingsSubScreen.WELCOME -> WelcomeScreen(
+                onFinish = { activeSubScreen = null }
             )
         }
     }
@@ -243,6 +247,12 @@ fun MainSettingsMenu(
                             Text(currentBackdropName)
                         },
                         onClick = { showBackdropStyleDialog = true }
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(id = R.drawable.splash_logo),
+                        title = { Text("Guía de bienvenida y configuración v0.6.5") },
+                        description = { Text("Revisar la configuración inicial, estilo de interfaz y Spotify") },
+                        onClick = { onNavigateTo(SettingsSubScreen.WELCOME) }
                     )
                 )
             )

@@ -153,8 +153,7 @@ fun LiquidBottomNavBar(
     collapseProgress: Float = 0f,
     scrollConnection: FloatingTabBarScrollConnection = rememberFloatingTabBarScrollConnection(),
     pureBlack: Boolean = false,
-    tabPosition: (() -> Float?)? = null,
-    landingTrigger: Long = 0L
+    tabPosition: (() -> Float?)? = null
 ) {
     val isDarkMode by com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState()
     val backdrop = LocalBackdrop.current
@@ -381,7 +380,6 @@ fun LiquidBottomNavBar(
                                     contentColor = miniPlayerContentColor,
                                     playbackProgress = playbackProgress,
                                     onSeek = onSeek,
-                                    landingTrigger = landingTrigger,
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .then(miniPlayerGlassModifier())
@@ -468,7 +466,6 @@ fun LiquidBottomNavBar(
                                     contentColor = miniPlayerContentColor,
                                     playbackProgress = playbackProgress,
                                     onSeek = onSeek,
-                                    landingTrigger = landingTrigger,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .skipToLookaheadSize()
@@ -667,7 +664,6 @@ fun LiquidBottomNavBar(
                                     contentColor = miniPlayerContentColor,
                                     playbackProgress = playbackProgress,
                                     onSeek = onSeek,
-                                    landingTrigger = landingTrigger,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .skipToLookaheadSize()

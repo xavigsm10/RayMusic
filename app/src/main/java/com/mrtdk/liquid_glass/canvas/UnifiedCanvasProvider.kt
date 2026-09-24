@@ -119,46 +119,50 @@ object UnifiedCanvasProvider {
             }
         }
 
-        // Strict Echo-Music validation algorithm
+        // Strict motion validation algorithm
         val validated = candidateArtwork?.let { artwork ->
             val localArtists = splitAndNormalizeArtists(rawArtist)
             val returnedArtists = splitAndNormalizeArtists(artwork.artist.orEmpty())
 
+            fun isFuzzyMatch(a: String, b: String): Boolean {
+                val aClean = a.trim()
+                val bClean = b.trim()
+                if (aClean.isBlank() || bClean.isBlank()) return false
+                if (aClean.length <= 3 || bClean.length <= 3) {
+                    return aClean.equals(bClean, ignoreCase = true)
+                }
+                return aClean.contains(bClean, ignoreCase = true) || bClean.contains(aClean, ignoreCase = true)
+            }
+
             val artistMatches = if (localArtists.isNotEmpty() && returnedArtists.isNotEmpty()) {
-                localArtists.any { local -> returnedArtists.any { it.contains(local) || local.contains(it) } }
+                localArtists.any { local ->
+                    returnedArtists.any { ret -> isFuzzyMatch(local, ret) }
+                }
             } else true
 
             val canvasAlbumName = artwork.albumName
             val canvasSongName = artwork.name
 
+            val normReqTitle = normalizeCanvasSongTitle(rawTitle)
+            val normReqAlb = if (requestedAlbum.isNotBlank()) normalizeCanvasSongTitle(requestedAlbum) else ""
+            val normCanvasSong = if (!canvasSongName.isNullOrBlank()) normalizeCanvasSongTitle(canvasSongName) else null
+            val normCanvasAlb = if (!canvasAlbumName.isNullOrBlank()) normalizeCanvasSongTitle(canvasAlbumName) else null
+
             val titleMatches = when {
-                // If the motion artwork belongs to an album, and song's album is provided, verify match
-                canvasAlbumName != null && requestedAlbum.isNotBlank() -> {
-                    val normCanvasAlb = normalizeCanvasSongTitle(canvasAlbumName)
-                    val normReqAlb = normalizeCanvasSongTitle(requestedAlbum)
-                    canvasAlbumName.contains(requestedAlbum, ignoreCase = true) ||
-                            requestedAlbum.contains(canvasAlbumName, ignoreCase = true) ||
-                            normCanvasAlb.contains(normReqAlb, ignoreCase = true) ||
-                            normReqAlb.contains(normCanvasAlb, ignoreCase = true)
+                // 1. If motion song title is present, it MUST match the requested song title
+                normCanvasSong != null && normReqTitle.isNotBlank() -> {
+                    isFuzzyMatch(canvasSongName!!, rawTitle) || isFuzzyMatch(normCanvasSong, normReqTitle)
                 }
-                // When played individually from search/home (requestedAlbum is blank)
-                canvasAlbumName != null && requestedAlbum.isBlank() -> true
-                canvasSongName != null && rawTitle.isNotBlank() -> {
-                    val normCanvasSong = normalizeCanvasSongTitle(canvasSongName)
-                    val normReqTitle = normalizeCanvasSongTitle(rawTitle)
-                    val normReqAlb = if (requestedAlbum.isNotBlank()) normalizeCanvasSongTitle(requestedAlbum) else ""
-                    canvasSongName.contains(rawTitle, ignoreCase = true) ||
-                            rawTitle.contains(canvasSongName, ignoreCase = true) ||
-                            normCanvasSong.contains(normReqTitle, ignoreCase = true) ||
-                            normReqTitle.contains(normCanvasSong, ignoreCase = true) ||
-                            (requestedAlbum.isNotBlank() && (
-                                    canvasSongName.contains(requestedAlbum, ignoreCase = true) ||
-                                            requestedAlbum.contains(canvasSongName, ignoreCase = true) ||
-                                            normCanvasSong.contains(normReqAlb, ignoreCase = true) ||
-                                            normReqAlb.contains(normCanvasSong, ignoreCase = true)
-                                    ))
+                // 2. If it is an album-level canvas and song's album was provided, verify album match
+                normCanvasAlb != null && requestedAlbum.isNotBlank() -> {
+                    isFuzzyMatch(canvasAlbumName!!, requestedAlbum) || isFuzzyMatch(normCanvasAlb, normReqAlb)
                 }
-                else -> true
+                // 3. When played individually from search/home (requestedAlbum is blank), an album canvas
+                // ONLY matches if the song title matches the album name (i.e. self-titled album or title track)
+                normCanvasAlb != null && requestedAlbum.isBlank() -> {
+                    isFuzzyMatch(canvasAlbumName!!, rawTitle) || isFuzzyMatch(normCanvasAlb, normReqTitle)
+                }
+                else -> false
             }
 
             if (artistMatches && titleMatches) artwork else null
@@ -249,18 +253,26 @@ object UnifiedCanvasProvider {
         val validated = candidateArtwork?.let { artwork ->
             val localArtists = splitAndNormalizeArtists(rawArtist)
             val returnedArtists = splitAndNormalizeArtists(artwork.artist.orEmpty())
+
+            fun isFuzzyMatch(a: String, b: String): Boolean {
+                val aClean = a.trim()
+                val bClean = b.trim()
+                if (aClean.isBlank() || bClean.isBlank()) return false
+                if (aClean.length <= 3 || bClean.length <= 3) {
+                    return aClean.equals(bClean, ignoreCase = true)
+                }
+                return aClean.contains(bClean, ignoreCase = true) || bClean.contains(aClean, ignoreCase = true)
+            }
+
             val artistMatches = if (localArtists.isNotEmpty() && returnedArtists.isNotEmpty()) {
-                localArtists.any { local -> returnedArtists.any { it.contains(local) || local.contains(it) } }
+                localArtists.any { local -> returnedArtists.any { ret -> isFuzzyMatch(local, ret) } }
             } else true
 
             val canvasAlbumName = artwork.albumName ?: artwork.name
             val albumMatches = if (canvasAlbumName != null && rawAlbum.isNotBlank()) {
                 val normCanvasAlb = normalizeCanvasSongTitle(canvasAlbumName)
-                canvasAlbumName.contains(rawAlbum, ignoreCase = true) ||
-                        rawAlbum.contains(canvasAlbumName, ignoreCase = true) ||
-                        normCanvasAlb.contains(normAlbum, ignoreCase = true) ||
-                        normAlbum.contains(normCanvasAlb, ignoreCase = true)
-            } else true
+                isFuzzyMatch(canvasAlbumName, rawAlbum) || isFuzzyMatch(normCanvasAlb, normAlbum)
+            } else false
 
             if (artistMatches && albumMatches) artwork else null
         }

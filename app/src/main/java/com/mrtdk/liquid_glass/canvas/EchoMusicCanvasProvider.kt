@@ -78,9 +78,19 @@ object EchoMusicCanvasProvider {
         val target = manifest.items.firstOrNull { item ->
             val itemSong = item.song.lowercase().trim()
             val itemArtist = item.artist.lowercase().trim()
-            val matchSong = cleanSong.contains(itemSong) || itemSong.contains(cleanSong)
-            val matchArtist = cleanArtist.contains(itemArtist) || itemArtist.contains(cleanArtist)
-            matchSong && matchArtist
+            if (itemSong.isBlank() || itemArtist.isBlank()) return@firstOrNull false
+
+            val matchSong = if (cleanSong.length <= 3 || itemSong.length <= 3) {
+                cleanSong == itemSong
+            } else {
+                cleanSong.contains(itemSong) || itemSong.contains(cleanSong)
+            }
+            val matchArtist = if (cleanArtist.length <= 3 || itemArtist.length <= 3) {
+                cleanArtist == itemArtist
+            } else {
+                cleanArtist.contains(itemArtist) || itemArtist.contains(cleanArtist)
+            }
+            matchSong && matchArtist && CanvasArtwork.isValidVideoUrl(item.url)
         }
 
         if (target != null && target.url.isNotBlank()) {

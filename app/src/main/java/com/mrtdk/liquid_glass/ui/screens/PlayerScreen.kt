@@ -1373,33 +1373,12 @@ fun AutomixIcon(
     modifier: Modifier = Modifier,
     size: androidx.compose.ui.unit.Dp = 22.dp
 ) {
-    Canvas(modifier = modifier.size(size)) {
-        val strokeWidth = 1.6.dp.toPx()
-        val radius = this.size.height * 0.28f
-        val centerY = this.size.height / 2f
-        val leftCenterX = this.size.width * 0.38f
-        val rightCenterX = this.size.width * 0.62f
-
-        // Left circle: subtle thin outline
-        drawCircle(
-            color = tint.copy(alpha = 0.45f),
-            radius = radius,
-            center = androidx.compose.ui.geometry.Offset(leftCenterX, centerY),
-            style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth)
-        )
-        // Right circle: bold ring with center fill
-        drawCircle(
-            color = tint,
-            radius = radius,
-            center = androidx.compose.ui.geometry.Offset(rightCenterX, centerY),
-            style = androidx.compose.ui.graphics.drawscope.Stroke(width = strokeWidth * 2.2f)
-        )
-        drawCircle(
-            color = tint,
-            radius = radius * 0.45f,
-            center = androidx.compose.ui.geometry.Offset(rightCenterX, centerY)
-        )
-    }
+    Icon(
+        painter = painterResource(id = R.drawable.ic_automix),
+        contentDescription = "AutoMix",
+        tint = tint,
+        modifier = modifier.size(size)
+    )
 }
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
@@ -1485,7 +1464,7 @@ fun PlayerScreen(
                     dragOffsetY.animateTo(
                         screenHeightPx,
                         spring(
-                            dampingRatio = 0.85f,
+                            dampingRatio = Spring.DampingRatioNoBouncy,
                             stiffness = Spring.StiffnessMediumLow
                         )
                     )
@@ -1970,7 +1949,7 @@ fun PlayerScreen(
                     album = album
                 )
 
-                if (foundUrl != null) {
+                if (foundUrl != null && com.mrtdk.liquid_glass.canvas.CanvasArtwork.isValidVideoUrl(foundUrl)) {
                     withContext(Dispatchers.Main) {
                         animatedArtworkUrl = foundUrl
                         com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.putForSong(artist, title, album, foundUrl)
@@ -2450,7 +2429,7 @@ fun PlayerScreen(
                 }
             }
 
-            val hasAnimatedCover = !animatedArtworkUrl.isNullOrBlank() || isVideoPlaying
+            val hasAnimatedCover = isVideoPlaying
             val isNormalArtwork = when (playerArtworkStyle) {
                 "normal" -> true
                 "animated_fullartwork" -> !hasAnimatedCover
@@ -3824,6 +3803,16 @@ fun PlayerScreen(
                         enableFrameCapture = (dragProgress == 0f) && !isOverlayActive && overlayTransitionProgress == 0f,
                         onPlayerCreated = { masterAnimatedPlayer = it },
                         onPlaybackStarted = { isVideoPlaying = true },
+                        onPlaybackFailed = {
+                            isVideoPlaying = false
+                            animatedArtworkUrl = null
+                            val artist = playerState?.artist
+                            val title = playerState?.title
+                            val album = playerState?.album
+                            if (!artist.isNullOrBlank() && !title.isNullOrBlank()) {
+                                com.mrtdk.liquid_glass.ui.components.AnimatedArtworkCache.removeForSong(artist, title, album)
+                            }
+                        },
                             onFrameCaptured = { frameBitmap ->
                                 val bmp = frameBitmap.asImageBitmap()
                                 coverBitmap = bmp
@@ -6236,6 +6225,8 @@ fun LandscapePlayerLayout(
                     enableFrameCapture = !showLyrics && !showQueue,
 
                     onPlaybackStarted = { onVideoPlayingChange(true) },
+
+                    onPlaybackFailed = { onVideoPlayingChange(false) },
 
                     onFrameCaptured = { frameBitmap ->
 

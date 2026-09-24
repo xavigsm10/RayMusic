@@ -744,6 +744,32 @@ object LibraryManager {
         return if (style == "semitransparent" || style == "semitransparente") "solid" else style
     }
 
+    fun hasCompletedOnboarding(): Boolean {
+        if (!isInitialized) return false
+        settingsCache["has_completed_onboarding_v065"]?.let { return it == "true" }
+        val fromDb = dbHelper.getSetting("has_completed_onboarding_v065", null)
+        if (fromDb != null) {
+            settingsCache["has_completed_onboarding_v065"] = fromDb
+            return fromDb == "true"
+        }
+        val fromPrefs = try { prefs.getString("has_completed_onboarding_v065", null) } catch (_: Exception) { null }
+        if (fromPrefs != null) {
+            settingsCache["has_completed_onboarding_v065"] = fromPrefs
+            return fromPrefs == "true"
+        }
+        return false
+    }
+
+    fun setCompletedOnboarding(completed: Boolean) {
+        if (!isInitialized) return
+        val strVal = completed.toString()
+        settingsCache["has_completed_onboarding_v065"] = strVal
+        try {
+            prefs.edit().putString("has_completed_onboarding_v065", strVal).apply()
+        } catch (_: Exception) {}
+        dbHelper.saveSetting("has_completed_onboarding_v065", strVal)
+    }
+
     fun saveGlassStyle(style: String) {
         if (!isInitialized) return
         _glassStyle.value = style
