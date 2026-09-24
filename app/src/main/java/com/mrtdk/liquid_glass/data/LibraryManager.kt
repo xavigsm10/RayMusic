@@ -82,6 +82,9 @@ object LibraryManager {
     private val _ultraPerformanceMode = MutableStateFlow(false)
     val ultraPerformanceMode: StateFlow<Boolean> = _ultraPerformanceMode
 
+    private val _pinnedItemIds = MutableStateFlow<Set<String>>(emptySet())
+    val pinnedItemIds: StateFlow<Set<String>> = _pinnedItemIds
+
     private fun parseItemType(value: String): ItemType? {
         return try {
             ItemType.valueOf(value)
@@ -121,6 +124,21 @@ object LibraryManager {
         _playerArtworkStyle.value = getPlayerArtworkStyle()
         _fullArtworkBackdropStyle.value = getFullArtworkBackdropStyle()
         _ultraPerformanceMode.value = isUltraPerformanceMode()
+
+        val initialPinned = mutableSetOf<String>()
+        try {
+            prefs.all.forEach { (key, value) ->
+                if (value == "true" && (key.startsWith("song_pinned_") || key.startsWith("item_pinned_") || key.startsWith("artist_pinned_") || key.startsWith("album_pinned_"))) {
+                    val id = key.removePrefix("song_pinned_")
+                        .removePrefix("item_pinned_")
+                        .removePrefix("artist_pinned_")
+                        .removePrefix("album_pinned_")
+                    if (id.isNotBlank()) initialPinned.add(id)
+                }
+            }
+        } catch (_: Exception) {}
+        _pinnedItemIds.value = initialPinned
+
         isInitialized = true
 
         // Load heavy data collections asynchronously on Dispatchers.IO to avoid blocking main thread at startup
@@ -288,6 +306,38 @@ object LibraryManager {
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+
+    fun isItemPinned(id: String): Boolean {
+        if (_pinnedItemIds.value.contains(id)) return true
+        if (::prefs.isInitialized) {
+            if (prefs.getString("song_pinned_$id", null) == "true") return true
+            if (prefs.getString("item_pinned_$id", null) == "true") return true
+            if (prefs.getString("artist_pinned_$id", null) == "true") return true
+            if (prefs.getString("album_pinned_$id", null) == "true") return true
+        }
+        return false
+    }
+
+    fun setItemPinned(id: String, pinned: Boolean) {
+        if (::prefs.isInitialized) {
+            val str = if (pinned) "true" else "false"
+            prefs.edit()
+                .putString("song_pinned_$id", str)
+                .putString("item_pinned_$id", str)
+                .putString("artist_pinned_$id", str)
+                .putString("album_pinned_$id", str)
+                .apply()
+        }
+        val set = _pinnedItemIds.value.toMutableSet()
+        if (pinned) set.add(id) else set.remove(id)
+        _pinnedItemIds.value = set
+    }
+
+    fun togglePinItem(id: String): Boolean {
+        val next = !isItemPinned(id)
+        setItemPinned(id, next)
+        return next
     }
 
     fun saveItem(item: LibraryItem) {

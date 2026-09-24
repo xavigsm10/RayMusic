@@ -565,6 +565,7 @@
     <string name="playlist_menu_share_playlist">Çalma Listesini Paylaş</string>
     <string name="playlist_menu_share_text">RayMusic üzerinde \'%1$s\' çalma listemi dinle!</string>
     <string name="playlist_menu_pin">Çalma Listesini Sabitle</string>
+    <string name="pinned_title">Sabitlenenler</string>
     <string name="playlist_menu_unpin">Çalma Listesi Sabitlemesini Kaldır</string>
     <string name="playlist_menu_add_to_playlist">Bir Çalma Listesine Ekle</string>
     <string name="playlist_menu_manage_collab">İş Birliğini Yönet</string>

@@ -23,6 +23,8 @@ import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
 import androidx.compose.ui.res.stringResource
 import com.mrtdk.liquid_glass.R
@@ -141,6 +143,7 @@ fun InicioScreen(
     innerPadding: PaddingValues,
     playerState: PlayerState? = null,
     state: InicioState = remember { InicioState() },
+    scrollToTopTrigger: Long = 0L,
     onSongSelected: (PlayerState) -> Unit = {},
     onStationSelected: (PlayerState) -> Unit = onSongSelected,
     onArtistSelected: (ArtistState) -> Unit = {},
@@ -772,6 +775,12 @@ fun InicioScreen(
         if (!SharedTransitionState.isDetailOpen && savedIndex != -1) {
             listState.scrollToItem(savedIndex, savedOffset)
             savedIndex = -1
+        }
+    }
+
+    LaunchedEffect(scrollToTopTrigger) {
+        if (scrollToTopTrigger > 0L) {
+            listState.animateScrollToItem(0)
         }
     }
 
@@ -2485,8 +2494,9 @@ private fun ArtistStationCard(
     }
 }
 
+// Cache estático de colores de degradado para FeaturedSuggestionCard
 private object SuggestionCardCache {
-    val horizontalColorsCache = object : android.util.LruCache<String, List<Color>>(60) {}
+    val gradientColorsCache = android.util.LruCache<String, List<Color>>(60)
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -2551,69 +2561,87 @@ private fun FeaturedSuggestionCard(
 
     val hdThumb = upgradeThumb(thumbUrl)
 
-    // Muestreo horizontal de colores de la franja inferior para el difuminado horizontal
-    val cachedColors = remember(hdThumb) {
-        hdThumb?.let { SuggestionCardCache.horizontalColorsCache.get(it) }
+    val cardWidth = 280.dp
+    val cardHeight = 380.dp
+    val imageWidth = 280.dp
+    val imageHeight = 270.dp
+    val bottomSectionHeight = 110.dp
+
+    val defaultColors = remember {
+        listOf(
+            Color(0xFF2C3E50),
+            Color(0xFF1E272E),
+            Color(0xFF12171A)
+        )
     }
-    var horizontalColors by remember(hdThumb) { mutableStateOf(cachedColors) }
+
+    val cachedGradient = remember(hdThumb) {
+        hdThumb?.let { SuggestionCardCache.gradientColorsCache.get(it) }
+    }
+    var gradientColors by remember(hdThumb) { mutableStateOf(cachedGradient ?: defaultColors) }
 
     LaunchedEffect(hdThumb) {
-        if (hdThumb != null && horizontalColors == null) {
+        if (hdThumb != null && cachedGradient == null) {
             withContext(Dispatchers.IO) {
                 try {
-                    val loader = coil.Coil.imageLoader(context)
+                    val loader = Coil.imageLoader(context)
                     val req = ImageRequest.Builder(context)
                         .data(hdThumb)
                         .allowHardware(false)
-                        .size(64, 64)
+                        .size(100)
                         .build()
                     val result = loader.execute(req)
-                    if (result is coil.request.SuccessResult) {
-                        val bmp = (result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                    if (result is SuccessResult) {
+                        val bmp = (result.drawable as? BitmapDrawable)?.bitmap
                         if (bmp != null) {
                             val w = bmp.width
                             val h = bmp.height
-                            val startY = (h * 0.65f).toInt().coerceIn(0, h - 1)
-                            val numBins = 5
-                            val binWidth = w.toFloat() / numBins
-                            val sampled = mutableListOf<Color>()
 
-                            for (i in 0 until numBins) {
-                                val startX = (i * binWidth).toInt().coerceIn(0, w - 1)
-                                val endX = ((i + 1) * binWidth).toInt().coerceIn(startX + 1, w)
-                                var r = 0L; var g = 0L; var b = 0L; var cnt = 0
-                                for (y in startY until h) {
-                                    for (x in startX until endX) {
-                                        val px = bmp.getPixel(x, y)
-                                        r += (px shr 16 and 0xFF)
-                                        g += (px shr 8 and 0xFF)
-                                        b += (px and 0xFF)
-                                        cnt++
-                                    }
-                                }
-                                if (cnt > 0) {
-                                    val raw = Color((r / cnt).toInt(), (g / cnt).toInt(), (b / cnt).toInt())
-                                    val lum = raw.luminance()
-                                    // Atenuar suavemente solo si es excesivamente claro para legibilidad
-                                    val finalColor = if (lum > 0.70f) {
-                                        val factor = 0.70f / lum
-                                        Color(
-                                            red = (raw.red * factor).coerceIn(0f, 1f),
-                                            green = (raw.green * factor).coerceIn(0f, 1f),
-                                            blue = (raw.blue * factor).coerceIn(0f, 1f)
-                                        )
-                                    } else {
-                                        raw
-                                    }
-                                    sampled.add(finalColor)
+                            // 1. Muestreo de la franja inferior de la imagen (último 15%)
+                            val startY = (h * 0.85f).toInt().coerceIn(0, h - 1)
+                            var rB = 0L; var gB = 0L; var bB = 0L; var cntB = 0
+                            val stepX = maxOf(1, w / 20)
+                            for (y in startY until h) {
+                                for (x in 0 until w step stepX) {
+                                    val px = bmp.getPixel(x, y)
+                                    rB += (px shr 16 and 0xFF)
+                                    gB += (px shr 8 and 0xFF)
+                                    bB += (px and 0xFF)
+                                    cntB++
                                 }
                             }
+                            val bottomColor = if (cntB > 0) {
+                                Color((rB / cntB).toInt(), (gB / cntB).toInt(), (bB / cntB).toInt())
+                            } else Color(0xFF2A2A2E)
 
-                            if (sampled.size >= 2) {
-                                SuggestionCardCache.horizontalColorsCache.put(hdThumb, sampled)
-                                withContext(Dispatchers.Main) {
-                                    horizontalColors = sampled
-                                }
+                            // 2. Extracción de color dominante/vibrante con Palette
+                            val palette = androidx.palette.graphics.Palette.from(bmp).maximumColorCount(16).generate()
+                            val dominantSwatch = palette.dominantSwatch 
+                                ?: palette.vibrantSwatch 
+                                ?: palette.darkVibrantSwatch 
+                                ?: palette.mutedSwatch
+                                ?: palette.darkMutedSwatch
+                            val dominantColor = dominantSwatch?.rgb?.let { Color(it) } ?: bottomColor
+
+                            // 3. Crear los tres puntos del degradado progresivo con los colores de la imagen
+                            val colorTop = bottomColor
+                            val colorMid = Color(
+                                red = (bottomColor.red * 0.45f + dominantColor.red * 0.55f).coerceIn(0f, 1f),
+                                green = (bottomColor.green * 0.45f + dominantColor.green * 0.55f).coerceIn(0f, 1f),
+                                blue = (bottomColor.blue * 0.45f + dominantColor.blue * 0.55f).coerceIn(0f, 1f)
+                            )
+                            val baseRef = if (dominantColor.luminance() > 0.05f) dominantColor else bottomColor
+                            val factor = 0.30f
+                            val colorBottom = Color(
+                                red = (baseRef.red * factor).coerceIn(0f, 1f),
+                                green = (baseRef.green * factor).coerceIn(0f, 1f),
+                                blue = (baseRef.blue * factor).coerceIn(0f, 1f)
+                            )
+
+                            val extracted = listOf(colorTop, colorMid, colorBottom)
+                            SuggestionCardCache.gradientColorsCache.put(hdThumb, extracted)
+                            withContext(Dispatchers.Main) {
+                                gradientColors = extracted
                             }
                         }
                     }
@@ -2622,112 +2650,46 @@ private fun FeaturedSuggestionCard(
         }
     }
 
-    val difuminadoAlpha by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (horizontalColors != null) 1f else 0f,
-        animationSpec = androidx.compose.animation.core.tween(300),
-        label = "difuminadoAlpha"
-    )
+    val animatedTopColor by animateColorAsState(targetValue = gradientColors[0], animationSpec = tween(400), label = "gradTop")
+    val animatedMidColor by animateColorAsState(targetValue = gradientColors[1], animationSpec = tween(400), label = "gradMid")
+    val animatedBottomColor by animateColorAsState(targetValue = gradientColors[2], animationSpec = tween(400), label = "gradBottom")
 
     // Card container
     var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
     Box(
         modifier = Modifier
-            .width(280.dp)
-            .height(380.dp)
+            .width(cardWidth)
+            .height(cardHeight)
             .clip(RoundedCornerShape(20.dp))
-            .background(Color.Transparent)
+            .background(animatedBottomColor)
             .wiggleOnScroll(item.id, lazyListState = scrollState)
             .clickable {
                 SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
                 clickAction()
             }
     ) {
-        // Capa inferior: reflejo invertido con la misma posición de PlayerScreen.kt
-        // pero tomando como referencia las dimensiones de la tarjeta de sugerencias destacadas
-        // y con el mismo desenfoque en blur de PlayerScreen.kt (createBlurEffect TileMode.MIRROR)
-        // aplicado únicamente a la imagen invertida, preservando sus colores vibrantes sin filtro oscuro
-        val cardWidth = 280.dp
-        val cardHeight = 380.dp
-        val expandedWidth = 280.dp
-        val expandedHeight = 270.dp
-        val expandedX = 0.dp
-        val expandedY = 0.dp
-
-        val reflectionWidth = cardWidth
-        val reflectionX = 0.dp
-        val childWidth = expandedWidth
-        val childOffsetX = expandedX
-        val reflectionOverlap = 32.dp
-        val baseReflectionY = (expandedY + expandedHeight) - reflectionOverlap
-        val reflectionY = baseReflectionY
-        val reflectionHeight = (cardHeight - baseReflectionY).coerceAtLeast(expandedHeight)
-
-        val verticalScale = -4.0f
-        val pivotY = 0f
-
-        // 1. Reflejo invertido con desenfoque en blur
+        // 1. Degradado progresivo con los colores de la imagen en la sección inferior
         Box(
             modifier = Modifier
-                .offset(x = reflectionX, y = reflectionY)
-                .width(reflectionWidth)
-                .height(reflectionHeight)
-                .clipToBounds()
-        ) {
-            Box(
-                modifier = Modifier
-                    .offset(x = childOffsetX, y = 0.dp)
-                    .width(childWidth)
-                    .height(expandedHeight)
-            ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(hdThumb)
-                        .crossfade(false)
-                        .build(),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            scaleY = verticalScale
-                            transformOrigin = TransformOrigin(0.5f, pivotY)
-                            if (verticalScale < 0f && size.height > 0f) {
-                                translationY = size.height * kotlin.math.abs(verticalScale)
-                            }
-                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                                renderEffect = android.graphics.RenderEffect
-                                    .createBlurEffect(20f, 20f, android.graphics.Shader.TileMode.MIRROR)
-                                    .asComposeRenderEffect()
-                            }
-                        }
-                        .then(
-                            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) {
-                                Modifier.blur(14.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
-                            } else Modifier
+                .align(Alignment.BottomCenter)
+                .size(width = imageWidth, height = bottomSectionHeight)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colorStops = arrayOf(
+                            0.0f to animatedTopColor,
+                            0.45f to animatedMidColor,
+                            1.0f to animatedBottomColor
                         )
+                    )
                 )
-            }
-        }
+        )
 
-        // 2. Portada Principal (Nítida arriba, con transición progresiva suave hacia el reflejo en su borde inferior)
+        // 2. Portada Principal (Nítida arriba, en las mismas dimensiones)
         Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .size(width = 280.dp, height = 270.dp)
+                .size(width = imageWidth, height = imageHeight)
                 .onGloballyPositioned { imageCoords = it }
-                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                .drawWithContent {
-                    drawContent()
-                    val featherPx = 32.dp.toPx()
-                    drawRect(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(Color.Black, Color.Transparent),
-                            startY = size.height - featherPx,
-                            endY = size.height
-                        ),
-                        blendMode = BlendMode.DstIn
-                    )
-                }
         ) {
             AsyncImage(
                 model = ImageRequest.Builder(context)
@@ -2741,59 +2703,12 @@ private fun FeaturedSuggestionCard(
             )
         }
 
-        // 3. Difuminado de colores horizontalmente a partir del nombre de la canción
-        val activeColors = horizontalColors ?: listOf(
-            Color(0xFF2C3E50),
-            Color(0xFF34495E),
-            Color(0xFF2C3E50)
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .height(110.dp)
-                .graphicsLayer {
-                    alpha = difuminadoAlpha
-                    compositingStrategy = CompositingStrategy.Offscreen
-                }
-                .drawWithContent {
-                    val w = size.width
-                    val h = size.height
-
-                    // 1. Difuminado de colores horizontal
-                    drawRect(
-                        brush = Brush.horizontalGradient(
-                            colors = activeColors,
-                            startX = 0f,
-                            endX = w
-                        )
-                    )
-
-                    // 2. Máscara vertical progresiva: transparente hasta el nombre de la canción,
-                    // y luego se intensifica suavemente hacia la base
-                    drawRect(
-                        brush = Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0.0f to Color.Transparent,
-                                0.20f to Color.Transparent,
-                                0.38f to Color.Black.copy(alpha = 0.40f),
-                                0.65f to Color.Black.copy(alpha = 0.75f),
-                                1.0f to Color.Black.copy(alpha = 0.92f)
-                            ),
-                            startY = 0f,
-                            endY = h
-                        ),
-                        blendMode = BlendMode.DstIn
-                    )
-                }
-        )
-
-        // 4. Contenido de Texto
+        // 3. Contenido de Texto (Nombre de la canción y subtítulo)
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .height(110.dp)
+                .height(bottomSectionHeight)
                 .padding(horizontal = 18.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.Center
         ) {

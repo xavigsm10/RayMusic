@@ -565,6 +565,7 @@
     <string name="playlist_menu_share_playlist">Compartilhar Playlist</string>
     <string name="playlist_menu_share_text">Ouça minha playlist \'%1$s\' no RayMusic!</string>
     <string name="playlist_menu_pin">Fixar Playlist</string>
+    <string name="pinned_title">Fixados</string>
     <string name="playlist_menu_unpin">Desafixar Playlist</string>
     <string name="playlist_menu_add_to_playlist">Adicionar a uma Playlist</string>
     <string name="playlist_menu_manage_collab">Gerenciar Colaboração</string>

@@ -11,6 +11,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -44,6 +46,8 @@ import androidx.compose.material.icons.filled.ArrowCircleDown
 import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.Delete
 import com.mrtdk.liquid_glass.R
 import com.mrtdk.liquid_glass.ui.components.trackClickBounds
 import com.mrtdk.liquid_glass.ui.components.trackTapBounds
@@ -71,6 +75,30 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import com.mrtdk.liquid_glass.utils.LocaleUtils
 import androidx.compose.ui.window.Dialog
+
+private sealed class PinnedEntity {
+    abstract val id: String
+    abstract val title: String
+    abstract val subtitle: String?
+    abstract val thumbnail: String?
+    abstract val isArtist: Boolean
+
+    data class PlaylistEntity(val playlist: com.mrtdk.liquid_glass.data.Playlist) : PinnedEntity() {
+        override val id: String get() = playlist.id
+        override val title: String get() = playlist.name
+        override val subtitle: String? get() = "Playlist"
+        override val thumbnail: String? get() = playlist.coverUrl ?: (if (playlist.items.isNotEmpty()) playlist.items.first().thumbnail else null)
+        override val isArtist: Boolean get() = false
+    }
+
+    data class ItemEntity(val item: LibraryItem) : PinnedEntity() {
+        override val id: String get() = item.id
+        override val title: String get() = item.title
+        override val subtitle: String? get() = item.subtitle
+        override val thumbnail: String? get() = item.thumbnail
+        override val isArtist: Boolean get() = item.type == ItemType.ARTIST
+    }
+}
 
 @Composable
 fun BibliotecaScreen(
@@ -135,6 +163,7 @@ fun BibliotecaScreen(
     val savedItems by LibraryManager.savedItems.collectAsState()
     val playlists by LibraryManager.playlists.collectAsState()
     val downloadedSongs by LibraryManager.downloadedSongs.collectAsState()
+    val pinnedItemIds by LibraryManager.pinnedItemIds.collectAsState()
     val isSpotifyLoggedIn by com.mrtdk.liquid_glass.spotify.SpotifySession.isLoggedIn.collectAsState()
 
     var selectedCategory by remember { mutableStateOf<ItemType?>(null) }
@@ -142,6 +171,25 @@ fun BibliotecaScreen(
     var selectedCategoryName by remember { mutableStateOf("") }
     
     var contextMenuPlaylist by remember { mutableStateOf<com.mrtdk.liquid_glass.data.Playlist?>(null) }
+    var contextMenuSavedItem by remember { mutableStateOf<LibraryItem?>(null) }
+
+    val pinnedEntities = remember(playlists, savedItems, pinnedItemIds) {
+        val list = mutableListOf<PinnedEntity>()
+        val seenIds = mutableSetOf<String>()
+
+        playlists.filter { it.isPinned }.forEach { pl ->
+            if (seenIds.add(pl.id)) {
+                list.add(PinnedEntity.PlaylistEntity(pl))
+            }
+        }
+
+        savedItems.filter { LibraryManager.isItemPinned(it.id) }.forEach { item ->
+            if (seenIds.add(item.id)) {
+                list.add(PinnedEntity.ItemEntity(item))
+            }
+        }
+        list
+    }
     var showSettings by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showGlassStyleDialog by remember { mutableStateOf(false) }
@@ -230,112 +278,223 @@ fun BibliotecaScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    val filteredItems = if (selectedCategoryKey == "Descargados") {
-                        val grouped = mutableListOf<LibraryItem>()
-                        val albumGroups = downloadedSongs.groupBy { it.album }
-                        albumGroups.forEach { (albumName, songsInAlbum) ->
-                            if (albumName.isNullOrBlank()) {
-                                grouped.addAll(songsInAlbum)
-                            } else {
-                                val firstSong = songsInAlbum.first()
-                                grouped.add(
-                                    LibraryItem(
-                                        id = "offline_album_$albumName",
-                                        title = albumName,
-                                        subtitle = firstSong.subtitle,
-                                        thumbnail = firstSong.thumbnail,
-                                        type = ItemType.ALBUM,
-                                        album = albumName
-                                    )
-                                )
-                            }
-                        }
-                        grouped
-                    } else {
-                        savedItems.filter { it.type == selectedCategory }
-                    }
-                    items(
-                        count = filteredItems.size,
-                        key = { i -> filteredItems[i].id },
-                        contentType = { "library_filtered_item" }
-                    ) { i ->
-                        val item = filteredItems[i]
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .wiggleOnScroll(item.id, categoryGridState)
-                                .trackClickBounds {
-                                    SharedTransitionState.lastOpenedId = item.id
-                                    when (item.type) {
-                                        ItemType.SONG -> {
-                                            onSongSelected(
-                                                com.mrtdk.liquid_glass.ui.screens.PlayerState(
-                                                    title = item.title,
-                                                    artist = item.subtitle,
-                                                    artUrl = item.thumbnail,
-                                                    videoId = item.id,
-                                                    album = item.album
-                                                )
-                                            )
-                                        }
-                                        ItemType.ARTIST -> {
-                                            onArtistSelected(
-                                                com.mrtdk.liquid_glass.ui.screens.ArtistState(
-                                                    id = item.id,
-                                                    name = item.title,
-                                                    thumbnail = item.thumbnail
-                                                )
-                                            )
-                                        }
-                                        ItemType.ALBUM -> {
-                                            onAlbumSelected(
-                                                com.mrtdk.liquid_glass.ui.screens.AlbumState(
-                                                    id = item.id,
-                                                    playlistId = item.id,
-                                                    title = item.title,
-                                                    artist = item.subtitle,
-                                                    thumbnail = item.thumbnail
-                                                )
-                                            )
-                                        }
-                                        else -> {}
-                                    }
-                                }
-                        ) {
-                            Box(
+                    if (selectedCategoryKey == "Fijados") {
+                        items(
+                            count = pinnedEntities.size,
+                            key = { i -> "pinned_detail_${pinnedEntities[i].id}" },
+                            contentType = { "pinned_detail_item" }
+                        ) { i ->
+                            val entity = pinnedEntities[i]
+                            val isArtist = entity.isArtist
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .aspectRatio(1f)
-                                    .clip(if (item.type == ItemType.ARTIST) androidx.compose.foundation.shape.CircleShape else RoundedCornerShape(12.dp))
-                                    .background(Color(0xFF1C1C1E))
-                                    .sharedTransitionElement(item.id)
+                                    .wiggleOnScroll(entity.id, categoryGridState)
+                                    .trackTapBounds(
+                                        onTap = {
+                                            SharedTransitionState.lastOpenedId = entity.id
+                                            when (entity) {
+                                                is PinnedEntity.PlaylistEntity -> onPlaylistSelected(entity.playlist)
+                                                is PinnedEntity.ItemEntity -> {
+                                                    val itm = entity.item
+                                                    when (itm.type) {
+                                                        ItemType.SONG -> onSongSelected(
+                                                            com.mrtdk.liquid_glass.ui.screens.PlayerState(
+                                                                title = itm.title,
+                                                                artist = itm.subtitle,
+                                                                artUrl = itm.thumbnail,
+                                                                videoId = itm.id,
+                                                                album = itm.album
+                                                            )
+                                                        )
+                                                        ItemType.ARTIST -> onArtistSelected(
+                                                            com.mrtdk.liquid_glass.ui.screens.ArtistState(
+                                                                id = itm.id,
+                                                                name = itm.title,
+                                                                thumbnail = itm.thumbnail
+                                                            )
+                                                        )
+                                                        ItemType.ALBUM -> onAlbumSelected(
+                                                            com.mrtdk.liquid_glass.ui.screens.AlbumState(
+                                                                id = itm.id,
+                                                                playlistId = itm.id,
+                                                                title = itm.title,
+                                                                artist = itm.subtitle,
+                                                                thumbnail = itm.thumbnail
+                                                            )
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        onLongPress = {
+                                            when (entity) {
+                                                is PinnedEntity.PlaylistEntity -> {
+                                                    contextMenuPlaylist = entity.playlist
+                                                }
+                                                is PinnedEntity.ItemEntity -> {
+                                                    contextMenuSavedItem = entity.item
+                                                }
+                                            }
+                                        }
+                                    )
                             ) {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(context)
-                                        .data(item.thumbnail)
-                                        .crossfade(true)
-                                        .build(),
-                                    contentDescription = item.title,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .aspectRatio(1f)
+                                        .clip(if (isArtist) androidx.compose.foundation.shape.CircleShape else RoundedCornerShape(12.dp))
+                                        .background(Color(0xFF1C1C1E))
+                                        .sharedTransitionElement(entity.id)
+                                ) {
+                                    val thumb = entity.thumbnail
+                                    if (!thumb.isNullOrBlank()) {
+                                        AsyncImage(
+                                            model = ImageRequest.Builder(context)
+                                                .data(thumb)
+                                                .crossfade(true)
+                                                .build(),
+                                            contentDescription = entity.title,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = if (isArtist) Icons.Default.Mic else Icons.Default.MusicNote,
+                                            contentDescription = null,
+                                            tint = Color.Gray,
+                                            modifier = Modifier.size(36.dp).align(Alignment.Center)
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = entity.title,
+                                    color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                entity.subtitle?.let { sub ->
+                                    Text(
+                                        text = sub,
+                                        color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor,
+                                        fontSize = 12.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        val filteredItems = if (selectedCategoryKey == "Descargados") {
+                            val grouped = mutableListOf<LibraryItem>()
+                            val albumGroups = downloadedSongs.groupBy { it.album }
+                            albumGroups.forEach { (albumName, songsInAlbum) ->
+                                if (albumName.isNullOrBlank()) {
+                                    grouped.addAll(songsInAlbum)
+                                } else {
+                                    val firstSong = songsInAlbum.first()
+                                    grouped.add(
+                                        LibraryItem(
+                                            id = "offline_album_$albumName",
+                                            title = albumName,
+                                            subtitle = firstSong.subtitle,
+                                            thumbnail = firstSong.thumbnail,
+                                            type = ItemType.ALBUM,
+                                            album = albumName
+                                        )
+                                    )
+                                }
+                            }
+                            grouped
+                        } else {
+                            savedItems.filter { it.type == selectedCategory }
+                        }
+                        items(
+                            count = filteredItems.size,
+                            key = { i -> filteredItems[i].id },
+                            contentType = { "library_filtered_item" }
+                        ) { i ->
+                            val item = filteredItems[i]
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .wiggleOnScroll(item.id, categoryGridState)
+                                    .trackClickBounds {
+                                        SharedTransitionState.lastOpenedId = item.id
+                                        when (item.type) {
+                                            ItemType.SONG -> {
+                                                onSongSelected(
+                                                    com.mrtdk.liquid_glass.ui.screens.PlayerState(
+                                                        title = item.title,
+                                                        artist = item.subtitle,
+                                                        artUrl = item.thumbnail,
+                                                        videoId = item.id,
+                                                        album = item.album
+                                                    )
+                                                )
+                                            }
+                                            ItemType.ARTIST -> {
+                                                onArtistSelected(
+                                                    com.mrtdk.liquid_glass.ui.screens.ArtistState(
+                                                        id = item.id,
+                                                        name = item.title,
+                                                        thumbnail = item.thumbnail
+                                                    )
+                                                )
+                                            }
+                                            ItemType.ALBUM -> {
+                                                onAlbumSelected(
+                                                    com.mrtdk.liquid_glass.ui.screens.AlbumState(
+                                                        id = item.id,
+                                                        playlistId = item.id,
+                                                        title = item.title,
+                                                        artist = item.subtitle,
+                                                        thumbnail = item.thumbnail
+                                                    )
+                                                )
+                                            }
+                                            else -> {}
+                                        }
+                                    }
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .aspectRatio(1f)
+                                        .clip(if (item.type == ItemType.ARTIST) androidx.compose.foundation.shape.CircleShape else RoundedCornerShape(12.dp))
+                                        .background(Color(0xFF1C1C1E))
+                                        .sharedTransitionElement(item.id)
+                                ) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(context)
+                                            .data(item.thumbnail)
+                                            .crossfade(true)
+                                            .build(),
+                                        contentDescription = item.title,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = item.title,
+                                    color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = item.subtitle,
+                                    color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor,
+                                    fontSize = 12.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = item.title,
-                                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = item.subtitle,
-                                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor,
-                                fontSize = 12.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
                         }
                     }
                 }
@@ -382,56 +541,158 @@ fun BibliotecaScreen(
             }
         }
 
-        val pinnedPlaylists = playlists.filter { it.isPinned }
-        if (pinnedPlaylists.isNotEmpty()) {
+        if (pinnedEntities.isNotEmpty()) {
             item(span = { GridItemSpan(2) }) {
-                val pinnedRowState = androidx.compose.foundation.lazy.rememberLazyListState()
-                androidx.compose.foundation.lazy.LazyRow(
-                    state = pinnedRowState,
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            selectedCategory = null
+                            selectedCategoryName = context.getString(R.string.pinned_title)
+                            selectedCategoryKey = "Fijados"
+                            showCategoryDetail = true
+                        }
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Text(
+                        text = stringResource(R.string.pinned_title),
+                        color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = stringResource(R.string.pinned_title),
+                        tint = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor.copy(alpha = 0.7f),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                val pinnedRowState = androidx.compose.foundation.lazy.rememberLazyListState()
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    androidx.compose.foundation.lazy.LazyRow(
+                        state = pinnedRowState,
+                        modifier = Modifier.wrapContentWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
                     items(
-                    count = pinnedPlaylists.size,
-                    key = { i -> pinnedPlaylists[i].id },
-                    contentType = { "pinned_playlist" }
-                ) { i ->
-                        val pl = pinnedPlaylists[i]
+                        count = pinnedEntities.size,
+                        key = { i -> "pinned_${pinnedEntities[i].id}" },
+                        contentType = { "pinned_entity" }
+                    ) { i ->
+                        val entity = pinnedEntities[i]
+                        val isArtist = entity.isArtist
                         Column(
                             modifier = Modifier
-                                .width(160.dp)
-                                .wiggleOnScroll(pl.id, lazyListState = pinnedRowState)
+                                .width(104.dp)
+                                .wiggleOnScroll(entity.id, lazyListState = pinnedRowState)
                                 .trackTapBounds(
                                     onTap = {
-                                        SharedTransitionState.lastOpenedId = pl.id
-                                        onPlaylistSelected(pl)
+                                        when (entity) {
+                                            is PinnedEntity.PlaylistEntity -> {
+                                                SharedTransitionState.lastOpenedId = entity.playlist.id
+                                                onPlaylistSelected(entity.playlist)
+                                            }
+                                            is PinnedEntity.ItemEntity -> {
+                                                val itm = entity.item
+                                                SharedTransitionState.lastOpenedId = itm.id
+                                                when (itm.type) {
+                                                    ItemType.SONG -> onSongSelected(
+                                                        com.mrtdk.liquid_glass.ui.screens.PlayerState(
+                                                            title = itm.title,
+                                                            artist = itm.subtitle,
+                                                            artUrl = itm.thumbnail,
+                                                            videoId = itm.id,
+                                                            album = itm.album
+                                                        )
+                                                    )
+                                                    ItemType.ARTIST -> onArtistSelected(
+                                                        com.mrtdk.liquid_glass.ui.screens.ArtistState(
+                                                            id = itm.id,
+                                                            name = itm.title,
+                                                            thumbnail = itm.thumbnail
+                                                        )
+                                                    )
+                                                    ItemType.ALBUM -> onAlbumSelected(
+                                                        com.mrtdk.liquid_glass.ui.screens.AlbumState(
+                                                            id = itm.id,
+                                                            playlistId = itm.id,
+                                                            title = itm.title,
+                                                            artist = itm.subtitle,
+                                                            thumbnail = itm.thumbnail
+                                                        )
+                                                    )
+                                                    else -> {}
+                                                }
+                                            }
+                                        }
                                     },
-                                    onLongPress = { contextMenuPlaylist = pl }
+                                    onLongPress = {
+                                        when (entity) {
+                                            is PinnedEntity.PlaylistEntity -> {
+                                                contextMenuPlaylist = entity.playlist
+                                            }
+                                            is PinnedEntity.ItemEntity -> {
+                                                contextMenuSavedItem = entity.item
+                                            }
+                                        }
+                                    }
                                 ),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .aspectRatio(1f)
-                                    .clip(RoundedCornerShape(12.dp))
+                                    .size(104.dp)
+                                    .clip(if (isArtist) androidx.compose.foundation.shape.CircleShape else RoundedCornerShape(10.dp))
                                     .background(Color(0xFF1C1C1E)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                val coverUrl = pl.coverUrl ?: (if (pl.items.isNotEmpty()) pl.items.first().thumbnail else null)
-                                if (coverUrl != null) {
-                                    AsyncImage(model = coverUrl, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                val coverUrl = entity.thumbnail
+                                if (!coverUrl.isNullOrBlank()) {
+                                    AsyncImage(
+                                        model = coverUrl,
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
                                 } else {
-                                    Icon(Icons.Default.MusicNote, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(48.dp))
+                                    Icon(
+                                        imageVector = if (isArtist) Icons.Default.Mic else Icons.Default.MusicNote,
+                                        contentDescription = null,
+                                        tint = Color.Gray,
+                                        modifier = Modifier.size(36.dp)
+                                    )
                                 }
                             }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(text = pl.name, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Spacer(modifier = Modifier.height(5.dp))
+                            Text(
+                                text = entity.title,
+                                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            val sub = entity.subtitle ?: if (isArtist) "Artista" else "Música"
+                            Text(
+                                text = sub,
+                                color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor,
+                                fontSize = 11.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                     }
                 }
             }
         }
+    }
         
         item(span = { GridItemSpan(2) }) {
             Column {
@@ -509,43 +770,48 @@ fun BibliotecaScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .wiggleOnScroll(item.id, mainGridState)
-                        .trackClickBounds {
-                            SharedTransitionState.lastOpenedId = item.id
-                            when (item.type) {
-                                ItemType.SONG -> {
-                                    onSongSelected(
-                                        com.mrtdk.liquid_glass.ui.screens.PlayerState(
-                                            title = item.title,
-                                            artist = item.subtitle,
-                                            artUrl = item.thumbnail,
-                                            videoId = item.id,
-                                            album = item.album
+                        .trackTapBounds(
+                            onTap = {
+                                SharedTransitionState.lastOpenedId = item.id
+                                when (item.type) {
+                                    ItemType.SONG -> {
+                                        onSongSelected(
+                                            com.mrtdk.liquid_glass.ui.screens.PlayerState(
+                                                title = item.title,
+                                                artist = item.subtitle,
+                                                artUrl = item.thumbnail,
+                                                videoId = item.id,
+                                                album = item.album
+                                            )
                                         )
-                                    )
-                                }
-                                ItemType.ARTIST -> {
-                                    onArtistSelected(
-                                        com.mrtdk.liquid_glass.ui.screens.ArtistState(
-                                            id = item.id,
-                                            name = item.title,
-                                            thumbnail = item.thumbnail
+                                    }
+                                    ItemType.ARTIST -> {
+                                        onArtistSelected(
+                                            com.mrtdk.liquid_glass.ui.screens.ArtistState(
+                                                id = item.id,
+                                                name = item.title,
+                                                thumbnail = item.thumbnail
+                                            )
                                         )
-                                    )
-                                }
-                                ItemType.ALBUM -> {
-                                    onAlbumSelected(
-                                        com.mrtdk.liquid_glass.ui.screens.AlbumState(
-                                            id = item.id,
-                                            playlistId = item.id,
-                                            title = item.title,
-                                            artist = item.subtitle,
-                                            thumbnail = item.thumbnail
+                                    }
+                                    ItemType.ALBUM -> {
+                                        onAlbumSelected(
+                                            com.mrtdk.liquid_glass.ui.screens.AlbumState(
+                                                id = item.id,
+                                                playlistId = item.id,
+                                                title = item.title,
+                                                artist = item.subtitle,
+                                                thumbnail = item.thumbnail
+                                            )
                                         )
-                                    )
+                                    }
+                                    else -> {}
                                 }
-                                else -> {}
+                            },
+                            onLongPress = {
+                                contextMenuSavedItem = item
                             }
-                        }
+                        )
                 ) {
                     Box(
                         modifier = Modifier
@@ -599,4 +865,123 @@ fun BibliotecaScreen(
         onDismiss = { contextMenuPlaylist = null },
         onSongSelected = onSongSelected
     )
+
+    if (contextMenuSavedItem != null) {
+        val targetItem = contextMenuSavedItem!!
+        val isItemPinned = LibraryManager.isItemPinned(targetItem.id)
+        Dialog(onDismissRequest = { contextMenuSavedItem = null }) {
+            Box(
+                modifier = Modifier
+                    .width(300.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.surfaceColor)
+                    .padding(20.dp)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        modifier = Modifier
+                            .size(70.dp)
+                            .clip(if (targetItem.type == ItemType.ARTIST) androidx.compose.foundation.shape.CircleShape else RoundedCornerShape(10.dp))
+                            .background(Color(0xFF1C1C1E))
+                    ) {
+                        if (!targetItem.thumbnail.isNullOrBlank()) {
+                            AsyncImage(
+                                model = targetItem.thumbnail,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            Icon(
+                                imageVector = if (targetItem.type == ItemType.ARTIST) Icons.Default.Mic else Icons.Default.MusicNote,
+                                contentDescription = null,
+                                tint = Color.Gray,
+                                modifier = Modifier.size(36.dp).align(Alignment.Center)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = targetItem.title,
+                        color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = targetItem.subtitle,
+                        color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor,
+                        fontSize = 13.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(18.dp))
+                    androidx.compose.material3.Divider(color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.dividerColor, thickness = 0.5.dp)
+
+                    // Opción: Fijar / Desfijar
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val next = !isItemPinned
+                                LibraryManager.setItemPinned(targetItem.id, next)
+                                Toast.makeText(
+                                    context,
+                                    if (next) "Fijado en la biblioteca" else "Desfijado de la biblioteca",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                contextMenuSavedItem = null
+                            }
+                            .padding(vertical = 12.dp, horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PushPin,
+                            contentDescription = null,
+                            tint = if (isItemPinned) Color(0xFFFA243C) else com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Text(
+                            text = if (isItemPinned) "Desfijar de la biblioteca" else "Fijar en la biblioteca",
+                            color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    androidx.compose.material3.Divider(color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.dividerColor, thickness = 0.5.dp)
+
+                    // Opción: Eliminar de la biblioteca
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                LibraryManager.removeItem(targetItem.id)
+                                LibraryManager.setItemPinned(targetItem.id, false)
+                                Toast.makeText(context, "Eliminado de la biblioteca", Toast.LENGTH_SHORT).show()
+                                contextMenuSavedItem = null
+                            }
+                            .padding(vertical = 12.dp, horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = Color(0xFFFA243C),
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Text(
+                            text = "Eliminar de la biblioteca",
+                            color = Color(0xFFFA243C),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+        }
+    }
 }

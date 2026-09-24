@@ -324,6 +324,9 @@ fun LiquidBottomNavBar(
                                         if (selectedIndex == 4) {
                                             onTabSelected(currentTab.index)
                                         } else {
+                                            if (currentTab.index == 0 && selectedIndex == 0) {
+                                                onTabSelected(0)
+                                            }
                                             scrollConnection.expand()
                                         }
                                     }

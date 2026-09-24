@@ -2658,28 +2658,15 @@ fun PlayerScreen(
                      val fluidSecondary = if (isNormalArtwork) normalMidColor else secCol
                      val fluidAccent = if (isNormalArtwork) normalBottomColor else bottomAverageColor
 
-                      // Fondo de formas estáticas (sin movimiento) para letras y cola: ahorra recursos.
-                      if (!isUltraPerformance && fullArtworkBackdropStyle != "accord") {
-                          com.mrtdk.liquid_glass.ui.components.RayMusicStaticFluidBackground(
+                      // Fondo de formas estáticas (sin movimiento) para letras y cola: estilo Apple Music con Mesh Gradient.
+                      if (fullArtworkBackdropStyle != "accord") {
+                          com.mrtdk.liquid_glass.ui.components.RayMusicStaticMeshGradientBackground(
                               primaryColor = fluidPrimary,
                               secondaryColor = fluidSecondary,
                               accentColor = fluidAccent,
                               modifier = Modifier.fillMaxSize()
                           )
-                     } else if (isUltraPerformance) {
-                         Box(
-                             modifier = Modifier
-                                 .fillMaxSize()
-                                 .background(
-                                     Brush.verticalGradient(
-                                         listOf(
-                                             fluidPrimary.copy(alpha = 0.85f),
-                                             Color.Black
-                                         )
-                                     )
-                                 )
-                         )
-                     }
+                      }
                  }
 
                       // Height of the content area: terminates ~5px (6dp) right above the seekbar
@@ -3960,6 +3947,8 @@ fun PlayerScreen(
                     .heightIn(min = 48.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val currentOnSkipNext by rememberUpdatedState(onSkipNext)
+                val currentOnSkipPrevious by rememberUpdatedState(onSkipPrevious)
                 val titleDragOffsetX = remember { androidx.compose.animation.core.Animatable(0f) }
                 var totalDragDistance by remember { mutableFloatStateOf(0f) }
                 var dragStartTime by remember { mutableLongStateOf(0L) }
@@ -3997,10 +3986,10 @@ fun PlayerScreen(
                                     if (shouldSkip) {
                                         if (currentVal < 0) {
                                             swipeDirection = 1
-                                            onSkipNext()
+                                            currentOnSkipNext()
                                         } else {
                                             swipeDirection = -1
-                                            onSkipPrevious()
+                                            currentOnSkipPrevious()
                                         }
                                     }
                                     scope.launch {
@@ -5354,57 +5343,22 @@ fun AnimatedSkipButton(
     onClick: () -> Unit
 
 ) {
-
-    var isPressed by remember { mutableStateOf(false) }
-
-    val scale by androidx.compose.animation.core.animateFloatAsState(if (isPressed) 0.85f else 1f, label="")
-
-    val bgAlpha by androidx.compose.animation.core.animateFloatAsState(if (isPressed) 0.15f else 0f, label="")
-
-    
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by androidx.compose.animation.core.animateFloatAsState(if (isPressed) 0.85f else 1f, label = "skipScale")
+    val bgAlpha by androidx.compose.animation.core.animateFloatAsState(if (isPressed) 0.15f else 0f, label = "skipBgAlpha")
 
     Box(
-
         modifier = Modifier
-
             .size(sizeDp)
-
             .clip(CircleShape)
-
             .background(contentColor.copy(alpha = bgAlpha))
-
             .clickable(
-
-                interactionSource = remember { MutableInteractionSource() },
-
+                interactionSource = interactionSource,
                 indication = null,
-
                 onClick = onClick
-
-            )
-
-            .pointerInput(Unit) {
-
-                awaitPointerEventScope {
-
-                    while (true) {
-
-                        val down = awaitFirstDown()
-
-                        isPressed = true
-
-                        waitForUpOrCancellation()
-
-                        isPressed = false
-
-                    }
-
-                }
-
-            },
-
+            ),
         contentAlignment = Alignment.Center
-
     ) {
 
         Icon(

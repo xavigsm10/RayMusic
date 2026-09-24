@@ -18,6 +18,9 @@ import com.echo.innertube.YouTube
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 import android.os.Build
+import android.os.Bundle
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
 import android.content.pm.ServiceInfo
 import androidx.core.app.NotificationCompat
 import android.app.Notification
@@ -589,51 +592,19 @@ class MusicService : MediaSessionService() {
             override fun hasPreviousMediaItem(): Boolean = true
 
             override fun seekToNext() {
-                seekToNextMediaItem()
+                performSeekToNextMediaItem()
             }
 
             override fun seekToPrevious() {
-                // Ir siempre a la canción anterior (o reiniciar si no hay historial).
-                // Sin regla de 3 segundos: el botón de retroceder siempre responde.
-                seekToPreviousMediaItem()
+                performSeekToPreviousMediaItem()
             }
 
             override fun seekToNextMediaItem() {
-                val queue = com.mrtdk.liquid_glass.playback.PlaybackQueue
-                // Avanzar y consumir la cola SIEMPRE primero (una sola vez por pulsación).
-                // peekNextSong no consume ni actualiza historial/currentSong, por eso el
-                // botón/swipe parecía muerto o repetía. El avance automático del automix
-                // (monitor de fin de pista / STATE_ENDED) no se toca: sigue igual abajo.
-                var nextState = queue.getNextSongAndAdvance(activePlayer.repeatMode)
-                if (nextState == null && activePlayer.repeatMode == Player.REPEAT_MODE_ONE) {
-                    nextState = queue.currentSong
-                }
-                if (nextState == null) {
-                    // Cola vacía: pedir más autoplay en segundo plano y reiniciar la actual
-                    // para que el botón siempre responda. La próxima pulsación ya tendrá cola.
-                    triggerRadioRefillIfNeeded()
-                    try { activePlayer.seekTo(0); activePlayer.play() } catch (_: Exception) {}
-                    return
-                }
-                if (queue.isAutomixEnabled && activePlayer.isPlaying) {
-                    // Si quedó un crossfade a medias, cancelarlo para que esta pulsación
-                    // manual nunca se trague: completeCrossfade compara current vs target,
-                    // y como ya avanzamos (current == target) no habrá doble consumo.
-                    if (isCrossfading) cancelCrossfadeToIdle()
-                    startCrossfadeTransition(durationMs = 1500L, targetState = nextState, isNaturalEnding = false)
-                } else {
-                    playSongState(nextState)
-                }
+                performSeekToNextMediaItem()
             }
 
             override fun seekToPreviousMediaItem() {
-                val prevState = com.mrtdk.liquid_glass.playback.PlaybackQueue.getPreviousSongAndGoBack()
-                if (prevState != null) {
-                    playSongState(prevState)
-                } else {
-                    // Sin historial: reiniciar la canción actual para que el botón responda.
-                    try { activePlayer.seekTo(0); activePlayer.play() } catch (_: Exception) {}
-                }
+                performSeekToPreviousMediaItem()
             }
 
             override fun pause() {
@@ -699,6 +670,39 @@ class MusicService : MediaSessionService() {
         }
     }
 
+    fun performSeekToNextMediaItem() {
+        val queue = com.mrtdk.liquid_glass.playback.PlaybackQueue
+        var nextState = queue.getNextSongAndAdvance(activePlayer.repeatMode)
+        if (nextState == null && activePlayer.repeatMode == Player.REPEAT_MODE_ONE) {
+            nextState = queue.currentSong
+        }
+        if (nextState == null) {
+            triggerRadioRefillIfNeeded()
+            try { activePlayer.seekTo(0); activePlayer.play() } catch (_: Exception) {}
+            return
+        }
+        if (isCrossfading) {
+            crossfadeJob?.cancel()
+            isCrossfading = false
+            com.mrtdk.liquid_glass.playback.PlaybackQueue.isAutoMixing = false
+        }
+        playSongState(nextState)
+    }
+
+    fun performSeekToPreviousMediaItem() {
+        if (isCrossfading) {
+            crossfadeJob?.cancel()
+            isCrossfading = false
+            com.mrtdk.liquid_glass.playback.PlaybackQueue.isAutoMixing = false
+        }
+        val prevState = com.mrtdk.liquid_glass.playback.PlaybackQueue.getPreviousSongAndGoBack()
+        if (prevState != null) {
+            playSongState(prevState)
+        } else {
+            try { activePlayer.seekTo(0); activePlayer.play() } catch (_: Exception) {}
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         
@@ -759,6 +763,46 @@ class MusicService : MediaSessionService() {
         mediaSession = MediaSession.Builder(this, forwardingPlayer)
             .setSessionActivity(pendingIntent)
             .setCallback(object : MediaSession.Callback {
+                override fun onConnect(
+                    session: MediaSession,
+                    controller: MediaSession.ControllerInfo
+                ): MediaSession.ConnectionResult {
+                    val connectionResult = super.onConnect(session, controller)
+                    val sessionCommands = connectionResult.availableSessionCommands.buildUpon()
+                        .add(SessionCommand("ACTION_SEEK_NEXT", Bundle.EMPTY))
+                        .add(SessionCommand("ACTION_SEEK_PREVIOUS", Bundle.EMPTY))
+                        .build()
+                    val playerCommands = connectionResult.availablePlayerCommands.buildUpon()
+                        .add(Player.COMMAND_SEEK_TO_NEXT)
+                        .add(Player.COMMAND_SEEK_TO_PREVIOUS)
+                        .add(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
+                        .add(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
+                        .build()
+                    return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+                        .setAvailableSessionCommands(sessionCommands)
+                        .setAvailablePlayerCommands(playerCommands)
+                        .build()
+                }
+
+                override fun onCustomCommand(
+                    session: MediaSession,
+                    controller: MediaSession.ControllerInfo,
+                    customCommand: SessionCommand,
+                    args: Bundle
+                ): com.google.common.util.concurrent.ListenableFuture<SessionResult> {
+                    when (customCommand.customAction) {
+                        "ACTION_SEEK_NEXT" -> {
+                            performSeekToNextMediaItem()
+                            return com.google.common.util.concurrent.Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                        }
+                        "ACTION_SEEK_PREVIOUS" -> {
+                            performSeekToPreviousMediaItem()
+                            return com.google.common.util.concurrent.Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                        }
+                    }
+                    return super.onCustomCommand(session, controller, customCommand, args)
+                }
+
                 override fun onPlaybackResumption(
                     mediaSession: MediaSession,
                     controller: MediaSession.ControllerInfo

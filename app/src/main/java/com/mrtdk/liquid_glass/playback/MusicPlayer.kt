@@ -299,10 +299,18 @@ class MusicPlayer(private val context: Context) {
     }
 
     fun seekToNext() {
+        try {
+            val cmd = androidx.media3.session.SessionCommand("ACTION_SEEK_NEXT", android.os.Bundle.EMPTY)
+            controller?.sendCustomCommand(cmd, android.os.Bundle.EMPTY)
+        } catch (_: Exception) {}
         controller?.seekToNextMediaItem()
     }
 
     fun seekToPrevious() {
+        try {
+            val cmd = androidx.media3.session.SessionCommand("ACTION_SEEK_PREVIOUS", android.os.Bundle.EMPTY)
+            controller?.sendCustomCommand(cmd, android.os.Bundle.EMPTY)
+        } catch (_: Exception) {}
         controller?.seekToPreviousMediaItem()
     }
 

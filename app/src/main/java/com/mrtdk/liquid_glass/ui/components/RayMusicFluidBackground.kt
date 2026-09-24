@@ -344,12 +344,14 @@ fun RayMusicFluidBackground(
 }
 
 /**
- * Fondo fluido con formas orgánicas estáticas para la vista de letras y cola de reproducción.
- * Dibuja las cintas de Bezier y orbes de luz ambiental de la carátula sin movimiento ni osciladores,
- * reproduciendo con exactitud la estética de formas difuminadas mostrada en la captura.
+ * Apple Music Static Mesh Gradient Background
+ *
+ * Fondo de gradiente de malla (Mesh Gradient) estático estilo Apple Music.
+ * Utiliza los colores de la carátula de la canción con nodos de malla fijos
+ * y difuminado profundo orgánico, sin movimiento ni consumo continuo de GPU.
  */
 @Composable
-fun RayMusicStaticFluidBackground(
+fun RayMusicStaticMeshGradientBackground(
     primaryColor: Color,
     secondaryColor: Color,
     accentColor: Color,
@@ -392,53 +394,22 @@ fun RayMusicStaticFluidBackground(
         )
     }
 
-    val animPrimary by animateColorAsState(safePrimary, tween(750, easing = FastOutSlowInEasing), label = "staticFluidPrimary")
-    val animSecondary by animateColorAsState(safeSecondary, tween(750, easing = FastOutSlowInEasing), label = "staticFluidSecondary")
-    val animAccent by animateColorAsState(safeAccent, tween(750, easing = FastOutSlowInEasing), label = "staticFluidAccent")
-    val animHighlight by animateColorAsState(safeHighlight, tween(750, easing = FastOutSlowInEasing), label = "staticFluidHighlight")
+    val safeDeep = remember(safePrimary, safeAccent) {
+        Color(
+            red = (safePrimary.red * 0.40f + safeAccent.red * 0.60f).coerceIn(0f, 1f),
+            green = (safePrimary.green * 0.40f + safeAccent.green * 0.60f).coerceIn(0f, 1f),
+            blue = (safePrimary.blue * 0.40f + safeAccent.blue * 0.60f).coerceIn(0f, 1f),
+            alpha = 1f
+        )
+    }
+
+    val animPrimary by animateColorAsState(safePrimary, tween(750, easing = FastOutSlowInEasing), label = "meshPrimary")
+    val animSecondary by animateColorAsState(safeSecondary, tween(750, easing = FastOutSlowInEasing), label = "meshSecondary")
+    val animAccent by animateColorAsState(safeAccent, tween(750, easing = FastOutSlowInEasing), label = "meshAccent")
+    val animHighlight by animateColorAsState(safeHighlight, tween(750, easing = FastOutSlowInEasing), label = "meshHighlight")
+    val animDeep by animateColorAsState(safeDeep, tween(750, easing = FastOutSlowInEasing), label = "meshDeep")
 
     val perfConfig by PerformanceProfileManager.config.collectAsState()
-
-    val path1 = remember { Path() }
-    val path2 = remember { Path() }
-    val path3 = remember { Path() }
-    val path4 = remember { Path() }
-
-    val colorsRibbon1 = remember(animPrimary, animHighlight, animSecondary) {
-        listOf(
-            animPrimary.copy(alpha = 0.70f),
-            animHighlight.copy(alpha = 0.58f),
-            animSecondary.copy(alpha = 0.42f)
-        )
-    }
-    val colorsRibbon2 = remember(animSecondary, animPrimary, animAccent) {
-        listOf(
-            animSecondary.copy(alpha = 0.68f),
-            animPrimary.copy(alpha = 0.52f),
-            animAccent.copy(alpha = 0.45f)
-        )
-    }
-    val colorsRibbon3 = remember(animAccent, animSecondary, animHighlight) {
-        listOf(
-            animAccent.copy(alpha = 0.60f),
-            animSecondary.copy(alpha = 0.48f),
-            animHighlight.copy(alpha = 0.38f)
-        )
-    }
-    val colorsRibbon4 = remember(animHighlight, animPrimary, animAccent) {
-        listOf(
-            animHighlight.copy(alpha = 0.55f),
-            animPrimary.copy(alpha = 0.48f),
-            animAccent.copy(alpha = 0.42f)
-        )
-    }
-    val colorsOrb = remember(animHighlight, animSecondary) {
-        listOf(
-            animHighlight.copy(alpha = 0.48f),
-            animSecondary.copy(alpha = 0.28f),
-            Color.Transparent
-        )
-    }
 
     Box(modifier = modifier) {
         // Capa 1: Base oscura atmosférica
@@ -446,14 +417,14 @@ fun RayMusicStaticFluidBackground(
             drawRect(color = Color(0xFF07080B))
             drawRect(
                 brush = Brush.verticalGradient(
-                    0.0f to animPrimary.copy(alpha = 0.42f),
-                    0.45f to animSecondary.copy(alpha = 0.30f),
-                    1.0f to animAccent.copy(alpha = 0.22f)
+                    0.0f to animPrimary.copy(alpha = 0.40f),
+                    0.48f to animSecondary.copy(alpha = 0.28f),
+                    1.0f to animAccent.copy(alpha = 0.20f)
                 )
             )
         }
 
-        // Capa 2: Malla de cintas sinuosas fluidas fijas con formas orgánicas
+        // Capa 2: Mesh Gradient con nodos radiales fijos orgánicos (100% estático, 0 movimiento)
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val scale = perfConfig.fluidScale.coerceIn(0.30f, 0.75f)
             val subWidth = maxWidth * scale
@@ -474,112 +445,106 @@ fun RayMusicStaticFluidBackground(
                 val h = size.height
                 if (w <= 0f || h <= 0f) return@Canvas
 
-                val strokeRibbon = w * 0.56f
-
-                // Ángulos y fases armónicas estáticas para crear la silueta idéntica a la captura
-                // Cinta 1: Flujo superior sinuoso oblicuo
-                val p1x0 = -w * 0.20f
-                val p1y0 = h * 0.22f
-                val p1c1x = w * 0.38f
-                val p1c1y = h * 0.12f
-                val p1c2x = w * 0.72f
-                val p1c2y = h * 0.32f
-                val p1x1 = w * 1.20f
-                val p1y1 = h * 0.25f
-
-                path1.rewind()
-                path1.moveTo(p1x0, p1y0)
-                path1.cubicTo(p1c1x, p1c1y, p1c2x, p1c2y, p1x1, p1y1)
-                drawPath(
-                    path = path1,
-                    brush = Brush.linearGradient(
-                        colors = colorsRibbon1,
-                        start = Offset(p1x0, p1y0),
-                        end = Offset(p1x1, p1y1)
-                    ),
-                    style = Stroke(width = strokeRibbon, cap = StrokeCap.Round, join = StrokeJoin.Round)
-                )
-
-                // Cinta 2: Flujo medio hacia la derecha (crea la silueta cálida prominente a la derecha)
-                val p2x0 = w * 1.20f
-                val p2y0 = h * 0.42f
-                val p2c1x = w * 0.90f
-                val p2c1y = h * 0.22f
-                val p2c2x = w * 0.32f
-                val p2c2y = h * 0.65f
-                val p2x1 = -w * 0.20f
-                val p2y1 = h * 0.50f
-
-                path2.rewind()
-                path2.moveTo(p2x0, p2y0)
-                path2.cubicTo(p2c1x, p2c1y, p2c2x, p2c2y, p2x1, p2y1)
-                drawPath(
-                    path = path2,
-                    brush = Brush.linearGradient(
-                        colors = colorsRibbon2,
-                        start = Offset(p2x0, p2y0),
-                        end = Offset(p2x1, p2y1)
-                    ),
-                    style = Stroke(width = strokeRibbon * 1.10f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-                )
-
-                // Cinta 3: Flujo inferior profundo
-                val p3x0 = -w * 0.20f
-                val p3y0 = h * 0.76f
-                val p3c1x = w * 0.32f
-                val p3c1y = h * 0.86f
-                val p3c2x = w * 0.74f
-                val p3c2y = h * 0.68f
-                val p3x1 = w * 1.20f
-                val p3y1 = h * 0.80f
-
-                path3.rewind()
-                path3.moveTo(p3x0, p3y0)
-                path3.cubicTo(p3c1x, p3c1y, p3c2x, p3c2y, p3x1, p3y1)
-                drawPath(
-                    path = path3,
-                    brush = Brush.linearGradient(
-                        colors = colorsRibbon3,
-                        start = Offset(p3x0, p3y0),
-                        end = Offset(p3x1, p3y1)
-                    ),
-                    style = Stroke(width = strokeRibbon, cap = StrokeCap.Round, join = StrokeJoin.Round)
-                )
-
-                // Cinta 4: Diagonal sinuosa
-                val p4x0 = w * 0.52f
-                val p4y0 = -h * 0.10f
-                val p4c1x = w * 0.28f
-                val p4c1y = h * 0.38f
-                val p4c2x = w * 0.82f
-                val p4c2y = h * 0.62f
-                val p4x1 = w * 0.48f
-                val p4y1 = h * 1.10f
-
-                path4.rewind()
-                path4.moveTo(p4x0, p4y0)
-                path4.cubicTo(p4c1x, p4c1y, p4c2x, p4c2y, p4x1, p4y1)
-                drawPath(
-                    path = path4,
-                    brush = Brush.linearGradient(
-                        colors = colorsRibbon4,
-                        start = Offset(p4x0, p4y0),
-                        end = Offset(p4x1, p4y1)
-                    ),
-                    style = Stroke(width = strokeRibbon * 0.90f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-                )
-
-                // Orbe radial de luz ambiental (posicionado hacia el centro-derecha, coincidente con la captura)
-                val orbCenterX = w * 0.64f
-                val orbCenterY = h * 0.58f
+                // Nodo 1: Superior izquierdo (animPrimary)
+                val n1Center = Offset(w * 0.15f, h * 0.12f)
+                val n1Radius = (w * 0.95f).coerceAtLeast(1f)
                 drawCircle(
                     brush = Brush.radialGradient(
-                        colors = colorsOrb,
-                        center = Offset(orbCenterX, orbCenterY),
-                        radius = w * 0.65f
+                        colors = listOf(
+                            animPrimary.copy(alpha = 0.85f),
+                            animPrimary.copy(alpha = 0.45f),
+                            Color.Transparent
+                        ),
+                        center = n1Center,
+                        radius = n1Radius
                     ),
-                    center = Offset(orbCenterX, orbCenterY),
-                    radius = w * 0.65f
+                    center = n1Center,
+                    radius = n1Radius
+                )
+
+                // Nodo 2: Superior derecho (animSecondary)
+                val n2Center = Offset(w * 0.85f, h * 0.20f)
+                val n2Radius = (w * 1.05f).coerceAtLeast(1f)
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            animSecondary.copy(alpha = 0.80f),
+                            animSecondary.copy(alpha = 0.40f),
+                            Color.Transparent
+                        ),
+                        center = n2Center,
+                        radius = n2Radius
+                    ),
+                    center = n2Center,
+                    radius = n2Radius
+                )
+
+                // Nodo 3: Centro-Izquierda (animHighlight)
+                val n3Center = Offset(w * 0.22f, h * 0.50f)
+                val n3Radius = (w * 0.90f).coerceAtLeast(1f)
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            animHighlight.copy(alpha = 0.75f),
+                            animHighlight.copy(alpha = 0.35f),
+                            Color.Transparent
+                        ),
+                        center = n3Center,
+                        radius = n3Radius
+                    ),
+                    center = n3Center,
+                    radius = n3Radius
+                )
+
+                // Nodo 4: Centro-Derecha (animAccent)
+                val n4Center = Offset(w * 0.82f, h * 0.62f)
+                val n4Radius = (w * 0.95f).coerceAtLeast(1f)
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            animAccent.copy(alpha = 0.78f),
+                            animAccent.copy(alpha = 0.38f),
+                            Color.Transparent
+                        ),
+                        center = n4Center,
+                        radius = n4Radius
+                    ),
+                    center = n4Center,
+                    radius = n4Radius
+                )
+
+                // Nodo 5: Inferior izquierdo (animDeep)
+                val n5Center = Offset(w * 0.25f, h * 0.88f)
+                val n5Radius = (w * 1.00f).coerceAtLeast(1f)
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            animDeep.copy(alpha = 0.70f),
+                            animDeep.copy(alpha = 0.30f),
+                            Color.Transparent
+                        ),
+                        center = n5Center,
+                        radius = n5Radius
+                    ),
+                    center = n5Center,
+                    radius = n5Radius
+                )
+
+                // Nodo 6: Inferior derecho (animSecondary + animPrimary blend)
+                val n6Center = Offset(w * 0.85f, h * 0.90f)
+                val n6Radius = (w * 0.95f).coerceAtLeast(1f)
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            animSecondary.copy(alpha = 0.65f),
+                            animPrimary.copy(alpha = 0.25f),
+                            Color.Transparent
+                        ),
+                        center = n6Center,
+                        radius = n6Radius
+                    ),
+                    center = n6Center,
+                    radius = n6Radius
                 )
             }
         }
@@ -596,6 +561,24 @@ fun RayMusicStaticFluidBackground(
             )
         }
     }
+}
+
+/**
+ * Delegación compatible para llamadas anteriores de RayMusicStaticFluidBackground.
+ */
+@Composable
+fun RayMusicStaticFluidBackground(
+    primaryColor: Color,
+    secondaryColor: Color,
+    accentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    RayMusicStaticMeshGradientBackground(
+        primaryColor = primaryColor,
+        secondaryColor = secondaryColor,
+        accentColor = accentColor,
+        modifier = modifier
+    )
 }
 
 /**

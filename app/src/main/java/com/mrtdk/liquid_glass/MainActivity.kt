@@ -236,6 +236,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 var selectedIndex by remember { mutableIntStateOf(com.mrtdk.liquid_glass.data.LibraryManager.getLastTab()) }
+                var inicioScrollToTopTrigger by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
                 LaunchedEffect(selectedIndex) {
                     com.mrtdk.liquid_glass.data.LibraryManager.saveLastTab(selectedIndex)
                 }
@@ -672,6 +673,7 @@ class MainActivity : ComponentActivity() {
                                                     innerPadding = innerPadding,
                                                     playerState = playerState,
                                                     state = inicioState,
+                                                    scrollToTopTrigger = inicioScrollToTopTrigger,
                                                     onSongSelected = playSong,
                                                     onStationSelected = playSongMiniPlayer,
                                                     onArtistSelected = onArtistSelectedAction,
@@ -942,6 +944,9 @@ class MainActivity : ComponentActivity() {
                                                     onNext = skipNextFun,
                                                     onPrevious = skipPreviousFun,
                                                     onTabSelected = { newIndex ->
+                                                        if (selectedIndex == 0 && newIndex == 0) {
+                                                            inicioScrollToTopTrigger = System.currentTimeMillis()
+                                                        }
                                                         artistDetail = null
                                                         albumDetail = null
                                                         playlistDetail = null

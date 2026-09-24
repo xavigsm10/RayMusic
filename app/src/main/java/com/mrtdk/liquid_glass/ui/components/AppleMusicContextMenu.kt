@@ -332,6 +332,7 @@ private fun SongMenuInnerContent(
                 label = stringResource(R.string.menu_fijar_accesos_directos),
                 onClick = {
                     LibraryManager.saveItem(libraryItem)
+                    LibraryManager.setItemPinned(libraryItem.id, true)
                     Toast.makeText(context, context.getString(R.string.menu_fijado_accesos_directos), Toast.LENGTH_SHORT).show()
                     onDismiss()
                 }
@@ -1334,6 +1335,38 @@ private fun AlbumMenuInnerContent(
                                 .fillMaxWidth()
                                 .verticalScroll(rememberScrollState())
                         ) {
+                            val isAlbumPinned = LibraryManager.isItemPinned(album.id)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        val next = !isAlbumPinned
+                                        LibraryManager.setItemPinned(album.id, next)
+                                        if (next) {
+                                            LibraryManager.saveItem(libraryAlbumItem)
+                                        }
+                                        Toast.makeText(context, if (next) "Álbum fijado en la biblioteca" else "Álbum desfijado", Toast.LENGTH_SHORT).show()
+                                        onDismiss()
+                                    }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PushPin,
+                                    contentDescription = null,
+                                    tint = if (isAlbumPinned) Color(0xFFFA243C) else Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(modifier = Modifier.width(14.dp))
+                                Text(
+                                    text = if (isAlbumPinned) "Desfijar álbum" else "Fijar álbum",
+                                    color = Color.White,
+                                    fontSize = 15.sp
+                                )
+                            }
+
+                            Divider(color = Color.White.copy(alpha = 0.08f), thickness = 0.5.dp)
+
                             // 1. Agregar a playlist
                             Row(
                                 modifier = Modifier
@@ -2748,6 +2781,21 @@ private fun ArtistMenuInnerContent(
 
     Divider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 4.dp))
 
+    val isArtistPinned = LibraryManager.isItemPinned(artistId)
+    VerticalMenuActionItem(
+        icon = Icons.Default.PushPin,
+        label = if (isArtistPinned) "Desfijar artista" else "Fijar artista",
+        iconTint = if (isArtistPinned) Color(0xFFFA243C) else Color.White
+    ) {
+        val next = !isArtistPinned
+        LibraryManager.setItemPinned(artistId, next)
+        if (next) {
+            LibraryManager.saveItem(LibraryItem(id = artistId, title = artistName, subtitle = "Artist", thumbnail = artistThumb, type = ItemType.ARTIST))
+        }
+        Toast.makeText(context, if (next) "Artista fijado en la biblioteca" else "Artista desfijado", Toast.LENGTH_SHORT).show()
+        onDismiss()
+    }
+
     // Vertical actions: Crear Emisora, Abrir en Clásica, Sugerir menos
     VerticalMenuActionItem(
         icon = Icons.Default.Radio,
@@ -3506,19 +3554,30 @@ fun GlassBoxScope.PlayerOptionsMenu(
                 ) {
                     // Fijar canción / Destacar canción
                     val isPinned = remember(playerState?.videoId) {
-                        val key = "song_pinned_${playerState?.videoId ?: ""}"
-                        LibraryManager.getString(key) == "true"
+                        LibraryManager.isItemPinned(playerState?.videoId ?: "")
                     }
                     VerticalMenuActionItem(
                         icon = Icons.Default.PushPin,
-                        label = if (isPinned) stringResource(R.string.player_menu_unpin_song) else stringResource(R.string.player_menu_pin_song)
+                        label = if (isPinned) stringResource(R.string.player_menu_unpin_song) else stringResource(R.string.player_menu_pin_song),
+                        iconTint = if (isPinned) Color(0xFFFA243C) else Color.White
                     ) {
                         handleDismiss {
                             if (playerState?.videoId != null) {
-                                val key = "song_pinned_${playerState.videoId}"
-                                val newPinned = !isPinned
-                                LibraryManager.saveString(key, if (newPinned) "true" else "false")
-                                Toast.makeText(context, if (newPinned) context.getString(R.string.toast_song_pinned) else context.getString(R.string.toast_song_unpinned), Toast.LENGTH_SHORT).show()
+                                val next = !isPinned
+                                LibraryManager.setItemPinned(playerState.videoId, next)
+                                if (next) {
+                                    LibraryManager.saveItem(
+                                        LibraryItem(
+                                            id = playerState.videoId,
+                                            title = playerState.title ?: "",
+                                            subtitle = playerState.artist ?: "",
+                                            thumbnail = playerState.artUrl?.toString(),
+                                            type = ItemType.SONG,
+                                            album = playerState.album
+                                        )
+                                    )
+                                }
+                                Toast.makeText(context, if (next) context.getString(R.string.toast_song_pinned) else context.getString(R.string.toast_song_unpinned), Toast.LENGTH_SHORT).show()
                             }
                         }
                     }

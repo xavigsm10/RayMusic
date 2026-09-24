@@ -154,6 +154,51 @@ object PlaybackQueue {
             onQueueChanged?.invoke()
             return nextState
         }
+
+        // Fallback: si cola y upNext están vacías (por ejemplo reproducción individual directa),
+        // avanzar a temas guardados o escuchados recientemente para que el botón/gesto siempre responda
+        val saved = com.mrtdk.liquid_glass.data.LibraryManager.savedItems.value
+            .filter { it.type == com.mrtdk.liquid_glass.data.ItemType.SONG }
+            .filter { it.id != current.videoId }
+        if (saved.isNotEmpty()) {
+            val nextItem = saved.shuffled().first()
+            addToHistory(current)
+            val nextState = PlayerState(
+                title = nextItem.title,
+                artist = nextItem.subtitle,
+                artUrl = nextItem.thumbnail,
+                videoId = nextItem.id,
+                contentUri = null,
+                isExclusiveQueue = false,
+                album = nextItem.album
+            )
+            currentSong = nextState
+            onCurrentSongChanged?.invoke(nextState)
+            onQueueChanged?.invoke()
+            return nextState
+        }
+
+        val recent = com.mrtdk.liquid_glass.data.LibraryManager.recentlyPlayed.value
+            .filter { it.type == com.mrtdk.liquid_glass.data.ItemType.SONG }
+            .filter { it.id != current.videoId }
+        if (recent.isNotEmpty()) {
+            val nextItem = recent.shuffled().first()
+            addToHistory(current)
+            val nextState = PlayerState(
+                title = nextItem.title,
+                artist = nextItem.subtitle,
+                artUrl = nextItem.thumbnail,
+                videoId = nextItem.id,
+                contentUri = null,
+                isExclusiveQueue = false,
+                album = nextItem.album
+            )
+            currentSong = nextState
+            onCurrentSongChanged?.invoke(nextState)
+            onQueueChanged?.invoke()
+            return nextState
+        }
+
         return null
     }
 
@@ -186,6 +231,43 @@ object PlaybackQueue {
             onQueueChanged?.invoke()
             return prev
         }
+
+        // Fallback para retroceder si el historial en memoria está vacío (p. ej. recién iniciada la reproducción)
+        val cur = currentSong
+        val recent = com.mrtdk.liquid_glass.data.LibraryManager.recentlyPlayed.value
+            .filter { it.type == com.mrtdk.liquid_glass.data.ItemType.SONG }
+            .filter { it.id != cur?.videoId }
+        if (recent.isNotEmpty()) {
+            val prevItem = recent.first()
+            val prevState = PlayerState(
+                title = prevItem.title,
+                artist = prevItem.subtitle,
+                artUrl = prevItem.thumbnail,
+                videoId = prevItem.id,
+                contentUri = null,
+                isExclusiveQueue = false,
+                album = prevItem.album
+            )
+            if (cur != null && cur.videoId != null && queue.firstOrNull()?.videoId != cur.videoId) {
+                queue = listOf(
+                    QueueItem(
+                        title = cur.title,
+                        artist = cur.artist,
+                        artUrl = cur.artUrl,
+                        videoId = cur.videoId,
+                        album = cur.album,
+                        albumId = cur.albumId,
+                        playlistId = cur.playlistId,
+                        playlistName = cur.playlistName
+                    )
+                ) + queue
+            }
+            currentSong = prevState
+            onCurrentSongChanged?.invoke(prevState)
+            onQueueChanged?.invoke()
+            return prevState
+        }
+
         return null
     }
 

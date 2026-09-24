@@ -121,6 +121,9 @@ fun FloatingMiniPlayer(
     val density = LocalDensity.current
     val densityScale = density.density
 
+    val currentOnNext by androidx.compose.runtime.rememberUpdatedState(onNext)
+    val currentOnPrevious by androidx.compose.runtime.rememberUpdatedState(onPrevious)
+
     val jumpOffsetY = remember { Animatable(0f) }
     val jumpScale = remember { Animatable(1f) }
     val artScale = remember { Animatable(1f) }
@@ -287,10 +290,10 @@ fun FloatingMiniPlayer(
                                 if (shouldChangeSong) {
                                     if (currentOffset > 0) {
                                         miniPlayerSwipeDirection = -1
-                                        onPrevious()
+                                        currentOnPrevious()
                                     } else {
                                         miniPlayerSwipeDirection = 1
-                                        onNext()
+                                        currentOnNext()
                                     }
                                 }
                                 coroutineScope.launch {
@@ -373,7 +376,7 @@ fun FloatingMiniPlayer(
             IconButton(
                 onClick = {
                     miniPlayerSwipeDirection = 1
-                    onNext()
+                    currentOnNext()
                 },
                 modifier = Modifier.size(if (isInline) 32.dp else 36.dp),
             ) {
