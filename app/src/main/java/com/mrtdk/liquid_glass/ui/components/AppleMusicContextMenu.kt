@@ -346,7 +346,7 @@ private fun SongMenuInnerContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = { onPlaylistsScreenChange(false) }) {
-                Icon(Icons.Default.ArrowBackIosNew, contentDescription = stringResource(R.string.lyrics_menu_back), tint = Color(0xFFFA243C))
+                Icon(painterResource(id = R.drawable.flecha_atras), contentDescription = stringResource(R.string.lyrics_menu_back), tint = Color(0xFFFA243C), modifier = Modifier.size(20.dp).offset(x = (-1).dp))
             }
             Text(
                 text = stringResource(R.string.menu_anadir_a_playlist),
@@ -1605,10 +1605,10 @@ private fun AlbumMenuInnerContent(
                                 modifier = Modifier.size(32.dp)
                             ) {
                                 Icon(
-                                    Icons.Default.ArrowBackIosNew,
+                                    painter = painterResource(id = R.drawable.flecha_atras),
                                     contentDescription = "Volver",
                                     tint = Color(0xFFFA243C),
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(18.dp).offset(x = (-1).dp)
                                 )
                             }
                             Spacer(modifier = Modifier.width(8.dp))

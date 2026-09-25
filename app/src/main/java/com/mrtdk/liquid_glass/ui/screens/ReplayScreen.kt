@@ -1161,10 +1161,10 @@ fun ReplayScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.ArrowBackIosNew,
+                        painter = painterResource(id = R.drawable.flecha_atras),
                         contentDescription = stringResource(R.string.back_action),
                         tint = if (currentView != ReplayView.MAIN) Color(0xFFFA243C) else Color.White,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(20.dp).offset(x = (-1).dp)
                     )
                 }
 
@@ -1194,7 +1194,7 @@ fun ReplayScreen(
                         painter = painterResource(id = R.drawable.compartir),
                         contentDescription = stringResource(R.string.compartir),
                         tint = if (currentView != ReplayView.MAIN) Color(0xFFFA243C) else Color.White,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
@@ -1266,7 +1266,7 @@ private fun ReplaySongRow(
         Box {
             IconButton(onClick = { showMenu = true }) {
                 Icon(
-                    imageVector = Icons.Default.MoreVert,
+                    painter = painterResource(id = R.drawable.tres_puntos), modifier = Modifier.width(20.dp).height(16.dp),
                     contentDescription = null,
                     tint = Color.White.copy(alpha = 0.6f)
                 )

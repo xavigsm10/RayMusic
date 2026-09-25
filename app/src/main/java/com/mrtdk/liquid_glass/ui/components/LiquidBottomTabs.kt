@@ -5,7 +5,9 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -77,6 +79,8 @@ fun LiquidBottomTabs(
     val glassStyle = com.mrtdk.glass.LocalGlassStyle.current
     val isLightweight = com.mrtdk.glass.LocalLightweightGlass.current
     val isUltraPerf by com.mrtdk.liquid_glass.data.LibraryManager.ultraPerformanceMode.collectAsState()
+    val currentBackdropStyle by com.mrtdk.liquid_glass.data.LibraryManager.fullArtworkBackdropStyle.collectAsState()
+    val isFondoCompleto = currentBackdropStyle == "accord"
     val isSolid = glassStyle == "solid" || isUltraPerf
     val solidBgColor = if (isDarkMode) Color(0xFF242428) else Color(0xFFE8E8EC)
 
@@ -202,7 +206,7 @@ fun LiquidBottomTabs(
             )
         }
 
-        if (isLightweight) {
+        if (isUltraPerf) {
             val solidPuckColor = if (isDarkMode) Color(0xFF38383C) else Color(0xFFD1D1D6)
 
             // Layer 1: Background container bar with light blur
@@ -269,40 +273,60 @@ fun LiquidBottomTabs(
                 content = content
             )
         } else {
-            // Layer 1: Outer capsule container with glass blur, lens, and specular rim
-            Row(
-                Modifier
-                    .graphicsLayer {
-                        translationX = panelOffset
-                    }
-                    .drawBackdrop(
-                        backdrop = backdrop,
-                        shape = { Capsule() },
-                        effects = {
-                            vibrancy()
-                            blur(8f.dp.toPx() * backdropScale)
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                lens(24f.dp.toPx() * backdropScale, 24f.dp.toPx() * backdropScale)
-                            }
-                        },
-                        layerBlock = {
-                            val progress = dampedDragAnimation.pressProgress
-                            val scale = lerp(1f, 1f + 16f.dp.toPx() / size.width, progress)
-                            scaleX = scale
-                            scaleY = scale
-                        },
-                        highlight = { Highlight.Default.copy(alpha = 0.35f) },
-                        shadow = { Shadow.Default },
-                        onDrawSurface = { drawRect(actualContainerColor) },
-                        backdropScale = backdropScale
-                    )
-                    .then(interactiveHighlight.modifier)
-                    .height(64f.dp)
-                    .fillMaxWidth()
-                    .padding(4f.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                content = content
-            )
+            // Layer 1: Outer capsule container
+            if (isFondoCompleto) {
+                Box(
+                    Modifier
+                        .graphicsLayer {
+                            translationX = panelOffset
+                        }
+                        .clip(Capsule())
+                        .background(actualContainerColor)
+                        .border(
+                            width = 0.75.dp,
+                            color = if (isDarkMode) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.06f),
+                            shape = Capsule()
+                        )
+                        .then(interactiveHighlight.modifier)
+                        .height(64f.dp)
+                        .fillMaxWidth()
+                        .padding(4f.dp)
+                )
+            } else {
+                Row(
+                    Modifier
+                        .graphicsLayer {
+                            translationX = panelOffset
+                        }
+                        .drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { Capsule() },
+                            effects = {
+                                vibrancy()
+                                blur(8f.dp.toPx() * backdropScale)
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    lens(24f.dp.toPx() * backdropScale, 24f.dp.toPx() * backdropScale)
+                                }
+                            },
+                            layerBlock = {
+                                val progress = dampedDragAnimation.pressProgress
+                                val scale = lerp(1f, 1f + 16f.dp.toPx() / size.width, progress)
+                                scaleX = scale
+                                scaleY = scale
+                            },
+                            highlight = { Highlight.Default.copy(alpha = 0.35f) },
+                            shadow = { Shadow.Default },
+                            onDrawSurface = { drawRect(actualContainerColor) },
+                            backdropScale = backdropScale
+                        )
+                        .then(interactiveHighlight.modifier)
+                        .height(64f.dp)
+                        .fillMaxWidth()
+                        .padding(4f.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    content = content
+                )
+            }
 
             // Layer 2: Hidden tinted tabs layer captured into tabsBackdrop for glass refraction
             CompositionLocalProvider(
@@ -379,17 +403,17 @@ fun LiquidBottomTabs(
                         },
                         highlight = {
                             val progress = dampedDragAnimation.pressProgress
-                            Highlight.Default.copy(alpha = progress)
+                            Highlight.Default.copy(alpha = if (isFondoCompleto) 0.35f + 0.65f * progress else progress)
                         },
                         shadow = {
                             val progress = dampedDragAnimation.pressProgress
-                            Shadow(alpha = progress)
+                            Shadow(alpha = if (isFondoCompleto) 0.25f + 0.75f * progress else progress)
                         },
                         innerShadow = {
                             val progress = dampedDragAnimation.pressProgress
                             InnerShadow(
-                                radius = 8f.dp * progress,
-                                alpha = progress
+                                radius = (if (isFondoCompleto) 6f else 8f).dp * (if (isFondoCompleto) (0.5f + 0.5f * progress) else progress),
+                                alpha = if (isFondoCompleto) 0.30f + 0.70f * progress else progress
                             )
                         },
                         layerBlock = {
@@ -401,18 +425,56 @@ fun LiquidBottomTabs(
                         },
                         onDrawSurface = {
                             val progress = dampedDragAnimation.pressProgress
-                            drawRect(
-                                if (isLightTheme) Color.Black.copy(0.1f)
-                                else Color.White.copy(0.1f),
-                                alpha = 1f - progress
-                            )
-                            drawRect(Color.Black.copy(alpha = 0.03f * progress))
+                            if (isFondoCompleto) {
+                                if (isDarkMode) {
+                                    drawRect(Color.White.copy(alpha = 0.14f))
+                                    drawRect(Color(0xFF383840).copy(alpha = 0.35f))
+                                } else {
+                                    drawRect(Color.Black.copy(alpha = 0.08f))
+                                }
+                            } else {
+                                drawRect(
+                                    if (isLightTheme) Color.Black.copy(0.1f)
+                                    else Color.White.copy(0.1f),
+                                    alpha = 1f - progress
+                                )
+                                drawRect(Color.Black.copy(alpha = 0.03f * progress))
+                            }
                         },
                         backdropScale = backdropScale
+                    )
+                    .then(
+                        if (isFondoCompleto) {
+                            Modifier.border(
+                                width = 0.8.dp,
+                                brush = Brush.verticalGradient(
+                                    if (isDarkMode) listOf(Color.White.copy(alpha = 0.32f), Color.White.copy(alpha = 0.06f))
+                                    else listOf(Color.White.copy(alpha = 0.85f), Color.White.copy(alpha = 0.40f))
+                                ),
+                                shape = Capsule()
+                            )
+                        } else Modifier
                     )
                     .height(56f.dp)
                     .fillMaxWidth(1f / tabsCount)
             )
+
+            // Layer 4: When isFondoCompleto, tab row on top of the bubble
+            if (isFondoCompleto) {
+                Row(
+                    Modifier
+                        .graphicsLayer {
+                            translationX = panelOffset
+                        }
+                        .then(interactiveHighlight.gestureModifier)
+                        .then(dampedDragAnimation.modifier)
+                        .height(64f.dp)
+                        .fillMaxWidth()
+                        .padding(4f.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    content = content
+                )
+            }
         }
     }
 }

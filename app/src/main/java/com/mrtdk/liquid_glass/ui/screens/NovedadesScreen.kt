@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.mrtdk.liquid_glass.R
 import com.mrtdk.liquid_glass.ui.components.trackClickBounds
@@ -602,6 +603,6 @@ private fun SongRow(
             }
             Text(s.artists.joinToString { it.name }, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.MoreVert, contentDescription = "More", tint = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, modifier = Modifier.padding(start = 8.dp).size(20.dp))
+        androidx.compose.material3.Icon(painterResource(id = R.drawable.tres_puntos), contentDescription = "More", tint = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, modifier = Modifier.padding(start = 8.dp).width(20.dp).height(16.dp))
     }
 }

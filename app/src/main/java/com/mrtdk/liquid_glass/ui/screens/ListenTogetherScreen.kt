@@ -33,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -207,7 +208,7 @@ fun ListenTogetherScreen(
 @Composable
 private fun AmNavigationHeader(isDark: Boolean, onBack: () -> Unit) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBackIosNew, stringResource(R.string.lyrics_menu_back), tint = AmRed, modifier = Modifier.size(20.dp)) }
+        IconButton(onClick = onBack) { Icon(painterResource(id = R.drawable.flecha_atras), stringResource(R.string.lyrics_menu_back), tint = AmRed, modifier = Modifier.size(20.dp).offset(x = (-1).dp)) }
         Text(stringResource(R.string.together_nav_title), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = primaryText(isDark), modifier = Modifier.weight(1f))
     }
 }

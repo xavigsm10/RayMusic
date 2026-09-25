@@ -97,20 +97,28 @@ fun FloatingMiniPlayer(
     if (playerState == null) return
 
     val isDarkMode by com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState()
+    val currentBackdropStyle by com.mrtdk.liquid_glass.data.LibraryManager.fullArtworkBackdropStyle.collectAsState()
+    val isFondoCompleto = currentBackdropStyle == "accord"
 
-    val effectiveTitleColor = if (contentColor != Color.Unspecified) {
+    val effectiveTitleColor = if (isFondoCompleto) {
+        if (isDarkMode) Color.White else Color(0xFF1C1C1E)
+    } else if (contentColor != Color.Unspecified) {
         if (!isDarkMode && contentColor == Color.White) Color(0xFF2C2C2E) else contentColor
     } else {
         if (isDarkMode) Color.White else Color(0xFF2C2C2E)
     }
 
-    val effectiveSubtextColor = if (contentColor != Color.Unspecified) {
+    val effectiveSubtextColor = if (isFondoCompleto) {
+        if (isDarkMode) Color.White.copy(alpha = 0.65f) else Color(0xFF636366)
+    } else if (contentColor != Color.Unspecified) {
         if (!isDarkMode && contentColor == Color.White) Color(0xFF636366) else contentColor.copy(alpha = 0.7f)
     } else {
         if (isDarkMode) Color.White.copy(alpha = 0.7f) else Color(0xFF636366)
     }
 
-    val effectiveIconColor = if (contentColor != Color.Unspecified) {
+    val effectiveIconColor = if (isFondoCompleto) {
+        if (isDarkMode) Color.White else Color(0xFF1C1C1E)
+    } else if (contentColor != Color.Unspecified) {
         if (!isDarkMode && contentColor == Color.White) Color(0xFF3C3C40) else contentColor
     } else {
         if (isDarkMode) Color.White else Color(0xFF3C3C40)
@@ -147,9 +155,8 @@ fun FloatingMiniPlayer(
     val interactiveHighlight = remember(coroutineScope) { InteractiveHighlight(animationScope = coroutineScope) }
 
     val pillShape = ContinuousRoundedRectangle(percent = 50)
-    // Minireproductor compacto: píldora baja con carátula e iconos medianos.
-    val containerHeight = if (isInline) 44.dp else 52.dp
-    val artSize = if (isInline) 32.dp else 38.dp
+    val containerHeight = if (isInline) 44.dp else if (isFondoCompleto) 56.dp else 52.dp
+    val artSize = if (isInline) 32.dp else if (isFondoCompleto) 44.dp else 38.dp
     val artCornerRadius = if (isInline) 8.dp else 10.dp
 
     var miniPlayerSwipeDirection by remember { mutableIntStateOf(1) }
@@ -275,8 +282,8 @@ fun FloatingMiniPlayer(
                         Text(
                             text = titleText,
                             style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = if (isInline) 13.sp else 14.5.sp,
-                                fontWeight = FontWeight.SemiBold
+                                fontSize = if (isInline) 13.sp else if (isFondoCompleto) 15.sp else 14.5.sp,
+                                fontWeight = if (isFondoCompleto) FontWeight.Bold else FontWeight.SemiBold
                             ),
                             color = effectiveTitleColor,
                             maxLines = 1,
@@ -285,7 +292,7 @@ fun FloatingMiniPlayer(
                         Text(
                             text = artistText,
                             style = MaterialTheme.typography.bodySmall.copy(
-                                fontSize = if (isInline) 10.5.sp else 12.sp
+                                fontSize = if (isInline) 10.5.sp else if (isFondoCompleto) 12.5.sp else 12.sp
                             ),
                             color = effectiveSubtextColor,
                             maxLines = 1,
@@ -312,7 +319,7 @@ fun FloatingMiniPlayer(
                         contentDescription = if (playing) "Pause" else "Play",
                         tint = effectiveIconColor,
                         modifier = Modifier
-                            .size(if (isInline) 22.dp else 26.dp)
+                            .size(if (isInline) 22.dp else if (isFondoCompleto) 24.dp else 26.dp)
                             .graphicsLayer {
                                 rotationZ = playPauseRotation
                             }
@@ -320,7 +327,7 @@ fun FloatingMiniPlayer(
                 }
             }
 
-            Spacer(Modifier.width(if (isInline) 2.dp else 4.dp))
+            Spacer(Modifier.width(if (isInline) 2.dp else if (isFondoCompleto) 4.dp else 4.dp))
             IconButton(
                 onClick = {
                     miniPlayerSwipeDirection = 1
@@ -332,7 +339,7 @@ fun FloatingMiniPlayer(
                     painter = painterResource(id = R.drawable.forward),
                     contentDescription = "Next",
                     tint = effectiveIconColor,
-                    modifier = Modifier.size(if (isInline) 20.dp else 24.dp)
+                    modifier = Modifier.size(if (isInline) 20.dp else if (isFondoCompleto) 22.dp else 24.dp)
                 )
             }
         }

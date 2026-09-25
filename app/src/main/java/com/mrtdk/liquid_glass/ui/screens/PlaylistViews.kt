@@ -1043,15 +1043,15 @@ fun PlaylistDetailScreen(
                                     .clip(CircleShape)
                                     .background(dominantColor.copy(alpha = 0.35f))
                                     .clickable { dismiss() },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.ArrowBackIosNew,
-                                    contentDescription = "Back",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.flecha_atras),
+                                        contentDescription = "Back",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(20.dp).offset(x = (-1).dp)
+                                    )
+                                }
 
                             Box(
                                 modifier = Modifier
@@ -1060,14 +1060,17 @@ fun PlaylistDetailScreen(
                                         scaleY = popScaleShare
                                         alpha = popScaleShare
                                     }
-                                    .height(48.dp)
+                                    .width(106.dp)
+                                    .height(44.dp)
                                     .clip(RoundedCornerShape(percent = 50))
                                     .background(dominantColor.copy(alpha = 0.35f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 10.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     IconButton(
@@ -1080,26 +1083,26 @@ fun PlaylistDetailScreen(
                                             }
                                             context.startActivity(android.content.Intent.createChooser(shareIntent, "Compartir"))
                                         },
-                                        modifier = Modifier.size(40.dp)
+                                        modifier = Modifier.size(38.dp)
                                     ) {
                                         Icon(
                                             painter = painterResource(id = R.drawable.compartir),
                                             contentDescription = "Share",
                                             tint = Color.White,
-                                            modifier = Modifier.size(22.dp)
+                                            modifier = Modifier.size(24.dp)
                                         )
                                     }
                                     IconButton(
                                         onClick = {
                                             showPlaylistMenu = true
                                         },
-                                        modifier = Modifier.size(40.dp)
+                                        modifier = Modifier.size(38.dp)
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.MoreVert,
+                                            painter = painterResource(id = R.drawable.tres_puntos),
                                             contentDescription = "More",
                                             tint = Color.White,
-                                            modifier = Modifier.size(22.dp)
+                                            modifier = Modifier.width(22.dp).height(16.dp)
                                         )
                                     }
                                 }
@@ -1287,10 +1290,10 @@ fun PlaylistDetailScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.ArrowBackIosNew,
+                                        painter = painterResource(id = R.drawable.flecha_atras),
                                         contentDescription = "Back",
                                         tint = Color.White,
-                                        modifier = Modifier.size(24.dp)
+                                        modifier = Modifier.size(20.dp).offset(x = (-1).dp)
                                     )
                                 }
                                 
@@ -1302,7 +1305,8 @@ fun PlaylistDetailScreen(
                                             scaleY = popScaleShare
                                             alpha = popScaleShare
                                         }
-                                        .height(48.dp),
+                                        .width(106.dp)
+                                        .height(44.dp),
                                     shape = RoundedCornerShape(percent = 50),
                                     tint = Color.Unspecified,
                                     blur = 0.8f,
@@ -1313,8 +1317,10 @@ fun PlaylistDetailScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Row(
-                                        modifier = Modifier.padding(horizontal = 8.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 10.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         IconButton(
@@ -1327,26 +1333,26 @@ fun PlaylistDetailScreen(
                                                 }
                                                 context.startActivity(android.content.Intent.createChooser(shareIntent, "Compartir"))
                                             },
-                                            modifier = Modifier.size(40.dp)
+                                            modifier = Modifier.size(38.dp)
                                         ) {
                                             Icon(
                                                 painter = painterResource(id = R.drawable.compartir),
                                                 contentDescription = "Share",
                                                 tint = Color.White,
-                                                modifier = Modifier.size(22.dp)
+                                                modifier = Modifier.size(24.dp)
                                             )
                                         }
                                         IconButton(
                                             onClick = {
                                                 showPlaylistMenu = true
                                             },
-                                            modifier = Modifier.size(40.dp)
+                                            modifier = Modifier.size(38.dp)
                                         ) {
                                             Icon(
-                                                imageVector = Icons.Default.MoreVert,
+                                                painter = painterResource(id = R.drawable.tres_puntos),
                                                 contentDescription = "More",
                                                 tint = Color.White,
-                                                modifier = Modifier.size(22.dp)
+                                                modifier = Modifier.width(22.dp).height(16.dp)
                                             )
                                         }
                                     }
@@ -1896,12 +1902,12 @@ fun PlaylistDetailScreen(
                                     .background(dominantColor.copy(alpha = 0.35f))
                                     .clickable { dismiss() },
                                 contentAlignment = Alignment.Center
-                            ) {
+                                ) {
                                 Icon(
-                                    imageVector = Icons.Default.ArrowBackIosNew,
+                                    painter = painterResource(id = R.drawable.flecha_atras),
                                     contentDescription = "Back",
                                     tint = Color.White,
-                                    modifier = Modifier.size(24.dp)
+                                    modifier = Modifier.size(20.dp).offset(x = (-1).dp)
                                 )
                             }
                             
@@ -1912,14 +1918,17 @@ fun PlaylistDetailScreen(
                                         scaleY = popScaleShare
                                         alpha = popScaleShare
                                     }
-                                    .height(48.dp)
+                                    .width(106.dp)
+                                    .height(44.dp)
                                     .clip(RoundedCornerShape(percent = 50))
                                     .background(dominantColor.copy(alpha = 0.35f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 10.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     IconButton(
@@ -1932,24 +1941,24 @@ fun PlaylistDetailScreen(
                                             }
                                             context.startActivity(android.content.Intent.createChooser(shareIntent, "Compartir"))
                                         },
-                                        modifier = Modifier.size(40.dp)
+                                        modifier = Modifier.size(38.dp)
                                     ) {
                                         Icon(
                                             painter = painterResource(id = R.drawable.compartir),
                                             contentDescription = "Share",
                                             tint = Color.White,
-                                            modifier = Modifier.size(22.dp)
+                                            modifier = Modifier.size(24.dp)
                                         )
                                     }
                                     IconButton(
                                         onClick = { showPlaylistMenu = true },
-                                        modifier = Modifier.size(40.dp)
+                                        modifier = Modifier.size(38.dp)
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.MoreVert,
+                                            painter = painterResource(id = R.drawable.tres_puntos),
                                             contentDescription = "More",
                                             tint = Color.White,
-                                            modifier = Modifier.size(22.dp)
+                                            modifier = Modifier.width(22.dp).height(16.dp)
                                         )
                                     }
                                 }
@@ -2079,10 +2088,10 @@ fun FavoriteSongsScreen(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.ArrowBackIosNew,
+                                            painter = painterResource(id = R.drawable.flecha_atras),
                                             contentDescription = "Back",
                                             tint = contentColor,
-                                            modifier = Modifier.size(24.dp)
+                                            modifier = Modifier.size(20.dp).offset(x = (-1).dp)
                                         )
                                     }
 
@@ -2279,10 +2288,10 @@ fun FavoriteSongsScreen(
                                              contentAlignment = Alignment.Center
                                          ) {
                                              Icon(
-                                                 imageVector = Icons.Default.ArrowBackIosNew,
+                                                 painter = painterResource(id = R.drawable.flecha_atras),
                                                  contentDescription = "Back",
                                                  tint = contentColor,
-                                                 modifier = Modifier.size(24.dp)
+                                                 modifier = Modifier.size(20.dp).offset(x = (-1).dp)
                                              )
                                          }
      
@@ -2989,12 +2998,21 @@ fun AddMusicContent(
                     },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = if (query.isNotEmpty() || activeAlbumId != null || activeArtistId != null) Icons.Default.ArrowBackIosNew else Icons.Default.Close,
-                    contentDescription = "Back",
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp)
-                )
+                if (query.isNotEmpty() || activeAlbumId != null || activeArtistId != null) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.flecha_atras),
+                        contentDescription = "Back",
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp).offset(x = (-1).dp)
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close",
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
 
             val defaultAlbumText = stringResource(R.string.search_type_album)

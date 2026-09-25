@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import com.mrtdk.liquid_glass.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -467,7 +468,7 @@ fun VideoPlayerScreen(
                             elevation = 4.dp
                         ) {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.ArrowBackIosNew, "Back", tint = Color(0xFFFA243C), modifier = Modifier.size(24.dp))
+                                Icon(painter = painterResource(id = R.drawable.flecha_atras), contentDescription = "Back", tint = Color(0xFFFA243C), modifier = Modifier.size(20.dp).offset(x = (-1).dp))
                             }
                         }
 

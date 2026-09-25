@@ -44,6 +44,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -1110,7 +1111,7 @@ fun BusquedaScreen(
                                                     },
                                                 contentAlignment = Alignment.Center
                                             ) {
-                                                Icon(Icons.Default.MoreVert, null, tint = ThemeManager.subtextColor)
+                                                Icon(painterResource(id = R.drawable.tres_puntos), null, tint = ThemeManager.subtextColor, modifier = Modifier.width(20.dp).height(16.dp))
                                             }
                                         }
                                     }
@@ -1290,7 +1291,7 @@ fun BusquedaScreen(
                                                     },
                                                 contentAlignment = Alignment.Center
                                             ) {
-                                                Icon(Icons.Default.MoreVert, null, tint = ThemeManager.subtextColor)
+                                                Icon(painterResource(id = R.drawable.tres_puntos), null, tint = ThemeManager.subtextColor, modifier = Modifier.width(20.dp).height(16.dp))
                                             }
                                         }
                                     }

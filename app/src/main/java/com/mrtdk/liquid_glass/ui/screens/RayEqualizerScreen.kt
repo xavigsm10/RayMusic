@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -80,7 +81,7 @@ fun RayEqualizerScreen(
         ) {
             IconButton(onClick = onBack) {
                 Icon(
-                    imageVector = Icons.Default.ArrowBackIosNew,
+                    painter = painterResource(id = R.drawable.flecha_atras), modifier = Modifier.size(20.dp).offset(x = (-1).dp),
                     contentDescription = stringResource(R.string.back_action),
                     tint = Color(0xFFFA243C)
                 )

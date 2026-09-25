@@ -107,10 +107,10 @@ fun WelcomeScreen(
                             .background(Color(0x33FFFFFF), CircleShape)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBackIosNew,
+                            painter = painterResource(id = R.drawable.flecha_atras),
                             contentDescription = "Atrás",
                             tint = Color.White,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(20.dp).offset(x = (-1).dp)
                         )
                     }
                 } else {

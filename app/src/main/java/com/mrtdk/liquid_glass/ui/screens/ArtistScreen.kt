@@ -1493,10 +1493,10 @@ fun ArtistScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.ArrowBackIosNew,
+                                    painter = painterResource(id = R.drawable.flecha_atras),
                                     contentDescription = "Back",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp).padding(end = 2.dp)
+                                    tint = if (isDarkMode) Color.White else Color(0xFF151515),
+                                    modifier = Modifier.size(20.dp).offset(x = (-1).dp)
                                 )
                             }
                         }
@@ -1824,10 +1824,10 @@ fun ArtistScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    Icons.Default.MoreVert,
-                                    null,
-                                    tint = Color.White.copy(alpha = 0.7f),
-                                    modifier = Modifier.size(20.dp)
+                                    painter = painterResource(id = R.drawable.tres_puntos),
+                                    contentDescription = "More",
+                                    tint = if (isDarkMode) Color.White.copy(alpha = 0.7f) else Color.Black.copy(alpha = 0.7f),
+                                    modifier = Modifier.width(20.dp).height(16.dp)
                                 )
                             }
                         }
@@ -1851,10 +1851,11 @@ fun ArtistScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+            val artistHeaderIconTint = if (isDarkMode) Color.White else Color(0xFF151515)
             // Circular back button with GlassBox (liquid glass)
             scope.GlassBox(
                 modifier = Modifier
-                    .size(54.dp)
+                    .size(48.dp)
                     .clickable { onBack() },
                 shape = CircleShape,
                 tint = Color.Unspecified,
@@ -1866,17 +1867,18 @@ fun ArtistScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.ArrowBackIosNew,
+                    painter = painterResource(id = R.drawable.flecha_atras),
                     contentDescription = "Back",
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
+                    tint = artistHeaderIconTint,
+                    modifier = Modifier.size(20.dp).offset(x = (-1).dp)
                 )
             }
 
             // Capsule containing Share and Settings options (liquid glass)
             scope.GlassBox(
                 modifier = Modifier
-                    .height(48.dp),
+                    .width(106.dp)
+                    .height(44.dp),
                 shape = RoundedCornerShape(percent = 50),
                 tint = Color.Unspecified,
                 blur = 0.8f,
@@ -1887,8 +1889,10 @@ fun ArtistScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(
@@ -1901,13 +1905,13 @@ fun ArtistScreen(
                             }
                             context.startActivity(android.content.Intent.createChooser(shareIntent, "Compartir"))
                         },
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(38.dp)
                     ) {
                         Icon(
                             painter = painterResource(id = R.drawable.compartir),
                             contentDescription = "Share",
-                            tint = Color.White,
-                            modifier = Modifier.size(22.dp)
+                            tint = artistHeaderIconTint,
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                     var artistDotsCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
@@ -1922,7 +1926,7 @@ fun ArtistScreen(
                     Box(
                         modifier = Modifier
                             .onGloballyPositioned { artistDotsCoords = it }
-                            .size(40.dp)
+                            .size(38.dp)
                             .graphicsLayer {
                                 scaleX = artistDotsPressScale
                                 scaleY = artistDotsPressScale
@@ -1947,10 +1951,10 @@ fun ArtistScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.MoreVert,
+                            painter = painterResource(id = R.drawable.tres_puntos),
                             contentDescription = "Settings",
-                            tint = Color.White,
-                            modifier = Modifier.size(22.dp)
+                            tint = artistHeaderIconTint,
+                            modifier = Modifier.width(22.dp).height(16.dp)
                         )
                     }
                 }

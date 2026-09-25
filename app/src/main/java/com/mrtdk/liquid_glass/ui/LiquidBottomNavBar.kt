@@ -22,6 +22,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -223,11 +224,21 @@ fun LiquidBottomNavBar(
         }
     }
 
+    val currentBackdropStyle by com.mrtdk.liquid_glass.data.LibraryManager.fullArtworkBackdropStyle.collectAsState()
+    val isFondoCompleto = currentBackdropStyle == "accord"
+    val accordPillBgColor = if (isDarkMode) Color(0xFF1E1E22).copy(alpha = 0.95f) else Color(0xFFF2F2F7).copy(alpha = 0.95f)
+    val accordBorderColor = if (isDarkMode) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.06f)
+
     val capsuleGlassModifier: @Composable () -> Modifier = {
         if (isSolid) {
             Modifier
                 .clip(Capsule())
                 .background(solidBgColor)
+        } else if (isFondoCompleto) {
+            Modifier
+                .clip(Capsule())
+                .background(accordPillBgColor)
+                .border(width = 0.75.dp, color = accordBorderColor, shape = Capsule())
         } else {
             Modifier.drawBackdrop(
                 backdrop = backdrop,
@@ -256,6 +267,11 @@ fun LiquidBottomNavBar(
             Modifier
                 .clip(MiniPlayerShape)
                 .background(solidBgColor)
+        } else if (isFondoCompleto) {
+            Modifier
+                .clip(MiniPlayerShape)
+                .background(accordPillBgColor)
+                .border(width = 0.75.dp, color = accordBorderColor, shape = MiniPlayerShape)
         } else {
             Modifier.drawBackdrop(
                 backdrop = backdrop,
@@ -505,7 +521,7 @@ fun LiquidBottomNavBar(
                                     backdrop = backdrop,
                                     tabsCount = expandedTabs.size,
                                     accentColor = activeAccentColor,
-                                    containerColor = if (isSolid) solidBgColor else actualTintColor,
+                                    containerColor = if (isSolid) solidBgColor else if (isFondoCompleto) accordPillBgColor else actualTintColor,
                                     backdropScale = NAV_BACKDROP_SCALE,
                                     modifier = Modifier
                                         .fillMaxWidth()

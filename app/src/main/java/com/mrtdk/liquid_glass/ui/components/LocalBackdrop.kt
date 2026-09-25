@@ -43,6 +43,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import com.mrtdk.liquid_glass.R
 import com.mrtdk.liquid_glass.ui.theme.ThemeManager
 
 val LocalBackdrop = staticCompositionLocalOf<Backdrop> { emptyBackdrop() }
@@ -212,11 +214,11 @@ fun DetailBackPillButton(
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            imageVector = Icons.Default.ArrowBackIosNew,
+            painter = painterResource(id = R.drawable.flecha_atras),
             contentDescription = "Back",
             tint = arrowColor,
             modifier = Modifier
-                .size(19.dp)
+                .size(20.dp)
                 .offset(x = (-1).dp)
         )
     }

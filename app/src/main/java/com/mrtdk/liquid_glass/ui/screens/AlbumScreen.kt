@@ -1527,10 +1527,10 @@ fun AlbumScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.ArrowBackIosNew,
+                                painter = painterResource(id = R.drawable.flecha_atras),
                                 contentDescription = "Back",
                                 tint = glassIconTint,
-                                modifier = Modifier.size(22.dp)
+                                modifier = Modifier.size(20.dp).offset(x = (-1).dp)
                             )
                         }
 
@@ -1838,10 +1838,10 @@ fun AlbumScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.ArrowBackIosNew,
+                                    painter = painterResource(id = R.drawable.flecha_atras),
                                     contentDescription = "Back",
                                     tint = glassIconTint,
-                                    modifier = Modifier.size(24.dp)
+                                    modifier = Modifier.size(20.dp).offset(x = (-1).dp)
                                 )
                             }
                             
@@ -1852,14 +1852,17 @@ fun AlbumScreen(
                                         scaleY = popScaleShare
                                         alpha = popScaleShare
                                     }
-                                    .height(48.dp)
+                                    .width(106.dp)
+                                    .height(44.dp)
                                     .clip(RoundedCornerShape(percent = 50))
                                     .background(glassButtonTint),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 10.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     IconButton(
@@ -1872,24 +1875,24 @@ fun AlbumScreen(
                                             }
                                             context.startActivity(android.content.Intent.createChooser(shareIntent, "Compartir"))
                                         },
-                                        modifier = Modifier.size(40.dp)
+                                        modifier = Modifier.size(38.dp)
                                     ) {
                                         Icon(
                                             painter = painterResource(id = R.drawable.compartir),
                                             contentDescription = "Share",
                                             tint = glassIconTint,
-                                            modifier = Modifier.size(22.dp)
+                                            modifier = Modifier.size(24.dp)
                                         )
                                     }
                                     IconButton(
                                         onClick = { showAlbumMenu = true },
-                                        modifier = Modifier.size(40.dp)
+                                        modifier = Modifier.size(38.dp)
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.MoreVert,
+                                            painter = painterResource(id = R.drawable.tres_puntos),
                                             contentDescription = "More",
                                             tint = glassIconTint,
-                                            modifier = Modifier.size(22.dp)
+                                            modifier = Modifier.width(22.dp).height(16.dp)
                                         )
                                     }
                                 }
@@ -2025,7 +2028,7 @@ fun AlbumTopRightMorphingPill(
 
     // Smooth continuous 2D size & corner interpolation
     val targetMenuHeight = if (isPlaylistsScreen) 370.dp else 390.dp
-    val morphWidth = androidx.compose.ui.unit.lerp(86.dp, 268.dp, morphProgress)
+    val morphWidth = androidx.compose.ui.unit.lerp(106.dp, 268.dp, morphProgress)
     val morphHeight = androidx.compose.ui.unit.lerp(44.dp, targetMenuHeight, morphProgress)
     val morphCorner = androidx.compose.ui.unit.lerp(22.dp, 24.dp, morphProgress)
     val morphTint = Color.Unspecified
@@ -2067,10 +2070,11 @@ fun AlbumTopRightMorphingPill(
                 Row(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
+                        .width(106.dp)
                         .height(44.dp)
-                        .padding(horizontal = 6.dp)
+                        .padding(horizontal = 10.dp)
                         .graphicsLayer { alpha = pillIconsAlpha },
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(
@@ -2083,24 +2087,24 @@ fun AlbumTopRightMorphingPill(
                             }
                             context.startActivity(Intent.createChooser(shareIntent, "Compartir"))
                         },
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(38.dp)
                     ) {
                         Icon(
                             painter = painterResource(id = R.drawable.compartir),
                             contentDescription = "Share",
                             tint = glassIconTint,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                     IconButton(
                         onClick = { onExpandChange(true) },
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(38.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.MoreVert,
+                            painter = painterResource(id = R.drawable.tres_puntos),
                             contentDescription = "More",
                             tint = glassIconTint,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.width(22.dp).height(16.dp)
                         )
                     }
                 }
@@ -2473,10 +2477,10 @@ fun AlbumTopRightMorphingPill(
                                 modifier = Modifier.size(32.dp)
                             ) {
                                 Icon(
-                                    Icons.Default.ArrowBackIosNew,
+                                    painter = painterResource(id = R.drawable.flecha_atras),
                                     contentDescription = stringResource(R.string.back_action),
                                     tint = Color(0xFFFA243C),
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(18.dp).offset(x = (-1).dp)
                                 )
                             }
                             Spacer(modifier = Modifier.width(8.dp))

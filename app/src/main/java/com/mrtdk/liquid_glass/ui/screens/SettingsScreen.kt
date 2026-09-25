@@ -160,7 +160,7 @@ fun MainSettingsMenu(
         ) {
             IconButton(onClick = onBack) {
                 Icon(
-                    imageVector = Icons.Default.ArrowBackIosNew,
+                    painter = painterResource(id = R.drawable.flecha_atras), modifier = Modifier.size(20.dp).offset(x = (-1).dp),
                     contentDescription = stringResource(R.string.back_action),
                     tint = Color(0xFFFA243C)
                 )
@@ -473,7 +473,7 @@ fun LyricsSettingsScreen(onBack: () -> Unit) {
         ) {
             IconButton(onClick = onBack) {
                 Icon(
-                    imageVector = Icons.Default.ArrowBackIosNew,
+                    painter = painterResource(id = R.drawable.flecha_atras), modifier = Modifier.size(20.dp).offset(x = (-1).dp),
                     contentDescription = null,
                     tint = Color(0xFFFA243C)
                 )
@@ -829,7 +829,7 @@ fun PlayerSettingsScreen(
         ) {
             IconButton(onClick = onBack) {
                 Icon(
-                    imageVector = Icons.Default.ArrowBackIosNew,
+                    painter = painterResource(id = R.drawable.flecha_atras), modifier = Modifier.size(20.dp).offset(x = (-1).dp),
                     contentDescription = null,
                     tint = Color(0xFFFA243C)
                 )
@@ -1012,7 +1012,7 @@ fun ListenTogetherSettingsScreen(onBack: () -> Unit) {
         ) {
             IconButton(onClick = onBack) {
                 Icon(
-                    imageVector = Icons.Default.ArrowBackIosNew,
+                    painter = painterResource(id = R.drawable.flecha_atras), modifier = Modifier.size(20.dp).offset(x = (-1).dp),
                     contentDescription = null,
                     tint = Color(0xFFFA243C)
                 )
@@ -1478,7 +1478,7 @@ fun ContentSettingsScreen(onBack: () -> Unit) {
         ) {
             IconButton(onClick = onBack) {
                 Icon(
-                    imageVector = Icons.Default.ArrowBackIosNew,
+                    painter = painterResource(id = R.drawable.flecha_atras), modifier = Modifier.size(20.dp).offset(x = (-1).dp),
                     contentDescription = null,
                     tint = Color(0xFFFA243C)
                 )
@@ -1712,7 +1712,7 @@ fun PrivacySettingsScreen(
         ) {
             IconButton(onClick = onBack) {
                 Icon(
-                    imageVector = Icons.Default.ArrowBackIosNew,
+                    painter = painterResource(id = R.drawable.flecha_atras), modifier = Modifier.size(20.dp).offset(x = (-1).dp),
                     contentDescription = null,
                     tint = Color(0xFFFA243C)
                 )
@@ -1882,7 +1882,7 @@ fun AboutSettingsScreen(
         ) {
             IconButton(onClick = onBack) {
                 Icon(
-                    imageVector = Icons.Default.ArrowBackIosNew,
+                    painter = painterResource(id = R.drawable.flecha_atras), modifier = Modifier.size(20.dp).offset(x = (-1).dp),
                     contentDescription = null,
                     tint = Color(0xFFFA243C)
                 )
@@ -2223,7 +2223,7 @@ fun SpotifySettingsScreen(onBack: () -> Unit) {
         ) {
             IconButton(onClick = onBack) {
                 Icon(
-                    imageVector = Icons.Default.ArrowBackIosNew,
+                    painter = painterResource(id = R.drawable.flecha_atras), modifier = Modifier.size(20.dp).offset(x = (-1).dp),
                     contentDescription = null,
                     tint = Color(0xFFFA243C)
                 )
