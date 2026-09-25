@@ -220,11 +220,7 @@ fun AlbumScreen(
     }
 
     val hasAnimatedCover = !isAnimatedArtworkBlocked && isVideoPlaying
-    val isNormalArtwork = when (playerArtworkStyle) {
-        "normal" -> true
-        "animated_fullartwork" -> !hasAnimatedCover
-        else -> false
-    }
+    val isNormalArtwork = playerArtworkStyle == "normal"
 
     LaunchedEffect(albumState.artist, albumState.title, tracks.firstOrNull()?.title) {
         val artist = albumState.artist
@@ -505,7 +501,7 @@ fun AlbumScreen(
             animationSpec = spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMediumLow),
             label = "popScaleMore"
         )
-        val contentAlpha = if (isNormalArtwork) progress.coerceIn(0f, 1f) else ((progress - 0.4f).coerceAtLeast(0f) / 0.6f)
+        val contentAlpha = ((progress - 0.4f).coerceAtLeast(0f) / 0.6f)
 
         Box(
             modifier = Modifier.fillMaxSize()
@@ -682,7 +678,8 @@ fun AlbumScreen(
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(top = 12.dp, bottom = 20.dp),
+                                            .padding(top = 12.dp, bottom = 20.dp)
+                                            .graphicsLayer { alpha = if (progress < 0.99f) 0f else 1f },
                                         contentAlignment = Alignment.Center
                                     ) {
                                         if (customMadeForYou != null) {
@@ -1634,7 +1631,7 @@ fun AlbumScreen(
                     }
                 }
             )
-            if (progress < 0.99f && !isNormalArtwork) {
+            if (progress < 0.99f) {
                 Box(
                     modifier = Modifier.fillMaxSize()
                 ) {
@@ -1652,163 +1649,314 @@ fun AlbumScreen(
                             modifier = Modifier.fillMaxSize(),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            // Cover Art at the top of the card
-                            val coverHeight = if (isMadeForYou) {
-                                // For MadeForYou cards, at progress = 0 the cover fills the entire card (sourceH).
-                                // At progress = 1, it expands to the hero height (screenWidth * albumHeightRatio).
-                                (sourceH + progress * (screenWidth * albumHeightRatio - sourceH)).coerceAtLeast(0f)
-                            } else {
-                                val coverHeightRatio = 1f + progress * (albumHeightRatio - 1f)
-                                curW * coverHeightRatio
-                            }
-                            
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(with(density) { coverHeight.toDp() })
-                            ) {
-                                if (headerArt != null) {
-                                    AsyncImage(
-                                        model = ImageRequest.Builder(context).data(headerArt).crossfade(false).build(),
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                } else if (isMadeForYou) {
-                                    val titleToUse = customMadeForYou?.title ?: albumState.title
-                                    val subToUse = customMadeForYou?.artistsSubtitle ?: albumState.artist
-                                    val gradToUse = customMadeForYou?.gradientColors ?: listOf(Color(0xFFE62B00), Color(0xFFFF5E3A))
-                                    MadeForYouCardContent(
-                                        title = titleToUse,
-                                        artistsSubtitle = subToUse,
-                                        gradientColors = gradToUse,
-                                        modifier = Modifier.fillMaxSize(),
-                                        isHero = progress > 0.6f
-                                    )
-                                } else {
-                                    Box(
-                                        modifier = Modifier.fillMaxSize().background(Color(0xFF1C1C1E)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(Icons.Default.Add, null, tint = Color.Gray, modifier = Modifier.size(48.dp))
-                                    }
-                                }
-                                
-                                // Gradient fade at the bottom of the cover art (only for normal albums)
-                                if (!isMadeForYou) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(
-                                                Brush.verticalGradient(
-                                                    0.0f to Color.Transparent,
-                                                    0.75f to Color.Transparent,
-                                                    1.0f to dominantColor
-                                                )
-                                            )
-                                    )
-                                }
-                            }
-                            
-                            // Details below the cover art (Title, Artist, Action Buttons)
-                            val detailsAlpha = ((progress - 0.1f) / 0.9f).coerceIn(0f, 1f)
-                            val detailsTranslationY = with(density) { ((1f - progress) * 20f).dp.toPx() }
-                            
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f)
-                                    .graphicsLayer {
-                                        alpha = detailsAlpha
-                                        translationY = detailsTranslationY
-                                    }
-                                    .padding(horizontal = 20.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Text(
-                                    text = albumState.title,
-                                    color = primaryTextColor,
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = albumState.artist,
-                                    color = secondaryTextColor,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Spacer(modifier = Modifier.height(12.dp))
-                                
-                                // Buttons Row (Shuffle, Play, Add)
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    // Shuffle button
-                                    Box(
-                                        modifier = Modifier
-                                            .size(40.dp)
-                                            .clip(CircleShape)
-                                            .background(circularButtonBg),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Shuffle,
-                                            contentDescription = "Shuffle",
-                                            tint = primaryTextColor,
-                                            modifier = Modifier.size(18.dp)
+                            if (isNormalArtwork) {
+                                val normalTargetW = with(density) { 220.dp.toPx() }
+                                val normalTargetH = if (customMadeForYou != null) with(density) { 280.dp.toPx() } else normalTargetW
+                                val statusBarHeightPx = WindowInsets.statusBars.getTop(density).toFloat()
+                                val targetTopMarginPx = statusBarHeightPx + with(density) { 68.dp.toPx() }
+                                val curNormalTopMargin = progress * targetTopMarginPx
+                                val curNormalCoverW = sourceW + progress * (normalTargetW - sourceW)
+                                val curNormalCoverH = sourceH + progress * (normalTargetH - sourceH)
+                                val curNormalCoverCorner = initialCorner + progress * (18f - initialCorner)
+                                val curNormalCoverElevation = (progress * 16f).dp
+
+                                Spacer(modifier = Modifier.height(with(density) { curNormalTopMargin.toDp() }))
+
+                                Box(
+                                    modifier = Modifier
+                                        .size(with(density) { curNormalCoverW.toDp() }, with(density) { curNormalCoverH.toDp() })
+                                        .shadow(
+                                            elevation = curNormalCoverElevation,
+                                            shape = RoundedCornerShape(curNormalCoverCorner.dp),
+                                            ambientColor = Color.Black.copy(alpha = progress * 0.5f),
+                                            spotColor = Color.Black.copy(alpha = progress * 0.5f)
                                         )
-                                    }
-                                    
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    
-                                    // Play button
-                                    Box(
-                                        modifier = Modifier
-                                            .width(140.dp)
-                                            .height(40.dp)
-                                            .clip(RoundedCornerShape(20.dp))
-                                            .background(playButtonBg),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        .clip(RoundedCornerShape(curNormalCoverCorner.dp))
+                                        .background(Color(0xFF1C1C1E))
+                                ) {
+                                    if (customMadeForYou != null) {
+                                        MadeForYouCardContent(
+                                            title = customMadeForYou.title,
+                                            artistsSubtitle = customMadeForYou.artistsSubtitle,
+                                            gradientColors = customMadeForYou.gradientColors,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    } else if (headerArt != null) {
+                                        AsyncImage(
+                                            model = ImageRequest.Builder(context).data(headerArt).crossfade(false).build(),
+                                            contentDescription = null,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    } else {
+                                        Box(
+                                            modifier = Modifier.fillMaxSize().background(Color(0xFF1C1C1E)),
+                                            contentAlignment = Alignment.Center
                                         ) {
-                                            Icon(
-                                                imageVector = Icons.Default.PlayArrow,
-                                                contentDescription = "Play",
-                                                tint = playButtonTextColor,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                            Text(stringResource(R.string.reproducir), color = playButtonTextColor, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                                            Icon(Icons.Default.Add, null, tint = Color.Gray, modifier = Modifier.size(48.dp))
                                         }
                                     }
-                                    
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    
-                                    // Add button
-                                    Box(
-                                        modifier = Modifier
-                                            .size(40.dp)
-                                            .clip(CircleShape)
-                                            .background(circularButtonBg),
-                                        contentAlignment = Alignment.Center
+                                }
+
+                                val detailsAlpha = ((progress - 0.2f) / 0.8f).coerceIn(0f, 1f)
+                                val detailsTranslationY = with(density) { ((1f - progress) * 20f).dp.toPx() }
+
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .weight(1f)
+                                        .graphicsLayer {
+                                            alpha = detailsAlpha
+                                            translationY = detailsTranslationY
+                                        }
+                                        .padding(horizontal = 20.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        text = albumState.title,
+                                        color = primaryTextColor,
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = albumState.artist,
+                                        color = secondaryTextColor,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center,
+                                        modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        Icon(
-                                            imageVector = if (isSaved) Icons.Default.Check else Icons.Default.Add,
-                                            contentDescription = "Add/Remove",
-                                            tint = primaryTextColor,
-                                            modifier = Modifier.size(18.dp)
+                                        // Shuffle button
+                                        Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .clip(CircleShape)
+                                                .background(circularButtonBg),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Shuffle,
+                                                contentDescription = "Shuffle",
+                                                tint = primaryTextColor,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.width(12.dp))
+
+                                        // Play button
+                                        Box(
+                                            modifier = Modifier
+                                                .width(140.dp)
+                                                .height(40.dp)
+                                                .clip(RoundedCornerShape(20.dp))
+                                                .background(playButtonBg),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.PlayArrow,
+                                                    contentDescription = "Play",
+                                                    tint = playButtonTextColor,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                                Text(stringResource(R.string.reproducir), color = playButtonTextColor, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.width(12.dp))
+
+                                        // Add button
+                                        Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .clip(CircleShape)
+                                                .background(circularButtonBg),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = if (isSaved) Icons.Default.Check else Icons.Default.Add,
+                                                contentDescription = "Add/Remove",
+                                                tint = primaryTextColor,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            } else {
+                                // Cover Art at the top of the card
+                                val coverHeight = if (isMadeForYou) {
+                                    // For MadeForYou cards, at progress = 0 the cover fills the entire card (sourceH).
+                                    // At progress = 1, it expands to the hero height (screenWidth * albumHeightRatio).
+                                    (sourceH + progress * (screenWidth * albumHeightRatio - sourceH)).coerceAtLeast(0f)
+                                } else {
+                                    val coverHeightRatio = 1f + progress * (albumHeightRatio - 1f)
+                                    curW * coverHeightRatio
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(with(density) { coverHeight.toDp() })
+                                ) {
+                                    if (headerArt != null) {
+                                        AsyncImage(
+                                            model = ImageRequest.Builder(context).data(headerArt).crossfade(false).build(),
+                                            contentDescription = null,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize()
                                         )
+                                    } else if (isMadeForYou) {
+                                        val titleToUse = customMadeForYou?.title ?: albumState.title
+                                        val subToUse = customMadeForYou?.artistsSubtitle ?: albumState.artist
+                                        val gradToUse = customMadeForYou?.gradientColors ?: listOf(Color(0xFFE62B00), Color(0xFFFF5E3A))
+                                        MadeForYouCardContent(
+                                            title = titleToUse,
+                                            artistsSubtitle = subToUse,
+                                            gradientColors = gradToUse,
+                                            modifier = Modifier.fillMaxSize(),
+                                            isHero = progress > 0.6f
+                                        )
+                                    } else {
+                                        Box(
+                                            modifier = Modifier.fillMaxSize().background(Color(0xFF1C1C1E)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(Icons.Default.Add, null, tint = Color.Gray, modifier = Modifier.size(48.dp))
+                                        }
+                                    }
+
+                                    // Gradient fade at the bottom of the cover art (only for normal albums)
+                                    if (!isMadeForYou) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(
+                                                    Brush.verticalGradient(
+                                                        0.0f to Color.Transparent,
+                                                        0.75f to Color.Transparent,
+                                                        1.0f to dominantColor
+                                                    )
+                                                )
+                                        )
+                                    }
+                                }
+
+                                // Details below the cover art (Title, Artist, Action Buttons)
+                                val detailsAlpha = ((progress - 0.1f) / 0.9f).coerceIn(0f, 1f)
+                                val detailsTranslationY = with(density) { ((1f - progress) * 20f).dp.toPx() }
+
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .weight(1f)
+                                        .graphicsLayer {
+                                            alpha = detailsAlpha
+                                            translationY = detailsTranslationY
+                                        }
+                                        .padding(horizontal = 20.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        text = albumState.title,
+                                        color = primaryTextColor,
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = albumState.artist,
+                                        color = secondaryTextColor,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+
+                                    // Buttons Row (Shuffle, Play, Add)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        // Shuffle button
+                                        Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .clip(CircleShape)
+                                                .background(circularButtonBg),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Shuffle,
+                                                contentDescription = "Shuffle",
+                                                tint = primaryTextColor,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.width(12.dp))
+
+                                        // Play button
+                                        Box(
+                                            modifier = Modifier
+                                                .width(140.dp)
+                                                .height(40.dp)
+                                                .clip(RoundedCornerShape(20.dp))
+                                                .background(playButtonBg),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.PlayArrow,
+                                                    contentDescription = "Play",
+                                                    tint = playButtonTextColor,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                                Text(stringResource(R.string.reproducir), color = playButtonTextColor, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.width(12.dp))
+
+                                        // Add button
+                                        Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .clip(CircleShape)
+                                                .background(circularButtonBg),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = if (isSaved) Icons.Default.Check else Icons.Default.Add,
+                                                contentDescription = "Add/Remove",
+                                                tint = primaryTextColor,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
