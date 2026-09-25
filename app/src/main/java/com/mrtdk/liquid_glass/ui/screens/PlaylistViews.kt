@@ -2195,6 +2195,14 @@ fun FavoriteSongsScreen(
 
     val firstThumbnail = songs.firstOrNull()?.thumbnail
 
+    LaunchedEffect(Unit) {
+        if (com.mrtdk.liquid_glass.spotify.SpotifySession.isLoggedIn.value) {
+            withContext(Dispatchers.IO) {
+                LibraryManager.fetchSpotifyPlaylistTracks("spotify_liked_songs")
+            }
+        }
+    }
+
     LaunchedEffect(firstThumbnail) {
         if (firstThumbnail != null) {
             val hdUrl = when {

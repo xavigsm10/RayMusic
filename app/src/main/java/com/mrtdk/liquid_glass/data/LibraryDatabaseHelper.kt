@@ -250,6 +250,30 @@ class LibraryDatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABA
         insertSavedItemDirect(db, item)
     }
 
+    fun insertSavedItems(items: List<LibraryItem>) {
+        if (items.isEmpty()) return
+        val db = this.writableDatabase
+        db.beginTransaction()
+        try {
+            val now = System.currentTimeMillis()
+            items.forEach { item ->
+                val values = ContentValues().apply {
+                    put(KEY_ID, item.id)
+                    put(KEY_TITLE, item.title)
+                    put(KEY_SUBTITLE, item.subtitle)
+                    put(KEY_THUMBNAIL, item.thumbnail)
+                    put(KEY_TYPE, item.type.name)
+                    put(KEY_ALBUM, item.album)
+                    put(KEY_TIMESTAMP, now)
+                }
+                db.insertWithOnConflict(TABLE_SAVED_ITEMS, null, values, SQLiteDatabase.CONFLICT_REPLACE)
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
     fun insertSavedItemDirect(db: SQLiteDatabase, item: LibraryItem) {
         val values = ContentValues().apply {
             put(KEY_ID, item.id)

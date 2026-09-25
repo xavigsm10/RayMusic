@@ -2576,7 +2576,7 @@ fun GlassBoxScope.AppleMusicArtistMenu(
         ) {
             val density = LocalDensity.current
             val menuWidth = 265.dp
-            val estimatedHeight = 290.dp
+            val estimatedHeight = 350.dp
 
             val screenWidthDp = maxWidth
             val screenHeightDp = maxHeight
@@ -2738,7 +2738,7 @@ fun GlassBoxScope.AppleMusicArtistMenu(
 }
 
 @Composable
-private fun ArtistMenuInnerContent(
+fun ArtistMenuInnerContent(
     context: android.content.Context,
     artistId: String,
     artistName: String,
@@ -2844,6 +2844,8 @@ private fun ArtistMenuInnerContent(
         Toast.makeText(context, context.getString(R.string.menu_artist_toast_suggest_less), Toast.LENGTH_SHORT).show()
         onDismiss()
     }
+
+    Spacer(modifier = Modifier.height(10.dp))
 }
 
 @Composable

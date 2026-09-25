@@ -817,17 +817,22 @@ class MainActivity : ComponentActivity() {
 
                                         if (playlistDetail != null) {
                                             val pl = playlistDetail!!
-                                            // Las playlists creadas por el usuario usan la misma vista que los álbumes
-                                            val isUserCreatedPlaylist = !pl.id.startsWith("replay_") &&
-                                                    !pl.id.startsWith("made_for_you_") &&
-                                                    !pl.id.startsWith("spotify_")
-                                            if (isUserCreatedPlaylist) {
+                                            // Las playlists creadas por el usuario y de Spotify usan la misma vista que los álbumes
+                                            val isModernPlaylist = !pl.id.startsWith("replay_") &&
+                                                    !pl.id.startsWith("made_for_you_")
+                                            if (isModernPlaylist) {
+                                                val isSpotify = pl.id.startsWith("spotify_")
+                                                val playlistArtist = if (isSpotify) {
+                                                    com.mrtdk.liquid_glass.spotify.SpotifySession.userName.ifBlank { "Spotify" }
+                                                } else {
+                                                    ""
+                                                }
                                                 AlbumScreen(
                                                     albumState = AlbumState(
                                                         id = "user_playlist_" + pl.id,
                                                         playlistId = "",
                                                         title = pl.name,
-                                                        artist = "",
+                                                        artist = playlistArtist,
                                                         thumbnail = pl.coverUrl ?: pl.items.firstOrNull()?.thumbnail,
                                                         year = null
                                                     ),

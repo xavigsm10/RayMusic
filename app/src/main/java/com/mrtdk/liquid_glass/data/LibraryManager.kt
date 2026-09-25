@@ -51,6 +51,7 @@ object LibraryManager {
     private lateinit var dbHelper: LibraryDatabaseHelper
     private var isInitialized = false
     private val settingsCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private val activeSpotifyFetches = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
     private val _savedItems = MutableStateFlow<List<LibraryItem>>(emptyList())
     val savedItems: StateFlow<List<LibraryItem>> = _savedItems
@@ -461,6 +462,7 @@ object LibraryManager {
 
             // 2. Sync Albums
             val spotifyAlbums = com.mrtdk.liquid_glass.spotify.Spotify.myAlbums().getOrNull() ?: emptyList()
+            val albumItems = mutableListOf<LibraryItem>()
             for (album in spotifyAlbums) {
                 if (album.id.isBlank() || album.name.isBlank()) continue
                 val albumId = "spotify_album_${album.id}"
@@ -473,11 +475,15 @@ object LibraryManager {
                     type = ItemType.ALBUM,
                     album = album.name
                 )
-                dbHelper.insertSavedItem(item)
+                albumItems.add(item)
+            }
+            if (albumItems.isNotEmpty()) {
+                dbHelper.insertSavedItems(albumItems)
             }
 
             // 3. Sync Artists
             val spotifyArtists = com.mrtdk.liquid_glass.spotify.Spotify.myArtists().getOrNull() ?: emptyList()
+            val artistItems = mutableListOf<LibraryItem>()
             for (artist in spotifyArtists) {
                 if (artist.id.isBlank() || artist.name.isBlank()) continue
                 val artistId = "spotify_artist_${artist.id}"
@@ -488,62 +494,30 @@ object LibraryManager {
                     thumbnail = artist.images.firstOrNull()?.url,
                     type = ItemType.ARTIST
                 )
-                dbHelper.insertSavedItem(item)
+                artistItems.add(item)
+            }
+            if (artistItems.isNotEmpty()) {
+                dbHelper.insertSavedItems(artistItems)
             }
 
             _savedItems.value = dbHelper.getSavedItems()
 
-            // 4. Sync Liked Songs / Favoritos ("Canciones que te gustan")
-            val allSavedTracks = mutableListOf<com.mrtdk.liquid_glass.spotify.SpotifyTrack>()
-            var savedOffset = 0
-            val savedLimit = 50
-            while (true) {
-                val savedPage = com.mrtdk.liquid_glass.spotify.Spotify.mySavedTracks(limit = savedLimit, offset = savedOffset).getOrNull() ?: break
-                if (savedPage.isEmpty()) break
-                allSavedTracks.addAll(savedPage)
-                for (track in savedPage) {
-                    if (track.id.isBlank() || track.name.isBlank()) continue
-                    val artistStr = track.artists.joinToString(", ") { it.name }
-                    val coverUrl = track.album?.images?.firstOrNull()?.url
-                    val item = LibraryItem(
-                        id = track.id,
-                        title = track.name,
-                        subtitle = artistStr,
-                        thumbnail = coverUrl,
-                        type = ItemType.SONG,
-                        album = track.album?.name
-                    )
-                    dbHelper.insertSavedItem(item)
-                }
-                if (savedPage.size < savedLimit) break
-                savedOffset += savedPage.size
-                if (savedOffset >= 200) break
-            }
-
-            if (allSavedTracks.isNotEmpty()) {
-                val likedPlaylistId = "spotify_liked_songs"
-                val existingLiked = _playlists.value.find { it.id == likedPlaylistId }
-                val likedItems = allSavedTracks.map { track ->
-                    val artistStr = track.artists.joinToString(", ") { it.name }
-                    LibraryItem(
-                        id = track.id,
-                        title = track.name,
-                        subtitle = artistStr,
-                        thumbnail = track.album?.images?.firstOrNull()?.url,
-                        type = ItemType.SONG,
-                        album = track.album?.name
-                    )
-                }
-                val coverUrl = likedItems.firstOrNull()?.thumbnail
-                if (existingLiked == null) {
-                    dbHelper.insertPlaylist(Playlist(likedPlaylistId, "Canciones que te gustan", likedItems, coverUrl, true, System.currentTimeMillis()))
-                } else {
-                    dbHelper.insertPlaylist(existingLiked.copy(items = likedItems, coverUrl = coverUrl ?: existingLiked.coverUrl))
-                }
+            // 4. Ensure Liked Songs ("Canciones que te gustan") playlist exists
+            val likedPlaylistId = "spotify_liked_songs"
+            val existingLiked = _playlists.value.find { it.id == likedPlaylistId }
+            if (existingLiked == null) {
+                dbHelper.insertPlaylist(Playlist(likedPlaylistId, "Canciones que te gustan", emptyList(), null, true, System.currentTimeMillis()))
                 _playlists.value = dbHelper.getPlaylists()
             }
 
-            _savedItems.value = dbHelper.getSavedItems()
+            // Asynchronously fetch all tracks for liked songs without blocking
+            kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    fetchSpotifyPlaylistTracks(likedPlaylistId)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
 
             // Asynchronously fetch tracks for each imported playlist
             for (spPlaylist in spotifyPlaylists) {
@@ -564,51 +538,116 @@ object LibraryManager {
 
     suspend fun fetchSpotifyPlaylistTracks(playlistId: String) {
         if (!isInitialized) return
+        if (!activeSpotifyFetches.add(playlistId)) return
         try {
-            val allTracks = mutableListOf<com.mrtdk.liquid_glass.spotify.SpotifyTrack>()
+            com.mrtdk.liquid_glass.spotify.SpotifySession.ensureValidToken()
+            val allItems = mutableListOf<LibraryItem>()
+
             if (playlistId == "spotify_liked_songs") {
+                val previousItemsCount = _playlists.value.find { it.id == playlistId }?.items?.size ?: 0
                 var offset = 0
                 val limit = 50
+                var consecutiveErrors = 0
                 while (true) {
-                    val page = com.mrtdk.liquid_glass.spotify.Spotify.mySavedTracks(limit = limit, offset = offset).getOrNull() ?: break
+                    val pageResult = com.mrtdk.liquid_glass.spotify.Spotify.mySavedTracks(limit = limit, offset = offset)
+                    val page = pageResult.getOrNull()
+                    if (page == null) {
+                        consecutiveErrors++
+                        if (consecutiveErrors >= 3) break
+                        kotlinx.coroutines.delay(1000L)
+                        continue
+                    }
+                    consecutiveErrors = 0
                     if (page.isEmpty()) break
-                    allTracks.addAll(page)
+
+                    val batchItems = page.mapNotNull { track ->
+                        if (track.id.isBlank() || track.name.isBlank()) return@mapNotNull null
+                        val artistStr = track.artists.joinToString(", ") { it.name }
+                        LibraryItem(
+                            id = track.id,
+                            title = track.name,
+                            subtitle = artistStr,
+                            thumbnail = track.album?.images?.firstOrNull()?.url,
+                            type = ItemType.SONG,
+                            album = track.album?.name
+                        )
+                    }
+                    allItems.addAll(batchItems)
+                    dbHelper.insertSavedItems(batchItems)
+
+                    val isFirstPage = (offset == 0 && previousItemsCount == 0)
+                    val isDone = (page.size < limit)
+                    val isMilestone = (allItems.size >= previousItemsCount && allItems.size % 250 < limit)
+
+                    if (isFirstPage || isMilestone || isDone) {
+                        val existingLiked = _playlists.value.find { it.id == playlistId }
+                        val coverUrl = allItems.firstOrNull()?.thumbnail ?: existingLiked?.coverUrl
+                        val updated = if (existingLiked == null) {
+                            Playlist(playlistId, "Canciones que te gustan", allItems.toList(), coverUrl, true, System.currentTimeMillis())
+                        } else {
+                            existingLiked.copy(items = allItems.toList(), coverUrl = coverUrl ?: existingLiked.coverUrl)
+                        }
+                        dbHelper.insertPlaylist(updated)
+                        _playlists.value = dbHelper.getPlaylists()
+                        _savedItems.value = dbHelper.getSavedItems()
+                    }
+
                     if (page.size < limit) break
                     offset += page.size
-                    if (offset >= 200) break
                 }
             } else {
+                val previousItemsCount = _playlists.value.find { it.id == playlistId }?.items?.size ?: 0
                 val rawId = playlistId.removePrefix("spotify_")
                 var offset = 0
                 val limit = 100
+                var consecutiveErrors = 0
                 while (true) {
-                    val page = com.mrtdk.liquid_glass.spotify.Spotify.playlistTracks(rawId, limit = limit, offset = offset).getOrNull() ?: break
+                    val pageResult = com.mrtdk.liquid_glass.spotify.Spotify.playlistTracks(rawId, limit = limit, offset = offset)
+                    val page = pageResult.getOrNull()
+                    if (page == null) {
+                        consecutiveErrors++
+                        if (consecutiveErrors >= 3) break
+                        kotlinx.coroutines.delay(1000L)
+                        continue
+                    }
+                    consecutiveErrors = 0
                     if (page.isEmpty()) break
-                    allTracks.addAll(page)
+
+                    val batchItems = page.mapNotNull { track ->
+                        if (track.id.isBlank() || track.name.isBlank()) return@mapNotNull null
+                        val artistStr = track.artists.joinToString(", ") { it.name }
+                        LibraryItem(
+                            id = track.id,
+                            title = track.name,
+                            subtitle = artistStr,
+                            thumbnail = track.album?.images?.firstOrNull()?.url,
+                            type = ItemType.SONG,
+                            album = track.album?.name
+                        )
+                    }
+                    allItems.addAll(batchItems)
+
+                    val isFirstPage = (offset == 0 && previousItemsCount == 0)
+                    val isDone = (page.size < limit)
+                    val isMilestone = (allItems.size >= previousItemsCount && allItems.size % 200 < limit)
+
+                    if (isFirstPage || isMilestone || isDone) {
+                        val existing = _playlists.value.find { it.id == playlistId }
+                        if (existing != null) {
+                            val updated = existing.copy(items = allItems.toList())
+                            dbHelper.insertPlaylist(updated)
+                            _playlists.value = dbHelper.getPlaylists()
+                        }
+                    }
+
                     if (page.size < limit) break
                     offset += page.size
                 }
             }
-            if (allTracks.isEmpty()) return
-
-            val items = allTracks.map { track ->
-                LibraryItem(
-                    id = track.id,
-                    title = track.name,
-                    subtitle = track.artists.firstOrNull()?.name ?: "",
-                    thumbnail = track.album?.images?.firstOrNull()?.url,
-                    type = ItemType.SONG,
-                    album = track.album?.name
-                )
-            }
-            val existing = _playlists.value.find { it.id == playlistId }
-            if (existing != null) {
-                val updated = existing.copy(items = items)
-                dbHelper.insertPlaylist(updated)
-                _playlists.value = dbHelper.getPlaylists()
-            }
         } catch (e: Exception) {
             e.printStackTrace()
+        } finally {
+            activeSpotifyFetches.remove(playlistId)
         }
     }
 

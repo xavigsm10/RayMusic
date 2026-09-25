@@ -148,8 +148,16 @@ fun AlbumScreen(
     var artistPageData by remember(albumState.artist, albumState.id) { mutableStateOf<com.echo.innertube.pages.ArtistPage?>(null) }
     var albumDescription by remember(albumState.id) { mutableStateOf<String?>(null) }
     val isSaved by androidx.compose.runtime.produceState(initialValue = false, albumState.id) {
-        LibraryManager.savedItems.collect { list ->
-            value = list.any { it.id == albumState.id }
+        val isUserPl = albumState.id.startsWith("user_playlist_")
+        if (isUserPl) {
+            val rawId = albumState.id.removePrefix("user_playlist_")
+            LibraryManager.playlists.collect { list ->
+                value = list.any { it.id == rawId }
+            }
+        } else {
+            LibraryManager.savedItems.collect { list ->
+                value = list.any { it.id == albumState.id }
+            }
         }
     }
 
@@ -189,7 +197,11 @@ fun AlbumScreen(
     // Albums that should never use animated artwork (only made for you playlists)
     val isAnimatedArtworkBlocked = isMadeForYou
 
-    val hdThumb = albumState.thumbnail
+    val rawThumb = albumState.thumbnail.takeIf { !it.isNullOrBlank() }
+        ?: userPlaylistItems.firstOrNull()?.thumbnail.takeIf { !it.isNullOrBlank() }
+        ?: tracks.firstOrNull()?.thumbnail.takeIf { !it.isNullOrBlank() }
+
+    val hdThumb = rawThumb
         ?.replace("=w226-h226", "=w720-h720")
         ?.replace("=w120-h120", "=w720-h720")
 
@@ -310,6 +322,12 @@ fun AlbumScreen(
     LaunchedEffect(albumState.id) {
         withContext(Dispatchers.IO) {
             if (isUserPlaylist) {
+                val rawPlaylistId = albumState.id.removePrefix("user_playlist_")
+                if (rawPlaylistId.startsWith("spotify_")) {
+                    kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+                        LibraryManager.fetchSpotifyPlaylistTracks(rawPlaylistId)
+                    }
+                }
                 tracks = userPlaylistTracks()
                 albumError = null
             } else if (isMadeForYou) {
@@ -318,6 +336,49 @@ fun AlbumScreen(
                     tracks = pl.songs
                     albumDescription = pl.artistsSubtitle
                     albumError = null
+                }
+            } else if (albumState.id.startsWith("spotify_album_")) {
+                val rawAlbumId = albumState.id.removePrefix("spotify_album_")
+                var loaded = false
+                try {
+                    val spTracks = com.mrtdk.liquid_glass.spotify.Spotify.albumTracks(rawAlbumId).getOrNull()
+                    if (!spTracks.isNullOrEmpty()) {
+                        tracks = spTracks.map { t ->
+                            com.echo.innertube.models.SongItem(
+                                id = t.id,
+                                title = t.name,
+                                artists = t.artists.map { com.echo.innertube.models.Artist(name = it.name, id = it.id) },
+                                album = com.echo.innertube.models.Album(name = albumState.title, id = albumState.id),
+                                thumbnail = hdThumb ?: albumState.thumbnail ?: "",
+                                explicit = false
+                            )
+                        }
+                        loaded = true
+                        albumError = null
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                if (!loaded) {
+                    try {
+                        val cleanArtist = albumState.artist.removePrefix("Álbum • ").removePrefix("Album • ").split(",", "&", ";").firstOrNull()?.trim() ?: ""
+                        val query = "${albumState.title} $cleanArtist".trim()
+                        val searchResult = com.echo.innertube.YouTube.search(query, com.echo.innertube.YouTube.SearchFilter.FILTER_ALBUM).getOrNull()
+                        val ytAlbum = searchResult?.items?.filterIsInstance<com.echo.innertube.models.AlbumItem>()?.firstOrNull()
+                        if (ytAlbum != null) {
+                            YouTube.album(ytAlbum.id).onSuccess { albumPage ->
+                                tracks = albumPage.songs
+                                albumDescription = albumPage.description
+                                loaded = true
+                                albumError = null
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+                if (!loaded) {
+                    albumError = "No se pudieron cargar las canciones del álbum"
                 }
             } else if (albumState.id.startsWith("offline_album_")) {
                 val localDownloads = LibraryManager.getDownloadedSongsForAlbum(albumState.title)
@@ -776,30 +837,41 @@ fun AlbumScreen(
                                             )
                                         )
                                     )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = albumState.artist,
-                                        color = secondaryTextColor,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                        style = TextStyle(
-                                            shadow = if (isLightBackground) null else Shadow(
-                                                color = Color.Black.copy(alpha = 0.6f),
-                                                offset = Offset(1f, 1f),
-                                                blurRadius = 3f
+                                    val cleanArtistName = remember(albumState.artist) {
+                                        albumState.artist.removePrefix("Álbum • ").removePrefix("Album • ")
+                                    }
+                                    if (cleanArtistName.isNotBlank()) {
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = cleanArtistName,
+                                            color = secondaryTextColor,
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                            style = TextStyle(
+                                                shadow = if (isLightBackground) null else Shadow(
+                                                    color = Color.Black.copy(alpha = 0.6f),
+                                                    offset = Offset(1f, 1f),
+                                                    blurRadius = 3f
+                                                )
                                             )
                                         )
-                                    )
+                                    }
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.Center
                                     ) {
+                                        val isSpotifyPlaylist = isUserPlaylist && albumState.id.removePrefix("user_playlist_").startsWith("spotify_")
+                                        val isSpotifyAlbum = albumState.id.startsWith("spotify_album_")
                                         val categoryText = if (isMadeForYou) {
                                             stringResource(R.string.playlists_hechas_para_ti) + " • RayMusic • "
+                                        } else if (isSpotifyPlaylist) {
+                                            "Playlist • Spotify • "
+                                        } else if (isSpotifyAlbum) {
+                                            "Álbum • Spotify • "
                                         } else if (isUserPlaylist) {
                                             stringResource(R.string.user_playlist_label) + " • "
                                         } else {
@@ -946,15 +1018,24 @@ fun AlbumScreen(
                                             .background(circularButtonBg)
                                             .clickable { 
                                                 if (isSaved) {
-                                                    LibraryManager.removeItem(albumState.id)
+                                                    if (isUserPlaylist) {
+                                                        val rawId = albumState.id.removePrefix("user_playlist_")
+                                                        LibraryManager.deletePlaylist(rawId)
+                                                    } else {
+                                                        LibraryManager.removeItem(albumState.id)
+                                                    }
                                                 } else {
-                                                    LibraryManager.saveItem(LibraryItem(
-                                                        id = albumState.id,
-                                                        title = albumState.title,
-                                                        subtitle = albumState.artist,
-                                                        thumbnail = hdThumb,
-                                                        type = ItemType.ALBUM
-                                                    ))
+                                                    if (isUserPlaylist) {
+                                                        LibraryManager.createPlaylist(albumState.title, hdThumb)
+                                                    } else {
+                                                        LibraryManager.saveItem(LibraryItem(
+                                                            id = albumState.id,
+                                                            title = albumState.title,
+                                                            subtitle = albumState.artist,
+                                                            thumbnail = hdThumb,
+                                                            type = ItemType.ALBUM
+                                                        ))
+                                                    }
                                                 }
                                             },
                                         contentAlignment = Alignment.Center
@@ -1582,16 +1663,22 @@ fun AlbumScreen(
                                     }
                                 },
                                 onSaveAlbumToLibrary = {
-                                    LibraryManager.saveItem(
-                                        LibraryItem(
-                                            id = albumState.id,
-                                            title = albumState.title,
-                                            subtitle = albumState.artist,
-                                            thumbnail = hdThumb,
-                                            type = ItemType.ALBUM
+                                    if (isUserPlaylist) {
+                                        val rawId = albumState.id.removePrefix("user_playlist_")
+                                        LibraryManager.createPlaylist(albumState.title, hdThumb)
+                                        Toast.makeText(context, "Playlist guardada en la biblioteca", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        LibraryManager.saveItem(
+                                            LibraryItem(
+                                                id = albumState.id,
+                                                title = albumState.title,
+                                                subtitle = albumState.artist,
+                                                thumbnail = hdThumb,
+                                                type = ItemType.ALBUM
+                                            )
                                         )
-                                    )
-                                    Toast.makeText(context, "Álbum guardado en la biblioteca", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "Álbum guardado en la biblioteca", Toast.LENGTH_SHORT).show()
+                                    }
                                 },
                                 onGoToArtist = {
                                     val aId = artistPageData?.artist?.id ?: albumState.artist
@@ -2159,8 +2246,16 @@ fun AlbumTopRightMorphingPill(
     }
 
     val isSaved by androidx.compose.runtime.produceState(initialValue = false, albumState.id) {
-        LibraryManager.savedItems.collect { list ->
-            value = list.any { it.id == albumState.id }
+        val isUserPl = albumState.id.startsWith("user_playlist_")
+        if (isUserPl) {
+            val rawId = albumState.id.removePrefix("user_playlist_")
+            LibraryManager.playlists.collect { list ->
+                value = list.any { it.id == rawId }
+            }
+        } else {
+            LibraryManager.savedItems.collect { list ->
+                value = list.any { it.id == albumState.id }
+            }
         }
     }
     var isFavorite by remember(albumState.id) { mutableStateOf(false) }
@@ -2227,7 +2322,17 @@ fun AlbumTopRightMorphingPill(
                 ) {
                     IconButton(
                         onClick = {
-                            val shareUrl = "https://music.youtube.com/playlist?list=${albumState.playlistId.ifEmpty { albumState.id }.removePrefix("VL")}"
+                            val isSpotifyPl = albumState.id.startsWith("user_playlist_spotify_")
+                            val isSpotifyAlb = albumState.id.startsWith("spotify_album_")
+                            val shareUrl = if (isSpotifyPl) {
+                                val rawId = albumState.id.removePrefix("user_playlist_spotify_")
+                                "https://open.spotify.com/playlist/$rawId"
+                            } else if (isSpotifyAlb) {
+                                val rawId = albumState.id.removePrefix("spotify_album_")
+                                "https://open.spotify.com/album/$rawId"
+                            } else {
+                                "https://music.youtube.com/playlist?list=${albumState.playlistId.ifEmpty { albumState.id }.removePrefix("VL")}"
+                            }
                             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                 type = "text/plain"
                                 putExtra(Intent.EXTRA_SUBJECT, albumState.title)
@@ -2285,8 +2390,14 @@ fun AlbumTopRightMorphingPill(
                                     .weight(1f)
                                     .clip(RoundedCornerShape(12.dp))
                                     .clickable {
+                                        val isUserPl = albumState.id.startsWith("user_playlist_")
                                         if (isSaved) {
-                                            LibraryManager.removeItem(albumState.id)
+                                            if (isUserPl) {
+                                                val rawId = albumState.id.removePrefix("user_playlist_")
+                                                LibraryManager.deletePlaylist(rawId)
+                                            } else {
+                                                LibraryManager.removeItem(albumState.id)
+                                            }
                                             Toast.makeText(context, "Eliminado de la biblioteca", Toast.LENGTH_SHORT).show()
                                         } else {
                                             onSaveAlbumToLibrary()
@@ -2350,8 +2461,18 @@ fun AlbumTopRightMorphingPill(
                                     .weight(1f)
                                     .clip(RoundedCornerShape(12.dp))
                                     .clickable {
-                                        val pId = albumState.playlistId.ifEmpty { albumState.id }.removePrefix("VL")
-                                        val shareUrl = "https://music.youtube.com/playlist?list=$pId"
+                                        val isSpotifyPl = albumState.id.startsWith("user_playlist_spotify_")
+                                        val isSpotifyAlb = albumState.id.startsWith("spotify_album_")
+                                        val shareUrl = if (isSpotifyPl) {
+                                            val rawId = albumState.id.removePrefix("user_playlist_spotify_")
+                                            "https://open.spotify.com/playlist/$rawId"
+                                        } else if (isSpotifyAlb) {
+                                            val rawId = albumState.id.removePrefix("spotify_album_")
+                                            "https://open.spotify.com/album/$rawId"
+                                        } else {
+                                            val pId = albumState.playlistId.ifEmpty { albumState.id }.removePrefix("VL")
+                                            "https://music.youtube.com/playlist?list=$pId"
+                                        }
                                         val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                             type = "text/plain"
                                             putExtra(Intent.EXTRA_SUBJECT, albumState.title)

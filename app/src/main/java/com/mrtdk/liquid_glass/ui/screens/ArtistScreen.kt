@@ -36,6 +36,7 @@ import com.mrtdk.glass.GlassContainer
 import com.mrtdk.glass.GlassBox
 import com.mrtdk.glass.DarkGrayGlassTint
 import com.mrtdk.liquid_glass.ui.components.AppleMusicArtistMenu
+import com.mrtdk.liquid_glass.ui.components.ArtistMenuInnerContent
 import com.mrtdk.liquid_glass.ui.components.AppleMusicSongMenu
 import com.mrtdk.liquid_glass.ui.components.ContextMenuSong
 import android.os.Build
@@ -1842,141 +1843,74 @@ fun ArtistScreen(
         val scope = this
         val isAnyOverlayActive = showAllAlbumsOverlay || showAllSectionOverlay || showAllSongsOverlay || showInfoOverlay
         if (!isAnyOverlayActive) {
-            // ── FLOATING TOP BAR ───────────────────────────
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-            val artistHeaderIconTint = if (isDarkMode) Color.White else Color(0xFF151515)
-            // Circular back button with GlassBox (liquid glass)
-            scope.GlassBox(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clickable { onBack() },
-                shape = CircleShape,
-                tint = Color.Unspecified,
-                blur = 0.8f,
-                centerDistortion = 0.1f,
-                scale = 0.02f,
-                warpEdges = 0.4f,
-                elevation = 16.dp,
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.flecha_atras),
-                    contentDescription = "Back",
-                    tint = artistHeaderIconTint,
-                    modifier = Modifier.size(20.dp).offset(x = (-1).dp)
+            // Semi-transparent overlay to dismiss morphing menu when clicking outside
+            if (showArtistMenu) {
+                androidx.activity.compose.BackHandler {
+                    showArtistMenu = false
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.35f))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { showArtistMenu = false }
                 )
             }
 
-            // Capsule containing Share and Settings options (liquid glass)
-            scope.GlassBox(
+            // ── FLOATING TOP BAR ───────────────────────────
+            Box(
                 modifier = Modifier
-                    .width(106.dp)
-                    .height(44.dp),
-                shape = RoundedCornerShape(percent = 50),
-                tint = Color.Unspecified,
-                blur = 0.8f,
-                centerDistortion = 0.1f,
-                scale = 0.02f,
-                warpEdges = 0.4f,
-                elevation = 16.dp,
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                Row(
+                val artistHeaderIconTint = if (isDarkMode) Color.White else Color(0xFF151515)
+                // Circular back button with GlassBox (liquid glass)
+                scope.GlassBox(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .align(Alignment.TopStart)
+                        .size(48.dp)
+                        .graphicsLayer {
+                            alpha = if (showArtistMenu) 0.4f else 1f
+                        }
+                        .clickable(enabled = !showArtistMenu) { onBack() },
+                    shape = CircleShape,
+                    tint = Color.Unspecified,
+                    blur = 0.8f,
+                    centerDistortion = 0.1f,
+                    scale = 0.02f,
+                    warpEdges = 0.4f,
+                    elevation = 16.dp,
+                    contentAlignment = Alignment.Center
                 ) {
-                    IconButton(
-                        onClick = {
-                            val shareUrl = "https://music.youtube.com/channel/${artistState.id}"
-                            val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(android.content.Intent.EXTRA_SUBJECT, artistState.name)
-                                putExtra(android.content.Intent.EXTRA_TEXT, "$shareUrl")
-                            }
-                            context.startActivity(android.content.Intent.createChooser(shareIntent, "Compartir"))
-                        },
-                        modifier = Modifier.size(38.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.compartir),
-                            contentDescription = "Share",
-                            tint = artistHeaderIconTint,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                    var artistDotsCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
-                    val artistDotsInteractionSource = remember { MutableInteractionSource() }
-                    val isArtistDotsPressed by artistDotsInteractionSource.collectIsPressedAsState()
-                    val artistDotsPressScale by animateFloatAsState(
-                        targetValue = if (isArtistDotsPressed) 0.86f else 1f,
-                        animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
-                        label = "artistDotsPress"
+                    Icon(
+                        painter = painterResource(id = R.drawable.flecha_atras),
+                        contentDescription = "Back",
+                        tint = artistHeaderIconTint,
+                        modifier = Modifier.size(20.dp).offset(x = (-1).dp)
                     )
+                }
 
-                    Box(
-                        modifier = Modifier
-                            .onGloballyPositioned { artistDotsCoords = it }
-                            .size(38.dp)
-                            .graphicsLayer {
-                                scaleX = artistDotsPressScale
-                                scaleY = artistDotsPressScale
-                                alpha = if (showArtistMenu) 0f else 1f
-                            }
-                            .clip(CircleShape)
-                            .clickable(
-                                interactionSource = artistDotsInteractionSource,
-                                indication = null,
-                                enabled = !showArtistMenu
-                            ) {
-                                val rootCoords = artistScreenRootCoords
-                                if (rootCoords != null && artistDotsCoords != null && rootCoords.isAttached && artistDotsCoords!!.isAttached) {
-                                    val localOffset = rootCoords.localPositionOf(artistDotsCoords!!, Offset.Zero)
-                                    val size = artistDotsCoords!!.size
-                                    artistMenuPivotBounds = Rect(localOffset, Size(size.width.toFloat(), size.height.toFloat()))
-                                } else {
-                                    artistMenuPivotBounds = artistDotsCoords?.boundsInRoot()
-                                }
-                                showArtistMenu = true
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.tres_puntos),
-                            contentDescription = "Settings",
-                            tint = artistHeaderIconTint,
-                            modifier = Modifier.width(22.dp).height(16.dp)
-                        )
-                    }
+                // Morphing Liquid Glass Pill -> Menu on Top-Right
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 2.dp)
+                ) {
+                    ArtistTopRightMorphingPill(
+                        glassScope = scope,
+                        artistState = artistState,
+                        artistThumb = hdThumb,
+                        isExpanded = showArtistMenu,
+                        onExpandChange = { showArtistMenu = it },
+                        glassIconTint = artistHeaderIconTint,
+                        topSongs = topSongsSection?.items?.filterIsInstance<SongItem>()?.let { l -> l.filterNot { it.isVideoSong }.ifEmpty { l } } ?: emptyList(),
+                        onSongSelected = onSongSelected
+                    )
                 }
             }
-        }
-    }
-
-        if (showArtistMenu) {
-            AppleMusicArtistMenu(
-                artistId = artistState.id,
-                artistName = artistState.name,
-                artistThumb = artistThumb,
-                backdrop = (expo.modules.androidglassview.LocalBackdrop.current as? com.kyant.backdrop.backdrops.LayerBackdrop) ?: rememberLayerBackdrop(),
-                dominantColor = dominantColor,
-                onDismiss = {
-                    showArtistMenu = false
-                    artistMenuPivotBounds = null
-                },
-                onSongSelected = onSongSelected,
-                topSongs = topSongsSection?.items?.filterIsInstance<SongItem>()?.let { l -> l.filterNot { it.isVideoSong }.ifEmpty { l } } ?: emptyList(),
-                pivotBounds = artistMenuPivotBounds
-            )
         }
 
         activeSongForMenu?.let { cSong ->
@@ -2440,3 +2374,145 @@ fun CarouselToGridTransitionOverlay(
         }
     }
 }
+
+@Composable
+fun ArtistTopRightMorphingPill(
+    glassScope: com.mrtdk.glass.GlassBoxScope,
+    artistState: ArtistState,
+    artistThumb: String?,
+    isExpanded: Boolean,
+    onExpandChange: (Boolean) -> Unit,
+    glassIconTint: Color,
+    topSongs: List<com.echo.innertube.models.SongItem>,
+    onSongSelected: (PlayerState) -> Unit
+) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
+    val savedItems by LibraryManager.savedItems.collectAsState()
+    val isFavorite = remember(savedItems, artistState.id) { savedItems.any { it.id == artistState.id } }
+
+    val morphProgress by animateFloatAsState(
+        targetValue = if (isExpanded) 1f else 0f,
+        animationSpec = spring(
+            dampingRatio = 0.74f,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "artistPillToMenuMorph"
+    )
+
+    // Smooth continuous 2D size & corner interpolation
+    val targetMenuHeight = 350.dp
+    val morphWidth = androidx.compose.ui.unit.lerp(106.dp, 268.dp, morphProgress)
+    val morphHeight = androidx.compose.ui.unit.lerp(44.dp, targetMenuHeight, morphProgress)
+    val morphCorner = androidx.compose.ui.unit.lerp(22.dp, 24.dp, morphProgress)
+    val morphTint = Color.Unspecified
+
+    // Smooth crossfade opacities
+    val pillIconsAlpha = ((0.28f - morphProgress) / 0.28f).coerceIn(0f, 1f)
+    val menuContentAlpha = ((morphProgress - 0.22f) / 0.78f).coerceIn(0f, 1f)
+
+    glassScope.GlassBox(
+        modifier = Modifier
+            .size(width = morphWidth, height = morphHeight)
+            .clip(RoundedCornerShape(morphCorner))
+            .then(
+                if (morphProgress > 0.05f) {
+                    Modifier.border(
+                        width = 0.8.dp,
+                        brush = Brush.verticalGradient(
+                            listOf(
+                                Color.White.copy(alpha = morphProgress * 0.35f),
+                                Color.White.copy(alpha = morphProgress * 0.08f)
+                            )
+                        ),
+                        shape = RoundedCornerShape(morphCorner)
+                    )
+                } else Modifier
+            ),
+        shape = RoundedCornerShape(morphCorner),
+        tint = morphTint,
+        blur = 0.85f,
+        centerDistortion = 0.1f,
+        scale = 0.02f,
+        warpEdges = 0.4f,
+        elevation = 16.dp,
+        contentAlignment = Alignment.TopEnd
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            // 1. Collapsed: Original Share + 3 Dots Capsule
+            if (pillIconsAlpha > 0.001f) {
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .width(106.dp)
+                        .height(44.dp)
+                        .padding(horizontal = 10.dp)
+                        .graphicsLayer { alpha = pillIconsAlpha },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = {
+                            val shareUrl = "https://music.youtube.com/channel/${artistState.id}"
+                            val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(android.content.Intent.EXTRA_SUBJECT, artistState.name)
+                                putExtra(android.content.Intent.EXTRA_TEXT, "$shareUrl")
+                            }
+                            context.startActivity(android.content.Intent.createChooser(shareIntent, "Compartir"))
+                        },
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.compartir),
+                            contentDescription = "Share",
+                            tint = glassIconTint,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    IconButton(
+                        onClick = { onExpandChange(true) },
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.tres_puntos),
+                            contentDescription = "More",
+                            tint = glassIconTint,
+                            modifier = Modifier.width(22.dp).height(16.dp)
+                        )
+                    }
+                }
+            }
+
+            // 2. Expanded: Apple Music Liquid Glass Menu
+            if (menuContentAlpha > 0.001f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { alpha = menuContentAlpha }
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(vertical = 8.dp)
+                    ) {
+                        ArtistMenuInnerContent(
+                            context = context,
+                            artistId = artistState.id,
+                            artistName = artistState.name,
+                            artistThumb = artistThumb,
+                            isFavorite = isFavorite,
+                            topSongs = topSongs,
+                            onSongSelected = onSongSelected,
+                            scope = coroutineScope,
+                            onDismiss = { onExpandChange(false) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+

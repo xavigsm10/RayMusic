@@ -207,6 +207,39 @@ object Spotify {
         }
     }
 
+    suspend fun albumTracks(albumId: String, limit: Int = 50, offset: Int = 0): Result<List<SpotifyTrack>> = withContext(Dispatchers.IO) {
+        runCatching {
+            SpotifySession.ensureValidToken()
+            val token = SpotifySession.accessToken
+            val rawId = albumId.removePrefix("spotify_album_").removePrefix("spotify_")
+
+            val jsonStr = httpGet("$REST_URL/albums/$rawId/tracks?limit=$limit&offset=$offset", mapOf("Authorization" to "Bearer $token", "App-Platform" to "WebPlayer"))
+            val json = JSONObject(jsonStr)
+            val items = json.optJSONArray("items") ?: JSONArray()
+            val tracks = mutableListOf<SpotifyTrack>()
+
+            for (i in 0 until items.length()) {
+                val item = items.optJSONObject(i) ?: continue
+                val trackObj = item.optJSONObject("track") ?: item
+                val id = trackObj.optString("id", "")
+                val name = trackObj.optString("name", "")
+                val durationMs = trackObj.optInt("duration_ms", 0)
+
+                val artistsArr = trackObj.optJSONArray("artists")
+                val artists = mutableListOf<SpotifySimpleArtist>()
+                if (artistsArr != null) {
+                    for (a in 0 until artistsArr.length()) {
+                        val art = artistsArr.optJSONObject(a) ?: continue
+                        artists.add(SpotifySimpleArtist(art.optString("id"), art.optString("name")))
+                    }
+                }
+
+                tracks.add(SpotifyTrack(id = id, name = name, artists = artists, album = null, durationMs = durationMs))
+            }
+            tracks
+        }
+    }
+
     suspend fun searchArtistImage(artistName: String): Result<String?> = withContext(Dispatchers.IO) {
         runCatching {
             if (artistName.isBlank()) return@runCatching null
@@ -676,7 +709,7 @@ object Spotify {
         return JSONObject(response)
     }
 
-    private fun httpPostJson(urlString: String, jsonBody: String, extraHeaders: Map<String, String>): String {
+    private fun httpPostJson(urlString: String, jsonBody: String, extraHeaders: Map<String, String>, retries: Int = 2): String {
         val connection = URL(urlString).openConnection() as HttpURLConnection
         try {
             connection.requestMethod = "POST"
@@ -697,6 +730,11 @@ object Spotify {
             }
 
             val responseCode = connection.responseCode
+            if (responseCode == 429 && retries > 0) {
+                val retryAfter = connection.getHeaderField("Retry-After")?.toLongOrNull() ?: 2L
+                Thread.sleep((retryAfter * 1000).coerceIn(1000L, 5000L))
+                return httpPostJson(urlString, jsonBody, extraHeaders, retries - 1)
+            }
             if (responseCode !in 200..299) {
                 val errorBody = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
                 throw Exception("HTTP $responseCode: $errorBody")
@@ -708,7 +746,7 @@ object Spotify {
         }
     }
 
-    private fun httpGet(urlString: String, extraHeaders: Map<String, String>): String {
+    private fun httpGet(urlString: String, extraHeaders: Map<String, String>, retries: Int = 2): String {
         val connection = URL(urlString).openConnection() as HttpURLConnection
         try {
             connection.requestMethod = "GET"
@@ -722,6 +760,11 @@ object Spotify {
             }
 
             val responseCode = connection.responseCode
+            if (responseCode == 429 && retries > 0) {
+                val retryAfter = connection.getHeaderField("Retry-After")?.toLongOrNull() ?: 2L
+                Thread.sleep((retryAfter * 1000).coerceIn(1000L, 5000L))
+                return httpGet(urlString, extraHeaders, retries - 1)
+            }
             if (responseCode !in 200..299) {
                 val errorBody = connection.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
                 throw Exception("HTTP $responseCode: $errorBody")
