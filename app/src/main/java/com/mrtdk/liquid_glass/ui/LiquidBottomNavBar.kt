@@ -232,29 +232,34 @@ fun LiquidBottomNavBar(
     val capsuleGlassModifier: @Composable () -> Modifier = {
         if (isSolid) {
             Modifier
-                .clip(Capsule())
+                .clip(MiniPlayerShape)
                 .background(solidBgColor)
         } else if (isFondoCompleto) {
             Modifier
-                .clip(Capsule())
+                .clip(MiniPlayerShape)
                 .background(accordPillBgColor)
-                .border(width = 0.75.dp, color = accordBorderColor, shape = Capsule())
+                .border(width = 0.75.dp, color = accordBorderColor, shape = MiniPlayerShape)
         } else {
             Modifier.drawBackdrop(
                 backdrop = backdrop,
-                shape = { Capsule() },
+                shape = { MiniPlayerShape },
                 effects = {
                     if (!isLightweight) {
                         vibrancy()
-                        blur(8.dp.toPx() * NAV_BACKDROP_SCALE)
+                        blur(6.dp.toPx() * NAV_BACKDROP_SCALE)
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            lens(24.dp.toPx() * NAV_BACKDROP_SCALE, 24.dp.toPx() * NAV_BACKDROP_SCALE)
+                            lens(
+                                refractionHeight = 16.dp.toPx() * NAV_BACKDROP_SCALE,
+                                refractionAmount = 24.dp.toPx() * NAV_BACKDROP_SCALE,
+                                depthEffect = true,
+                                chromaticAberration = false
+                            )
                         }
                     } else {
                         blur(3.dp.toPx() * NAV_BACKDROP_SCALE)
                     }
                 },
-                highlight = { Highlight.Default.copy(alpha = 0.35f) },
+                highlight = { Highlight.Default.copy(alpha = 0.25f) },
                 shadow = { Shadow.Default },
                 onDrawSurface = { drawRect(actualTintColor) },
                 backdropScale = NAV_BACKDROP_SCALE
@@ -335,7 +340,6 @@ fun LiquidBottomNavBar(
                                 )
                                 .size(48.dp)
                                 .then(capsuleGlassModifier())
-                                .clip(Capsule())
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null,
@@ -419,7 +423,6 @@ fun LiquidBottomNavBar(
                                     zIndexInOverlay = 1f
                                 )
                                 .then(capsuleGlassModifier())
-                                .clip(Capsule())
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null,
@@ -618,7 +621,6 @@ fun LiquidBottomNavBar(
                                         )
                                         .size(64.dp)
                                         .then(capsuleGlassModifier())
-                                        .clip(Capsule())
                                         .clickable(
                                             interactionSource = remember { MutableInteractionSource() },
                                             indication = null,
@@ -707,7 +709,6 @@ fun LiquidBottomNavBar(
                                     )
                                     .size(48.dp)
                                     .then(capsuleGlassModifier())
-                                    .clip(Capsule())
                                     .clickable(
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = null,
@@ -747,7 +748,6 @@ fun LiquidBottomNavBar(
                                         zIndexInOverlay = 1f
                                     )
                                     .then(capsuleGlassModifier())
-                                    .clip(Capsule())
                                     .clickable(
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = null,

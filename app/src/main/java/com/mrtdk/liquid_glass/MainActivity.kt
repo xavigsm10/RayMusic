@@ -66,7 +66,6 @@ import com.kyant.backdrop.effects.vibrancy
 import com.mrtdk.liquid_glass.ui.screens.AlbumScreen
 import com.mrtdk.liquid_glass.ui.screens.AlbumState
 import com.mrtdk.liquid_glass.ui.screens.PlaylistDetailScreen
-import com.mrtdk.liquid_glass.ui.screens.FavoriteSongsScreen
 import com.mrtdk.liquid_glass.data.Playlist
 import com.mrtdk.liquid_glass.data.LibraryManager
 import com.mrtdk.liquid_glass.ui.screens.ArtistScreen
@@ -346,7 +345,6 @@ class MainActivity : ComponentActivity() {
                     var playlistDetail by remember { mutableStateOf<Playlist?>(null) }
                     var videoDetail by remember { mutableStateOf<String?>(null) }
                     var categoryDetail by remember { mutableStateOf<com.mrtdk.liquid_glass.ui.screens.SearchCategory?>(null) }
-                    var showFavoriteSongs by remember { mutableStateOf(false) }
                     var showReplay by remember { mutableStateOf(false) }
                     var showListenTogether by remember { mutableStateOf(false) }
                     var isSearchInputActive by remember { mutableStateOf(false) }
@@ -363,7 +361,7 @@ class MainActivity : ComponentActivity() {
 
                     // Handle system back navigation
                     androidx.activity.compose.BackHandler(
-                        enabled = showPlayer || showReplay || showListenTogether || videoDetail != null || playlistDetail != null || albumDetail != null || artistDetail != null || categoryDetail != null || showFavoriteSongs || (selectedIndex == 4 && isSearchSubmitted) || selectedIndex != 0
+                        enabled = showPlayer || showReplay || showListenTogether || videoDetail != null || playlistDetail != null || albumDetail != null || artistDetail != null || categoryDetail != null || (selectedIndex == 4 && isSearchSubmitted) || selectedIndex != 0
                     ) {
                         when {
                             videoDetail != null -> videoDetail = null
@@ -373,7 +371,6 @@ class MainActivity : ComponentActivity() {
                             categoryDetail != null -> categoryDetail = null
                             showPlayer -> showPlayer = false
                             showReplay -> showReplay = false
-                            showFavoriteSongs -> showFavoriteSongs = false
                             showListenTogether -> showListenTogether = false
                             selectedIndex == 4 && isSearchSubmitted -> {
                                 isSearchSubmitted = false
@@ -704,9 +701,16 @@ class MainActivity : ComponentActivity() {
                                                     onAlbumSelected = { albumDetail = it },
                                                     initialCategoryKey = initialLibraryCategory,
                                                     onCategoryConsumed = { initialLibraryCategory = null },
-                                                    onGlassStyleChanged = { glassStyle = it },
-                                                    onFavoriteSongsSelected = { showFavoriteSongs = true },
-                                                    onUpdateAvailable = { updateReleaseInfo = it },
+                                                    onFavoriteSongsSelected = {
+                                                        albumDetail = AlbumState(
+                                                            id = "favorite_songs",
+                                                            playlistId = "",
+                                                            title = getString(R.string.favorite_songs),
+                                                            artist = "",
+                                                            thumbnail = null,
+                                                            year = null
+                                                        )
+                                                    },
                                                     onDisableScreenshotChanged = { disable ->
                                                         if (disable) {
                                                             window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
@@ -870,15 +874,6 @@ class MainActivity : ComponentActivity() {
                                                     onAlbumSelected = { album -> albumDetail = album },
                                                     onPlaylistSelected = { playlist -> albumDetail = playlist },
                                                     onArtistSelected = { artist -> artistDetail = artist }
-                                                )
-                                            }
-                                        }
-
-                                        if (showFavoriteSongs) {
-                                            SharedElementTransitionContainer(onBack = { showFavoriteSongs = false }) { _, _ ->
-                                                FavoriteSongsScreen(
-                                                    onBack = { showFavoriteSongs = false },
-                                                    onSongSelected = playSong
                                                 )
                                             }
                                         }

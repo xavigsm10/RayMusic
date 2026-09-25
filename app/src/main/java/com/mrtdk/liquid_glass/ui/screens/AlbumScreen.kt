@@ -147,9 +147,11 @@ fun AlbumScreen(
     var albumError by remember { mutableStateOf<String?>(null) }
     var artistPageData by remember(albumState.artist, albumState.id) { mutableStateOf<com.echo.innertube.pages.ArtistPage?>(null) }
     var albumDescription by remember(albumState.id) { mutableStateOf<String?>(null) }
+    val isFavoriteSongs = albumState.id == "favorite_songs"
     val isSaved by androidx.compose.runtime.produceState(initialValue = false, albumState.id) {
-        val isUserPl = albumState.id.startsWith("user_playlist_")
-        if (isUserPl) {
+        if (isFavoriteSongs) {
+            value = true
+        } else if (albumState.id.startsWith("user_playlist_")) {
             val rawId = albumState.id.removePrefix("user_playlist_")
             LibraryManager.playlists.collect { list ->
                 value = list.any { it.id == rawId }
@@ -175,6 +177,14 @@ fun AlbumScreen(
     // Playlists creadas por el usuario: se muestran con esta misma vista de álbumes
     val isUserPlaylist = albumState.id.startsWith("user_playlist_")
     val allUserPlaylists by LibraryManager.playlists.collectAsState()
+    val allSavedItems by LibraryManager.savedItems.collectAsState()
+    val favoriteSongsItems = remember(albumState.id, allSavedItems) {
+        if (isFavoriteSongs) {
+            allSavedItems.filter { it.type == ItemType.SONG }
+        } else {
+            emptyList()
+        }
+    }
     val userPlaylistItems = remember(albumState.id, allUserPlaylists) {
         if (isUserPlaylist) {
             allUserPlaylists.find { it.id == albumState.id.removePrefix("user_playlist_") }?.items ?: emptyList()
@@ -183,7 +193,8 @@ fun AlbumScreen(
         }
     }
     fun userPlaylistTracks(): List<SongItem> {
-        return userPlaylistItems.filter { it.type == ItemType.SONG }.map { s ->
+        val items = if (isFavoriteSongs) favoriteSongsItems else userPlaylistItems.filter { it.type == ItemType.SONG }
+        return items.map { s ->
             SongItem(
                 id = s.id,
                 title = s.title,
@@ -194,12 +205,14 @@ fun AlbumScreen(
             )
         }
     }
-    // Albums that should never use animated artwork (only made for you playlists)
-    val isAnimatedArtworkBlocked = isMadeForYou
+    // Albums that should never use animated artwork (made for you playlists & favorite songs)
+    val isAnimatedArtworkBlocked = isMadeForYou || isFavoriteSongs
 
-    val rawThumb = albumState.thumbnail.takeIf { !it.isNullOrBlank() }
-        ?: userPlaylistItems.firstOrNull()?.thumbnail.takeIf { !it.isNullOrBlank() }
-        ?: tracks.firstOrNull()?.thumbnail.takeIf { !it.isNullOrBlank() }
+    val rawThumb = if (isFavoriteSongs) null else (
+        albumState.thumbnail.takeIf { !it.isNullOrBlank() }
+            ?: userPlaylistItems.firstOrNull()?.thumbnail.takeIf { !it.isNullOrBlank() }
+            ?: tracks.firstOrNull()?.thumbnail.takeIf { !it.isNullOrBlank() }
+    )
 
     val hdThumb = rawThumb
         ?.replace("=w226-h226", "=w720-h720")
@@ -232,7 +245,7 @@ fun AlbumScreen(
     }
 
     val hasAnimatedCover = !isAnimatedArtworkBlocked && isVideoPlaying
-    val isNormalArtwork = playerArtworkStyle == "normal"
+    val isNormalArtwork = playerArtworkStyle == "normal" || isFavoriteSongs
 
     LaunchedEffect(albumState.artist, albumState.title, tracks.firstOrNull()?.title) {
         val artist = albumState.artist
@@ -259,6 +272,12 @@ fun AlbumScreen(
 
     // Extract dominant colour
     LaunchedEffect(headerArt, isMichaelAlbum, albumState.id) {
+        if (isFavoriteSongs) {
+            val favColor = Color(0xFF8B0000)
+            dominantColor = favColor
+            onDominantColorChanged(favColor)
+            return@LaunchedEffect
+        }
         if (isMadeForYou) {
             val c = customMadeForYou?.gradientColors?.firstOrNull() ?: Color(0xFFE62B00)
             dominantColor = c
@@ -310,9 +329,9 @@ fun AlbumScreen(
         }
     }
 
-    // Las playlists de usuario se leen de la biblioteca local (reactivo a agregar/quitar)
-    LaunchedEffect(userPlaylistItems) {
-        if (isUserPlaylist) {
+    // Las playlists de usuario y canciones favoritas se leen de la biblioteca local (reactivo a agregar/quitar)
+    LaunchedEffect(userPlaylistItems, favoriteSongsItems, albumState.id) {
+        if (isUserPlaylist || isFavoriteSongs) {
             tracks = userPlaylistTracks()
             albumError = null
         }
@@ -321,7 +340,15 @@ fun AlbumScreen(
     // Load album/playlist tracks & artist info
     LaunchedEffect(albumState.id) {
         withContext(Dispatchers.IO) {
-            if (isUserPlaylist) {
+            if (isFavoriteSongs) {
+                if (com.mrtdk.liquid_glass.spotify.SpotifySession.isLoggedIn.value) {
+                    kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+                        LibraryManager.fetchSpotifyPlaylistTracks("spotify_liked_songs")
+                    }
+                }
+                tracks = userPlaylistTracks()
+                albumError = null
+            } else if (isUserPlaylist) {
                 val rawPlaylistId = albumState.id.removePrefix("user_playlist_")
                 if (rawPlaylistId.startsWith("spotify_")) {
                     kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
@@ -491,7 +518,7 @@ fun AlbumScreen(
 
     // Artist Fallback Search if artistPageData is still empty
     LaunchedEffect(albumState.artist) {
-        if (isMadeForYou || isUserPlaylist) return@LaunchedEffect
+        if (isMadeForYou || isUserPlaylist || isFavoriteSongs) return@LaunchedEffect
         if (artistPageData == null && albumState.artist.isNotBlank()) {
             withContext(Dispatchers.IO) {
                 try {
@@ -646,6 +673,24 @@ fun AlbumScreen(
                                         modifier = Modifier.fillMaxSize(),
                                         isHero = true
                                     )
+                                } else if (isFavoriteSongs) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(
+                                                Brush.linearGradient(
+                                                    colors = listOf(Color(0xFF8B0000), Color(0xFFFA243C))
+                                                )
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Star,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(120.dp)
+                                        )
+                                    }
                                 } else {
                                     AsyncImage(
                                         model = ImageRequest.Builder(context)
@@ -719,8 +764,10 @@ fun AlbumScreen(
                             }
                         }
 
-                        val editorialText = remember(albumDescription, albumState.artist, albumState.title, isMichaelAlbum) {
-                            if (!albumDescription.isNullOrBlank()) {
+                        val editorialText = remember(albumDescription, albumState.artist, albumState.title, isMichaelAlbum, isFavoriteSongs) {
+                            if (isFavoriteSongs) {
+                                "Todas tus canciones favoritas en un solo lugar."
+                            } else if (!albumDescription.isNullOrBlank()) {
                                 albumDescription!!
                             } else if (isMichaelAlbum) {
                                 "Su leyenda cobra nueva vida en una retrospectiva trepidante."
@@ -761,6 +808,31 @@ fun AlbumScreen(
                                                     artistsSubtitle = customMadeForYou.artistsSubtitle,
                                                     gradientColors = customMadeForYou.gradientColors,
                                                     modifier = Modifier.fillMaxSize()
+                                                )
+                                            }
+                                        } else if (isFavoriteSongs) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(220.dp)
+                                                    .shadow(
+                                                        elevation = 16.dp,
+                                                        shape = RoundedCornerShape(18.dp),
+                                                        ambientColor = Color.Black.copy(alpha = 0.5f),
+                                                        spotColor = Color.Black.copy(alpha = 0.5f)
+                                                    )
+                                                    .clip(RoundedCornerShape(18.dp))
+                                                    .background(
+                                                        Brush.linearGradient(
+                                                            colors = listOf(Color(0xFF8B0000), Color(0xFFFA243C))
+                                                        )
+                                                    ),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Star,
+                                                    contentDescription = null,
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(90.dp)
                                                 )
                                             }
                                         } else {
@@ -866,7 +938,9 @@ fun AlbumScreen(
                                     ) {
                                         val isSpotifyPlaylist = isUserPlaylist && albumState.id.removePrefix("user_playlist_").startsWith("spotify_")
                                         val isSpotifyAlbum = albumState.id.startsWith("spotify_album_")
-                                        val categoryText = if (isMadeForYou) {
+                                        val categoryText = if (isFavoriteSongs) {
+                                            stringResource(R.string.favorite_songs) + " • "
+                                        } else if (isMadeForYou) {
                                             stringResource(R.string.playlists_hechas_para_ti) + " • RayMusic • "
                                         } else if (isSpotifyPlaylist) {
                                             "Playlist • Spotify • "
@@ -1010,42 +1084,44 @@ fun AlbumScreen(
                                         }
                                     }
 
-                                    // + button
-                                    Box(
-                                        modifier = Modifier
-                                            .size(46.dp)
-                                            .clip(CircleShape)
-                                            .background(circularButtonBg)
-                                            .clickable { 
-                                                if (isSaved) {
-                                                    if (isUserPlaylist) {
-                                                        val rawId = albumState.id.removePrefix("user_playlist_")
-                                                        LibraryManager.deletePlaylist(rawId)
+                                    // + button (not needed for favorite songs)
+                                    if (!isFavoriteSongs) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(46.dp)
+                                                .clip(CircleShape)
+                                                .background(circularButtonBg)
+                                                .clickable { 
+                                                    if (isSaved) {
+                                                        if (isUserPlaylist) {
+                                                            val rawId = albumState.id.removePrefix("user_playlist_")
+                                                            LibraryManager.deletePlaylist(rawId)
+                                                        } else {
+                                                            LibraryManager.removeItem(albumState.id)
+                                                        }
                                                     } else {
-                                                        LibraryManager.removeItem(albumState.id)
+                                                        if (isUserPlaylist) {
+                                                            LibraryManager.createPlaylist(albumState.title, hdThumb)
+                                                        } else {
+                                                            LibraryManager.saveItem(LibraryItem(
+                                                                id = albumState.id,
+                                                                title = albumState.title,
+                                                                subtitle = albumState.artist,
+                                                                thumbnail = hdThumb,
+                                                                type = ItemType.ALBUM
+                                                            ))
+                                                        }
                                                     }
-                                                } else {
-                                                    if (isUserPlaylist) {
-                                                        LibraryManager.createPlaylist(albumState.title, hdThumb)
-                                                    } else {
-                                                        LibraryManager.saveItem(LibraryItem(
-                                                            id = albumState.id,
-                                                            title = albumState.title,
-                                                            subtitle = albumState.artist,
-                                                            thumbnail = hdThumb,
-                                                            type = ItemType.ALBUM
-                                                        ))
-                                                    }
-                                                }
-                                            },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = if (isSaved) Icons.Default.Check else Icons.Default.Add,
-                                            contentDescription = "Add/Remove",
-                                            tint = primaryTextColor,
-                                            modifier = Modifier.size(22.dp)
-                                        )
+                                                },
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = if (isSaved) Icons.Default.Check else Icons.Default.Add,
+                                                contentDescription = "Add/Remove",
+                                                tint = primaryTextColor,
+                                                modifier = Modifier.size(22.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -1768,6 +1844,18 @@ fun AlbumScreen(
                                             gradientColors = customMadeForYou.gradientColors,
                                             modifier = Modifier.fillMaxSize()
                                         )
+                                    } else if (isFavoriteSongs) {
+                                        Box(
+                                            modifier = Modifier.fillMaxSize().background(
+                                                Brush.linearGradient(
+                                                    colors = listOf(Color(0xFF8B0000), Color(0xFFFA243C))
+                                                )
+                                            ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            val starSize = with(density) { (curNormalCoverW * 0.41f).toDp() }
+                                            Icon(Icons.Default.Star, null, tint = Color.White, modifier = Modifier.size(starSize))
+                                        }
                                     } else if (headerArt != null) {
                                         AsyncImage(
                                             model = ImageRequest.Builder(context).data(headerArt).crossfade(false).build(),
@@ -1901,7 +1989,19 @@ fun AlbumScreen(
                                         .fillMaxWidth()
                                         .height(with(density) { coverHeight.toDp() })
                                 ) {
-                                    if (headerArt != null) {
+                                    if (isFavoriteSongs) {
+                                        Box(
+                                            modifier = Modifier.fillMaxSize().background(
+                                                Brush.linearGradient(
+                                                    colors = listOf(Color(0xFF8B0000), Color(0xFFFA243C))
+                                                )
+                                            ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            val starSize = with(density) { (curW.coerceAtMost(coverHeight) * 0.41f).toDp() }
+                                            Icon(Icons.Default.Star, null, tint = Color.White, modifier = Modifier.size(starSize))
+                                        }
+                                    } else if (headerArt != null) {
                                         AsyncImage(
                                             model = ImageRequest.Builder(context).data(headerArt).crossfade(false).build(),
                                             contentDescription = null,

@@ -54,12 +54,15 @@ import com.kyant.backdrop.highlight.Highlight
 import com.kyant.backdrop.shadow.InnerShadow
 import com.kyant.backdrop.shadow.Shadow
 import com.kyant.shapes.Capsule
+import com.mrtdk.liquid_glass.ui.components.shapes.ContinuousRoundedRectangle
 import com.mrtdk.liquid_glass.utils.DampedDragAnimation
 import com.mrtdk.liquid_glass.utils.InteractiveHighlight
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.sign
+
+private val TabsPillShape = ContinuousRoundedRectangle(percent = 50)
 
 @Composable
 fun LiquidBottomTabs(
@@ -88,7 +91,7 @@ fun LiquidBottomTabs(
     if (isSolid) {
         Row(
             modifier
-                .clip(Capsule())
+                .clip(TabsPillShape)
                 .background(containerColor ?: solidBgColor)
                 .height(64f.dp)
                 .fillMaxWidth()
@@ -280,12 +283,12 @@ fun LiquidBottomTabs(
                         .graphicsLayer {
                             translationX = panelOffset
                         }
-                        .clip(Capsule())
+                        .clip(TabsPillShape)
                         .background(actualContainerColor)
                         .border(
                             width = 0.75.dp,
                             color = if (isDarkMode) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.06f),
-                            shape = Capsule()
+                            shape = TabsPillShape
                         )
                         .then(interactiveHighlight.modifier)
                         .height(64f.dp)
@@ -300,12 +303,21 @@ fun LiquidBottomTabs(
                         }
                         .drawBackdrop(
                             backdrop = backdrop,
-                            shape = { Capsule() },
+                            shape = { TabsPillShape },
                             effects = {
-                                vibrancy()
-                                blur(8f.dp.toPx() * backdropScale)
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                    lens(24f.dp.toPx() * backdropScale, 24f.dp.toPx() * backdropScale)
+                                if (!isLightweight) {
+                                    vibrancy()
+                                    blur(6f.dp.toPx() * backdropScale)
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        lens(
+                                            refractionHeight = 16f.dp.toPx() * backdropScale,
+                                            refractionAmount = 24f.dp.toPx() * backdropScale,
+                                            depthEffect = true,
+                                            chromaticAberration = false
+                                        )
+                                    }
+                                } else {
+                                    blur(3f.dp.toPx() * backdropScale)
                                 }
                             },
                             layerBlock = {
@@ -314,7 +326,7 @@ fun LiquidBottomTabs(
                                 scaleX = scale
                                 scaleY = scale
                             },
-                            highlight = { Highlight.Default.copy(alpha = 0.35f) },
+                            highlight = { Highlight.Default.copy(alpha = 0.25f) },
                             shadow = { Shadow.Default },
                             onDrawSurface = { drawRect(actualContainerColor) },
                             backdropScale = backdropScale
@@ -344,24 +356,29 @@ fun LiquidBottomTabs(
                         }
                         .drawBackdrop(
                             backdrop = backdrop,
-                            shape = { Capsule() },
+                            shape = { TabsPillShape },
                             effects = {
                                 val progress = dampedDragAnimation.pressProgress
-                                vibrancy()
-                                blur(8f.dp.toPx() * backdropScale)
-                                if (progress > 0.01f) {
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                if (!isLightweight) {
+                                    vibrancy()
+                                    blur(6f.dp.toPx() * backdropScale)
+                                    if (progress > 0.01f && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                         lens(
-                                            24f.dp.toPx() * backdropScale * progress,
-                                            24f.dp.toPx() * backdropScale * progress
+                                            refractionHeight = 16f.dp.toPx() * backdropScale * progress,
+                                            refractionAmount = 24f.dp.toPx() * backdropScale * progress,
+                                            depthEffect = true,
+                                            chromaticAberration = false
                                         )
                                     }
+                                } else {
+                                    blur(3f.dp.toPx() * backdropScale)
                                 }
                             },
                             highlight = {
                                 val progress = dampedDragAnimation.pressProgress
-                                Highlight.Default.copy(alpha = progress)
+                                Highlight.Default.copy(alpha = 0.25f * progress)
                             },
+                            shadow = { Shadow.Default },
                             onDrawSurface = { drawRect(actualContainerColor) },
                             backdropScale = backdropScale
                         )
@@ -388,7 +405,7 @@ fun LiquidBottomTabs(
                     .then(dampedDragAnimation.modifier)
                     .drawBackdrop(
                         backdrop = rememberCombinedBackdrop(backdrop, tabsBackdrop),
-                        shape = { Capsule() },
+                        shape = { TabsPillShape },
                         effects = {
                             val progress = dampedDragAnimation.pressProgress
                             if (progress > 0.01f) {
@@ -451,7 +468,7 @@ fun LiquidBottomTabs(
                                     if (isDarkMode) listOf(Color.White.copy(alpha = 0.32f), Color.White.copy(alpha = 0.06f))
                                     else listOf(Color.White.copy(alpha = 0.85f), Color.White.copy(alpha = 0.40f))
                                 ),
-                                shape = Capsule()
+                                shape = TabsPillShape
                             )
                         } else Modifier
                     )
