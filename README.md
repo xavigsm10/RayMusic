@@ -62,13 +62,18 @@ Disfruta de un vistazo a la cuidada y premium interfaz de usuario:
   <img src="Capturas%20de%20Pantalla/Reproductor%20en%20Detalle%202.png" width="30%" alt="Reproductor en Detalle 2">
 </p>
 <p align="center">
+  <img src="Capturas%20de%20Pantalla/Reproductor%20en%20Detalle%203.png" width="30%" alt="Reproductor en Detalle 3">
   <img src="Capturas%20de%20Pantalla/Artistas.png" width="30%" alt="Artistas">
   <img src="Capturas%20de%20Pantalla/Letras.png" width="30%" alt="Letras">
-  <img src="Capturas%20de%20Pantalla/Novedades.png" width="30%" alt="Novedades">
 </p>
 <p align="center">
-  <img src="Capturas%20de%20Pantalla/Playlist.png" width="30%" alt="Playlist">
+  <img src="Capturas%20de%20Pantalla/Automix%20y%20cola%20de%20reproducci%C3%B3n.png" width="30%" alt="Automix y cola de reproducción">
+  <img src="Capturas%20de%20Pantalla/Albumes.jpg" width="30%" alt="Álbumes">
+  <img src="Capturas%20de%20Pantalla/Canciones%20favoritas.png" width="30%" alt="Canciones favoritas">
+</p>
+<p align="center">
   <img src="Capturas%20de%20Pantalla/Biblioteca.png" width="30%" alt="Biblioteca">
+  <img src="Capturas%20de%20Pantalla/Historial.jpg" width="30%" alt="Historial">
 </p>
 
 ---
