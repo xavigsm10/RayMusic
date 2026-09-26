@@ -384,13 +384,14 @@ data class QueueItem(
 enum class AudioOutputIcon(
     val id: String,
     val title: String,
+    val titleRes: Int,
     val assetPath: String,
     val drawableRes: Int
 ) {
-    SELECCION_BOCINA("seleccion_bocina", "Selección bocina", "file:///android_asset/img reproductor/seleccion bocina.png", R.drawable.ic_seleccion_bocina),
-    PARLANTE("parlante", "Parlante", "file:///android_asset/img reproductor/parlante.png", R.drawable.ic_parlante),
-    AUDIFONOS("audifonos", "Audífonos", "file:///android_asset/img reproductor/audifonos.png", R.drawable.ic_audifonos),
-    HOMEPOD("homepod", "HomePod", "file:///android_asset/img reproductor/homepod.png", R.drawable.ic_homepod);
+    SELECCION_BOCINA("seleccion_bocina", "Selección bocina", R.string.audio_icon_speaker_selection, "file:///android_asset/img reproductor/seleccion bocina.png", R.drawable.ic_seleccion_bocina),
+    PARLANTE("parlante", "Parlante", R.string.audio_icon_speaker, "file:///android_asset/img reproductor/parlante.png", R.drawable.ic_parlante),
+    AUDIFONOS("audifonos", "Audífonos", R.string.audio_icon_headphones, "file:///android_asset/img reproductor/audifonos.png", R.drawable.ic_audifonos),
+    HOMEPOD("homepod", "HomePod", R.string.audio_icon_homepod, "file:///android_asset/img reproductor/homepod.png", R.drawable.ic_homepod);
 
     companion object {
         fun fromId(id: String?): AudioOutputIcon {
@@ -927,7 +928,7 @@ fun GlassBoxScope.AudioRoutingMenu(
                             Spacer(modifier = Modifier.width(3.dp))
                             Icon(
                                 Icons.Default.KeyboardArrowDown,
-                                contentDescription = "Cambiar icono",
+                                contentDescription = stringResource(R.string.cambiar_icono),
                                 tint = tint.copy(alpha = 0.75f),
                                 modifier = Modifier.size(15.dp)
                             )
@@ -999,7 +1000,7 @@ fun GlassBoxScope.AudioRoutingMenu(
 
                             } catch (e: Exception) {
 
-                                Toast.makeText(context, "No se pudieron abrir los ajustes de WiFi", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.wifi_settings_error), Toast.LENGTH_SHORT).show()
 
                             }
 
@@ -1057,7 +1058,7 @@ fun GlassBoxScope.AudioRoutingMenu(
 
                             } catch (e: Exception) {
 
-                                Toast.makeText(context, "No se pudieron abrir los ajustes de Bluetooth", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.bluetooth_settings_error), Toast.LENGTH_SHORT).show()
 
                             }
 
@@ -1110,7 +1111,7 @@ fun GlassBoxScope.AudioRoutingMenu(
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = "Icono: ${AudioRoutingState.selectedOutputIcon.title}",
+                        text = stringResource(R.string.audio_output_icon_format, stringResource(AudioRoutingState.selectedOutputIcon.titleRes)),
                         color = Color.White.copy(alpha = 0.85f),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
@@ -1215,14 +1216,14 @@ fun GlassBoxScope.AudioIconPickerDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Icono de reproducción",
+                    text = stringResource(R.string.audio_output_icon_dialog_title),
                     color = Color.White,
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Selecciona el icono para la salida de audio",
+                    text = stringResource(R.string.audio_output_icon_dialog_subtitle),
                     color = Color.White.copy(alpha = 0.6f),
                     fontSize = 12.5.sp,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -1270,7 +1271,7 @@ fun GlassBoxScope.AudioIconPickerDialog(
                             Spacer(modifier = Modifier.width(14.dp))
 
                             Text(
-                                text = iconOption.title,
+                                text = stringResource(iconOption.titleRes),
                                 color = Color.White,
                                 fontSize = 15.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
@@ -2944,6 +2945,13 @@ fun PlayerScreen(
                               secondaryColor = fluidSecondary,
                               accentColor = fluidAccent,
                               modifier = Modifier.fillMaxSize()
+                          )
+                      } else {
+                          // Filtro un poco oscuro para Fondo Completo ("accord") en letras y cola
+                          Box(
+                              modifier = Modifier
+                                  .fillMaxSize()
+                                  .background(Color.Black.copy(alpha = 0.38f))
                           )
                       }
                  }

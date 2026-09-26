@@ -950,6 +950,8 @@ fun InicioScreen(
                                         }
                                     }
                                     .clip(if (isCircle) CircleShape else RoundedCornerShape(12.dp))
+                                    .background(Color(0xFF161618))
+                                    .border(0.5.dp, Color.Black.copy(alpha = 0.12f), if (isCircle) CircleShape else RoundedCornerShape(12.dp))
                                     .graphicsLayer {
                                         alpha = if (SharedTransitionState.animatingItemIds.contains(item.id)) 0f else 1f
                                     }
@@ -1032,7 +1034,8 @@ fun InicioScreen(
                                         alpha = if (SharedTransitionState.animatingItemIds.contains(album.id) || (SharedTransitionState.isDetailOpen && SharedTransitionState.lastOpenedId == album.id)) 0f else 1f
                                     }
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xFF1C1C1E))
+                                    .background(Color(0xFF161618))
+                                    .border(0.5.dp, Color.Black.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
@@ -1127,7 +1130,8 @@ fun InicioScreen(
                                         alpha = if (SharedTransitionState.animatingItemIds.contains(pl.id) || (SharedTransitionState.isDetailOpen && SharedTransitionState.lastOpenedId == pl.id)) 0f else 1f
                                     }
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xFF1C1C1E))
+                                    .background(Color(0xFF161618))
+                                    .border(0.5.dp, Color.Black.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
@@ -1275,7 +1279,8 @@ fun InicioScreen(
                                     .size(180.dp)
                                     .onGloballyPositioned { imageCoords = it }
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xFF1C1C1E))
+                                    .background(Color(0xFF161618))
+                                    .border(0.5.dp, Color.Black.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
@@ -1541,6 +1546,8 @@ fun InicioScreen(
                                             }
                                         }
                                         .clip(RoundedCornerShape(12.dp))
+                                        .background(Color(0xFF161618))
+                                        .border(0.5.dp, Color.Black.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
                                         .graphicsLayer {
                                             alpha = if (SharedTransitionState.animatingItemIds.contains(item.id)) 0f else 1f
                                         }
@@ -1610,7 +1617,8 @@ fun InicioScreen(
                                             }
                                         }
                                         .clip(RoundedCornerShape(12.dp))
-                                        .background(Color(0xFF1C1C1E))
+                                        .background(Color(0xFF161618))
+                                        .border(0.5.dp, Color.Black.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
                                 ) {
                                     AsyncImage(
                                         model = ImageRequest.Builder(context).data(hdThumb).size(320).crossfade(true).build(),
@@ -1681,7 +1689,8 @@ fun InicioScreen(
                                         }
                                     }
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xFF1C1C1E))
+                                    .background(Color(0xFF161618))
+                                    .border(0.5.dp, Color.Black.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
                             ) {
                                 AsyncImage(
                                     model = ImageRequest.Builder(context).data(hdThumb).size(320).crossfade(true).build(),
@@ -1729,6 +1738,7 @@ fun InicioScreen(
                             end = androidx.compose.ui.geometry.Offset(1000f, 1000f)
                         )
                     )
+                    .border(1.dp, Color.Black.copy(alpha = 0.15f), RoundedCornerShape(20.dp))
                     .wiggleOnScroll("replay_home_card", lazyListState = listState)
                     .clickable {
                         onReplaySelected()
@@ -1897,7 +1907,8 @@ fun InicioScreen(
                                     .aspectRatio(1f)
                                     .onGloballyPositioned { imageCoords = it }
                                     .clip(if (isCircle) androidx.compose.foundation.shape.CircleShape else RoundedCornerShape(12.dp))
-                                    .background(Color(0xFF1C1C1E))
+                                    .background(Color(0xFF161618))
+                                    .border(0.5.dp, Color.Black.copy(alpha = 0.12f), if (isCircle) androidx.compose.foundation.shape.CircleShape else RoundedCornerShape(12.dp))
                             ) {
                                 if (isCircle) {
                                     com.mrtdk.liquid_glass.spotify.SpotifyArtistAvatar(
@@ -2027,7 +2038,8 @@ fun InicioScreen(
                                     .aspectRatio(1f)
                                     .onGloballyPositioned { imageCoords = it }
                                     .clip(if (isCircle) CircleShape else RoundedCornerShape(12.dp))
-                                    .background(Color(0xFF1C1C1E))
+                                    .background(Color(0xFF161618))
+                                    .border(0.5.dp, Color.Black.copy(alpha = 0.12f), if (isCircle) CircleShape else RoundedCornerShape(12.dp))
                             ) {
                                 AsyncImage(
                                     model = ImageRequest.Builder(context).data(hdThumb).size(320).crossfade(false).build(),
@@ -2131,7 +2143,8 @@ fun InicioScreen(
                                     .aspectRatio(1f)
                                     .onGloballyPositioned { imageCoords = it }
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xFF1C1C1E))
+                                    .background(Color(0xFF161618))
+                                    .border(0.5.dp, Color.Black.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
                             ) {
                                 AsyncImage(
                                     model = ImageRequest.Builder(context).data(hdThumb).size(320).crossfade(false).build(),
@@ -2234,7 +2247,8 @@ fun InicioScreen(
                                     .aspectRatio(1f)
                                     .onGloballyPositioned { imageCoords = it }
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xFF1C1C1E))
+                                    .background(Color(0xFF161618))
+                                    .border(0.5.dp, Color.Black.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
                             ) {
                                 AsyncImage(
                                     model = ImageRequest.Builder(context).data(hdThumb).size(320).crossfade(false).build(),
@@ -2310,6 +2324,7 @@ private fun MadeForYouPlaylistCard(
             .width(195.dp)
             .height(265.dp)
             .clip(RoundedCornerShape(18.dp))
+            .border(1.dp, Color.Black.copy(alpha = 0.15f), RoundedCornerShape(18.dp))
             .clickable(onClick = onSelected)
     ) {
         MadeForYouCardContent(
@@ -2340,6 +2355,7 @@ private fun ArtistStationCard(
                 .size(175.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .background(station.backgroundColor)
+                .border(1.dp, Color.Black.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
         ) {
             if (station.isPersonal) {
                 // Geometric Chevrons (Warm Orange / Coral / Pink)
@@ -2603,18 +2619,20 @@ private fun FeaturedSuggestionCard(
                             val dominantColor = dominantSwatch?.rgb?.let { Color(it) } ?: bottomColor
 
                             // 3. Crear los tres puntos del degradado progresivo con los colores de la imagen
+                            // Tono más oscuro y rico para que destaque sobre fondos blancos
+                            val darkBase = Color(0xFF141416)
                             val colorTop = bottomColor
                             val colorMid = Color(
-                                red = (bottomColor.red * 0.45f + dominantColor.red * 0.55f).coerceIn(0f, 1f),
-                                green = (bottomColor.green * 0.45f + dominantColor.green * 0.55f).coerceIn(0f, 1f),
-                                blue = (bottomColor.blue * 0.45f + dominantColor.blue * 0.55f).coerceIn(0f, 1f)
+                                red = ((bottomColor.red * 0.40f + dominantColor.red * 0.45f) * 0.75f + darkBase.red * 0.25f).coerceIn(0f, 1f),
+                                green = ((bottomColor.green * 0.40f + dominantColor.green * 0.45f) * 0.75f + darkBase.green * 0.25f).coerceIn(0f, 1f),
+                                blue = ((bottomColor.blue * 0.40f + dominantColor.blue * 0.45f) * 0.75f + darkBase.blue * 0.25f).coerceIn(0f, 1f)
                             )
                             val baseRef = if (dominantColor.luminance() > 0.05f) dominantColor else bottomColor
-                            val factor = 0.30f
+                            val factor = 0.20f
                             val colorBottom = Color(
-                                red = (baseRef.red * factor).coerceIn(0f, 1f),
-                                green = (baseRef.green * factor).coerceIn(0f, 1f),
-                                blue = (baseRef.blue * factor).coerceIn(0f, 1f)
+                                red = (baseRef.red * factor * 0.70f + darkBase.red * 0.30f).coerceIn(0f, 1f),
+                                green = (baseRef.green * factor * 0.70f + darkBase.green * 0.30f).coerceIn(0f, 1f),
+                                blue = (baseRef.blue * factor * 0.70f + darkBase.blue * 0.30f).coerceIn(0f, 1f)
                             )
 
                             val extracted = listOf(colorTop, colorMid, colorBottom)
@@ -2641,6 +2659,7 @@ private fun FeaturedSuggestionCard(
             .height(cardHeight)
             .clip(RoundedCornerShape(20.dp))
             .background(animatedBottomColor)
+            .border(1.dp, Color.Black.copy(alpha = 0.16f), RoundedCornerShape(20.dp))
             .wiggleOnScroll(item.id, lazyListState = scrollState)
             .clickable {
                 SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()

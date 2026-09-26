@@ -108,7 +108,7 @@ fun WelcomeScreen(
                     ) {
                         Icon(
                             painter = painterResource(id = R.drawable.flecha_atras),
-                            contentDescription = "Atrás",
+                            contentDescription = stringResource(R.string.back_action),
                             tint = Color.White,
                             modifier = Modifier.size(20.dp).offset(x = (-1).dp)
                         )
@@ -144,7 +144,7 @@ fun WelcomeScreen(
                 // Step counter or Skip button
                 if (currentStep in 1 until totalSteps - 1) {
                     Text(
-                        text = "Paso ${currentStep + 1}/$totalSteps",
+                        text = stringResource(R.string.welcome_step_counter, currentStep + 1, totalSteps),
                         color = Color.White.copy(alpha = 0.5f),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium
@@ -220,12 +220,12 @@ fun WelcomeScreen(
                                         LibraryManager.syncSpotifyPlaylists()
                                         withContext(kotlinx.coroutines.Dispatchers.Main) {
                                             isSyncingSpotify = false
-                                            Toast.makeText(context, "Playlists sincronizadas exitosamente", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, context.getString(R.string.welcome_toast_sync_success), Toast.LENGTH_SHORT).show()
                                         }
                                     } catch (_: Exception) {
                                         withContext(kotlinx.coroutines.Dispatchers.Main) {
                                             isSyncingSpotify = false
-                                            Toast.makeText(context, "Error al sincronizar playlists", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, context.getString(R.string.welcome_toast_sync_error), Toast.LENGTH_SHORT).show()
                                         }
                                     }
                                 }
@@ -272,9 +272,9 @@ fun WelcomeScreen(
                     ) {
                         Text(
                             text = when (currentStep) {
-                                0 -> "Comenzar personalización"
-                                totalSteps - 1 -> "Empezar a escuchar"
-                                else -> "Continuar"
+                                0 -> stringResource(R.string.welcome_start_customization)
+                                totalSteps - 1 -> stringResource(R.string.welcome_start_listening)
+                                else -> stringResource(R.string.welcome_continue)
                             },
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Bold,
@@ -293,7 +293,7 @@ fun WelcomeScreen(
                 if (currentStep in 1 until totalSteps - 1) {
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = "Omitir paso",
+                        text = stringResource(R.string.welcome_skip_step),
                         color = Color.White.copy(alpha = 0.5f),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
@@ -322,7 +322,7 @@ fun WelcomeScreen(
                         LibraryManager.syncSpotifyPlaylists()
                         withContext(kotlinx.coroutines.Dispatchers.Main) {
                             isSyncingSpotify = false
-                            Toast.makeText(context, "Conectado a Spotify exitosamente", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.welcome_toast_connected_success), Toast.LENGTH_SHORT).show()
                         }
                     } catch (_: Exception) {
                         withContext(kotlinx.coroutines.Dispatchers.Main) {
@@ -378,7 +378,7 @@ private fun WelcomeIntroStep() {
                 .padding(horizontal = 12.dp, vertical = 4.dp)
         ) {
             Text(
-                text = "VERSIÓN 0.6.5",
+                text = stringResource(R.string.welcome_version_badge),
                 color = AppleRed,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.ExtraBold,
@@ -389,7 +389,7 @@ private fun WelcomeIntroStep() {
         Spacer(modifier = Modifier.height(14.dp))
 
         Text(
-            text = "Te damos la bienvenida a",
+            text = stringResource(R.string.welcome_title_prefix),
             color = Color.White.copy(alpha = 0.85f),
             fontSize = 20.sp,
             fontWeight = FontWeight.Medium,
@@ -411,8 +411,8 @@ private fun WelcomeIntroStep() {
         FeatureItem(
             icon = Icons.Default.Palette,
             iconTint = Color(0xFFFF5252),
-            title = "Vidrio Líquido & Material 3",
-            description = "Elige entre un diseño translúcido con desenfoque de cristal o una cápsula sólida de alto contraste."
+            title = stringResource(R.string.welcome_feature_liquid_glass_title),
+            description = stringResource(R.string.welcome_feature_liquid_glass_desc)
         )
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -420,8 +420,8 @@ private fun WelcomeIntroStep() {
         FeatureItem(
             icon = Icons.Default.Tune,
             iconTint = Color(0xFFFF4081),
-            title = "Portadas Animadas en Fullartwork",
-            description = "Disfruta de portadas en movimiento y videos oficiales que transforman por completo el reproductor."
+            title = stringResource(R.string.welcome_feature_animated_artwork_title),
+            description = stringResource(R.string.welcome_feature_animated_artwork_desc)
         )
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -429,8 +429,8 @@ private fun WelcomeIntroStep() {
         FeatureItem(
             icon = Icons.Default.QueueMusic,
             iconTint = Color(0xFF1ED760),
-            title = "Tus Playlists de Spotify",
-            description = "Importa y sincroniza fácilmente tus listas de reproducción personales con un solo toque."
+            title = stringResource(R.string.welcome_feature_spotify_title),
+            description = stringResource(R.string.welcome_feature_spotify_desc)
         )
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -438,8 +438,8 @@ private fun WelcomeIntroStep() {
         FeatureItem(
             icon = Icons.Default.GraphicEq,
             iconTint = Color(0xFF448AFF),
-            title = "Audio Hi-Res Lossless",
-            description = "Experiencia de sonido puro sin pérdida, ecualización dinámica y letras sincronizadas en tiempo real."
+            title = stringResource(R.string.welcome_feature_lossless_title),
+            description = stringResource(R.string.welcome_feature_lossless_desc)
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -510,7 +510,7 @@ private fun InterfaceStyleStep(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Estilo de Interfaz",
+            text = stringResource(R.string.welcome_step_interface_title),
             color = Color.White,
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
@@ -520,7 +520,7 @@ private fun InterfaceStyleStep(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Personaliza el aspecto de la barra de navegación y el minireproductor a tu preferencia.",
+            text = stringResource(R.string.welcome_step_interface_desc),
             color = Color.White.copy(alpha = 0.65f),
             fontSize = 14.5.sp,
             textAlign = TextAlign.Center,
@@ -531,8 +531,8 @@ private fun InterfaceStyleStep(
 
         // Option 1: Vidrio Líquido (Liquid Glass)
         InterfacePreviewCard(
-            title = "Vidrio Líquido (Liquid Glass)",
-            description = "Efecto de cristal translúcido con desenfoque de fondo en tiempo real y reflejos dinámicos.",
+            title = stringResource(R.string.welcome_liquid_glass_title),
+            description = stringResource(R.string.welcome_liquid_glass_desc),
             imageRes = R.drawable.preview_liquid_glass,
             isSelected = currentStyle == "transparent",
             onClick = { onStyleSelected("transparent") }
@@ -542,8 +542,8 @@ private fun InterfaceStyleStep(
 
         // Option 2: Material 3 Expressive (Sólido)
         InterfacePreviewCard(
-            title = "Material 3 Expressive (Sólido)",
-            description = "Cápsula oscura sólida y elegante con alto contraste y enfoque limpio en los controles.",
+            title = stringResource(R.string.welcome_material3_title),
+            description = stringResource(R.string.welcome_material3_desc),
             imageRes = R.drawable.preview_material3,
             isSelected = currentStyle == "solid",
             onClick = { onStyleSelected("solid") }
@@ -666,7 +666,7 @@ private fun ArtworkAndBackdropStep(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Portadas y Reproductor",
+            text = stringResource(R.string.welcome_step_artwork_title),
             color = Color.White,
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
@@ -676,7 +676,7 @@ private fun ArtworkAndBackdropStep(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Configura cómo deseas disfrutar las portadas y el fondo inmersivo al expandir una canción.",
+            text = stringResource(R.string.welcome_step_artwork_desc),
             color = Color.White.copy(alpha = 0.65f),
             fontSize = 14.5.sp,
             textAlign = TextAlign.Center,
@@ -687,9 +687,9 @@ private fun ArtworkAndBackdropStep(
 
         // Option 1: Portadas animadas solamente con fullartwork (Recomendado)
         ArtworkOptionCard(
-            title = "Portadas animadas solamente con fullartwork",
-            description = "Las canciones con video se expanden a pantalla completa inmersiva; las portadas estáticas originales se muestran en modo normal con tarjeta.",
-            badge = "RECOMENDADO",
+            title = stringResource(R.string.welcome_art_animated_full_title),
+            description = stringResource(R.string.welcome_art_animated_full_desc),
+            badge = stringResource(R.string.welcome_badge_recommended),
             isSelected = currentArtworkStyle == "animated_fullartwork",
             onClick = { onArtworkStyleSelected("animated_fullartwork") }
         )
@@ -698,8 +698,8 @@ private fun ArtworkAndBackdropStep(
 
         // Option 2: Fullartwork siempre
         ArtworkOptionCard(
-            title = "Fullartwork completo",
-            description = "Todas las portadas (tanto estáticas como animadas) se expanden ocupando toda la pantalla.",
+            title = stringResource(R.string.welcome_art_full_title),
+            description = stringResource(R.string.welcome_art_full_desc),
             badge = null,
             isSelected = currentArtworkStyle == "fullartwork",
             onClick = { onArtworkStyleSelected("fullartwork") }
@@ -709,8 +709,8 @@ private fun ArtworkAndBackdropStep(
 
         // Option 3: Normal
         ArtworkOptionCard(
-            title = "Normal (Tarjeta estándar)",
-            description = "Tarjeta cuadrada centrada clásica con bordes redondeados y sombra elegante estilo Apple Music.",
+            title = stringResource(R.string.welcome_art_normal_title),
+            description = stringResource(R.string.welcome_art_normal_desc),
             badge = null,
             isSelected = currentArtworkStyle == "normal",
             onClick = { onArtworkStyleSelected("normal") }
@@ -720,7 +720,7 @@ private fun ArtworkAndBackdropStep(
 
         // Section: Estilo de Fondo de Fullartwork
         Text(
-            text = "Efecto de fondo en Fullartwork",
+            text = stringResource(R.string.welcome_backdrop_section_title),
             color = Color.White,
             fontSize = 17.sp,
             fontWeight = FontWeight.Bold,
@@ -734,15 +734,15 @@ private fun ArtworkAndBackdropStep(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             SubSelectorPill(
-                title = "Reflejo Apple Music",
-                subtitle = "Gradiente dinámico",
+                title = stringResource(R.string.welcome_backdrop_apple_music_title),
+                subtitle = stringResource(R.string.welcome_backdrop_apple_music_sub),
                 isSelected = currentBackdropStyle == "apple_music",
                 modifier = Modifier.weight(1f),
                 onClick = { onBackdropStyleSelected("apple_music") }
             )
             SubSelectorPill(
-                title = "Fondo completo",
-                subtitle = "Fluido animado",
+                title = stringResource(R.string.welcome_backdrop_accord_title),
+                subtitle = stringResource(R.string.welcome_backdrop_accord_sub),
                 isSelected = currentBackdropStyle == "accord",
                 modifier = Modifier.weight(1f),
                 onClick = { onBackdropStyleSelected("accord") }
@@ -753,7 +753,7 @@ private fun ArtworkAndBackdropStep(
 
         // Section: Estilo de Pestañas
         Text(
-            text = "Estilo de pestañas inferiores",
+            text = stringResource(R.string.welcome_bottom_tabs_section_title),
             color = Color.White,
             fontSize = 17.sp,
             fontWeight = FontWeight.Bold,
@@ -767,15 +767,15 @@ private fun ArtworkAndBackdropStep(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             SubSelectorPill(
-                title = "Estilo iOS 26",
-                subtitle = "Barra estándar",
+                title = stringResource(R.string.welcome_bottom_tabs_ios26_title),
+                subtitle = stringResource(R.string.welcome_bottom_tabs_ios26_sub),
                 isSelected = currentBottomTabsStyle == "ios26",
                 modifier = Modifier.weight(1f),
                 onClick = { onBottomTabsStyleSelected("ios26") }
             )
             SubSelectorPill(
-                title = "Estilo iOS 27",
-                subtitle = "Cápsula flotante",
+                title = stringResource(R.string.welcome_bottom_tabs_ios27_title),
+                subtitle = stringResource(R.string.welcome_bottom_tabs_ios27_sub),
                 isSelected = currentBottomTabsStyle == "ios27",
                 modifier = Modifier.weight(1f),
                 onClick = { onBottomTabsStyleSelected("ios27") }
@@ -955,7 +955,7 @@ private fun SpotifyConnectStep(
         Spacer(modifier = Modifier.height(20.dp))
 
         Text(
-            text = "Tus Playlists de Spotify",
+            text = stringResource(R.string.welcome_feature_spotify_title),
             color = Color.White,
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
@@ -965,7 +965,7 @@ private fun SpotifyConnectStep(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Conecta tu cuenta para importar todas tus playlists personales y escucharlas sin anuncios en RayMusic.",
+            text = stringResource(R.string.welcome_spotify_connect_desc),
             color = Color.White.copy(alpha = 0.65f),
             fontSize = 14.5.sp,
             textAlign = TextAlign.Center,
@@ -997,7 +997,7 @@ private fun SpotifyConnectStep(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Cuenta Conectada",
+                            text = stringResource(R.string.welcome_spotify_account_connected),
                             color = Color(0xFF1ED760),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
@@ -1007,7 +1007,7 @@ private fun SpotifyConnectStep(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = userName.ifBlank { "Usuario de Spotify" },
+                        text = userName.ifBlank { stringResource(R.string.welcome_spotify_default_user) },
                         color = Color.White,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.ExtraBold
@@ -1032,11 +1032,11 @@ private fun SpotifyConnectStep(
                                 strokeWidth = 2.5.dp
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Sincronizando...", color = Color.Black, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.welcome_spotify_syncing), color = Color.Black, fontWeight = FontWeight.Bold)
                         } else {
                             Icon(imageVector = Icons.Default.Sync, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Sincronizar playlists ahora", color = Color.Black, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.welcome_spotify_sync_now), color = Color.Black, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -1053,7 +1053,7 @@ private fun SpotifyConnectStep(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "Importación Instantánea",
+                        text = stringResource(R.string.welcome_spotify_import_title),
                         color = Color.White,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
@@ -1062,7 +1062,7 @@ private fun SpotifyConnectStep(
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = "RayMusic leerá tus listas de Spotify y buscará las canciones con la más alta fidelidad de audio automáticamente.",
+                        text = stringResource(R.string.welcome_spotify_import_desc),
                         color = Color.White.copy(alpha = 0.6f),
                         fontSize = 13.5.sp,
                         textAlign = TextAlign.Center,
@@ -1090,7 +1090,7 @@ private fun SpotifyConnectStep(
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            text = "Cargar mis playlists de Spotify",
+                            text = stringResource(R.string.welcome_spotify_connect_btn),
                             color = Color.Black,
                             fontSize = 15.5.sp,
                             fontWeight = FontWeight.Bold
@@ -1144,7 +1144,7 @@ private fun WelcomeReadyStep(
         Spacer(modifier = Modifier.height(20.dp))
 
         Text(
-            text = "¡Todo Listo!",
+            text = stringResource(R.string.welcome_ready_title),
             color = Color.White,
             fontSize = 32.sp,
             fontWeight = FontWeight.ExtraBold,
@@ -1154,7 +1154,7 @@ private fun WelcomeReadyStep(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Tu experiencia en RayMusic v0.6.5 ha sido configurada a tu medida.",
+            text = stringResource(R.string.welcome_ready_desc),
             color = Color.White.copy(alpha = 0.7f),
             fontSize = 15.sp,
             textAlign = TextAlign.Center,
@@ -1174,7 +1174,7 @@ private fun WelcomeReadyStep(
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = "Resumen de configuración",
+                    text = stringResource(R.string.welcome_summary_title),
                     color = Color.White,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
@@ -1183,19 +1183,19 @@ private fun WelcomeReadyStep(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 SummaryRow(
-                    label = "Estilo de interfaz",
-                    value = if (glassStyle == "transparent") "Vidrio Líquido (Translúcido)" else "Material 3 Expressive (Sólido)",
+                    label = stringResource(R.string.welcome_summary_interface_label),
+                    value = if (glassStyle == "transparent") stringResource(R.string.welcome_summary_interface_transparent) else stringResource(R.string.welcome_summary_interface_solid),
                     icon = Icons.Default.Palette
                 )
 
                 Spacer(modifier = Modifier.height(14.dp))
 
                 SummaryRow(
-                    label = "Reproductor y portadas",
+                    label = stringResource(R.string.welcome_summary_player_label),
                     value = when (artworkStyle) {
-                        "normal" -> "Normal (Tarjeta)"
-                        "animated_fullartwork" -> "Animadas con Fullartwork"
-                        else -> "Fullartwork Completo"
+                        "normal" -> stringResource(R.string.welcome_summary_player_normal)
+                        "animated_fullartwork" -> stringResource(R.string.welcome_summary_player_animated)
+                        else -> stringResource(R.string.welcome_summary_player_full)
                     },
                     icon = Icons.Default.Tune
                 )
@@ -1203,8 +1203,8 @@ private fun WelcomeReadyStep(
                 Spacer(modifier = Modifier.height(14.dp))
 
                 SummaryRow(
-                    label = "Spotify Playlists",
-                    value = if (isSpotifyConnected) "Conectado" else "No conectado",
+                    label = stringResource(R.string.welcome_summary_spotify_label),
+                    value = if (isSpotifyConnected) stringResource(R.string.welcome_summary_spotify_connected) else stringResource(R.string.welcome_summary_spotify_disconnected),
                     icon = Icons.Default.QueueMusic
                 )
             }
@@ -1213,7 +1213,7 @@ private fun WelcomeReadyStep(
         Spacer(modifier = Modifier.height(20.dp))
 
         Text(
-            text = "Puedes modificar estas opciones en cualquier momento desde Ajustes > Apariencia.",
+            text = stringResource(R.string.welcome_summary_settings_hint),
             color = Color.White.copy(alpha = 0.45f),
             fontSize = 13.sp,
             textAlign = TextAlign.Center,

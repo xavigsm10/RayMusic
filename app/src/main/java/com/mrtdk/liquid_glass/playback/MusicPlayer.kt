@@ -390,10 +390,10 @@ class MusicPlayer(private val context: Context) {
             val cachedMeta = songMetadataCache[videoId]
             val currentSong = com.mrtdk.liquid_glass.playback.PlaybackQueue.currentSong
             val queueItem = com.mrtdk.liquid_glass.playback.PlaybackQueue.queue.find { it.videoId == videoId }
-            val songTitle = cachedMeta?.first?.ifEmpty { null }
+            var songTitle = cachedMeta?.first?.ifEmpty { null }
                 ?: currentSong?.takeIf { it.videoId == videoId }?.title
                 ?: queueItem?.title
-            val songArtist = cachedMeta?.second?.ifEmpty { null }
+            var songArtist = cachedMeta?.second?.ifEmpty { null }
                 ?: currentSong?.takeIf { it.videoId == videoId }?.artist
                 ?: queueItem?.artist
 
@@ -402,13 +402,38 @@ class MusicPlayer(private val context: Context) {
                 spotifyToYtCache[videoId]?.let { cachedYtId ->
                     targetVideoId = cachedYtId
                 } ?: run {
+                    // Try to resolve metadata from local saved items or playlists if missing
+                    if (songTitle.isNullOrBlank() && songArtist.isNullOrBlank()) {
+                        val savedItem = com.mrtdk.liquid_glass.data.LibraryManager.savedItems.value.find { it.id == videoId }
+                            ?: com.mrtdk.liquid_glass.data.LibraryManager.playlists.value.asSequence().flatMap { it.items }.find { it.id == videoId }
+                        if (savedItem != null) {
+                            songTitle = savedItem.title.ifBlank { null }
+                            songArtist = savedItem.subtitle?.ifBlank { null }
+                        }
+                    }
+
+                    // Try Spotify API if still missing and looks like a Spotify ID
+                    if (songTitle.isNullOrBlank() && songArtist.isNullOrBlank()) {
+                        try {
+                            val spTrack = com.mrtdk.liquid_glass.spotify.Spotify.track(videoId).getOrNull()
+                            if (spTrack != null) {
+                                songTitle = spTrack.name.ifBlank { null }
+                                songArtist = spTrack.artists.joinToString(", ") { it.name }.ifBlank { null }
+                            }
+                        } catch (_: Exception) {}
+                    }
+
+                    if (!songTitle.isNullOrBlank() || !songArtist.isNullOrBlank()) {
+                        songMetadataCache[videoId] = Pair(songTitle.orEmpty(), songArtist.orEmpty())
+                    }
+
                     val query = when {
                         !songTitle.isNullOrBlank() && !songArtist.isNullOrBlank() -> "$songArtist $songTitle"
                         !songTitle.isNullOrBlank() -> songTitle
-                        else -> videoId
-                    }.trim()
+                        else -> null
+                    }?.trim()
 
-                    if (query.isNotBlank()) {
+                    if (!query.isNullOrBlank()) {
                         val foundYtId = try {
                             val searchResult = YouTube.search(query, YouTube.SearchFilter.FILTER_SONG).getOrNull()
                                 ?: YouTube.search(query, YouTube.SearchFilter.FILTER_VIDEO).getOrNull()
@@ -416,6 +441,14 @@ class MusicPlayer(private val context: Context) {
                             songItems.firstOrNull { !it.isVideoSong }?.id
                                 ?: songItems.firstOrNull()?.id
                                 ?: searchResult?.items?.firstOrNull()?.id
+                                ?: run {
+                                    val summary = YouTube.searchSummary(query).getOrNull()
+                                    val summaryItems = summary?.summaries?.flatMap { it.items }.orEmpty()
+                                    val summarySongs = summaryItems.filterIsInstance<SongItem>()
+                                    summarySongs.firstOrNull { !it.isVideoSong }?.id
+                                        ?: summarySongs.firstOrNull()?.id
+                                        ?: summaryItems.firstOrNull()?.id
+                                }
                         } catch (e: Exception) {
                             android.util.Log.e("MusicPlayer", "Failed YouTube search for Spotify track $query", e)
                             null
@@ -428,6 +461,11 @@ class MusicPlayer(private val context: Context) {
                         }
                     }
                 }
+            }
+
+            if (!isYouTubeId(targetVideoId)) {
+                android.util.Log.e("MusicPlayer", "Unable to resolve non-YouTube track $videoId to a valid YouTube ID")
+                return@withContext null
             }
 
             // Extract stream URL for targetVideoId

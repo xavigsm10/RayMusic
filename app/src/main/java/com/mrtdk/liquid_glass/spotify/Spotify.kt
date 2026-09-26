@@ -240,6 +240,48 @@ object Spotify {
         }
     }
 
+    suspend fun track(trackId: String): Result<SpotifyTrack> = withContext(Dispatchers.IO) {
+        runCatching {
+            SpotifySession.ensureValidToken()
+            val token = SpotifySession.accessToken
+            val rawId = trackId.removePrefix("spotify_track_").removePrefix("spotify:track:").removePrefix("spotify:")
+            val jsonStr = httpGet("$REST_URL/tracks/$rawId", mapOf("Authorization" to "Bearer $token", "App-Platform" to "WebPlayer"))
+            val json = JSONObject(jsonStr)
+            val id = json.optString("id", rawId)
+            val name = json.optString("name", "")
+            val durationMs = json.optInt("duration_ms", 0)
+
+            val artistsArr = json.optJSONArray("artists")
+            val artists = mutableListOf<SpotifySimpleArtist>()
+            if (artistsArr != null) {
+                for (a in 0 until artistsArr.length()) {
+                    val art = artistsArr.optJSONObject(a) ?: continue
+                    artists.add(SpotifySimpleArtist(art.optString("id"), art.optString("name")))
+                }
+            }
+
+            val albumObj = json.optJSONObject("album")
+            var album: SpotifySimpleAlbum? = null
+            if (albumObj != null) {
+                val albumImagesArr = albumObj.optJSONArray("images")
+                val albumImages = mutableListOf<SpotifyImage>()
+                if (albumImagesArr != null) {
+                    for (imgIdx in 0 until albumImagesArr.length()) {
+                        val img = albumImagesArr.optJSONObject(imgIdx) ?: continue
+                        albumImages.add(SpotifyImage(img.optString("url")))
+                    }
+                }
+                album = SpotifySimpleAlbum(
+                    id = albumObj.optString("id"),
+                    name = albumObj.optString("name"),
+                    images = albumImages
+                )
+            }
+
+            SpotifyTrack(id = id, name = name, artists = artists, album = album, durationMs = durationMs)
+        }
+    }
+
     suspend fun searchArtistImage(artistName: String): Result<String?> = withContext(Dispatchers.IO) {
         runCatching {
             if (artistName.isBlank()) return@runCatching null

@@ -60,6 +60,7 @@ import com.echo.innertube.models.AlbumItem
 import com.echo.innertube.models.ArtistItem
 import com.echo.innertube.models.PlaylistItem
 import com.echo.innertube.models.SongItem
+import com.echo.innertube.models.YTItem
 import com.mrtdk.glass.GlassBoxScope
 import com.mrtdk.glass.GlassContainer
 import com.mrtdk.liquid_glass.R
@@ -270,9 +271,10 @@ fun BusquedaScreen(
                         else -> YouTube.SearchFilter.FILTER_SONG
                     }
                     val filterRes = YouTube.search(query, filter)
+                    var items: List<YTItem> = emptyList()
                     if (filterRes.isSuccess) {
                         val result = filterRes.getOrNull()
-                        state.displayResults = when (state.selectedTab) {
+                        items = when (state.selectedTab) {
                             1 -> result?.items?.filterIsInstance<ArtistItem>()?.take(30) ?: emptyList()
                             2 -> result?.items?.filterIsInstance<AlbumItem>()?.take(30) ?: emptyList()
                             else -> {
@@ -280,9 +282,22 @@ fun BusquedaScreen(
                                 (allSongs.filter { !it.isVideoSong } + allSongs.filter { it.isVideoSong }).take(30)
                             }
                         }
-                    } else {
-                        state.displayResults = emptyList()
                     }
+
+                    // Fallback to searchSummary if filtered search returned nothing
+                    if (items.isEmpty()) {
+                        val summaryRes = try { YouTube.searchSummary(query).getOrNull() } catch (_: Exception) { null }
+                        val allSummaryItems = summaryRes?.summaries?.flatMap { it.items }.orEmpty()
+                        items = when (state.selectedTab) {
+                            1 -> allSummaryItems.filterIsInstance<ArtistItem>().take(30)
+                            2 -> allSummaryItems.filterIsInstance<AlbumItem>().take(30)
+                            else -> {
+                                val allSongs = allSummaryItems.filterIsInstance<SongItem>()
+                                (allSongs.filter { !it.isVideoSong } + allSongs.filter { it.isVideoSong }).take(30)
+                            }
+                        }
+                    }
+                    state.displayResults = items
                 }
             }
         } catch (_: kotlin.coroutines.cancellation.CancellationException) {

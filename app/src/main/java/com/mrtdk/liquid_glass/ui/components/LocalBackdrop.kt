@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.emptyBackdrop
+import com.mrtdk.liquid_glass.data.LibraryManager
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -188,9 +189,10 @@ fun DetailBackPillButton(
     isDarkMode: Boolean = ThemeManager.isDarkMode.collectAsState().value,
     onClick: () -> Unit
 ) {
-    val arrowColor = if (isDarkMode) Color.White else Color.Black
-    val borderColor = if (isDarkMode) Color.White.copy(alpha = 0.75f) else Color.Black.copy(alpha = 0.5f)
-    val bgColor = if (isDarkMode) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.04f)
+    val isSolid = com.mrtdk.glass.LocalGlassStyle.current == "solid" || LibraryManager.getGlassStyle() == "solid"
+    val arrowColor = if (isSolid || isDarkMode) Color.White else Color.Black
+    val borderColor = if (isSolid) Color.White.copy(alpha = 0.15f) else if (isDarkMode) Color.White.copy(alpha = 0.75f) else Color.Black.copy(alpha = 0.5f)
+    val bgColor = if (isSolid) Color(0xFF242428) else if (isDarkMode) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.04f)
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(

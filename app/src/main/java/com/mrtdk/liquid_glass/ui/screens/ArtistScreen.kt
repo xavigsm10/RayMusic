@@ -250,18 +250,23 @@ fun ArtistScreen(
     LaunchedEffect(artistState.id) {
         withContext(Dispatchers.IO) {
             val errors = mutableListOf<String>()
+            val isChannelId = artistState.id.startsWith("UC") || artistState.id.startsWith("FE")
             
-            // Try the direct artist API first (fastest)
-            val result = YouTube.artist(artistState.id)
-            if (result.isSuccess && result.getOrNull()?.sections?.isNotEmpty() == true) {
-                artistPage = result.getOrNull()
-            } else {
-                val errVal = result.exceptionOrNull()
-                if (errVal != null) {
-                    errors.add("Artist API error: ${errVal.localizedMessage ?: errVal.toString()}")
+            // Only try direct artist browse API if it is an actual YouTube channel / browse ID
+            if (isChannelId) {
+                val result = YouTube.artist(artistState.id)
+                if (result.isSuccess && result.getOrNull()?.sections?.isNotEmpty() == true) {
+                    artistPage = result.getOrNull()
+                } else {
+                    val errVal = result.exceptionOrNull()
+                    if (errVal != null) {
+                        errors.add("Artist API error: ${errVal.localizedMessage ?: errVal.toString()}")
+                    }
                 }
-                
-                // Fallback: search for the artist to get their correct browseId
+            }
+            
+            // Fallback: search for the artist if direct browse wasn't attempted or failed
+            if (artistPage == null) {
                 // If the artist name has commas, ampersands, or semicolons, take the first one
                 val firstArtistName = artistState.name
                     .split(",").firstOrNull()
@@ -270,27 +275,28 @@ fun ArtistScreen(
                     ?.trim() ?: artistState.name
                 
                 val searchResult = YouTube.search(firstArtistName, YouTube.SearchFilter.FILTER_ARTIST)
-                if (searchResult.isSuccess) {
-                    val foundArtist = searchResult.getOrNull()?.items?.filterIsInstance<com.echo.innertube.models.ArtistItem>()?.firstOrNull()
-                    if (foundArtist != null && foundArtist.id != artistState.id) {
-                        val result2 = YouTube.artist(foundArtist.id)
-                        if (result2.isSuccess) {
-                            artistPage = result2.getOrNull()
-                        } else {
-                            val errVal2 = result2.exceptionOrNull()
-                            if (errVal2 != null) {
-                                errors.add("Artist fallback error: ${errVal2.localizedMessage ?: errVal2.toString()}")
-                            }
+                var foundArtist = searchResult.getOrNull()?.items?.filterIsInstance<com.echo.innertube.models.ArtistItem>()?.firstOrNull()
+
+                // Fallback to searchSummary if FILTER_ARTIST returned nothing
+                if (foundArtist == null) {
+                    val summaryRes = YouTube.searchSummary(firstArtistName).getOrNull()
+                    foundArtist = summaryRes?.summaries?.flatMap { it.items }?.filterIsInstance<com.echo.innertube.models.ArtistItem>()?.firstOrNull()
+                }
+
+                if (foundArtist != null && foundArtist.id != artistState.id) {
+                    val result2 = YouTube.artist(foundArtist.id)
+                    if (result2.isSuccess && result2.getOrNull()?.sections?.isNotEmpty() == true) {
+                        artistPage = result2.getOrNull()
+                        errors.clear() // Success on fallback, clear any previous browse errors
+                    } else {
+                        val errVal2 = result2.exceptionOrNull()
+                        if (errVal2 != null) {
+                            errors.add("Artist fallback error: ${errVal2.localizedMessage ?: errVal2.toString()}")
                         }
-                    }
-                } else {
-                    val searchErr = searchResult.exceptionOrNull()
-                    if (searchErr != null) {
-                        errors.add("Search fallback error: ${searchErr.localizedMessage ?: searchErr.toString()}")
                     }
                 }
                 
-                // If still nothing, build a minimal page from search results
+                // If still nothing, build a page from search results
                 if (artistPage == null) {
                     val songsResult = YouTube.search(firstArtistName, YouTube.SearchFilter.FILTER_SONG)
                     val albumsResult = YouTube.search(firstArtistName, YouTube.SearchFilter.FILTER_ALBUM)
@@ -299,24 +305,25 @@ fun ArtistScreen(
                     val songs = (songItems.filterNot { it.isVideoSong }.ifEmpty { songItems }).take(10)
                     val albums = albumsResult.getOrNull()?.items?.filterIsInstance<AlbumItem>() ?: emptyList()
                     
-                    if (songsResult.isFailure) {
-                        val sErr = songsResult.exceptionOrNull()
-                        if (sErr != null) errors.add("Song search error: ${sErr.localizedMessage ?: sErr.toString()}")
-                    }
-                    if (albumsResult.isFailure) {
-                        val aErr = albumsResult.exceptionOrNull()
-                        if (aErr != null) errors.add("Album search error: ${aErr.localizedMessage ?: aErr.toString()}")
-                    }
-                    
                     if (songs.isNotEmpty() || albums.isNotEmpty()) {
                         val sections = mutableListOf<ArtistSection>()
                         if (songs.isNotEmpty()) sections.add(ArtistSection(title = "Songs", items = songs, moreEndpoint = null))
                         if (albums.isNotEmpty()) sections.add(ArtistSection(title = "Albums", items = albums, moreEndpoint = null))
                         artistPage = ArtistPage(
-                            artist = com.echo.innertube.models.ArtistItem(id = artistState.id, title = artistState.name, thumbnail = artistState.thumbnail, shuffleEndpoint = null, radioEndpoint = null),
+                            artist = com.echo.innertube.models.ArtistItem(id = foundArtist?.id ?: artistState.id, title = artistState.name, thumbnail = artistState.thumbnail, shuffleEndpoint = null, radioEndpoint = null),
                             sections = sections,
                             description = null
                         )
+                        errors.clear() // Successfully created fallback page
+                    } else {
+                        if (songsResult.isFailure) {
+                            val sErr = songsResult.exceptionOrNull()
+                            if (sErr != null) errors.add("Song search error: ${sErr.localizedMessage ?: sErr.toString()}")
+                        }
+                        if (albumsResult.isFailure) {
+                            val aErr = albumsResult.exceptionOrNull()
+                            if (aErr != null) errors.add("Album search error: ${aErr.localizedMessage ?: aErr.toString()}")
+                        }
                     }
                 }
             }
@@ -1866,7 +1873,8 @@ fun ArtistScreen(
                     .statusBarsPadding()
                     .padding(horizontal = 16.dp, vertical = 12.dp)
             ) {
-                val artistHeaderIconTint = if (isDarkMode) Color.White else Color(0xFF151515)
+                val isSolid = com.mrtdk.glass.LocalGlassStyle.current == "solid" || LibraryManager.getGlassStyle() == "solid"
+                val artistHeaderIconTint = if (isSolid || isDarkMode) Color.White else Color(0xFF151515)
                 // Circular back button with GlassBox (liquid glass)
                 scope.GlassBox(
                     modifier = Modifier
@@ -2042,7 +2050,8 @@ private fun ItemCard(
                     }
                     .let { if (!fillWidth) it.sharedTransitionElement(item.id) else it }
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color.DarkGray)
+                    .background(Color(0xFF161618))
+                    .border(0.5.dp, Color.Black.copy(alpha = 0.14f), RoundedCornerShape(12.dp))
                 ) {
                     AsyncImage(
                         model = ImageRequest.Builder(context).data(hdThumb).size(360).crossfade(true).build(),
@@ -2077,7 +2086,8 @@ private fun ItemCard(
                         }
                     }
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color.DarkGray)
+                    .background(Color(0xFF161618))
+                    .border(0.5.dp, Color.Black.copy(alpha = 0.14f), RoundedCornerShape(12.dp))
                 ) {
                     AsyncImage(
                         model = ImageRequest.Builder(context).data(hdThumb).size(360).crossfade(true).build(),
@@ -2114,7 +2124,8 @@ private fun ItemCard(
                     }
                     .let { if (!fillWidth) it.sharedTransitionElement(item.id) else it }
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color.DarkGray)
+                    .background(Color(0xFF161618))
+                    .border(0.5.dp, Color.Black.copy(alpha = 0.14f), RoundedCornerShape(12.dp))
                 ) {
                     AsyncImage(
                         model = ImageRequest.Builder(context).data(hdThumb).size(360).crossfade(true).build(),

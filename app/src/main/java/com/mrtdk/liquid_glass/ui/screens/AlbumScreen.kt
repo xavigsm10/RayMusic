@@ -576,11 +576,12 @@ fun AlbumScreen(
     val tertiaryTextColor = if (isLightBackground) Color(0xFF151515).copy(alpha = 0.52f) else Color.White.copy(alpha = 0.60f)
     val dividerColor = if (isLightBackground) Color.Black.copy(alpha = 0.10f) else Color.White.copy(alpha = 0.12f)
     val trackNumberColor = if (isLightBackground) Color.Black.copy(alpha = 0.45f) else Color.White.copy(alpha = 0.50f)
-    val circularButtonBg = if (isLightBackground) Color.Black.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.22f)
+    val circularButtonBg = if (isLightBackground) Color.Black.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.22f)
     val playButtonBg = if (isLightBackground) Color(0xFF151515) else Color.White
     val playButtonTextColor = if (isLightBackground) Color.White else (if (dominantColor.luminance() > 0.65f) Color(0xFF151515) else dominantColor)
-    val glassButtonTint = if (isLightBackground) Color.White.copy(alpha = 0.65f) else DarkGrayGlassTint
-    val glassIconTint = if (isLightBackground) Color(0xFF151515) else Color.White
+    val isSolid = com.mrtdk.glass.LocalGlassStyle.current == "solid" || com.mrtdk.liquid_glass.data.LibraryManager.getGlassStyle() == "solid"
+    val glassButtonTint = if (isSolid) Color(0xFF242428) else if (isLightBackground) Color.White.copy(alpha = 0.65f) else DarkGrayGlassTint
+    val glassIconTint = if (isSolid) Color.White else if (isLightBackground) Color(0xFF151515) else Color.White
 
     SharedElementTransitionContainer(
         onBack = onBack,
@@ -1425,7 +1426,8 @@ fun AlbumScreen(
                                                                 .fillMaxWidth()
                                                                 .height(175.dp)
                                                                 .clip(RoundedCornerShape(10.dp))
-                                                                .background(Color.DarkGray)
+                                                                .background(Color(0xFF161618))
+                                                                .border(0.5.dp, Color.Black.copy(alpha = 0.14f), RoundedCornerShape(10.dp))
                                                         ) {
                                                             AsyncImage(
                                                                 model = ImageRequest.Builder(context).data(vThumb).crossfade(true).build(),
@@ -1516,7 +1518,8 @@ fun AlbumScreen(
                                                         modifier = Modifier
                                                             .size(155.dp)
                                                             .clip(RoundedCornerShape(10.dp))
-                                                            .background(Color.DarkGray)
+                                                            .background(Color(0xFF161618))
+                                                            .border(0.5.dp, Color.Black.copy(alpha = 0.14f), RoundedCornerShape(10.dp))
                                                     ) {
                                                         AsyncImage(
                                                             model = ImageRequest.Builder(context).data(aThumb).crossfade(true).build(),
@@ -1636,7 +1639,8 @@ fun AlbumScreen(
                                                         modifier = Modifier
                                                             .size(155.dp)
                                                             .clip(RoundedCornerShape(10.dp))
-                                                            .background(Color.DarkGray)
+                                                            .background(Color(0xFF161618))
+                                                            .border(0.5.dp, Color.Black.copy(alpha = 0.14f), RoundedCornerShape(10.dp))
                                                     ) {
                                                         AsyncImage(
                                                             model = ImageRequest.Builder(context).data(thumb).crossfade(true).build(),
