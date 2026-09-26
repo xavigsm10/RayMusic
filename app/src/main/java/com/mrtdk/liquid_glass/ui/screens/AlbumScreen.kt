@@ -489,6 +489,39 @@ fun AlbumScreen(
                     }
                 }
                 
+                // Fallback to online search if direct ID fetch failed
+                if (!loaded || tracks.isEmpty()) {
+                    try {
+                        val query = "${albumState.title} ${albumState.artist}".trim()
+                        val searchResult = YouTube.search(query, YouTube.SearchFilter.FILTER_ALBUM).getOrNull()
+                        val foundAlbum = searchResult?.items?.filterIsInstance<com.echo.innertube.models.AlbumItem>()?.firstOrNull {
+                            it.title.equals(albumState.title, ignoreCase = true)
+                        } ?: searchResult?.items?.filterIsInstance<com.echo.innertube.models.AlbumItem>()?.firstOrNull()
+
+                        if (foundAlbum != null) {
+                            YouTube.album(foundAlbum.browseId).onSuccess { albumPage ->
+                                tracks = albumPage.songs
+                                albumDescription = albumPage.description
+                                loaded = true
+                                val artistId = albumPage.album.artists?.firstOrNull()?.id
+                                if (!artistId.isNullOrBlank()) {
+                                    YouTube.artist(artistId).onSuccess { artPage ->
+                                        artistPageData = artPage
+                                    }
+                                }
+                            }.onFailure {
+                                if (!foundAlbum.playlistId.isNullOrBlank()) {
+                                    val fallbackPId = foundAlbum.playlistId.removePrefix("VL")
+                                    YouTube.playlist(fallbackPId).onSuccess { playlistPage ->
+                                        tracks = playlistPage.songs
+                                        loaded = true
+                                    }
+                                }
+                            }
+                        }
+                    } catch (_: Exception) {}
+                }
+
                 // Fallback to downloaded tracks if online fetch failed or returned empty
                 if (!loaded || tracks.isEmpty()) {
                     val localDownloads = LibraryManager.getDownloadedSongsForAlbum(albumState.title)

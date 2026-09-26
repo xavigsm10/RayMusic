@@ -54,6 +54,9 @@ import com.mrtdk.liquid_glass.ui.components.trackClickBounds
 import com.mrtdk.liquid_glass.ui.components.trackTapBounds
 import com.mrtdk.liquid_glass.ui.components.wiggleOnScroll
 import com.mrtdk.liquid_glass.ui.components.sharedTransitionElement
+import androidx.compose.ui.geometry.Rect
+import com.mrtdk.liquid_glass.ui.components.AppleMusicLibraryContextMenu
+import com.mrtdk.liquid_glass.ui.components.LibraryContextMenuTarget
 import com.mrtdk.liquid_glass.ui.components.DetailBackPillButton
 import com.mrtdk.liquid_glass.ui.components.SharedTransitionState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -173,7 +176,8 @@ fun BibliotecaScreen(
     var selectedCategoryName by remember { mutableStateOf("") }
     
     var contextMenuPlaylist by remember { mutableStateOf<com.mrtdk.liquid_glass.data.Playlist?>(null) }
-    var contextMenuSavedItem by remember { mutableStateOf<LibraryItem?>(null) }
+    var activeLibraryMenuTarget by remember { mutableStateOf<LibraryContextMenuTarget?>(null) }
+    var activeLibraryMenuPivotBounds by remember { mutableStateOf<Rect?>(null) }
 
     val pinnedEntities = remember(playlists, savedItems, pinnedItemIds) {
         val list = mutableListOf<PinnedEntity>()
@@ -327,13 +331,22 @@ fun BibliotecaScreen(
                                                 }
                                             }
                                         },
-                                        onLongPress = {
+                                        onLongPressWithBounds = { bounds ->
                                             when (entity) {
                                                 is PinnedEntity.PlaylistEntity -> {
                                                     contextMenuPlaylist = entity.playlist
                                                 }
                                                 is PinnedEntity.ItemEntity -> {
-                                                    contextMenuSavedItem = entity.item
+                                                    val itm = entity.item
+                                                    activeLibraryMenuPivotBounds = bounds
+                                                    activeLibraryMenuTarget = LibraryContextMenuTarget(
+                                                        id = itm.id,
+                                                        title = itm.title,
+                                                        subtitle = itm.subtitle,
+                                                        thumbnail = itm.thumbnail,
+                                                        type = itm.type,
+                                                        album = itm.album
+                                                    )
                                                 }
                                             }
                                         }
@@ -422,43 +435,56 @@ fun BibliotecaScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .wiggleOnScroll(item.id, categoryGridState)
-                                    .trackClickBounds {
-                                        SharedTransitionState.lastOpenedId = item.id
-                                        when (item.type) {
-                                            ItemType.SONG -> {
-                                                onSongSelected(
-                                                    com.mrtdk.liquid_glass.ui.screens.PlayerState(
-                                                        title = item.title,
-                                                        artist = item.subtitle,
-                                                        artUrl = item.thumbnail,
-                                                        videoId = item.id,
-                                                        album = item.album
+                                    .trackTapBounds(
+                                        onTap = {
+                                            SharedTransitionState.lastOpenedId = item.id
+                                            when (item.type) {
+                                                ItemType.SONG -> {
+                                                    onSongSelected(
+                                                        com.mrtdk.liquid_glass.ui.screens.PlayerState(
+                                                            title = item.title,
+                                                            artist = item.subtitle,
+                                                            artUrl = item.thumbnail,
+                                                            videoId = item.id,
+                                                            album = item.album
+                                                        )
                                                     )
-                                                )
-                                            }
-                                            ItemType.ARTIST -> {
-                                                onArtistSelected(
-                                                    com.mrtdk.liquid_glass.ui.screens.ArtistState(
-                                                        id = item.id,
-                                                        name = item.title,
-                                                        thumbnail = item.thumbnail
+                                                }
+                                                ItemType.ARTIST -> {
+                                                    onArtistSelected(
+                                                        com.mrtdk.liquid_glass.ui.screens.ArtistState(
+                                                            id = item.id,
+                                                            name = item.title,
+                                                            thumbnail = item.thumbnail
+                                                        )
                                                     )
-                                                )
-                                            }
-                                            ItemType.ALBUM -> {
-                                                onAlbumSelected(
-                                                    com.mrtdk.liquid_glass.ui.screens.AlbumState(
-                                                        id = item.id,
-                                                        playlistId = item.id,
-                                                        title = item.title,
-                                                        artist = item.subtitle,
-                                                        thumbnail = item.thumbnail
+                                                }
+                                                ItemType.ALBUM -> {
+                                                    onAlbumSelected(
+                                                        com.mrtdk.liquid_glass.ui.screens.AlbumState(
+                                                            id = item.id,
+                                                            playlistId = item.id,
+                                                            title = item.title,
+                                                            artist = item.subtitle,
+                                                            thumbnail = item.thumbnail
+                                                        )
                                                     )
-                                                )
+                                                }
+                                                else -> {}
                                             }
-                                            else -> {}
+                                        },
+                                        onLongPressWithBounds = { bounds ->
+                                            activeLibraryMenuPivotBounds = bounds
+                                            activeLibraryMenuTarget = LibraryContextMenuTarget(
+                                                id = item.id,
+                                                title = item.title,
+                                                subtitle = item.subtitle,
+                                                thumbnail = item.thumbnail,
+                                                type = item.type,
+                                                album = item.album
+                                            )
                                         }
-                                    }
+                                    )
                             ) {
                                 Box(
                                     modifier = Modifier
@@ -628,13 +654,22 @@ fun BibliotecaScreen(
                                             }
                                         }
                                     },
-                                    onLongPress = {
+                                    onLongPressWithBounds = { bounds ->
                                         when (entity) {
                                             is PinnedEntity.PlaylistEntity -> {
                                                 contextMenuPlaylist = entity.playlist
                                             }
                                             is PinnedEntity.ItemEntity -> {
-                                                contextMenuSavedItem = entity.item
+                                                val itm = entity.item
+                                                activeLibraryMenuPivotBounds = bounds
+                                                activeLibraryMenuTarget = LibraryContextMenuTarget(
+                                                    id = itm.id,
+                                                    title = itm.title,
+                                                    subtitle = itm.subtitle,
+                                                    thumbnail = itm.thumbnail,
+                                                    type = itm.type,
+                                                    album = itm.album
+                                                )
                                             }
                                         }
                                     }
@@ -802,8 +837,16 @@ fun BibliotecaScreen(
                                     else -> {}
                                 }
                             },
-                            onLongPress = {
-                                contextMenuSavedItem = item
+                            onLongPressWithBounds = { bounds ->
+                                activeLibraryMenuPivotBounds = bounds
+                                activeLibraryMenuTarget = LibraryContextMenuTarget(
+                                    id = item.id,
+                                    title = item.title,
+                                    subtitle = item.subtitle,
+                                    thumbnail = item.thumbnail,
+                                    type = item.type,
+                                    album = item.album
+                                )
                             }
                         )
                 ) {
@@ -849,7 +892,37 @@ fun BibliotecaScreen(
                 key = { index -> songs[index].id },
                 contentType = { "library_song_item" }
             ) { index ->
-                SongGridItem(song = songs[index], fillMaxWidth = true)
+                val song = songs[index]
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .trackTapBounds(
+                            onTap = {
+                                onSongSelected(
+                                    com.mrtdk.liquid_glass.ui.screens.PlayerState(
+                                        title = song.title,
+                                        artist = song.artist,
+                                        artUrl = song.albumArtUri?.toString(),
+                                        videoId = song.id.toString(),
+                                        album = song.album
+                                    )
+                                )
+                            },
+                            onLongPressWithBounds = { bounds ->
+                                activeLibraryMenuPivotBounds = bounds
+                                activeLibraryMenuTarget = LibraryContextMenuTarget(
+                                    id = song.id.toString(),
+                                    title = song.title,
+                                    subtitle = song.artist,
+                                    thumbnail = song.albumArtUri?.toString(),
+                                    type = ItemType.SONG,
+                                    album = song.album
+                                )
+                            }
+                        )
+                ) {
+                    SongGridItem(song = song, fillMaxWidth = true)
+                }
             }
         }
     }
@@ -860,122 +933,48 @@ fun BibliotecaScreen(
         onSongSelected = onSongSelected
     )
 
-    if (contextMenuSavedItem != null) {
-        val targetItem = contextMenuSavedItem!!
-        val isItemPinned = LibraryManager.isItemPinned(targetItem.id)
-        Dialog(onDismissRequest = { contextMenuSavedItem = null }) {
-            Box(
-                modifier = Modifier
-                    .width(300.dp)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(com.mrtdk.liquid_glass.ui.theme.ThemeManager.surfaceColor)
-                    .padding(20.dp)
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(
-                        modifier = Modifier
-                            .size(70.dp)
-                            .clip(if (targetItem.type == ItemType.ARTIST) androidx.compose.foundation.shape.CircleShape else RoundedCornerShape(10.dp))
-                            .background(Color(0xFF1C1C1E))
-                    ) {
-                        if (!targetItem.thumbnail.isNullOrBlank()) {
-                            AsyncImage(
-                                model = targetItem.thumbnail,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
+    activeLibraryMenuTarget?.let { target ->
+        AppleMusicLibraryContextMenu(
+            target = target,
+            onDismiss = { activeLibraryMenuTarget = null },
+            onOpenDetail = {
+                when (target.type) {
+                    ItemType.SONG -> {
+                        onSongSelected(
+                            com.mrtdk.liquid_glass.ui.screens.PlayerState(
+                                title = target.title,
+                                artist = target.subtitle,
+                                artUrl = target.thumbnail,
+                                videoId = target.id,
+                                album = target.album
                             )
-                        } else {
-                            Icon(
-                                imageVector = if (targetItem.type == ItemType.ARTIST) Icons.Default.Mic else Icons.Default.MusicNote,
-                                contentDescription = null,
-                                tint = Color.Gray,
-                                modifier = Modifier.size(36.dp).align(Alignment.Center)
+                        )
+                    }
+                    ItemType.ARTIST -> {
+                        onArtistSelected(
+                            com.mrtdk.liquid_glass.ui.screens.ArtistState(
+                                id = target.id,
+                                name = target.title,
+                                thumbnail = target.thumbnail
                             )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        text = targetItem.title,
-                        color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = targetItem.subtitle,
-                        color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor,
-                        fontSize = 13.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(modifier = Modifier.height(18.dp))
-                    androidx.compose.material3.Divider(color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.dividerColor, thickness = 0.5.dp)
-
-                    // Opción: Fijar / Desfijar
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                val next = !isItemPinned
-                                LibraryManager.setItemPinned(targetItem.id, next)
-                                Toast.makeText(
-                                    context,
-                                    if (next) "Fijado en la biblioteca" else "Desfijado de la biblioteca",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                                contextMenuSavedItem = null
-                            }
-                            .padding(vertical = 12.dp, horizontal = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.PushPin,
-                            contentDescription = null,
-                            tint = if (isItemPinned) Color(0xFFFA243C) else com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Spacer(modifier = Modifier.width(14.dp))
-                        Text(
-                            text = if (isItemPinned) "Desfijar de la biblioteca" else "Fijar en la biblioteca",
-                            color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Medium
                         )
                     }
-
-                    androidx.compose.material3.Divider(color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.dividerColor, thickness = 0.5.dp)
-
-                    // Opción: Eliminar de la biblioteca
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                LibraryManager.removeItem(targetItem.id)
-                                LibraryManager.setItemPinned(targetItem.id, false)
-                                Toast.makeText(context, "Eliminado de la biblioteca", Toast.LENGTH_SHORT).show()
-                                contextMenuSavedItem = null
-                            }
-                            .padding(vertical = 12.dp, horizontal = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = null,
-                            tint = Color(0xFFFA243C),
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Spacer(modifier = Modifier.width(14.dp))
-                        Text(
-                            text = "Eliminar de la biblioteca",
-                            color = Color(0xFFFA243C),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Medium
+                    ItemType.ALBUM -> {
+                        onAlbumSelected(
+                            com.mrtdk.liquid_glass.ui.screens.AlbumState(
+                                id = target.albumId ?: target.id,
+                                playlistId = target.albumId ?: target.id,
+                                title = target.title,
+                                artist = target.subtitle,
+                                thumbnail = target.thumbnail
+                            )
                         )
                     }
+                    else -> {}
                 }
-            }
-        }
+            },
+            onSongSelected = onSongSelected,
+            pivotBounds = activeLibraryMenuPivotBounds
+        )
     }
 }

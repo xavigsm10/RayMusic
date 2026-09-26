@@ -128,6 +128,7 @@ fun Modifier.trackClickBounds(onClick: () -> Unit): Modifier = composed {
 }
 
 fun Modifier.trackTapBounds(
+    onLongPressWithBounds: ((Rect?) -> Unit)? = null,
     onLongPress: (() -> Unit)? = null,
     onTap: () -> Unit
 ): Modifier = composed {
@@ -141,6 +142,8 @@ fun Modifier.trackTapBounds(
                     onTap()
                 },
                 onLongPress = {
+                    val bounds = coords?.unclippedBoundsInRoot()
+                    onLongPressWithBounds?.invoke(bounds)
                     onLongPress?.invoke()
                 }
             )

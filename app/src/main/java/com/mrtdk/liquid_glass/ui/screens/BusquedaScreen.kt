@@ -24,6 +24,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -304,14 +305,10 @@ fun BusquedaScreen(
         onInputActiveChange(false)
     }
 
-    LaunchedEffect(listState.isScrollInProgress) {
-        if (listState.isScrollInProgress) {
-            // En el historial ("Búsquedas recientes", sin texto) no se quita el foco:
-            // perderlo hace que el campo inferior reporte isFocused=false y la vista
-            // se cierra saltando a las categorías. Solo se oculta el teclado.
-            if (query.isNotBlank() || state.isFullResultsMode) {
-                focusManager.clearFocus()
-            }
+    val isListDragged by listState.interactionSource.collectIsDraggedAsState()
+    LaunchedEffect(isListDragged) {
+        if (isListDragged) {
+            // Solo ocultar el teclado cuando el usuario arrastra manualmente la lista con el dedo
             keyboardController?.hide()
         }
     }
@@ -338,6 +335,30 @@ fun BusquedaScreen(
                         selectedSource = state.searchSource,
                         onSourceSelected = { state.searchSource = it },
                         modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+                    )
+                }
+
+                // iOS 27: barra de búsqueda persistente para que el campo de texto no pierda foco ni se destruya al escribir
+                if (bottomTabsStyle == "ios27") {
+                    if (query.isEmpty() && !isInputActive) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.search_action),
+                                color = ThemeManager.textColor,
+                                fontSize = 34.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    Ios27SearchBar(
+                        query = query,
+                        onQueryChange = onQueryChange,
+                        onSubmitChange = onSubmitChange,
+                        onInputActiveChange = onInputActiveChange
                     )
                 }
 
@@ -438,16 +459,6 @@ fun BusquedaScreen(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(bottom = 180.dp)
                         ) {
-                            if (bottomTabsStyle == "ios27") {
-                                item {
-                                    Ios27SearchBar(
-                                        query = query,
-                                        onQueryChange = onQueryChange,
-                                        onSubmitChange = onSubmitChange,
-                                        onInputActiveChange = onInputActiveChange
-                                    )
-                                }
-                            }
                             if (recentSearches.isNotEmpty()) {
                                 item {
                                     Row(
@@ -553,29 +564,20 @@ fun BusquedaScreen(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(bottom = 180.dp)
                         ) {
-                            item {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 16.dp)
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.search_action),
-                                        color = ThemeManager.textColor,
-                                        fontSize = 34.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                            // iOS 27: barra para escribir debajo del título
-                            if (bottomTabsStyle == "ios27") {
+                            if (bottomTabsStyle != "ios27") {
                                 item {
-                                    Ios27SearchBar(
-                                        query = query,
-                                        onQueryChange = onQueryChange,
-                                        onSubmitChange = onSubmitChange,
-                                        onInputActiveChange = onInputActiveChange
-                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 16.dp)
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.search_action),
+                                            color = ThemeManager.textColor,
+                                            fontSize = 34.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                 }
                             }
                             item {
@@ -655,16 +657,6 @@ fun BusquedaScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 180.dp)
                     ) {
-                        if (bottomTabsStyle == "ios27") {
-                            item {
-                                Ios27SearchBar(
-                                    query = query,
-                                    onQueryChange = onQueryChange,
-                                    onSubmitChange = onSubmitChange,
-                                    onInputActiveChange = onInputActiveChange
-                                )
-                            }
-                        }
                         // Autocompletion text suggestions
                         if (state.suggestions.isNotEmpty()) {
                             items(
@@ -921,16 +913,6 @@ fun BusquedaScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = 180.dp)
                     ) {
-                        if (bottomTabsStyle == "ios27") {
-                            item {
-                                Ios27SearchBar(
-                                    query = query,
-                                    onQueryChange = onQueryChange,
-                                    onSubmitChange = onSubmitChange,
-                                    onInputActiveChange = onInputActiveChange
-                                )
-                            }
-                        }
                         // Filter tabs row
                         item {
                             LazyRow(

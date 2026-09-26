@@ -4449,8 +4449,11 @@ fun GlassBoxScope.LyricsOptionsMenu(
 fun GlassBoxScope.ArtistOptionsMenu(
     backdrop: com.kyant.backdrop.backdrops.LayerBackdrop,
     artists: List<String>,
+    albumTitle: String? = null,
+    albumId: String? = null,
     onDismiss: () -> Unit,
     onArtistSelected: (String) -> Unit,
+    onAlbumSelected: ((String, String?) -> Unit)? = null,
     pivotBounds: androidx.compose.ui.geometry.Rect? = null
 ) {
     var isDismissing by remember { mutableStateOf(false) }
@@ -4503,8 +4506,9 @@ fun GlassBoxScope.ArtistOptionsMenu(
         modifier = Modifier.fillMaxSize()
     ) {
         val density = LocalDensity.current
-        val menuWidth = 280.dp
-        val estimatedHeight = (88 + artists.size * 48).dp
+        val menuWidth = 260.dp
+        val hasAlbum = !albumTitle.isNullOrBlank() || onAlbumSelected != null
+        val estimatedHeight = ((if (hasAlbum) 56 else 0) + artists.size * 56 + 16).dp
 
         val screenWidthDp = maxWidth
         val screenHeightDp = maxHeight
@@ -4534,7 +4538,7 @@ fun GlassBoxScope.ArtistOptionsMenu(
         val currentTop = androidx.compose.ui.unit.lerp(startTop, targetTop, morphProgress)
         val currentWidth = androidx.compose.ui.unit.lerp(startWidth, menuWidth, morphProgress)
         val currentHeight = androidx.compose.ui.unit.lerp(startHeight, estimatedHeight, morphProgress)
-        val currentCorner = androidx.compose.ui.unit.lerp(startCorner, 24.dp, morphProgress)
+        val currentCorner = androidx.compose.ui.unit.lerp(startCorner, 20.dp, morphProgress)
 
         val threeDotsAlpha = if (pivotBounds != null) ((0.22f - morphProgress) / 0.22f).coerceIn(0f, 1f) else 0f
         val threeDotsScale = 1f - (morphProgress / 0.22f).coerceIn(0f, 1f) * 0.15f
@@ -4597,43 +4601,114 @@ fun GlassBoxScope.ArtistOptionsMenu(
                                 translationY = with(density) { menuContentOffsetY.toPx() }
                             }
                             .let { if (blurPx > 0.1f && !com.mrtdk.glass.LocalLightweightGlass.current) it.blur(blurPx.dp) else it }
-                            .padding(vertical = 12.dp)
+                            .padding(vertical = 6.dp)
                     ) {
-                // Header Title
-                Text(
-                    text = if (artists.size > 1) stringResource(R.string.artist_menu_select_title) else stringResource(R.string.artist_menu_single_title),
-                    color = Color.White.copy(alpha = 0.6f),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                    textAlign = TextAlign.Center
-                )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            if (hasAlbum) {
+                                val displayAlbum = albumTitle.takeIf { !it.isNullOrBlank() } ?: "Álbum"
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null,
+                                            onClick = {
+                                                handleDismiss {
+                                                    onAlbumSelected?.invoke(displayAlbum, albumId)
+                                                }
+                                            }
+                                        )
+                                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Album,
+                                        contentDescription = null,
+                                        tint = Color.White.copy(alpha = 0.9f),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(14.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Ir al álbum",
+                                            color = Color.White,
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Text(
+                                            text = displayAlbum,
+                                            color = Color.White.copy(alpha = 0.65f),
+                                            fontSize = 12.5.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
 
-                HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 8.dp))
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    artists.forEach { artist ->
-                        val labelText = if (artists.size > 1) stringResource(R.string.artist_menu_view_artist_format, artist) else stringResource(R.string.artist_menu_view_artist)
-                        VerticalMenuActionItem(
-                            icon = Icons.Default.Person,
-                            label = labelText,
-                            onClick = {
-                                handleDismiss { onArtistSelected(artist) }
+                                HorizontalDivider(
+                                    color = Color.White.copy(alpha = 0.08f),
+                                    thickness = 0.5.dp,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
+                                )
                             }
-                        )
+
+                            artists.forEachIndexed { index, artist ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null,
+                                            onClick = {
+                                                handleDismiss {
+                                                    onArtistSelected(artist)
+                                                }
+                                            }
+                                        )
+                                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Mic,
+                                        contentDescription = null,
+                                        tint = Color.White.copy(alpha = 0.9f),
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(14.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Ir al artista",
+                                            color = Color.White,
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Text(
+                                            text = artist,
+                                            color = Color.White.copy(alpha = 0.65f),
+                                            fontSize = 12.5.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                                if (index < artists.size - 1) {
+                                    HorizontalDivider(
+                                        color = Color.White.copy(alpha = 0.08f),
+                                        thickness = 0.5.dp,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
     }
-}
-}
 }
 
 private fun startRadioStation(

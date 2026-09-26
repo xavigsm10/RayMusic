@@ -1450,39 +1450,39 @@ fun PlayerScreen(
     }
     val density = androidx.compose.ui.platform.LocalDensity.current
     val screenHeightPx = remember(context) { context.resources.displayMetrics.heightPixels.toFloat() }
+    val navBarBottomPx = WindowInsets.navigationBars.getBottom(density).toFloat()
+    val targetCollapseDistancePx = screenHeightPx
 
     var isMounted by remember { mutableStateOf(isVisible) }
     var isClosingAnim by remember { mutableStateOf(false) }
     var collapseJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     val scope = rememberCoroutineScope()
-    val dragOffsetY = remember { Animatable(if (isVisible) 0f else screenHeightPx) }
+    val dragOffsetY = remember { Animatable(if (isVisible) 0f else targetCollapseDistancePx) }
 
     val currentIsVisible by androidx.compose.runtime.rememberUpdatedState(isVisible)
     val currentOnClose by androidx.compose.runtime.rememberUpdatedState(onClose)
 
-    val triggerCollapse: () -> Unit = remember(scope, screenHeightPx) {
+    val triggerCollapse: () -> Unit = remember(scope, targetCollapseDistancePx) {
         {
             if (!isClosingAnim) {
                 isClosingAnim = true
-                currentOnClose()
                 collapseJob?.cancel()
                 collapseJob = scope.launch {
                     try {
                         dragOffsetY.animateTo(
-                            screenHeightPx,
+                            targetCollapseDistancePx,
                             spring(
-                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                dampingRatio = 0.82f,
                                 stiffness = Spring.StiffnessMediumLow
                             )
                         )
                     } catch (_: kotlinx.coroutines.CancellationException) {
                         return@launch
                     } catch (_: Exception) {
-                        try { dragOffsetY.snapTo(screenHeightPx) } catch (_: Exception) {}
+                        try { dragOffsetY.snapTo(targetCollapseDistancePx) } catch (_: Exception) {}
                     } finally {
-                        if (!currentIsVisible) {
-                            isMounted = false
-                        }
+                        currentOnClose()
+                        isMounted = false
                         isClosingAnim = false
                     }
                 }
@@ -1497,7 +1497,7 @@ fun PlayerScreen(
             val wasMounted = isMounted
             isMounted = true
             if (!wasMounted) {
-                try { dragOffsetY.snapTo(screenHeightPx) } catch (_: Exception) {}
+                try { dragOffsetY.snapTo(targetCollapseDistancePx) } catch (_: Exception) {}
             }
             dragOffsetY.animateTo(
                 0f,
@@ -2147,17 +2147,34 @@ fun PlayerScreen(
             }
         }
 
-
-
         val isOverlayActive = showLyrics || showQueue
+        val dismissThresholdPx = with(density) { 120.dp.toPx() }
+        val flickThresholdPx = with(density) { 36.dp.toPx() }
+
+        val currentDragPx = dragOffsetY.value
+        val scrimAlpha = ((1f - (currentDragPx / (screenHeightPx * 0.45f))) * 0.45f).coerceIn(0f, 0.45f)
+
+        if (scrimAlpha > 0.001f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = scrimAlpha))
+            )
+        }
+
         GlassContainer(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
                     translationY = dragOffsetY.value
-                    shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
+                    shape = RoundedCornerShape(
+                        topStart = 38.dp,
+                        topEnd = 38.dp,
+                        bottomStart = if (dragOffsetY.value > 0f) 38.dp else 0.dp,
+                        bottomEnd = if (dragOffsetY.value > 0f) 38.dp else 0.dp
+                    )
                     clip = true
-                    shadowElevation = if (dragOffsetY.value > 0f) 32.dp.toPx() else 0f
+                    shadowElevation = if (dragOffsetY.value > 0f) 24.dp.toPx() else 0f
                 }
                 .pointerInput(showLyrics, showQueue) {
                     if (!showLyrics && !showQueue) {
@@ -2171,8 +2188,7 @@ fun PlayerScreen(
                             onDragCancel = {
                                 if (!isClosingAnim) {
                                     val currentOffsetY = dragOffsetY.value
-                                    val thresholdPx = with(density) { 120.dp.toPx() }
-                                    if (currentOffsetY > thresholdPx) {
+                                    if (currentOffsetY > dismissThresholdPx) {
                                         triggerCollapse()
                                     } else {
                                         scope.launch {
@@ -2192,9 +2208,7 @@ fun PlayerScreen(
                                     val dragDuration = System.currentTimeMillis() - dragStartTime
                                     val velocity = if (dragDuration > 0) totalDragDistance / dragDuration else 0f
                                     val currentOffsetY = dragOffsetY.value
-                                    val thresholdPx = with(density) { 120.dp.toPx() }
-                                    val flickThresholdPx = with(density) { 36.dp.toPx() }
-                                    if (currentOffsetY > thresholdPx || (velocity > 0.6f && currentOffsetY > flickThresholdPx)) {
+                                    if (currentOffsetY > dismissThresholdPx || (velocity > 0.6f && currentOffsetY > flickThresholdPx)) {
                                         triggerCollapse()
                                     } else {
                                         scope.launch {
@@ -2220,24 +2234,15 @@ fun PlayerScreen(
                     }
                 },
             useShader = true,
-
             content = {
-
                 BoxWithConstraints(
-
                     modifier = Modifier
-
                         .fillMaxSize()
-
                         .onGloballyPositioned { parentCoordinates = it }
-
                         .let { if (!isUltraPerformance) it.layerBackdrop(localBackdrop) else it }
-
                 ) {
-
-            val maxWidth = maxWidth
-
-            val maxHeight = maxHeight
+                                val maxWidth = maxWidth
+                                val maxHeight = maxHeight
 
 
 
@@ -2711,9 +2716,8 @@ fun PlayerScreen(
 
                         if (isClosingAnim || showLyrics || showQueue) return Velocity.Zero
 
-                        val currentOffsetY = dragOffsetY.value
-
-                        if (currentOffsetY > with(density) { 120.dp.toPx() } || available.y > 1000f) {
+                        val dismissThresholdPx = with(density) { 120.dp.toPx() }
+                        if (dragOffsetY.value > dismissThresholdPx || available.y > 1000f) {
                             triggerCollapse()
                         } else {
                             dragOffsetY.animateTo(0f, spring(dampingRatio = 0.85f, stiffness = Spring.StiffnessMediumLow))
@@ -5191,13 +5195,79 @@ fun PlayerScreen(
             ArtistOptionsMenu(
                 backdrop = localBackdrop,
                 artists = artistMenuOptions,
+                albumTitle = playerState?.album,
+                albumId = playerState?.albumId,
                 onDismiss = { showArtistOptionsMenu = false },
                 onArtistSelected = { artistName ->
+                    showArtistOptionsMenu = false
                     onArtistSelected(com.mrtdk.liquid_glass.ui.screens.ArtistState(
                         id = artistName,
                         name = artistName,
                         thumbnail = null
                     ))
+                },
+                onAlbumSelected = { albumName, albId ->
+                    showArtistOptionsMenu = false
+                    val knownValidId = if (!albId.isNullOrBlank() && (albId.startsWith("MPRE") || albId.startsWith("OLAK") || albId.startsWith("VL") || albId.startsWith("FEmusic"))) albId else null
+                    if (knownValidId != null) {
+                        onAlbumSelected(
+                            com.mrtdk.liquid_glass.ui.screens.AlbumState(
+                                id = knownValidId,
+                                playlistId = knownValidId,
+                                title = albumName,
+                                artist = playerState?.artist ?: "",
+                                thumbnail = playerState?.artUrl?.toString()
+                            )
+                        )
+                    } else {
+                        val isOffline = playerState?.contentUri != null || (!albumName.isNullOrBlank() && LibraryManager.getDownloadedSongsForAlbum(albumName).isNotEmpty())
+                        if (isOffline) {
+                            onAlbumSelected(
+                                com.mrtdk.liquid_glass.ui.screens.AlbumState(
+                                    id = "offline_album_$albumName",
+                                    playlistId = "offline_album_$albumName",
+                                    title = albumName,
+                                    artist = playerState?.artist ?: "",
+                                    thumbnail = playerState?.artUrl?.toString()
+                                )
+                            )
+                        } else {
+                            scope.launch {
+                                android.widget.Toast.makeText(context, context.getString(R.string.toast_searching_album), android.widget.Toast.LENGTH_SHORT).show()
+                                withContext(Dispatchers.IO) {
+                                    val query = "$albumName ${playerState?.artist ?: ""}".trim()
+                                    val searchResult = com.echo.innertube.YouTube.search(query, com.echo.innertube.YouTube.SearchFilter.FILTER_ALBUM).getOrNull()
+                                    val albumItem = searchResult?.items?.filterIsInstance<com.echo.innertube.models.AlbumItem>()?.firstOrNull {
+                                        it.title.equals(albumName, ignoreCase = true)
+                                    } ?: searchResult?.items?.filterIsInstance<com.echo.innertube.models.AlbumItem>()?.firstOrNull()
+
+                                    withContext(Dispatchers.Main) {
+                                        if (albumItem != null) {
+                                            onAlbumSelected(
+                                                com.mrtdk.liquid_glass.ui.screens.AlbumState(
+                                                    id = albumItem.browseId,
+                                                    playlistId = albumItem.playlistId,
+                                                    title = albumItem.title,
+                                                    artist = albumItem.artists?.joinToString { it.name } ?: (playerState?.artist ?: ""),
+                                                    thumbnail = albumItem.thumbnail ?: playerState?.artUrl?.toString()
+                                                )
+                                            )
+                                        } else {
+                                            onAlbumSelected(
+                                                com.mrtdk.liquid_glass.ui.screens.AlbumState(
+                                                    id = albId ?: albumName,
+                                                    playlistId = albId ?: albumName,
+                                                    title = albumName,
+                                                    artist = playerState?.artist ?: "",
+                                                    thumbnail = playerState?.artUrl?.toString()
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 },
                 pivotBounds = artistPivotBounds
             )
@@ -5239,7 +5309,6 @@ fun PlayerScreen(
     }
 
 )
-
 }
 
 @Composable
