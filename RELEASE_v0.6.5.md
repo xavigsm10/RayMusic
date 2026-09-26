@@ -5,7 +5,7 @@
 ---
 
 ### ⚡ Rendimiento & Optimización Extrema
-* **Optimización integral del sistema**: Reducción sustancial del consumo de **CPU**, **GPU**, memoria **RAM** y ahorro inteligente de **batería** para sesiones más largas sin sobrecalentamiento.
+* **Optimización integral del sistema**: Reducción sustancial del consumo de **CPU**, **GPU**, memoria **RAM** y ahorro inteligente de **batería** para sesiones más prolongadas sin sobrecalentamiento.
 * **Eliminación de cuellos de botella**: Desaparición total de retrasos y bloqueos en el hilo principal de la interfaz; la aplicación ahora se mueve a **120 FPS** consistentes y estables.
 * **Desenfoque por carga real ultra liviano**: Sustitución del desenfoque pesado tradicional por un nuevo algoritmo de desenfoque dinámico por carga real, mucho más rápido y ligero en cualquier dispositivo.
 
@@ -37,5 +37,5 @@
 
 ### 📦 Instrucciones de Instalación
 1. Descarga el archivo APK adjunto (`RayMusic-v0.6.5.apk`).
-2. Abre el archivo en tu dispositivo Android e instala la actualización (no es necesario desinstalar la versión anterior; se mantendrán tus canciones descargadas y favoritos).
+2. Abre el archivo en tu dispositivo Android e instala la actualización (se conservarán tus canciones descargadas, ajustes y listas).
 3. ¡Abre RayMusic y disfruta de la música como nunca antes!
