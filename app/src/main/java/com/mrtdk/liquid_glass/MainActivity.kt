@@ -57,6 +57,8 @@ import com.mrtdk.liquid_glass.ui.components.MiniPlayer
 import com.mrtdk.liquid_glass.ui.components.LocalBackdrop
 import com.mrtdk.liquid_glass.ui.components.SharedElementTransitionContainer
 import com.mrtdk.liquid_glass.ui.components.UpdateDialog
+import com.mrtdk.liquid_glass.ui.components.WhatsNewDialog
+import com.mrtdk.liquid_glass.BuildConfig
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
@@ -331,6 +333,15 @@ class MainActivity : ComponentActivity() {
                                     updateReleaseInfo = info
                                 }
                             }
+                        }
+                    }
+
+                    var showWhatsNewDialog by remember { mutableStateOf(false) }
+                    LaunchedEffect(Unit) {
+                        val lastSeen = LibraryManager.getString("last_seen_version", null)
+                        if (lastSeen != BuildConfig.VERSION_NAME) {
+                            kotlinx.coroutines.delay(800L)
+                            showWhatsNewDialog = true
                         }
                     }
 
@@ -990,6 +1001,14 @@ class MainActivity : ComponentActivity() {
                                                 scope.UpdateDialog(
                                                     releaseInfo = updateReleaseInfo!!,
                                                     onDismiss = { updateReleaseInfo = null }
+                                                )
+                                            }
+                                            if (showWhatsNewDialog) {
+                                                scope.WhatsNewDialog(
+                                                    onDismiss = {
+                                                        showWhatsNewDialog = false
+                                                        LibraryManager.saveString("last_seen_version", BuildConfig.VERSION_NAME)
+                                                    }
                                                 )
                                             }
                                         }

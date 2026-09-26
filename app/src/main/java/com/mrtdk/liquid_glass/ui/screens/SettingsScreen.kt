@@ -1868,6 +1868,8 @@ fun AboutSettingsScreen(
     val uriHandler = LocalUriHandler.current
     val scrollState = rememberScrollState()
 
+    var showWhatsNewDialog by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -1967,6 +1969,14 @@ fun AboutSettingsScreen(
                         }
                     ),
                     Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.AutoAwesome),
+                        title = { Text("Novedades de la versión") },
+                        description = { Text("Ver todos los cambios de la versión ${com.mrtdk.liquid_glass.BuildConfig.VERSION_NAME}") },
+                        onClick = {
+                            showWhatsNewDialog = true
+                        }
+                    ),
+                    Material3SettingsItem(
                         icon = painterResource(id = R.drawable.ic_github),
                         title = { Text(stringResource(R.string.repositorio_app)) },
                         description = { Text(stringResource(R.string.ver_codigo_github)) },
@@ -1987,6 +1997,12 @@ fun AboutSettingsScreen(
 
             Spacer(modifier = Modifier.height(120.dp))
         }
+    }
+
+    if (showWhatsNewDialog) {
+        com.mrtdk.liquid_glass.ui.components.WhatsNewDialog(
+            onDismiss = { showWhatsNewDialog = false }
+        )
     }
 }
 

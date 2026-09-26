@@ -2,12 +2,15 @@ package com.mrtdk.liquid_glass.ui.components
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -91,7 +94,7 @@ fun GlassBoxScope.UpdateDialog(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        val menuWidth = 300.dp
+        val menuWidth = 345.dp
 
         this@UpdateDialog.GlassBox(
             modifier = Modifier
@@ -102,21 +105,47 @@ fun GlassBoxScope.UpdateDialog(
                 }
                 .width(menuWidth)
                 .wrapContentHeight(),
-            blur = 0.8f,
+            blur = 0.85f,
             scale = 0.02f,
             centerDistortion = 0.1f,
             warpEdges = 0.4f,
-            elevation = 4.dp,
+            elevation = 6.dp,
             shape = RoundedCornerShape(cornerRadius.dp),
-            tint = dominantColor.copy(alpha = 0.25f),
-            darkness = 0.2f
+            tint = dominantColor.copy(alpha = 0.28f),
+            darkness = 0.25f
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 16.dp)
+                    .padding(vertical = 18.dp)
             ) {
+                // Rocket / Sparkle icon badge
+                Box(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(
+                            androidx.compose.ui.graphics.Brush.radialGradient(
+                                listOf(
+                                    Color(0xFFFA243C).copy(alpha = 0.35f),
+                                    Color(0xFFFA243C).copy(alpha = 0.08f)
+                                )
+                            )
+                        )
+                        .border(1.dp, Color(0xFFFA243C).copy(alpha = 0.5f), androidx.compose.foundation.shape.CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.RocketLaunch,
+                        contentDescription = null,
+                        tint = Color(0xFFFA243C),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
                 Text(
                     text = stringResource(R.string.actualizacion_disponible),
                     color = Color.White,
@@ -126,40 +155,199 @@ fun GlassBoxScope.UpdateDialog(
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Versión ${releaseInfo.versionName}",
-                    color = Color(0xFFFA243C),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Center
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color(0xFFFA243C).copy(alpha = 0.2f))
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "v${releaseInfo.versionName}",
+                            color = Color(0xFFFA243C),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "RayMusic",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
                 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(14.dp))
                 
                 // Scrollable Changelog Section
-                val changelogText = remember(releaseInfo.body) {
-                    releaseInfo.body?.takeIf { it.isNotBlank() } ?: "Mejoras de estabilidad y rendimiento."
-                }
-                Column(
+                val scrollState = rememberScrollState()
+                val bodyText = releaseInfo.body?.takeIf { it.isNotBlank() }
+                
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 180.dp)
-                        .padding(horizontal = 20.dp)
-                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp)
+                        .heightIn(min = 140.dp, max = 260.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.White.copy(alpha = 0.05f))
+                        .border(0.5.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
                 ) {
-                    Text(
-                        text = "Novedades:",
-                        color = Color.White,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(bottom = 4.dp)
-                    )
-                    Text(
-                        text = changelogText,
-                        color = Color.White.copy(alpha = 0.75f),
-                        fontSize = 12.sp,
-                        lineHeight = 16.sp
-                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(scrollState)
+                            .padding(horizontal = 14.dp, vertical = 12.dp)
+                    ) {
+                        Text(
+                            text = "Novedades de la versión:",
+                            color = Color.White,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 6.dp)
+                        )
+
+                        if (bodyText != null && bodyText.contains("\n") && !bodyText.equals("null", ignoreCase = true)) {
+                            // Render GitHub release body lines
+                            val lines = bodyText.lines()
+                            lines.forEach { line ->
+                                val trimmed = line.trim()
+                                when {
+                                    trimmed.startsWith("### ") || trimmed.startsWith("## ") -> {
+                                        Text(
+                                            text = trimmed.removePrefix("### ").removePrefix("## "),
+                                            color = Color(0xFFFA243C),
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
+                                        )
+                                    }
+                                    trimmed.startsWith("* ") || trimmed.startsWith("- ") -> {
+                                        val content = trimmed.substring(2)
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 2.dp),
+                                            verticalAlignment = Alignment.Top
+                                        ) {
+                                            Text(
+                                                text = "•",
+                                                color = Color(0xFFFA243C),
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(end = 6.dp)
+                                            )
+                                            Text(
+                                                text = content.replace("**", ""),
+                                                color = Color.White.copy(alpha = 0.85f),
+                                                fontSize = 11.5.sp,
+                                                lineHeight = 15.sp
+                                            )
+                                        }
+                                    }
+                                    trimmed.isNotBlank() && !trimmed.startsWith("#") && !trimmed.startsWith("---") -> {
+                                        Text(
+                                            text = trimmed.replace("**", ""),
+                                            color = Color.White.copy(alpha = 0.75f),
+                                            fontSize = 11.5.sp,
+                                            lineHeight = 15.sp,
+                                            modifier = Modifier.padding(vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            // Rich curated categories fallback
+                            com.mrtdk.liquid_glass.data.ReleaseNotes.categories.forEachIndexed { idx, cat ->
+                                if (idx > 0) Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(bottom = 4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = cat.icon,
+                                        contentDescription = null,
+                                        tint = Color(0xFFFA243C),
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(5.dp))
+                                    Text(
+                                        text = cat.categoryName,
+                                        color = Color.White,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                                cat.items.forEach { item ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(start = 4.dp, bottom = 3.dp),
+                                        verticalAlignment = Alignment.Top
+                                    ) {
+                                        Text(
+                                            text = "•",
+                                            color = Color(0xFFFA243C),
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(end = 5.dp)
+                                        )
+                                        Column {
+                                            Text(
+                                                text = item.title,
+                                                color = Color.White.copy(alpha = 0.9f),
+                                                fontSize = 11.5.sp,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                            Text(
+                                                text = item.description,
+                                                color = Color.White.copy(alpha = 0.65f),
+                                                fontSize = 11.sp,
+                                                lineHeight = 14.sp
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+                    }
+
+                    // Slide down indicator when scroll is available
+                    if (scrollState.canScrollForward) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .height(26.dp)
+                                .background(
+                                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                                        listOf(Color.Transparent, Color(0xFF16161A).copy(alpha = 0.9f))
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Desliza para ver más",
+                                    color = Color.White.copy(alpha = 0.6f),
+                                    fontSize = 10.sp
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowDown,
+                                    contentDescription = null,
+                                    tint = Color.White.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        }
+                    }
                 }
 
                 if (downloading) {
