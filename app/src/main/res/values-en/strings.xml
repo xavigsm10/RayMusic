@@ -350,11 +350,11 @@
     <string name="lyrics_statusbar_desc">Hides the system status bar when opening the player</string>
 
     <string name="player_quality_title">Audio Quality</string>
-    <string name="player_quality_auto">Automatic (Recommended - 160 kbps)</string>
+    <string name="player_quality_auto">Lossless (Opus 48 kHz - Recommended)</string>
     <string name="player_quality_low">Low (Data Saver)</string>
-    <string name="player_quality_high">High (Recommended)</string>
-    <string name="player_quality_low_desc">Low (48 kbps AAC / 50 kbps Opus)</string>
-    <string name="player_quality_high_desc">High (160 kbps Opus / 128 kbps AAC)</string>
+    <string name="player_quality_high">High Quality (AAC 128 kbps)</string>
+    <string name="player_quality_low_desc">Data Saver (AAC / Opus 48 kbps)</string>
+    <string name="player_quality_high_desc">High Quality (AAC 128 kbps)</string>
     <string name="player_eq_title">Equalizer</string>
     <string name="player_eq_desc">Configure sound effects and equalizer</string>
 
@@ -729,5 +729,38 @@
     <string name="audio_icon_speaker">Speaker</string>
     <string name="audio_icon_headphones">Headphones</string>
     <string name="audio_icon_homepod">HomePod</string>
+ 
+    <!-- Apple Music Audio & Playback Enhancements (Fase 1) -->
+    <string name="settings_sound_check_title">Sound Check</string>
+    <string name="settings_sound_check_desc">Automatically balances volume between songs to prevent sudden loudness changes.</string>
+    <string name="settings_crossfade_title">Crossfade</string>
+    <string name="settings_crossfade_desc">Smooth transition between songs with no gaps.</string>
+    <string name="settings_crossfade_duration">%1$d seconds</string>
+    <string name="settings_sleep_timer_title">Sleep Timer</string>
+    <string name="settings_sleep_timer_desc">Automatically stops playback with a smooth fade-out when time expires.</string>
+    <string name="sleep_timer_off">Off</string>
+    <string name="sleep_timer_15m">15 minutes</string>
+    <string name="sleep_timer_30m">30 minutes</string>
+    <string name="sleep_timer_45m">45 minutes</string>
+    <string name="sleep_timer_60m">1 hour</string>
+    <string name="sleep_timer_end_of_song">When Current Song Ends</string>
+    <string name="sleep_timer_active_prefix">Active (%1$s)</string>
+    <string name="audio_quality_sheet_title">Audio Quality</string>
+    <string name="audio_quality_lossless_badge">Lossless</string>
+    <string name="audio_quality_codec_label">Codec / Format</string>
+    <string name="audio_quality_sample_rate_label">Sample Rate</string>
+    <string name="audio_quality_bitrate_label">Bitrate</string>
+    <string name="audio_quality_channels_label">Channels</string>
+    <string name="audio_quality_lossless_desc">Lossless audio preserves every detail of the original recording, ensuring you hear music exactly as artists created it in the studio.</string>
+
+    <!-- Dolby Atmos / Spatial Audio -->
+    <string name="settings_dolby_atmos_title">Dolby Atmos</string>
+    <string name="settings_dolby_atmos_desc">Immersive 3D Spatial Audio for headphones.</string>
+    <string name="settings_dolby_atmos_always">Always On</string>
+    <string name="settings_dolby_atmos_off">Off</string>
+    <string name="audio_quality_dolby_badge">Dolby Atmos</string>
+    <string name="audio_quality_spatial_label">Spatial Audio</string>
+    <string name="audio_quality_spatial_value">Dolby Atmos (Immersive 3D)</string>
+    <string name="audio_quality_dolby_desc">Spatial Audio with Dolby Atmos creates an immersive, three-dimensional sound field that surrounds you with true studio clarity and instrument separation.</string>
 </resources>
 

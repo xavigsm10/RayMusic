@@ -1,6 +1,7 @@
 package com.mrtdk.liquid_glass.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -59,15 +61,16 @@ fun LiquidButton(
     val isSolid = glassStyle == "solid" || com.mrtdk.liquid_glass.data.LibraryManager.isUltraPerformanceMode()
 
     val baseModifier = if (isSolid) {
+        val isDark = com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState().value
+        val buttonBg = when {
+            surfaceColor.isSpecified -> surfaceColor
+            tint.isSpecified -> tint.copy(alpha = 0.35f)
+            else -> if (isDark) Color(0xFF26272E) else Color(0xFFE8E9F0)
+        }
+        val buttonBorder = if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.08f)
         modifier
-            .background(
-                when {
-                    surfaceColor.isSpecified -> surfaceColor
-                    tint.isSpecified -> tint.copy(alpha = 0.35f)
-                    else -> Color.White.copy(alpha = 0.12f)
-                },
-                Capsule()
-            )
+            .background(buttonBg, Capsule())
+            .border(1.dp, buttonBorder, Capsule())
             .clip(Capsule())
     } else {
         modifier

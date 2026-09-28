@@ -49,9 +49,8 @@ class BiquadFilter(
             FilterType.PK -> calculatePeakingCoefficients()
             FilterType.LSC -> calculateLowShelfCoefficients()
             FilterType.HSC -> calculateHighShelfCoefficients()
-            else -> {
-                calculatePeakingCoefficients()
-            }
+            FilterType.LPQ -> calculateLowPassCoefficients()
+            FilterType.HPQ -> calculateHighPassCoefficients()
         }
     }
 
@@ -133,6 +132,54 @@ class BiquadFilter(
         a0 = aPlusOne - aMinusOne * cosOmega + twoSqrtAAlpha
         a1 = 2.0 * (aMinusOne - aPlusOne * cosOmega)
         a2 = aPlusOne - aMinusOne * cosOmega - twoSqrtAAlpha
+
+        b0 /= a0
+        b1 /= a0
+        b2 /= a0
+        a1 /= a0
+        a2 /= a0
+        a0 = 1.0
+    }
+
+    /**
+     * Calculate resonant low-pass filter coefficients (LPQ)
+     */
+    private fun calculateLowPassCoefficients() {
+        val omega = 2.0 * PI * frequency / sampleRate
+        val sinOmega = sin(omega)
+        val cosOmega = cos(omega)
+        val alpha = sinOmega / (2.0 * q)
+
+        b0 = (1.0 - cosOmega) / 2.0
+        b1 = 1.0 - cosOmega
+        b2 = (1.0 - cosOmega) / 2.0
+        a0 = 1.0 + alpha
+        a1 = -2.0 * cosOmega
+        a2 = 1.0 - alpha
+
+        b0 /= a0
+        b1 /= a0
+        b2 /= a0
+        a1 /= a0
+        a2 /= a0
+        a0 = 1.0
+    }
+
+    /**
+     * Calculate resonant high-pass filter coefficients (HPQ)
+     */
+    private fun calculateHighPassCoefficients() {
+        val omega = 2.0 * PI * frequency / sampleRate
+        val sinOmega = sin(omega)
+        val cosOmega = cos(omega)
+        val alpha = sinOmega / (2.0 * q)
+
+        b0 = (1.0 + cosOmega) / 2.0
+        b1 = -(1.0 + cosOmega)
+        b2 = (1.0 + cosOmega) / 2.0
+        a0 = 1.0 + alpha
+        a1 = -2.0 * cosOmega
+        a2 = 1.0 - alpha
 
         b0 /= a0
         b1 /= a0

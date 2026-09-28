@@ -19,7 +19,7 @@ import androidx.compose.ui.platform.InspectorInfo
 import expo.modules.androidglassview.backdrop.internal.recordLayer
 
 fun Modifier.layerBackdrop(backdrop: LayerBackdrop): Modifier =
-    this then LayerBackdropElement(backdrop)
+    if (com.mrtdk.liquid_glass.BuildConfig.IS_LITE) this else this then LayerBackdropElement(backdrop)
 
 private class LayerBackdropElement(
     val backdrop: LayerBackdrop

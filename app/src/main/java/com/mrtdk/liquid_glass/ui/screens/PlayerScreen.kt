@@ -96,8 +96,8 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 
 import androidx.compose.ui.res.painterResource
-
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 
 import com.mrtdk.liquid_glass.R
 
@@ -404,6 +404,7 @@ object AudioRoutingState {
     var connectedDeviceName: String? by mutableStateOf(null)
     var showAudioRoutingMenu by mutableStateOf(false)
     var showIconPickerMenu by mutableStateOf(false)
+    var showAudioQualitySheet by mutableStateOf(false)
     var selectedOutputIcon by mutableStateOf(AudioOutputIcon.SELECCION_BOCINA)
     private var isInitialized = false
 
@@ -468,6 +469,7 @@ fun RoutingDeviceRow(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null
 ) {
+    val isSolid = com.mrtdk.glass.LocalGlassStyle.current == "solid" || com.mrtdk.liquid_glass.BuildConfig.IS_LITE
     val currentVolumePosition by rememberUpdatedState(volumePosition)
     val currentOnVolumeChange by rememberUpdatedState(onVolumeChange)
 
@@ -477,7 +479,11 @@ fun RoutingDeviceRow(
                 .fillMaxWidth()
                 .height(48.dp)
                 .clip(RoundedCornerShape(24.dp))
-                .background(Color.White.copy(alpha = 0.08f))
+                .background(if (isSolid) Color.White.copy(alpha = 0.12f) else Color.White.copy(alpha = 0.08f))
+                .then(
+                    if (isSolid) Modifier.border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(24.dp))
+                    else Modifier
+                )
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onTap = { offset ->
@@ -489,99 +495,59 @@ fun RoutingDeviceRow(
                         }
                     )
                 }
-
                 .pointerInput(Unit) {
-
                     detectHorizontalDragGestures { change, dragAmount ->
-
                         val newVolume = (currentVolumePosition + (dragAmount / size.width)).coerceIn(0f, 1f)
-
                         currentOnVolumeChange(newVolume)
-
                     }
-
                 }
-
         ) {
-
             val widthPx = maxWidth
 
-            
-
             // 1. Unfilled layer (Dark background, white text)
-
             Row(
-
                 modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-
                 verticalAlignment = Alignment.CenterVertically
-
             ) {
-
                 icon(Color.White)
-
                 Spacer(modifier = Modifier.width(12.dp))
-
                 Text(text, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-
                 Icon(Icons.Default.Check, null, tint = Color.White, modifier = Modifier.size(18.dp))
-
             }
-
-
 
             // 2. Filled layer (White background, dark text), clipped to volumePosition
-
             Box(
-
                 modifier = Modifier
-
                     .fillMaxHeight()
-
                     .fillMaxWidth(volumePosition)
-
                     .clipToBounds()
-
                     .background(Color.White)
-
             ) {
-
                 Row(
-
                     modifier = Modifier
-
                         .width(widthPx)
-
                         .fillMaxHeight()
-
                         .padding(horizontal = 16.dp),
-
                     verticalAlignment = Alignment.CenterVertically
-
                 ) {
-
                     icon(Color.Black)
-
                     Spacer(modifier = Modifier.width(12.dp))
-
                     Text(text, color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-
                     Icon(Icons.Default.Check, null, tint = Color.Black, modifier = Modifier.size(18.dp))
-
                 }
-
             }
-
         }
-
     } else {
-
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp)
                 .clip(RoundedCornerShape(24.dp))
-                .background(Color.White.copy(alpha = 0.04f))
+                .background(if (isSolid) Color.White.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.04f))
+                .then(
+                    if (isSolid) Modifier.border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(24.dp))
+                    else Modifier
+                )
                 .pointerInput(Unit) {
                     detectTapGestures(
                         onTap = { onClick() },
@@ -591,17 +557,11 @@ fun RoutingDeviceRow(
                 .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-
             icon(Color.White.copy(alpha = 0.7f))
-
             Spacer(modifier = Modifier.width(12.dp))
-
             Text(text, color = Color.White.copy(alpha = 0.7f), fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-
         }
-
     }
-
 }
 
 
@@ -818,97 +778,68 @@ fun GlassBoxScope.AudioRoutingMenu(
 
     val tintColor = remember(dominantColor) { dominantColor.copy(alpha = 0.35f) }
     val isLightweight = com.mrtdk.glass.LocalLightweightGlass.current
+    val isSolid = com.mrtdk.glass.LocalGlassStyle.current == "solid" || com.mrtdk.liquid_glass.BuildConfig.IS_LITE
 
     Box(
-
         modifier = Modifier
-
             .fillMaxSize()
-
             .background(Color.Black.copy(alpha = 0.4f))
-
             .clickable(
-
                 interactionSource = remember { MutableInteractionSource() },
-
                 indication = null
-
             ) { handleDismiss() }
-
     )
 
-
-
     Box(
-
         modifier = Modifier.fillMaxSize(),
-
         contentAlignment = Alignment.BottomCenter
-
     ) {
-
         Box(
-
             modifier = Modifier
-
                 .padding(bottom = 120.dp)
-
                 .graphicsLayer {
-
                     scaleX = scale
-
                     scaleY = scale
-
                     this.alpha = alpha
-
                 }
-
                 .width(320.dp)
-
                 .wrapContentHeight()
-
-                .drawBackdrop(
-
-                    backdrop = backdrop,
-
-                    shape = { RoundedCornerShape(cornerRadius.dp) },
-
-                    effects = {
-                        if (!isLightweight) {
-                            vibrancy()
-                            blur(8f.dp.toPx())
-                            lens(24f.dp.toPx(), 24f.dp.toPx())
-                        } else {
-                            blur(2f.dp.toPx())
-                        }
-                    },
-
-                    onDrawSurface = {
-
-                        drawRect(tintColor)
-
+                .then(
+                    if (isSolid) {
+                        Modifier
+                            .shadow(16.dp, RoundedCornerShape(cornerRadius.dp))
+                            .clip(RoundedCornerShape(cornerRadius.dp))
+                            .background(Color(0xFF222328))
+                            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(cornerRadius.dp))
+                    } else {
+                        Modifier
+                            .drawBackdrop(
+                                backdrop = backdrop,
+                                shape = { RoundedCornerShape(cornerRadius.dp) },
+                                effects = {
+                                    if (!isLightweight) {
+                                        vibrancy()
+                                        blur(8f.dp.toPx())
+                                        lens(24f.dp.toPx(), 24f.dp.toPx())
+                                    } else {
+                                        blur(2f.dp.toPx())
+                                    }
+                                },
+                                onDrawSurface = {
+                                    drawRect(tintColor)
+                                }
+                            )
+                            .clip(RoundedCornerShape(cornerRadius.dp))
                     }
-
                 )
-
-                .clip(RoundedCornerShape(cornerRadius.dp))
-
         ) {
-
             Column(
-
                 modifier = Modifier
-
                     .fillMaxWidth()
-
-                    .let { if (blurPx > 0.1f) it.blur(blurPx.dp) else it }
-
+                    .let { if (!isSolid && blurPx > 0.1f) it.blur(blurPx.dp) else it }
                     .padding(16.dp),
-
                 verticalArrangement = Arrangement.spacedBy(8.dp)
-
             ) {
-
                 // 1. Cellular Speaker row
                 RoutingDeviceRow(
                     icon = { tint ->
@@ -942,152 +873,80 @@ fun GlassBoxScope.AudioRoutingMenu(
                     onLongClick = { AudioRoutingState.showIconPickerMenu = true }
                 )
 
-
-
                 // 2. Real connected Bluetooth device row (if active/connected)
-
                 val isBtActive = connectedBluetoothDeviceName != null
-
                 if (isBtActive && connectedBluetoothDeviceName != null) {
-
                     val devName = connectedBluetoothDeviceName!!
-
                     RoutingDeviceRow(
-
                         icon = { tint -> BluetoothIcon(modifier = Modifier.size(20.dp), tint = tint) },
-
                         text = devName,
-
                         isActive = AudioRoutingState.connectedDeviceName == devName,
-
                         volumePosition = volumePosition,
-
                         onVolumeChange = onVolumeChange,
-
                         onClick = { AudioRoutingState.connectedDeviceName = devName }
-
                     )
-
                 }
-
-
 
                 HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 4.dp))
 
-
-
                 // 3. Search WiFi devices action
-
                 Row(
-
                     modifier = Modifier
-
                         .fillMaxWidth()
-
                         .height(48.dp)
-
                         .clip(RoundedCornerShape(24.dp))
-
-                        .background(Color.White.copy(alpha = 0.08f))
-
+                        .background(if (isSolid) Color.White.copy(alpha = 0.06f) else Color.White.copy(alpha = 0.08f))
+                        .then(if (isSolid) Modifier.border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(24.dp)) else Modifier)
                         .clickable {
-
                             try {
-
                                 val intent = android.content.Intent(android.provider.Settings.ACTION_WIFI_SETTINGS)
-
                                 context.startActivity(intent)
-
                             } catch (e: Exception) {
-
                                 Toast.makeText(context, context.getString(R.string.wifi_settings_error), Toast.LENGTH_SHORT).show()
-
                             }
-
                         }
-
                         .padding(horizontal = 16.dp),
-
                     verticalAlignment = Alignment.CenterVertically
-
                 ) {
-
                     Icon(Icons.Default.Wifi, null, tint = Color.White, modifier = Modifier.size(20.dp))
-
                     Spacer(modifier = Modifier.width(12.dp))
-
                     Text(
-
                         text = stringResource(R.string.wifi_settings_action),
-
                         color = Color.White.copy(alpha = 0.8f),
-
                         fontSize = 14.sp,
-
                         fontWeight = FontWeight.Medium,
-
                         modifier = Modifier.weight(1f)
-
                     )
-
                 }
 
-
-
                 // 4. Search Bluetooth devices action
-
                 Row(
-
                     modifier = Modifier
-
                         .fillMaxWidth()
-
                         .height(48.dp)
-
                         .clip(RoundedCornerShape(24.dp))
-
-                        .background(Color.White.copy(alpha = 0.08f))
-
+                        .background(if (isSolid) Color.White.copy(alpha = 0.06f) else Color.White.copy(alpha = 0.08f))
+                        .then(if (isSolid) Modifier.border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(24.dp)) else Modifier)
                         .clickable {
-
                             try {
-
                                 val intent = android.content.Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS)
-
                                 context.startActivity(intent)
-
                             } catch (e: Exception) {
-
                                 Toast.makeText(context, context.getString(R.string.bluetooth_settings_error), Toast.LENGTH_SHORT).show()
-
                             }
-
                         }
-
                         .padding(horizontal = 16.dp),
-
                     verticalAlignment = Alignment.CenterVertically
-
                 ) {
-
                     BluetoothIcon(modifier = Modifier.size(20.dp), tint = Color.White)
-
                     Spacer(modifier = Modifier.width(12.dp))
-
                     Text(
-
                         text = stringResource(R.string.bluetooth_settings_action),
-
                         color = Color.White.copy(alpha = 0.8f),
-
                         fontSize = 14.sp,
-
                         fontWeight = FontWeight.Medium,
-
                         modifier = Modifier.weight(1f)
-
                     )
-
                 }
 
                 HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 4.dp))
@@ -1098,7 +957,8 @@ fun GlassBoxScope.AudioRoutingMenu(
                         .fillMaxWidth()
                         .height(48.dp)
                         .clip(RoundedCornerShape(24.dp))
-                        .background(Color.White.copy(alpha = 0.08f))
+                        .background(if (isSolid) Color.White.copy(alpha = 0.06f) else Color.White.copy(alpha = 0.08f))
+                        .then(if (isSolid) Modifier.border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(24.dp)) else Modifier)
                         .clickable { AudioRoutingState.showIconPickerMenu = true }
                         .padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -1124,13 +984,9 @@ fun GlassBoxScope.AudioRoutingMenu(
                         modifier = Modifier.size(18.dp)
                     )
                 }
-
             }
-
         }
-
     }
-
 }
 
 @Composable
@@ -1142,6 +998,7 @@ fun GlassBoxScope.AudioIconPickerDialog(
     val isLightweight = com.mrtdk.glass.LocalLightweightGlass.current
     val dominantColor by LibraryManager.currentDominantColor.collectAsState()
     val tintColor = remember(dominantColor) { dominantColor.copy(alpha = 0.35f) }
+    val isSolid = com.mrtdk.glass.LocalGlassStyle.current == "solid" || com.mrtdk.liquid_glass.BuildConfig.IS_LITE
 
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
@@ -1191,23 +1048,34 @@ fun GlassBoxScope.AudioIconPickerDialog(
                 }
                 .width(310.dp)
                 .wrapContentHeight()
-                .drawBackdrop(
-                    backdrop = backdrop,
-                    shape = { RoundedCornerShape(28.dp) },
-                    effects = {
-                        if (!isLightweight) {
-                            vibrancy()
-                            blur(10f.dp.toPx())
-                            lens(24f.dp.toPx(), 24f.dp.toPx())
-                        } else {
-                            blur(2f.dp.toPx())
-                        }
-                    },
-                    onDrawSurface = {
-                        drawRect(tintColor)
+                .then(
+                    if (isSolid) {
+                        Modifier
+                            .shadow(20.dp, RoundedCornerShape(28.dp))
+                            .clip(RoundedCornerShape(28.dp))
+                            .background(Color(0xFF222328))
+                            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(28.dp))
+                    } else {
+                        Modifier
+                            .drawBackdrop(
+                                backdrop = backdrop,
+                                shape = { RoundedCornerShape(28.dp) },
+                                effects = {
+                                    if (!isLightweight) {
+                                        vibrancy()
+                                        blur(10f.dp.toPx())
+                                        lens(24f.dp.toPx(), 24f.dp.toPx())
+                                    } else {
+                                        blur(2f.dp.toPx())
+                                    }
+                                },
+                                onDrawSurface = {
+                                    drawRect(tintColor)
+                                }
+                            )
+                            .clip(RoundedCornerShape(28.dp))
                     }
                 )
-                .clip(RoundedCornerShape(28.dp))
         ) {
             Column(
                 modifier = Modifier
@@ -1243,8 +1111,15 @@ fun GlassBoxScope.AudioIconPickerDialog(
                                 .height(52.dp)
                                 .clip(RoundedCornerShape(16.dp))
                                 .background(
-                                    if (isSelected) Color.White.copy(alpha = 0.22f)
-                                    else Color.White.copy(alpha = 0.07f)
+                                    if (isSelected) (if (isSolid) Color.White.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.22f))
+                                    else (if (isSolid) Color.White.copy(alpha = 0.06f) else Color.White.copy(alpha = 0.07f))
+                                )
+                                .then(
+                                    if (isSolid) Modifier.border(
+                                        width = 1.dp,
+                                        color = if (isSelected) Color.White.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.08f),
+                                        shape = RoundedCornerShape(16.dp)
+                                    ) else Modifier
                                 )
                                 .clickable {
                                     AudioRoutingState.setOutputIcon(context, iconOption)
@@ -1297,7 +1172,8 @@ fun GlassBoxScope.AudioIconPickerDialog(
                         .fillMaxWidth()
                         .height(44.dp)
                         .clip(RoundedCornerShape(22.dp))
-                        .background(Color.White.copy(alpha = 0.12f))
+                        .background(if (isSolid) Color.White.copy(alpha = 0.16f) else Color.White.copy(alpha = 0.12f))
+                        .then(if (isSolid) Modifier.border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(22.dp)) else Modifier)
                         .clickable { handleDismiss() },
                     contentAlignment = Alignment.Center
                 ) {
@@ -1464,6 +1340,11 @@ fun PlayerScreen(
     val currentOnClose by androidx.compose.runtime.rememberUpdatedState(onClose)
 
     val triggerCollapse: () -> Unit = remember(scope, targetCollapseDistancePx) {
+        val playerSpringSpec = if (com.mrtdk.liquid_glass.BuildConfig.IS_LITE) {
+            spring<Float>(dampingRatio = 0.95f, stiffness = Spring.StiffnessMedium)
+        } else {
+            spring<Float>(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)
+        }
         {
             if (!isClosingAnim) {
                 isClosingAnim = true
@@ -1472,10 +1353,7 @@ fun PlayerScreen(
                     try {
                         dragOffsetY.animateTo(
                             targetCollapseDistancePx,
-                            spring(
-                                dampingRatio = 0.82f,
-                                stiffness = Spring.StiffnessMediumLow
-                            )
+                            playerSpringSpec
                         )
                     } catch (_: kotlinx.coroutines.CancellationException) {
                         return@launch
@@ -1500,12 +1378,14 @@ fun PlayerScreen(
             if (!wasMounted) {
                 try { dragOffsetY.snapTo(targetCollapseDistancePx) } catch (_: Exception) {}
             }
+            val openSpringSpec = if (com.mrtdk.liquid_glass.BuildConfig.IS_LITE) {
+                spring<Float>(dampingRatio = 0.95f, stiffness = Spring.StiffnessMedium)
+            } else {
+                spring<Float>(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)
+            }
             dragOffsetY.animateTo(
                 0f,
-                spring(
-                    dampingRatio = 0.82f,
-                    stiffness = Spring.StiffnessMediumLow
-                )
+                openSpringSpec
             )
         } else if (isMounted && !isClosingAnim) {
             triggerCollapse()
@@ -2168,13 +2048,6 @@ fun PlayerScreen(
                 .fillMaxSize()
                 .graphicsLayer {
                     translationY = dragOffsetY.value
-                    shape = RoundedCornerShape(
-                        topStart = 38.dp,
-                        topEnd = 38.dp,
-                        bottomStart = if (dragOffsetY.value > 0f) 38.dp else 0.dp,
-                        bottomEnd = if (dragOffsetY.value > 0f) 38.dp else 0.dp
-                    )
-                    clip = true
                     shadowElevation = if (dragOffsetY.value > 0f) 24.dp.toPx() else 0f
                 }
                 .pointerInput(showLyrics, showQueue) {
@@ -2240,7 +2113,7 @@ fun PlayerScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .onGloballyPositioned { parentCoordinates = it }
-                        .let { if (!isUltraPerformance) it.layerBackdrop(localBackdrop) else it }
+                        .let { if (!isUltraPerformance && !com.mrtdk.liquid_glass.BuildConfig.IS_LITE && com.mrtdk.glass.LocalGlassStyle.current != "solid") it.layerBackdrop(localBackdrop) else it }
                 ) {
                                 val maxWidth = maxWidth
                                 val maxHeight = maxHeight
@@ -5314,10 +5187,196 @@ fun PlayerScreen(
             )
         }
 
+        if (AudioRoutingState.showAudioQualitySheet) {
+            AudioQualityDialog(
+                playerState = playerState,
+                onDismiss = { AudioRoutingState.showAudioQualitySheet = false }
+            )
+        }
+
     }
 
 )
 }
+
+@Composable
+fun AudioQualityDialog(
+    playerState: PlayerState?,
+    onDismiss: () -> Unit
+) {
+    val isDolbyAtmos by com.mrtdk.liquid_glass.data.LibraryManager.dolbyAtmosEnabled.collectAsState()
+
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Box(
+            modifier = Modifier
+                .width(330.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .background(Color(0xFF222224))
+                .border(0.5.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(24.dp))
+                .padding(22.dp)
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color.White.copy(alpha = 0.14f))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.apple_lossless_seeklogo),
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(width = 16.dp, height = 10.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.audio_quality_lossless_badge),
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    if (isDolbyAtmos) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color.White.copy(alpha = 0.14f))
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_dolby_atmos),
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(width = 18.dp, height = 11.dp)
+                                )
+                                Text(
+                                    text = stringResource(R.string.audio_quality_dolby_badge),
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Text(
+                    text = stringResource(R.string.audio_quality_sheet_title),
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = playerState?.title ?: "",
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val isLocal = playerState?.contentUri != null && playerState.contentUri.scheme != "yt"
+                    val codecStr = if (isLocal) "PCM / Audio Local" else "Opus (WebM Audio)"
+                    val bitrateStr = if (isLocal) "1411 kbps (Sin compresión)" else "160 kbps (VBR alta fidelidad)"
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(stringResource(R.string.audio_quality_codec_label), color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+                        Text(codecStr, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(stringResource(R.string.audio_quality_sample_rate_label), color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+                        Text("48,000 Hz (48 kHz)", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(stringResource(R.string.audio_quality_bitrate_label), color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+                        Text(bitrateStr, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(stringResource(R.string.audio_quality_channels_label), color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+                        Text("Estéreo (2 canales)", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    if (isDolbyAtmos) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(stringResource(R.string.audio_quality_spatial_label), color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+                            Text(stringResource(R.string.audio_quality_spatial_value), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Text(
+                    text = if (isDolbyAtmos) stringResource(R.string.audio_quality_dolby_desc) else stringResource(R.string.audio_quality_lossless_desc),
+                    color = Color.White.copy(alpha = 0.65f),
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Button(
+                    onClick = onDismiss,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFA243C)),
+                    shape = RoundedCornerShape(50),
+                    modifier = Modifier.fillMaxWidth().height(44.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.menu_creditos_entendido),
+                        color = Color.White,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        }
+    }
+}
+
 
 @Composable
 fun LosslessBadge(
@@ -5355,6 +5414,51 @@ fun LosslessBadge(
             )
             Text(
                 text = "Lossless",
+                color = contentColor.copy(alpha = 0.85f),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                lineHeight = 11.sp
+            )
+        }
+    }
+}
+
+@Composable
+fun DolbyAtmosBadge(
+    contentColor: Color,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(contentColor.copy(alpha = 0.14f))
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onClick
+                    )
+                } else Modifier
+            )
+            .padding(horizontal = 7.dp, vertical = 2.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_dolby_atmos),
+                contentDescription = "Dolby Atmos",
+                tint = contentColor.copy(alpha = 0.85f),
+                modifier = Modifier
+                    .height(8.5.dp)
+                    .width(15.dp)
+            )
+            Text(
+                text = "Dolby Atmos",
                 color = contentColor.copy(alpha = 0.85f),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -5403,16 +5507,29 @@ private fun IsolatedPlayerSeekbar(
         barHeightDp = 8.dp
     )
 
+    val isDolbyAtmos by com.mrtdk.liquid_glass.data.LibraryManager.dolbyAtmosEnabled.collectAsState()
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(formatDuration(displayPos), color = contentColor.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Normal)
-        LosslessBadge(
-            contentColor = contentColor,
-            onClick = { AudioRoutingState.showAudioRoutingMenu = true }
-        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            LosslessBadge(
+                contentColor = contentColor,
+                onClick = { AudioRoutingState.showAudioQualitySheet = true }
+            )
+            if (isDolbyAtmos) {
+                DolbyAtmosBadge(
+                    contentColor = contentColor,
+                    onClick = { AudioRoutingState.showAudioQualitySheet = true }
+                )
+            }
+        }
         Text("-${formatDuration((duration - displayPos).coerceAtLeast(0L))}", color = contentColor.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Normal)
     }
 }
@@ -5457,16 +5574,28 @@ fun PlayerBottomControls(
                 inactiveColor = sliderInactiveColor,
                 barHeightDp = 8.dp
             )
+            val isDolbyAtmos by com.mrtdk.liquid_glass.data.LibraryManager.dolbyAtmosEnabled.collectAsState()
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(formatDuration(displayPos), color = contentColor.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Normal)
-                LosslessBadge(
-                    contentColor = contentColor,
-                    onClick = { AudioRoutingState.showAudioRoutingMenu = true }
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    LosslessBadge(
+                        contentColor = contentColor,
+                        onClick = { AudioRoutingState.showAudioQualitySheet = true }
+                    )
+                    if (isDolbyAtmos) {
+                        DolbyAtmosBadge(
+                            contentColor = contentColor,
+                            onClick = { AudioRoutingState.showAudioQualitySheet = true }
+                        )
+                    }
+                }
                 Text("-${formatDuration((duration - displayPos).coerceAtLeast(0L))}", color = contentColor.copy(alpha = 0.55f), fontSize = 12.sp, fontWeight = FontWeight.Normal)
             }
 

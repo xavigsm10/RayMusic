@@ -199,17 +199,21 @@ fun MainSettingsMenu(
                     ),
                     Material3SettingsItem(
                         icon = rememberPainter(Icons.Default.Palette),
-                        title = { Text(stringResource(R.string.liquid_glass)) },
+                        title = { Text(if (com.mrtdk.liquid_glass.BuildConfig.IS_LITE) "Diseño de interfaz" else stringResource(R.string.liquid_glass)) },
                         description = {
                             val currentStyle = LibraryManager.getGlassStyle()
-                            val currentStyleName = when (currentStyle) {
-                                "transparent" -> stringResource(R.string.vidrio_liquido_transparente)
-                                "solid" -> stringResource(R.string.estilo_solido_material3)
-                                else -> stringResource(R.string.vidrio_liquido_transparente)
+                            val currentStyleName = if (com.mrtdk.liquid_glass.BuildConfig.IS_LITE) {
+                                "Material 3 Expressive (Optimizado)"
+                            } else {
+                                when (currentStyle) {
+                                    "transparent" -> stringResource(R.string.vidrio_liquido_transparente)
+                                    "solid" -> stringResource(R.string.estilo_solido_material3)
+                                    else -> stringResource(R.string.vidrio_liquido_transparente)
+                                }
                             }
                             Text(currentStyleName)
                         },
-                        onClick = { showGlassStyleDialog = true }
+                        onClick = { if (!com.mrtdk.liquid_glass.BuildConfig.IS_LITE) showGlassStyleDialog = true }
                     ),
                     Material3SettingsItem(
                         icon = painterResource(id = R.drawable.nav_novedades),
@@ -229,7 +233,7 @@ fun MainSettingsMenu(
                         description = {
                             val currentStyleName = when (currentArtworkStyle) {
                                 "normal" -> stringResource(R.string.player_artwork_style_normal)
-                                "animated_fullartwork" -> stringResource(R.string.player_artwork_style_animated)
+                                "animated_fullartwork" -> if (com.mrtdk.liquid_glass.BuildConfig.IS_LITE) stringResource(R.string.player_artwork_style_fullartwork) else stringResource(R.string.player_artwork_style_animated)
                                 else -> stringResource(R.string.player_artwork_style_fullartwork)
                             }
                             Text(currentStyleName)
@@ -240,9 +244,13 @@ fun MainSettingsMenu(
                         icon = rememberPainter(Icons.Default.Tune),
                         title = { Text(stringResource(R.string.full_artwork_backdrop_style_title)) },
                         description = {
-                            val currentBackdropName = when (currentBackdropStyle) {
-                                "accord" -> stringResource(R.string.full_artwork_backdrop_style_accord)
-                                else -> stringResource(R.string.full_artwork_backdrop_style_apple_music)
+                            val currentBackdropName = if (com.mrtdk.liquid_glass.BuildConfig.IS_LITE) {
+                                stringResource(R.string.full_artwork_backdrop_style_accord)
+                            } else {
+                                when (currentBackdropStyle) {
+                                    "accord" -> stringResource(R.string.full_artwork_backdrop_style_accord)
+                                    else -> stringResource(R.string.full_artwork_backdrop_style_apple_music)
+                                }
                             }
                             Text(currentBackdropName)
                         },
@@ -405,14 +413,22 @@ fun MainSettingsMenu(
     }
 
     if (showArtworkStyleDialog) {
-        SingleChoiceDialog(
-            title = stringResource(R.string.player_artwork_style_title),
-            options = listOf(
+        val artworkOptions = if (com.mrtdk.liquid_glass.BuildConfig.IS_LITE) {
+            listOf(
+                "fullartwork" to stringResource(R.string.player_artwork_style_fullartwork),
+                "normal" to stringResource(R.string.player_artwork_style_normal)
+            )
+        } else {
+            listOf(
                 "fullartwork" to stringResource(R.string.player_artwork_style_fullartwork),
                 "normal" to stringResource(R.string.player_artwork_style_normal),
                 "animated_fullartwork" to stringResource(R.string.player_artwork_style_animated)
-            ),
-            selectedValue = currentArtworkStyle,
+            )
+        }
+        SingleChoiceDialog(
+            title = stringResource(R.string.player_artwork_style_title),
+            options = artworkOptions,
+            selectedValue = if (com.mrtdk.liquid_glass.BuildConfig.IS_LITE && currentArtworkStyle == "animated_fullartwork") "fullartwork" else currentArtworkStyle,
             onDismiss = { showArtworkStyleDialog = false },
             onSelect = {
                 LibraryManager.savePlayerArtworkStyle(it)
@@ -421,13 +437,20 @@ fun MainSettingsMenu(
     }
 
     if (showBackdropStyleDialog) {
-        SingleChoiceDialog(
-            title = stringResource(R.string.full_artwork_backdrop_style_title),
-            options = listOf(
+        val backdropOptions = if (com.mrtdk.liquid_glass.BuildConfig.IS_LITE) {
+            listOf(
+                "accord" to stringResource(R.string.full_artwork_backdrop_style_accord)
+            )
+        } else {
+            listOf(
                 "apple_music" to stringResource(R.string.full_artwork_backdrop_style_apple_music),
                 "accord" to stringResource(R.string.full_artwork_backdrop_style_accord)
-            ),
-            selectedValue = currentBackdropStyle,
+            )
+        }
+        SingleChoiceDialog(
+            title = stringResource(R.string.full_artwork_backdrop_style_title),
+            options = backdropOptions,
+            selectedValue = if (com.mrtdk.liquid_glass.BuildConfig.IS_LITE) "accord" else currentBackdropStyle,
             onDismiss = { showBackdropStyleDialog = false },
             onSelect = {
                 LibraryManager.saveFullArtworkBackdropStyle(it)
@@ -813,6 +836,15 @@ fun PlayerSettingsScreen(
     var autoDownloadOnLike by remember { mutableStateOf(LibraryManager.getString("auto_download_on_like", "false") == "true") }
     var persistentQueue by remember { mutableStateOf(LibraryManager.getString("persistent_queue", "true") == "true") }
 
+    var soundCheck by remember { mutableStateOf(LibraryManager.getString("sound_check_enabled", "false") == "true") }
+    var dolbyAtmos by remember { mutableStateOf(LibraryManager.getString("dolby_atmos_enabled", "false") == "true") }
+    var crossfadeEnabled by remember { mutableStateOf(LibraryManager.getString("automix_enabled", "false") == "true") }
+    var crossfadeDuration by remember { mutableStateOf(LibraryManager.getString("crossfade_duration", "5")?.toIntOrNull() ?: 5) }
+
+    val sleepTimerMode by com.mrtdk.liquid_glass.playback.SleepTimerManager.mode.collectAsState()
+    val sleepTimerRemaining by com.mrtdk.liquid_glass.playback.SleepTimerManager.remainingSeconds.collectAsState()
+    var showSleepTimerDialog by remember { mutableStateOf(false) }
+
     var showQualityDialog by remember { mutableStateOf(false) }
 
     Column(
@@ -871,6 +903,142 @@ fun PlayerSettingsScreen(
                         title = { Text(stringResource(R.string.player_eq_title)) },
                         description = { Text(stringResource(R.string.player_eq_desc)) },
                         onClick = onOpenEqualizer
+                    ),
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.VolumeUp),
+                        title = { Text(stringResource(R.string.settings_sound_check_title)) },
+                        description = { Text(stringResource(R.string.settings_sound_check_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = soundCheck,
+                                onCheckedChange = { value ->
+                                    soundCheck = value
+                                    LibraryManager.saveString("sound_check_enabled", value.toString())
+                                    com.mrtdk.liquid_glass.playback.MusicService.updateAudioEffects?.invoke()
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFFA243C))
+                            )
+                        },
+                        onClick = {
+                            val value = !soundCheck
+                            soundCheck = value
+                            LibraryManager.saveString("sound_check_enabled", value.toString())
+                            com.mrtdk.liquid_glass.playback.MusicService.updateAudioEffects?.invoke()
+                        }
+                    ),
+                    Material3SettingsItem(
+                        icon = painterResource(id = R.drawable.ic_dolby_atmos),
+                        title = { Text(stringResource(R.string.settings_dolby_atmos_title)) },
+                        description = {
+                            Text(
+                                if (dolbyAtmos) stringResource(R.string.settings_dolby_atmos_desc)
+                                else stringResource(R.string.settings_dolby_atmos_off)
+                            )
+                        },
+                        trailingContent = {
+                            Switch(
+                                checked = dolbyAtmos,
+                                onCheckedChange = { value ->
+                                    dolbyAtmos = value
+                                    LibraryManager.setDolbyAtmosEnabled(value)
+                                    com.mrtdk.liquid_glass.playback.MusicService.updateAudioEffects?.invoke()
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFFA243C))
+                            )
+                        },
+                        onClick = {
+                            val value = !dolbyAtmos
+                            dolbyAtmos = value
+                            LibraryManager.setDolbyAtmosEnabled(value)
+                            com.mrtdk.liquid_glass.playback.MusicService.updateAudioEffects?.invoke()
+                        }
+                    ),
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.CompareArrows),
+                        title = { Text(stringResource(R.string.settings_crossfade_title)) },
+                        description = {
+                            Text(
+                                if (crossfadeEnabled) stringResource(R.string.settings_crossfade_duration, crossfadeDuration)
+                                else stringResource(R.string.sleep_timer_off)
+                            )
+                        },
+                        trailingContent = {
+                            Switch(
+                                checked = crossfadeEnabled,
+                                onCheckedChange = { value ->
+                                    crossfadeEnabled = value
+                                    LibraryManager.saveString("automix_enabled", value.toString())
+                                    com.mrtdk.liquid_glass.playback.PlaybackQueue.isAutomixEnabled = value
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFFA243C))
+                            )
+                        },
+                        onClick = {
+                            val value = !crossfadeEnabled
+                            crossfadeEnabled = value
+                            LibraryManager.saveString("automix_enabled", value.toString())
+                            com.mrtdk.liquid_glass.playback.PlaybackQueue.isAutomixEnabled = value
+                        }
+                    )
+                )
+            )
+
+            if (crossfadeEnabled) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Duración del fundido",
+                            color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor.copy(alpha = 0.7f),
+                            fontSize = 13.sp
+                        )
+                        Text(
+                            text = "${crossfadeDuration} s",
+                            color = Color(0xFFFA243C),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Slider(
+                        value = crossfadeDuration.toFloat(),
+                        onValueChange = {
+                            crossfadeDuration = it.roundToInt()
+                            LibraryManager.saveString("crossfade_duration", crossfadeDuration.toString())
+                        },
+                        valueRange = 1f..12f,
+                        steps = 10,
+                        colors = SliderDefaults.colors(
+                            thumbColor = Color.White,
+                            activeTrackColor = Color(0xFFFA243C),
+                            inactiveTrackColor = Color.Gray.copy(alpha = 0.3f)
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Material3SettingsGroup(
+                title = stringResource(R.string.settings_sleep_timer_title),
+                items = listOf(
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.Bedtime),
+                        title = { Text(stringResource(R.string.settings_sleep_timer_title)) },
+                        description = {
+                            Text(
+                                com.mrtdk.liquid_glass.playback.SleepTimerManager.getFormattedRemaining()?.let {
+                                    stringResource(R.string.sleep_timer_active_prefix, it)
+                                } ?: stringResource(R.string.sleep_timer_off)
+                            )
+                        },
+                        onClick = { showSleepTimerDialog = true }
                     )
                 )
             )
@@ -963,7 +1131,43 @@ fun PlayerSettingsScreen(
             }
         )
     }
+
+    if (showSleepTimerDialog) {
+        val currentOption = when (sleepTimerMode) {
+            com.mrtdk.liquid_glass.playback.SleepTimerManager.TimerMode.OFF -> "off"
+            com.mrtdk.liquid_glass.playback.SleepTimerManager.TimerMode.END_OF_SONG -> "end_of_song"
+            com.mrtdk.liquid_glass.playback.SleepTimerManager.TimerMode.DURATION -> {
+                val rem = sleepTimerRemaining ?: 0L
+                if (rem > 45 * 60) "60"
+                else if (rem > 30 * 60) "45"
+                else if (rem > 15 * 60) "30"
+                else "15"
+            }
+        }
+        SingleChoiceDialog(
+            title = stringResource(R.string.settings_sleep_timer_title),
+            options = listOf(
+                "off" to stringResource(R.string.sleep_timer_off),
+                "15" to stringResource(R.string.sleep_timer_15m),
+                "30" to stringResource(R.string.sleep_timer_30m),
+                "45" to stringResource(R.string.sleep_timer_45m),
+                "60" to stringResource(R.string.sleep_timer_60m),
+                "end_of_song" to stringResource(R.string.sleep_timer_end_of_song)
+            ),
+            selectedValue = currentOption,
+            onDismiss = { showSleepTimerDialog = false },
+            onSelect = { option ->
+                when (option) {
+                    "off" -> com.mrtdk.liquid_glass.playback.SleepTimerManager.cancelTimer()
+                    "end_of_song" -> com.mrtdk.liquid_glass.playback.SleepTimerManager.startEndOfSong()
+                    else -> option.toIntOrNull()?.let { com.mrtdk.liquid_glass.playback.SleepTimerManager.startTimerMinutes(it) }
+                }
+                showSleepTimerDialog = false
+            }
+        )
+    }
 }
+
 
 // Sub-screen: Listen Together
 @Composable

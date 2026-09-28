@@ -291,7 +291,7 @@ fun NovedadesScreen(
     // Auto-scrolling pager
     val pagerState = rememberPagerState(pageCount = { state.featuredAlbums.size.coerceAtLeast(1) })
     LaunchedEffect(pagerState, state.featuredAlbums.size) {
-        if (state.featuredAlbums.size <= 1) return@LaunchedEffect
+        if (state.featuredAlbums.size <= 1 || com.mrtdk.liquid_glass.BuildConfig.IS_LITE) return@LaunchedEffect
         while (true) { delay(4500); pagerState.animateScrollToPage((pagerState.currentPage + 1) % state.featuredAlbums.size) }
     }
 

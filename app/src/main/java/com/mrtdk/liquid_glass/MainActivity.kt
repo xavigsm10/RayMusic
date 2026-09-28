@@ -141,8 +141,8 @@ class MainActivity : ComponentActivity() {
 
         // Configure global Coil ImageLoader with adaptive memory and disk caches
         val activityManager = getSystemService(android.content.Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
-        val isLowRam = activityManager?.isLowRamDevice == true
-        val memoryPercent = if (isLowRam) 0.15 else 0.25
+        val isLowRam = activityManager?.isLowRamDevice == true || BuildConfig.IS_LITE
+        val memoryPercent = if (BuildConfig.IS_LITE) 0.12 else if (isLowRam) 0.15 else 0.25
         val globalImageLoader = coil.ImageLoader.Builder(this)
             .memoryCache {
                 coil.memory.MemoryCache.Builder(this)
@@ -156,7 +156,8 @@ class MainActivity : ComponentActivity() {
                     .build()
             }
             .allowHardware(!isLowRam)
-            .crossfade(true)
+            .allowRgb565(isLowRam)
+            .crossfade(!BuildConfig.IS_LITE)
             .components {
                 if (android.os.Build.VERSION.SDK_INT >= 28) {
                     add(coil.decode.ImageDecoderDecoder.Factory())
@@ -639,7 +640,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    val effectiveGlassStyle = if (isUltraPerformance) "solid" else glassStyle
+                    val effectiveGlassStyle = if (isUltraPerformance || BuildConfig.IS_LITE) "solid" else glassStyle
                     val onArtistSelectedAction: (ArtistState) -> Unit = remember { { artistDetail = it } }
                     val onAlbumSelectedAction: (AlbumState) -> Unit = remember { { albumDetail = it } }
                     val onVideoSelectedAction: (String) -> Unit = remember(musicPlayer) { { videoId ->
@@ -651,7 +652,7 @@ class MainActivity : ComponentActivity() {
 
                     CompositionLocalProvider(
                         com.mrtdk.glass.LocalGlassStyle provides effectiveGlassStyle,
-                        com.mrtdk.glass.LocalLightweightGlass provides isLightweightGlass
+                        com.mrtdk.glass.LocalLightweightGlass provides (isLightweightGlass || BuildConfig.IS_LITE)
                     ) {
                         Scaffold(
                             modifier = Modifier.fillMaxSize(),
@@ -670,7 +671,7 @@ class MainActivity : ComponentActivity() {
                                             state = pagerState,
                                             modifier = Modifier.fillMaxSize().background(Color.Black),
                                             userScrollEnabled = false,
-                                            beyondViewportPageCount = 1,
+                                            beyondViewportPageCount = if (BuildConfig.IS_LITE) 0 else 1,
                                         ) { page ->
                                             when (page) {
                                                 0 -> InicioScreen(
@@ -997,18 +998,17 @@ class MainActivity : ComponentActivity() {
                                                     bottomTabsStyle = bottomTabsStyle
                                                 )
                                             }
-                                            if (updateReleaseInfo != null) {
-                                                scope.UpdateDialog(
-                                                    releaseInfo = updateReleaseInfo!!,
-                                                    onDismiss = { updateReleaseInfo = null }
-                                                )
-                                            }
                                             if (showWhatsNewDialog) {
                                                 scope.WhatsNewDialog(
                                                     onDismiss = {
                                                         showWhatsNewDialog = false
                                                         LibraryManager.saveString("last_seen_version", BuildConfig.VERSION_NAME)
                                                     }
+                                                )
+                                            } else if (updateReleaseInfo != null) {
+                                                scope.UpdateDialog(
+                                                    releaseInfo = updateReleaseInfo!!,
+                                                    onDismiss = { updateReleaseInfo = null }
                                                 )
                                             }
                                         }

@@ -49,6 +49,8 @@ class MusicService : MediaSessionService() {
 
     private lateinit var eqProcessorA: com.mrtdk.liquid_glass.playback.eq.CustomEqualizerAudioProcessor
     private lateinit var eqProcessorB: com.mrtdk.liquid_glass.playback.eq.CustomEqualizerAudioProcessor
+    private lateinit var spatialProcessorA: com.mrtdk.liquid_glass.playback.spatial.SpatialAudioProcessor
+    private lateinit var spatialProcessorB: com.mrtdk.liquid_glass.playback.spatial.SpatialAudioProcessor
 
     private val serviceJob = Job()
     private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
@@ -71,9 +73,52 @@ class MusicService : MediaSessionService() {
     private var radioRefillJob: Job? = null
     private val songRetryCounts = java.util.concurrent.ConcurrentHashMap<String, Int>()
 
+    private var loudnessEnhancer: android.media.audiofx.LoudnessEnhancer? = null
+    private var virtualizer: android.media.audiofx.Virtualizer? = null
+    private var currentLoudnessSessionId: Int = -1
+    private var currentVirtualizerSessionId: Int = -1
+
+    private fun applySoundCheckIfNeeded(audioSessionId: Int) {
+        try {
+            val isSoundCheck = com.mrtdk.liquid_glass.data.LibraryManager.getString("sound_check_enabled", "false") == "true"
+            if (audioSessionId > 0 && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
+                if (loudnessEnhancer == null || currentLoudnessSessionId != audioSessionId || loudnessEnhancer?.hasControl() != true) {
+                    try { loudnessEnhancer?.release() } catch (_: Exception) {}
+                    loudnessEnhancer = android.media.audiofx.LoudnessEnhancer(audioSessionId)
+                    currentLoudnessSessionId = audioSessionId
+                }
+                loudnessEnhancer?.setTargetGain(if (isSoundCheck) 180 else 0)
+                loudnessEnhancer?.enabled = isSoundCheck
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("MusicService", "SoundCheck / LoudnessEnhancer notice: ${e.message}")
+        }
+    }
+
+    private fun applyDolbyAtmosIfNeeded(audioSessionId: Int) {
+        try {
+            val isDolbyAtmos = com.mrtdk.liquid_glass.data.LibraryManager.getString("dolby_atmos_enabled", "false") == "true"
+            com.mrtdk.liquid_glass.playback.spatial.SpatialAudioManager.setSpatialEnabled(isDolbyAtmos)
+            if (audioSessionId > 0) {
+                if (virtualizer == null || currentVirtualizerSessionId != audioSessionId || virtualizer?.hasControl() != true) {
+                    try { virtualizer?.release() } catch (_: Exception) {}
+                    virtualizer = android.media.audiofx.Virtualizer(0, audioSessionId)
+                    currentVirtualizerSessionId = audioSessionId
+                }
+                virtualizer?.enabled = isDolbyAtmos
+                if (isDolbyAtmos && virtualizer?.strengthSupported == true) {
+                    virtualizer?.setStrength(1000.toShort())
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("MusicService", "DolbyAtmos / Virtualizer notice: ${e.message}")
+        }
+    }
+
     private val mediaAudioAttributes: AudioAttributes = AudioAttributes.Builder()
         .setUsage(C.USAGE_MEDIA)
         .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+        .setSpatializationBehavior(C.SPATIALIZATION_BEHAVIOR_AUTO)
         .build()
 
     private fun buildMediaItem(state: com.mrtdk.liquid_glass.ui.screens.PlayerState): androidx.media3.common.MediaItem {
@@ -259,6 +304,9 @@ class MusicService : MediaSessionService() {
         activePlayer = standbyPlayer
         standbyPlayer = temp
 
+        applySoundCheckIfNeeded(activePlayer.audioSessionId)
+        applyDolbyAtmosIfNeeded(activePlayer.audioSessionId)
+
         val currentQueueSong = com.mrtdk.liquid_glass.playback.PlaybackQueue.currentSong
         val targetKey = targetState.videoId ?: targetState.contentUri?.toString()
         val currentKey = currentQueueSong?.videoId ?: currentQueueSong?.contentUri?.toString()
@@ -291,11 +339,15 @@ class MusicService : MediaSessionService() {
                 if (!activePlayer.isPlaying || isCrossfading) continue
                 val dur = activePlayer.duration
                 val pos = activePlayer.currentPosition
-                if (dur > 15_000L && pos > 0L) {
+                val cfSec = com.mrtdk.liquid_glass.data.LibraryManager.getString("crossfade_duration", "5")?.toIntOrNull()?.coerceIn(1, 12) ?: 5
+                val cfDurationMs = cfSec * 1000L
+                val preloadThresholdMs = (cfDurationMs + 8000L).coerceAtLeast(14000L)
+
+                if (dur > (cfDurationMs + 5000L) && pos > 0L) {
                     val remainingMs = dur - pos
 
-                    // 1. Preload next song at 22s before end
-                    if (remainingMs in 8_600L..25_000L && !isPreloading) {
+                    // 1. Preload next song
+                    if (remainingMs in (cfDurationMs + 600L)..preloadThresholdMs && !isPreloading) {
                         val nextSong = com.mrtdk.liquid_glass.playback.PlaybackQueue.peekNextSong(activePlayer.repeatMode)
                         if (nextSong != null) {
                             val key = nextSong.videoId ?: nextSong.contentUri?.toString() ?: nextSong.title
@@ -305,18 +357,18 @@ class MusicService : MediaSessionService() {
                         }
                     }
 
-                    // 2. Trigger crossfade at 8.0s before end
-                    if (remainingMs in 100L..8_500L && !isCrossfading) {
+                    // 2. Trigger crossfade at dynamic threshold
+                    if (remainingMs in 100L..(cfDurationMs + 400L) && !isCrossfading) {
                         val nextSong = preloadedState ?: com.mrtdk.liquid_glass.playback.PlaybackQueue.peekNextSong(activePlayer.repeatMode)
                         if (nextSong != null) {
                             startCrossfadeTransition(
-                                durationMs = remainingMs.coerceIn(4500L, 8000L),
+                                durationMs = remainingMs.coerceIn(1000L, cfDurationMs),
                                 targetState = nextSong,
                                 isNaturalEnding = true
                             )
                         }
                     }
-                } else if (dur in 1L..15_000L && pos > 0L) {
+                } else if (dur in 1L..(cfDurationMs + 5000L) && pos > 0L) {
                     val remainingMs = dur - pos
                     if (!isPreloading && preloadedSongKey == null) {
                         val nextSong = com.mrtdk.liquid_glass.playback.PlaybackQueue.peekNextSong(activePlayer.repeatMode)
@@ -328,7 +380,7 @@ class MusicService : MediaSessionService() {
                         val nextSong = preloadedState ?: com.mrtdk.liquid_glass.playback.PlaybackQueue.peekNextSong(activePlayer.repeatMode)
                         if (nextSong != null) {
                             startCrossfadeTransition(
-                                durationMs = remainingMs.coerceAtLeast(1500L),
+                                durationMs = remainingMs.coerceAtLeast(1000L),
                                 targetState = nextSong,
                                 isNaturalEnding = true
                             )
@@ -474,6 +526,8 @@ class MusicService : MediaSessionService() {
 
                 if (playbackState == Player.STATE_READY) {
                     songRetryCounts.clear()
+                    applySoundCheckIfNeeded(targetPlayer.audioSessionId)
+                    applyDolbyAtmosIfNeeded(targetPlayer.audioSessionId)
                     if (targetPlayer == activePlayer && com.mrtdk.liquid_glass.playback.PlaybackQueue.isAutomixEnabled) {
                         startTrackEndMonitor()
                     }
@@ -481,6 +535,9 @@ class MusicService : MediaSessionService() {
 
                 if (playbackState == Player.STATE_ENDED) {
                     if (targetPlayer == activePlayer && !isCrossfading) {
+                        if (com.mrtdk.liquid_glass.playback.SleepTimerManager.onSongFinishedNaturally()) {
+                            return
+                        }
                         val nextState = com.mrtdk.liquid_glass.playback.PlaybackQueue.getNextSongAndAdvance(activePlayer.repeatMode)
                         if (nextState != null) {
                             playSongState(nextState)
@@ -527,6 +584,7 @@ class MusicService : MediaSessionService() {
 
     private fun createPlayerInstance(
         processor: com.mrtdk.liquid_glass.playback.eq.CustomEqualizerAudioProcessor,
+        spatialProcessor: com.mrtdk.liquid_glass.playback.spatial.SpatialAudioProcessor,
         handleAudioFocus: Boolean,
         dataSourceFactory: androidx.media3.datasource.DataSource.Factory,
         extractorsFactory: androidx.media3.extractor.ExtractorsFactory
@@ -538,8 +596,8 @@ class MusicService : MediaSessionService() {
                 enableAudioTrackPlaybackParams: Boolean
             ): androidx.media3.exoplayer.audio.AudioSink? {
                 return androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(context)
-                    .setAudioProcessors(arrayOf(processor))
-                    .setEnableFloatOutput(enableFloatOutput)
+                    .setAudioProcessors(arrayOf(processor, spatialProcessor))
+                    .setEnableFloatOutput(false)
                     .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
                     .build()
             }
@@ -715,6 +773,43 @@ class MusicService : MediaSessionService() {
         com.mrtdk.liquid_glass.playback.eq.EqualizerService.addAudioProcessor(eqProcessorA)
         com.mrtdk.liquid_glass.playback.eq.EqualizerService.addAudioProcessor(eqProcessorB)
 
+        spatialProcessorA = com.mrtdk.liquid_glass.playback.spatial.SpatialAudioProcessor()
+        spatialProcessorB = com.mrtdk.liquid_glass.playback.spatial.SpatialAudioProcessor()
+        com.mrtdk.liquid_glass.playback.spatial.SpatialAudioManager.addProcessor(spatialProcessorA)
+        com.mrtdk.liquid_glass.playback.spatial.SpatialAudioManager.addProcessor(spatialProcessorB)
+
+        com.mrtdk.liquid_glass.playback.SleepTimerManager.onPerformFadeOutAndPause = { durationMs, onComplete ->
+            serviceScope.launch {
+                try {
+                    if (activePlayer.isPlaying) {
+                        val steps = 20
+                        val stepDelay = (durationMs / steps).coerceAtLeast(40L)
+                        for (i in steps downTo 0) {
+                            activePlayer.volume = (i.toFloat() / steps.toFloat()).coerceIn(0f, 1f)
+                            delay(stepDelay)
+                        }
+                        activePlayer.pause()
+                        activePlayer.volume = 1f
+                    }
+                } catch (_: Exception) {}
+                onComplete()
+            }
+        }
+        com.mrtdk.liquid_glass.playback.SleepTimerManager.onPauseImmediate = {
+            serviceScope.launch {
+                try {
+                    activePlayer.pause()
+                } catch (_: Exception) {}
+            }
+        }
+
+        updateAudioEffects = {
+            if (::activePlayer.isInitialized) {
+                applySoundCheckIfNeeded(activePlayer.audioSessionId)
+                applyDolbyAtmosIfNeeded(activePlayer.audioSessionId)
+            }
+        }
+
         com.mrtdk.liquid_glass.utils.YTPlayerUtils.init(applicationContext)
         serviceScope.launch(Dispatchers.IO) {
             com.echo.innertube.YouTubeExtractor.ensureInitialized()
@@ -744,8 +839,8 @@ class MusicService : MediaSessionService() {
             )
         }
 
-        playerA = createPlayerInstance(eqProcessorA, handleAudioFocus = true, dataSourceFactory = dataSourceFactory, extractorsFactory = extractorsFactory)
-        playerB = createPlayerInstance(eqProcessorB, handleAudioFocus = false, dataSourceFactory = dataSourceFactory, extractorsFactory = extractorsFactory)
+        playerA = createPlayerInstance(eqProcessorA, spatialProcessorA, handleAudioFocus = true, dataSourceFactory = dataSourceFactory, extractorsFactory = extractorsFactory)
+        playerB = createPlayerInstance(eqProcessorB, spatialProcessorB, handleAudioFocus = false, dataSourceFactory = dataSourceFactory, extractorsFactory = extractorsFactory)
 
         playerA.addListener(createPlayerListener(playerA))
         playerB.addListener(createPlayerListener(playerB))
@@ -882,6 +977,12 @@ class MusicService : MediaSessionService() {
         if (::eqProcessorB.isInitialized) {
             com.mrtdk.liquid_glass.playback.eq.EqualizerService.removeAudioProcessor(eqProcessorB)
         }
+        if (::spatialProcessorA.isInitialized) {
+            com.mrtdk.liquid_glass.playback.spatial.SpatialAudioManager.removeProcessor(spatialProcessorA)
+        }
+        if (::spatialProcessorB.isInitialized) {
+            com.mrtdk.liquid_glass.playback.spatial.SpatialAudioManager.removeProcessor(spatialProcessorB)
+        }
         mediaSession?.run {
             player.release()
             release()
@@ -893,6 +994,17 @@ class MusicService : MediaSessionService() {
         if (::playerB.isInitialized) {
             playerB.release()
         }
+        updateAudioEffects = null
+        try {
+            loudnessEnhancer?.release()
+            loudnessEnhancer = null
+        } catch (_: Exception) {}
+        try {
+            virtualizer?.release()
+            virtualizer = null
+        } catch (_: Exception) {}
+        com.mrtdk.liquid_glass.playback.SleepTimerManager.onPerformFadeOutAndPause = null
+        com.mrtdk.liquid_glass.playback.SleepTimerManager.onPauseImmediate = null
         super.onDestroy()
     }
 
@@ -1175,5 +1287,6 @@ class MusicService : MediaSessionService() {
         const val CHANNEL_ID = "music_channel_01"
         const val NOTIFICATION_ID = 888
         const val CHUNK_LENGTH = 512 * 1024L
+        var updateAudioEffects: (() -> Unit)? = null
     }
 }

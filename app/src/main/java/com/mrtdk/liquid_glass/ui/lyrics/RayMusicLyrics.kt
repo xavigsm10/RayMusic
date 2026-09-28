@@ -1175,7 +1175,7 @@ private fun LyricsSkeleton(modifier: Modifier = Modifier) {
 }
 
 private fun Modifier.lyricBlur(radius: Dp): Modifier =
-    if (radius > 0.dp && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    if (radius > 0.dp && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !com.mrtdk.liquid_glass.BuildConfig.IS_LITE) {
         this.blur(radius, BlurredEdgeTreatment.Unbounded)
     } else {
         this

@@ -101,6 +101,9 @@ object PerformanceProfileManager {
     }
 
     fun detectTier(context: Context): PerformanceTier {
+        if (com.mrtdk.liquid_glass.BuildConfig.IS_LITE) {
+            return PerformanceTier.LOW_END
+        }
         val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
         val memInfo = ActivityManager.MemoryInfo()
         am?.getMemoryInfo(memInfo)

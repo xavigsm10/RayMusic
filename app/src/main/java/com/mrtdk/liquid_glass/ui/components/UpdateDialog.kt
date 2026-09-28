@@ -26,6 +26,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.stringResource
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.compositeOver
 import com.mrtdk.liquid_glass.R
 import com.mrtdk.liquid_glass.utils.Updater
 import com.mrtdk.glass.GlassBoxScope
@@ -36,6 +39,31 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun GlassBoxScope.UpdateDialog(
+    releaseInfo: Updater.ReleaseInfo,
+    onDismiss: () -> Unit
+) {
+    UpdateDialogContent(
+        glassScope = this,
+        releaseInfo = releaseInfo,
+        onDismiss = onDismiss
+    )
+}
+
+@Composable
+fun UpdateDialog(
+    releaseInfo: Updater.ReleaseInfo,
+    onDismiss: () -> Unit
+) {
+    UpdateDialogContent(
+        glassScope = null,
+        releaseInfo = releaseInfo,
+        onDismiss = onDismiss
+    )
+}
+
+@Composable
+private fun UpdateDialogContent(
+    glassScope: GlassBoxScope?,
     releaseInfo: Updater.ReleaseInfo,
     onDismiss: () -> Unit
 ) {
@@ -68,6 +96,10 @@ fun GlassBoxScope.UpdateDialog(
 
     val dominantColor by LibraryManager.currentDominantColor.collectAsState()
 
+    val isSolid = com.mrtdk.liquid_glass.BuildConfig.IS_LITE ||
+            com.mrtdk.glass.LocalGlassStyle.current == "solid"
+    val isDark = com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState().value
+
     fun handleDismiss() {
         if (!downloading) {
             visible = false
@@ -83,7 +115,7 @@ fun GlassBoxScope.UpdateDialog(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.4f))
+            .background(Color.Black.copy(alpha = if (isSolid) 0.65f else 0.4f))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -96,30 +128,170 @@ fun GlassBoxScope.UpdateDialog(
     ) {
         val menuWidth = 345.dp
 
-        this@UpdateDialog.GlassBox(
-            modifier = Modifier
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                    this.alpha = alpha
-                }
-                .width(menuWidth)
-                .wrapContentHeight(),
-            blur = 0.85f,
-            scale = 0.02f,
-            centerDistortion = 0.1f,
-            warpEdges = 0.4f,
-            elevation = 6.dp,
-            shape = RoundedCornerShape(cornerRadius.dp),
-            tint = dominantColor.copy(alpha = 0.28f),
-            darkness = 0.25f
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 18.dp)
+        val cardModifier = Modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+                this.alpha = alpha
+            }
+            .width(menuWidth)
+            .wrapContentHeight()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { /* Prevent dismissing on card click */ }
+
+        if (isSolid) {
+            val surfaceBg = if (isDark) dominantColor.copy(alpha = 0.12f).compositeOver(Color(0xFF22232A)) else Color(0xFFFFFFFF)
+            val surfaceBorder = if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.08f)
+            Surface(
+                modifier = cardModifier,
+                shape = RoundedCornerShape(cornerRadius.dp),
+                color = surfaceBg,
+                shadowElevation = 16.dp,
+                tonalElevation = 6.dp,
+                border = BorderStroke(1.dp, surfaceBorder)
             ) {
+                UpdateInnerContent(
+                    context = context,
+                    releaseInfo = releaseInfo,
+                    isSolid = true,
+                    isDark = isDark,
+                    downloading = downloading,
+                    progress = progress,
+                    downloadComplete = downloadComplete,
+                    apkFile = apkFile,
+                    onStartDownload = {
+                        downloading = true
+                        Updater.downloadApk(context, releaseInfo.downloadUrl, { p ->
+                            progress = p
+                        }, { file ->
+                            downloading = false
+                            if (file != null) {
+                                downloadComplete = true
+                                apkFile = file
+                            } else {
+                                handleDismiss()
+                            }
+                        })
+                    },
+                    onInstallApk = {
+                        apkFile?.let { Updater.installApk(context, it) }
+                    },
+                    onDismiss = { handleDismiss() }
+                )
+            }
+        } else if (glassScope != null) {
+            glassScope.GlassBox(
+                modifier = cardModifier,
+                blur = 0.85f,
+                scale = 0.02f,
+                centerDistortion = 0.1f,
+                warpEdges = 0.4f,
+                elevation = 6.dp,
+                shape = RoundedCornerShape(cornerRadius.dp),
+                tint = dominantColor.copy(alpha = 0.28f),
+                darkness = 0.25f
+            ) {
+                UpdateInnerContent(
+                    context = context,
+                    releaseInfo = releaseInfo,
+                    isSolid = false,
+                    isDark = isDark,
+                    downloading = downloading,
+                    progress = progress,
+                    downloadComplete = downloadComplete,
+                    apkFile = apkFile,
+                    onStartDownload = {
+                        downloading = true
+                        Updater.downloadApk(context, releaseInfo.downloadUrl, { p ->
+                            progress = p
+                        }, { file ->
+                            downloading = false
+                            if (file != null) {
+                                downloadComplete = true
+                                apkFile = file
+                            } else {
+                                handleDismiss()
+                            }
+                        })
+                    },
+                    onInstallApk = {
+                        apkFile?.let { Updater.installApk(context, it) }
+                    },
+                    onDismiss = { handleDismiss() }
+                )
+            }
+        } else {
+            Surface(
+                modifier = cardModifier
+                    .border(
+                        1.dp,
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.3f),
+                                Color.White.copy(alpha = 0.08f)
+                            )
+                        ),
+                        RoundedCornerShape(cornerRadius.dp)
+                    ),
+                shape = RoundedCornerShape(cornerRadius.dp),
+                color = Color(0xFF18181C).copy(alpha = 0.95f),
+                tonalElevation = 8.dp
+            ) {
+                UpdateInnerContent(
+                    context = context,
+                    releaseInfo = releaseInfo,
+                    isSolid = false,
+                    isDark = isDark,
+                    downloading = downloading,
+                    progress = progress,
+                    downloadComplete = downloadComplete,
+                    apkFile = apkFile,
+                    onStartDownload = {
+                        downloading = true
+                        Updater.downloadApk(context, releaseInfo.downloadUrl, { p ->
+                            progress = p
+                        }, { file ->
+                            downloading = false
+                            if (file != null) {
+                                downloadComplete = true
+                                apkFile = file
+                            } else {
+                                handleDismiss()
+                            }
+                        })
+                    },
+                    onInstallApk = {
+                        apkFile?.let { Updater.installApk(context, it) }
+                    },
+                    onDismiss = { handleDismiss() }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun UpdateInnerContent(
+    context: android.content.Context,
+    releaseInfo: Updater.ReleaseInfo,
+    isSolid: Boolean,
+    isDark: Boolean,
+    downloading: Boolean,
+    progress: Float,
+    downloadComplete: Boolean,
+    apkFile: File?,
+    onStartDownload: () -> Unit,
+    onInstallApk: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 18.dp)
+    ) {
                 // Rocket / Sparkle icon badge
                 Box(
                     modifier = Modifier
@@ -148,7 +320,7 @@ fun GlassBoxScope.UpdateDialog(
 
                 Text(
                     text = stringResource(R.string.actualizacion_disponible),
-                    color = Color.White,
+                    color = if (isDark) Color.White else Color(0xFF1C1C1E),
                     fontSize = 19.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
@@ -174,7 +346,7 @@ fun GlassBoxScope.UpdateDialog(
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "RayMusic",
-                        color = Color.White.copy(alpha = 0.7f),
+                        color = if (isDark) Color.White.copy(alpha = 0.7f) else Color(0xFF1C1C1E).copy(alpha = 0.7f),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium
                     )
@@ -192,8 +364,22 @@ fun GlassBoxScope.UpdateDialog(
                         .padding(horizontal = 16.dp)
                         .heightIn(min = 140.dp, max = 260.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Color.White.copy(alpha = 0.05f))
-                        .border(0.5.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
+                        .background(
+                            if (isSolid) {
+                                if (isDark) Color(0xFF2C2D35) else Color(0xFFF1F2F8)
+                            } else {
+                                Color.White.copy(alpha = 0.05f)
+                            }
+                        )
+                        .border(
+                            if (isSolid) 1.dp else 0.5.dp,
+                            if (isSolid) {
+                                if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.08f)
+                            } else {
+                                Color.White.copy(alpha = 0.12f)
+                            },
+                            RoundedCornerShape(16.dp)
+                        )
                 ) {
                     Column(
                         modifier = Modifier
@@ -203,7 +389,7 @@ fun GlassBoxScope.UpdateDialog(
                     ) {
                         Text(
                             text = "Novedades de la versión:",
-                            color = Color.White,
+                            color = if (isDark) Color.White else Color(0xFF1C1C1E),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(bottom = 6.dp)
@@ -241,7 +427,7 @@ fun GlassBoxScope.UpdateDialog(
                                             )
                                             Text(
                                                 text = content.replace("**", ""),
-                                                color = Color.White.copy(alpha = 0.85f),
+                                                color = if (isDark) Color.White.copy(alpha = 0.85f) else Color(0xFF1C1C1E).copy(alpha = 0.85f),
                                                 fontSize = 11.5.sp,
                                                 lineHeight = 15.sp
                                             )
@@ -250,7 +436,7 @@ fun GlassBoxScope.UpdateDialog(
                                     trimmed.isNotBlank() && !trimmed.startsWith("#") && !trimmed.startsWith("---") -> {
                                         Text(
                                             text = trimmed.replace("**", ""),
-                                            color = Color.White.copy(alpha = 0.75f),
+                                            color = if (isDark) Color.White.copy(alpha = 0.75f) else Color(0xFF1C1C1E).copy(alpha = 0.75f),
                                             fontSize = 11.5.sp,
                                             lineHeight = 15.sp,
                                             modifier = Modifier.padding(vertical = 2.dp)
@@ -275,7 +461,7 @@ fun GlassBoxScope.UpdateDialog(
                                     Spacer(modifier = Modifier.width(5.dp))
                                     Text(
                                         text = cat.categoryName,
-                                        color = Color.White,
+                                        color = if (isDark) Color.White else Color(0xFF1C1C1E),
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.SemiBold
                                     )
@@ -297,13 +483,13 @@ fun GlassBoxScope.UpdateDialog(
                                         Column {
                                             Text(
                                                 text = item.title,
-                                                color = Color.White.copy(alpha = 0.9f),
+                                                color = if (isDark) Color.White.copy(alpha = 0.9f) else Color(0xFF1C1C1E).copy(alpha = 0.9f),
                                                 fontSize = 11.5.sp,
                                                 fontWeight = FontWeight.Medium
                                             )
                                             Text(
                                                 text = item.description,
-                                                color = Color.White.copy(alpha = 0.65f),
+                                                color = if (isDark) Color.White.copy(alpha = 0.65f) else Color(0xFF1C1C1E).copy(alpha = 0.65f),
                                                 fontSize = 11.sp,
                                                 lineHeight = 14.sp
                                             )
@@ -325,7 +511,14 @@ fun GlassBoxScope.UpdateDialog(
                                 .height(26.dp)
                                 .background(
                                     androidx.compose.ui.graphics.Brush.verticalGradient(
-                                        listOf(Color.Transparent, Color(0xFF16161A).copy(alpha = 0.9f))
+                                        listOf(
+                                            Color.Transparent,
+                                            if (isSolid) {
+                                                if (isDark) Color(0xFF2C2D35) else Color(0xFFF1F2F8)
+                                            } else {
+                                                Color(0xFF16161A).copy(alpha = 0.9f)
+                                            }
+                                        )
                                     )
                                 ),
                             contentAlignment = Alignment.Center
@@ -335,14 +528,14 @@ fun GlassBoxScope.UpdateDialog(
                             ) {
                                 Text(
                                     text = "Desliza para ver más",
-                                    color = Color.White.copy(alpha = 0.6f),
+                                    color = if (isDark) Color.White.copy(alpha = 0.6f) else Color(0xFF1C1C1E).copy(alpha = 0.6f),
                                     fontSize = 10.sp
                                 )
                                 Spacer(modifier = Modifier.width(3.dp))
                                 Icon(
                                     imageVector = Icons.Default.KeyboardArrowDown,
                                     contentDescription = null,
-                                    tint = Color.White.copy(alpha = 0.6f),
+                                    tint = if (isDark) Color.White.copy(alpha = 0.6f) else Color(0xFF1C1C1E).copy(alpha = 0.6f),
                                     modifier = Modifier.size(14.dp)
                                 )
                             }
@@ -354,7 +547,7 @@ fun GlassBoxScope.UpdateDialog(
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = stringResource(R.string.descargando, (progress * 100).toInt()),
-                        color = Color.LightGray,
+                        color = if (isDark) Color.LightGray else Color.DarkGray,
                         fontSize = 12.sp,
                         textAlign = TextAlign.Center
                     )
@@ -373,7 +566,7 @@ fun GlassBoxScope.UpdateDialog(
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                HorizontalDivider(color = if (isDark) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.08f))
                 
                 if (!downloadComplete && !downloading) {
                     Row(
@@ -385,30 +578,17 @@ fun GlassBoxScope.UpdateDialog(
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxHeight()
-                                .clickable { handleDismiss() },
+                                .clickable { onDismiss() },
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(text = stringResource(R.string.cancelar), color = Color.LightGray, fontSize = 16.sp)
+                            Text(text = stringResource(R.string.cancelar), color = if (isDark) Color.LightGray else Color(0xFF707074), fontSize = 16.sp)
                         }
-                        Box(modifier = Modifier.width(0.5.dp).fillMaxHeight().background(Color.White.copy(alpha = 0.1f)))
+                        Box(modifier = Modifier.width(0.5.dp).fillMaxHeight().background(if (isDark) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.08f)))
                         Box(
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxHeight()
-                                .clickable {
-                                    downloading = true
-                                    Updater.downloadApk(context, releaseInfo.downloadUrl, { p ->
-                                        progress = p
-                                    }, { file ->
-                                        downloading = false
-                                        if (file != null) {
-                                            downloadComplete = true
-                                            apkFile = file
-                                        } else {
-                                            handleDismiss()
-                                        }
-                                    })
-                                },
+                                .clickable { onStartDownload() },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(text = stringResource(R.string.actualizar), color = Color(0xFFFA243C), fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -428,15 +608,11 @@ fun GlassBoxScope.UpdateDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(44.dp)
-                            .clickable {
-                                apkFile?.let { Updater.installApk(context, it) }
-                            },
+                            .clickable { onInstallApk() },
                         contentAlignment = Alignment.Center
                     ) {
                         Text(text = stringResource(R.string.instalar), color = Color(0xFFFA243C), fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
-        }
-    }
 }

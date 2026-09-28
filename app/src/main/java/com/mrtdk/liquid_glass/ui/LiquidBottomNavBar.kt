@@ -182,7 +182,8 @@ fun LiquidBottomNavBar(
     val isLightweight = com.mrtdk.glass.LocalLightweightGlass.current
     val isUltraPerf by com.mrtdk.liquid_glass.data.LibraryManager.ultraPerformanceMode.collectAsState()
     val isSolid = glassStyle == "solid" || isUltraPerf
-    val solidBgColor = if (isDarkMode) Color(0xFF242428) else Color(0xFFE8E8EC)
+    val solidBgColor = if (isDarkMode) Color(0xFF1E1F25) else Color(0xFFF0F1F6)
+    val m3PillBorderColor = if (isDarkMode) Color.White.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.06f)
 
     var lastActiveMainTab by remember { mutableIntStateOf(0) }
     LaunchedEffect(selectedIndex) {
@@ -234,6 +235,7 @@ fun LiquidBottomNavBar(
             Modifier
                 .clip(MiniPlayerShape)
                 .background(solidBgColor)
+                .border(width = 1.dp, color = m3PillBorderColor, shape = MiniPlayerShape)
         } else if (isFondoCompleto) {
             Modifier
                 .clip(MiniPlayerShape)
@@ -272,6 +274,7 @@ fun LiquidBottomNavBar(
             Modifier
                 .clip(MiniPlayerShape)
                 .background(solidBgColor)
+                .border(width = 1.dp, color = m3PillBorderColor, shape = MiniPlayerShape)
         } else if (isFondoCompleto) {
             Modifier
                 .clip(MiniPlayerShape)

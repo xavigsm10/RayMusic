@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -23,8 +24,10 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
@@ -122,7 +125,7 @@ fun ExpoGlassPill(
 ) {
     val glassStyle = LocalGlassStyle.current
     val isLightweight = LocalLightweightGlass.current
-    val isSolid = glassStyle == "solid"
+    val isSolid = glassStyle == "solid" || com.mrtdk.liquid_glass.BuildConfig.IS_LITE
     val interactionSource = remember { MutableInteractionSource() }
     val animationScope = rememberCoroutineScope()
     val effectsSupported = isRenderEffectSupported()
@@ -150,13 +153,20 @@ fun ExpoGlassPill(
     }
 
     if (isSolid) {
+        val isDark = com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState().value
+        val baseBg = if (isDark) Color(0xFF26272E) else Color(0xFFE8E9F0)
+        val pillBg = if (resolvedTint.isSpecified) {
+            if (resolvedTint.alpha < 1f) resolvedTint.compositeOver(baseBg) else resolvedTint
+        } else baseBg
+        val pillBorder = if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.08f)
         Box(
             modifier = modifier
                 .clip(shape)
-                .background(Color(0xFF28282C), shape)
+                .background(pillBg, shape)
+                .border(1.dp, pillBorder, shape)
                 .clickable(
                     interactionSource = interactionSource,
-                    indication = ripple(bounded = true, color = Color.White),
+                    indication = ripple(bounded = true, color = if (isDark) Color.White else Color.Black),
                     enabled = enabled,
                     onClick = onClick
                 ),
@@ -237,7 +247,7 @@ fun ExpoGlassMenuCard(
 ) {
     val glassStyle = LocalGlassStyle.current
     val isLightweight = LocalLightweightGlass.current
-    val isSolid = glassStyle == "solid"
+    val isSolid = glassStyle == "solid" || com.mrtdk.liquid_glass.BuildConfig.IS_LITE
     val effectsSupported = isRenderEffectSupported()
 
     val resolvedTint = if (tint == DarkGrayGlassTint) Color.Unspecified else tint
@@ -259,10 +269,18 @@ fun ExpoGlassMenuCard(
     }
 
     if (isSolid) {
+        val isDark = com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState().value
+        val baseBg = if (isDark) Color(0xFF22232A) else Color(0xFFFFFFFF)
+        val menuBg = if (resolvedTint.isSpecified) {
+            if (resolvedTint.alpha < 1f) resolvedTint.compositeOver(baseBg) else resolvedTint
+        } else baseBg
+        val menuBorder = if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.08f)
         Box(
             modifier = modifier
+                .shadow(12.dp, shape)
                 .clip(shape)
-                .background(Color(0xFF1E1E1E), shape),
+                .background(menuBg, shape)
+                .border(1.dp, menuBorder, shape),
             content = content
         )
     } else {
@@ -323,7 +341,7 @@ fun GlassBoxScope.GlassBox(
     content: @Composable BoxScope.() -> Unit = { },
 ) {
     val glassStyle = LocalGlassStyle.current
-    val isSolid = glassStyle == "solid"
+    val isSolid = glassStyle == "solid" || com.mrtdk.liquid_glass.BuildConfig.IS_LITE
     val isLightweight = LocalLightweightGlass.current
     val effectsSupported = isRenderEffectSupported()
 
@@ -346,10 +364,18 @@ fun GlassBoxScope.GlassBox(
     }
 
     if (isSolid) {
+        val isDark = com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState().value
+        val baseBg = if (isDark) Color(0xFF22232A) else Color(0xFFF1F2F6)
+        val boxBg = if (resolvedTint.isSpecified) {
+            if (resolvedTint.alpha < 1f) resolvedTint.compositeOver(baseBg) else resolvedTint
+        } else baseBg
+        val boxBorder = if (isDark) Color.White.copy(alpha = 0.09f) else Color.Black.copy(alpha = 0.06f)
         Box(
             modifier = modifier
+                .then(if (elevation > 0.dp) Modifier.shadow(elevation, shape) else Modifier)
                 .clip(shape)
-                .background(Color(0xFF242428), shape),
+                .background(boxBg, shape)
+                .border(1.dp, boxBorder, shape),
             contentAlignment = contentAlignment,
             propagateMinConstraints = propagateMinConstraints,
             content = content
@@ -402,7 +428,26 @@ fun GlassContainer(
     content: @Composable () -> Unit,
     glassContent: @Composable GlassBoxScope.() -> Unit,
 ) {
+    val isSolid = com.mrtdk.liquid_glass.BuildConfig.IS_LITE ||
+            com.mrtdk.glass.LocalGlassStyle.current == "solid" ||
+            LocalGlassStyle.current == "solid"
+
     val glassScope = remember { GlassScopeImpl() }
+
+    if (isSolid) {
+        val emptyBackdrop = remember { emptyBackdrop() }
+        Box(modifier = modifier) {
+            content()
+            CompositionLocalProvider(LocalBackdrop provides emptyBackdrop) {
+                val boxScopeImpl = remember(glassScope) {
+                    GlassBoxScopeImpl(this, glassScope)
+                }
+                boxScopeImpl.glassContent()
+            }
+        }
+        return
+    }
+
     val backdrop = rememberLayerBackdrop()
 
     Box(modifier = modifier) {

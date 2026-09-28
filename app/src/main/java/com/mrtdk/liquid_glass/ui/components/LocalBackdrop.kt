@@ -64,7 +64,7 @@ fun Modifier.wiggleOnScroll(
     lazyListState: androidx.compose.foundation.lazy.LazyListState? = null,
     customScrollState: androidx.compose.foundation.ScrollState? = null
 ): Modifier {
-    if (com.mrtdk.liquid_glass.data.LibraryManager.isUltraPerformanceMode()) return this
+    if (com.mrtdk.liquid_glass.data.LibraryManager.isUltraPerformanceMode() || com.mrtdk.liquid_glass.BuildConfig.IS_LITE) return this
     if (SharedTransitionState.lastOpenedId == null || itemId != SharedTransitionState.lastOpenedId) return this
     return composed {
         val lastOpenedId = SharedTransitionState.lastOpenedId
@@ -174,15 +174,17 @@ private fun lerpFloat(start: Float, stop: Float, fraction: Float): Float {
     return start + fraction * (stop - start)
 }
 
-val DetailEntrySpringSpec = spring<Float>(
-    dampingRatio = 0.85f,
-    stiffness = 200f
-)
+val DetailEntrySpringSpec = if (com.mrtdk.liquid_glass.BuildConfig.IS_LITE) {
+    spring<Float>(dampingRatio = 0.95f, stiffness = 600f)
+} else {
+    spring<Float>(dampingRatio = 0.85f, stiffness = 200f)
+}
 
-val DetailExitSpringSpec = spring<Float>(
-    dampingRatio = Spring.DampingRatioNoBouncy,
-    stiffness = 320f
-)
+val DetailExitSpringSpec = if (com.mrtdk.liquid_glass.BuildConfig.IS_LITE) {
+    spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 600f)
+} else {
+    spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 320f)
+}
 
 @Composable
 fun DetailBackPillButton(

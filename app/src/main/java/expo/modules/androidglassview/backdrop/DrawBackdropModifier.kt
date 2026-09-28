@@ -37,6 +37,8 @@ import androidx.compose.ui.node.observeReads
 import androidx.compose.ui.node.requireGraphicsContext
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import expo.modules.androidglassview.backdrop.backdrops.LayerBackdrop
@@ -66,6 +68,21 @@ fun Modifier.drawPlainBackdrop(
     clipToShape: Boolean = true,
     backdropScale: Float = 1f
 ): Modifier {
+    if (com.mrtdk.liquid_glass.BuildConfig.IS_LITE) {
+        val s = shape()
+        var mod = this
+        if (clipToShape) {
+            mod = mod.clip(s)
+        }
+        if (onDrawSurface != null || onDrawBehind != null || onDrawFront != null) {
+            mod = mod.drawBehind {
+                onDrawBehind?.invoke(this)
+                onDrawSurface?.invoke(this)
+                onDrawFront?.invoke(this)
+            }
+        }
+        return mod
+    }
     val shapeProvider = ShapeProvider(shape)
     return this
         .then(
@@ -108,6 +125,21 @@ fun Modifier.drawBackdrop(
     clipToShape: Boolean = true,
     backdropScale: Float = 1f
 ): Modifier {
+    if (com.mrtdk.liquid_glass.BuildConfig.IS_LITE) {
+        val s = shape()
+        var mod = this
+        if (clipToShape) {
+            mod = mod.clip(s)
+        }
+        if (onDrawSurface != null || onDrawBehind != null || onDrawFront != null) {
+            mod = mod.drawBehind {
+                onDrawBehind?.invoke(this)
+                onDrawSurface?.invoke(this)
+                onDrawFront?.invoke(this)
+            }
+        }
+        return mod
+    }
     val shapeProvider = ShapeProvider(shape)
     return this
         .then(

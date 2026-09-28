@@ -19,6 +19,21 @@ android {
         versionName = "0.6.5"
     }
 
+    flavorDimensions += "edition"
+    productFlavors {
+        create("standard") {
+            dimension = "edition"
+            isDefault = true
+            buildConfigField("boolean", "IS_LITE", "false")
+        }
+        create("lite") {
+            dimension = "edition"
+            applicationIdSuffix = ".lite"
+            versionNameSuffix = "-lite"
+            buildConfigField("boolean", "IS_LITE", "true")
+        }
+    }
+
     signingConfigs {
         create("release") {
             storeFile = file("keystore/release.keystore")

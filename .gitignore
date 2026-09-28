@@ -24,3 +24,5 @@ LiquidGlassKit/
 Spotui/
 music-os-26/
 *.apk
+.agents/
+

@@ -34,6 +34,11 @@ import com.mrtdk.glass.GlassBoxScope
 import com.mrtdk.liquid_glass.data.LibraryManager
 import com.mrtdk.liquid_glass.data.ReleaseNotes
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.compositeOver
+import com.mrtdk.liquid_glass.ui.theme.ThemeManager
+
 @Composable
 fun GlassBoxScope.WhatsNewDialog(
     onDismiss: () -> Unit
@@ -78,6 +83,10 @@ private fun WhatsNewDialogContent(
     val dominantColor by LibraryManager.currentDominantColor.collectAsState()
     val scrollState = rememberScrollState()
 
+    val isSolid = com.mrtdk.liquid_glass.BuildConfig.IS_LITE ||
+            com.mrtdk.glass.LocalGlassStyle.current == "solid"
+    val isDark = ThemeManager.isDarkMode.collectAsState().value
+
     fun handleDismiss() {
         visible = false
         onDismiss()
@@ -113,7 +122,25 @@ private fun WhatsNewDialogContent(
                 indication = null
             ) { /* Prevent dismissing on card click */ }
 
-        if (glassScope != null) {
+        if (isSolid) {
+            val surfaceBg = if (isDark) dominantColor.copy(alpha = 0.12f).compositeOver(Color(0xFF22232A)) else Color(0xFFFFFFFF)
+            val surfaceBorder = if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.08f)
+            Surface(
+                modifier = cardModifier,
+                shape = RoundedCornerShape(28.dp),
+                color = surfaceBg,
+                shadowElevation = 16.dp,
+                tonalElevation = 6.dp,
+                border = BorderStroke(1.dp, surfaceBorder)
+            ) {
+                CardInnerContent(
+                    scrollState = scrollState,
+                    isSolid = true,
+                    isDark = isDark,
+                    onDismiss = { handleDismiss() }
+                )
+            }
+        } else if (glassScope != null) {
             glassScope.GlassBox(
                 modifier = cardModifier,
                 blur = 0.85f,
@@ -127,6 +154,8 @@ private fun WhatsNewDialogContent(
             ) {
                 CardInnerContent(
                     scrollState = scrollState,
+                    isSolid = false,
+                    isDark = isDark,
                     onDismiss = { handleDismiss() }
                 )
             }
@@ -149,6 +178,8 @@ private fun WhatsNewDialogContent(
             ) {
                 CardInnerContent(
                     scrollState = scrollState,
+                    isSolid = false,
+                    isDark = isDark,
                     onDismiss = { handleDismiss() }
                 )
             }
@@ -159,6 +190,8 @@ private fun WhatsNewDialogContent(
 @Composable
 private fun CardInnerContent(
     scrollState: androidx.compose.foundation.ScrollState,
+    isSolid: Boolean,
+    isDark: Boolean,
     onDismiss: () -> Unit
 ) {
     Column(
@@ -195,7 +228,7 @@ private fun CardInnerContent(
 
         Text(
             text = "Novedades de RayMusic",
-            color = Color.White,
+            color = if (isDark) Color.White else Color(0xFF1C1C1E),
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
@@ -221,7 +254,7 @@ private fun CardInnerContent(
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = "Actualización Mayor",
-                color = Color.White.copy(alpha = 0.65f),
+                color = if (isDark) Color.White.copy(alpha = 0.65f) else Color(0xFF1C1C1E).copy(alpha = 0.65f),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -229,7 +262,10 @@ private fun CardInnerContent(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 20.dp))
+        HorizontalDivider(
+            color = if (isDark) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.08f),
+            modifier = Modifier.padding(horizontal = 20.dp)
+        )
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -271,7 +307,7 @@ private fun CardInnerContent(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = category.categoryName,
-                            color = Color.White,
+                            color = if (isDark) Color.White else Color(0xFF1C1C1E),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -283,13 +319,21 @@ private fun CardInnerContent(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp),
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = Color.White.copy(alpha = 0.05f)
+                                containerColor = if (isSolid) {
+                                    if (isDark) Color(0xFF2C2D35) else Color(0xFFF1F2F8)
+                                } else {
+                                    Color.White.copy(alpha = 0.05f)
+                                }
                             ),
-                            border = androidx.compose.foundation.BorderStroke(
-                                0.5.dp,
-                                Color.White.copy(alpha = 0.1f)
+                            border = BorderStroke(
+                                1.dp,
+                                if (isSolid) {
+                                    if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.08f)
+                                } else {
+                                    Color.White.copy(alpha = 0.1f)
+                                }
                             )
                         ) {
                             Column(
@@ -303,7 +347,7 @@ private fun CardInnerContent(
                                 ) {
                                     Text(
                                         text = item.title,
-                                        color = Color.White,
+                                        color = if (isDark) Color.White else Color(0xFF1C1C1E),
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.SemiBold,
                                         modifier = Modifier.weight(1f)
@@ -312,12 +356,18 @@ private fun CardInnerContent(
                                         Box(
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(4.dp))
-                                                .background(Color.White.copy(alpha = 0.12f))
+                                                .background(
+                                                    if (isSolid) {
+                                                        if (isDark) Color.White.copy(alpha = 0.15f) else Color.Black.copy(alpha = 0.08f)
+                                                    } else {
+                                                        Color.White.copy(alpha = 0.12f)
+                                                    }
+                                                )
                                                 .padding(horizontal = 5.dp, vertical = 1.dp)
                                         ) {
                                             Text(
                                                 text = item.tag,
-                                                color = Color.White.copy(alpha = 0.85f),
+                                                color = if (isDark) Color.White.copy(alpha = 0.85f) else Color(0xFF1C1C1E),
                                                 fontSize = 9.sp,
                                                 fontWeight = FontWeight.Medium
                                             )
@@ -327,7 +377,7 @@ private fun CardInnerContent(
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = item.description,
-                                    color = Color.White.copy(alpha = 0.72f),
+                                    color = if (isDark) Color.White.copy(alpha = 0.72f) else Color(0xFF1C1C1E).copy(alpha = 0.75f),
                                     fontSize = 12.sp,
                                     lineHeight = 16.sp
                                 )
@@ -348,7 +398,14 @@ private fun CardInnerContent(
                         .height(30.dp)
                         .background(
                             Brush.verticalGradient(
-                                listOf(Color.Transparent, Color(0xFF141416).copy(alpha = 0.85f))
+                                listOf(
+                                    Color.Transparent,
+                                    if (isSolid) {
+                                        if (isDark) Color(0xFF22232A) else Color(0xFFFFFFFF)
+                                    } else {
+                                        Color(0xFF141416).copy(alpha = 0.85f)
+                                    }
+                                )
                             )
                         ),
                     contentAlignment = Alignment.BottomCenter
@@ -356,7 +413,7 @@ private fun CardInnerContent(
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowDown,
                         contentDescription = "Desliza para ver más",
-                        tint = Color.White.copy(alpha = 0.7f),
+                        tint = if (isDark) Color.White.copy(alpha = 0.7f) else Color(0xFF1C1C1E).copy(alpha = 0.7f),
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -365,7 +422,10 @@ private fun CardInnerContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(horizontal = 20.dp))
+        HorizontalDivider(
+            color = if (isDark) Color.White.copy(alpha = 0.1f) else Color.Black.copy(alpha = 0.08f),
+            modifier = Modifier.padding(horizontal = 20.dp)
+        )
 
         Spacer(modifier = Modifier.height(14.dp))
 

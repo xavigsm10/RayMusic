@@ -86,6 +86,9 @@ object LibraryManager {
     private val _pinnedItemIds = MutableStateFlow<Set<String>>(emptySet())
     val pinnedItemIds: StateFlow<Set<String>> = _pinnedItemIds
 
+    private val _dolbyAtmosEnabled = MutableStateFlow(false)
+    val dolbyAtmosEnabled: StateFlow<Boolean> = _dolbyAtmosEnabled
+
     private fun parseItemType(value: String): ItemType? {
         return try {
             ItemType.valueOf(value)
@@ -125,6 +128,8 @@ object LibraryManager {
         _playerArtworkStyle.value = getPlayerArtworkStyle()
         _fullArtworkBackdropStyle.value = getFullArtworkBackdropStyle()
         _ultraPerformanceMode.value = isUltraPerformanceMode()
+        _dolbyAtmosEnabled.value = getString("dolby_atmos_enabled", "false") == "true"
+        com.mrtdk.liquid_glass.playback.spatial.SpatialAudioManager.init(_dolbyAtmosEnabled.value)
 
         val initialPinned = mutableSetOf<String>()
         try {
@@ -728,6 +733,12 @@ object LibraryManager {
         dbHelper.saveSetting(key, value)
     }
 
+    fun setDolbyAtmosEnabled(enabled: Boolean) {
+        _dolbyAtmosEnabled.value = enabled
+        saveString("dolby_atmos_enabled", enabled.toString())
+        com.mrtdk.liquid_glass.playback.spatial.SpatialAudioManager.setSpatialEnabled(enabled)
+    }
+
     fun getString(key: String, defaultValue: String? = null): String? {
         if (!isInitialized) return defaultValue
         settingsCache[key]?.let { return it }
@@ -777,6 +788,7 @@ object LibraryManager {
     }
 
     fun getGlassStyle(): String {
+        if (com.mrtdk.liquid_glass.BuildConfig.IS_LITE) return "solid"
         if (isInitialized) return _glassStyle.value
         val fromDb = dbHelper.getSetting("glass_style", null)
         val style = fromDb ?: try { prefs.getString("glass_style", null) } catch (_: Exception) { null } ?: "transparent"
@@ -837,24 +849,27 @@ object LibraryManager {
     }
 
     fun getPlayerArtworkStyle(): String {
-        if (isInitialized) return _playerArtworkStyle.value
+        if (isInitialized) {
+            val current = _playerArtworkStyle.value
+            return if (com.mrtdk.liquid_glass.BuildConfig.IS_LITE && current == "animated_fullartwork") "fullartwork" else current
+        }
         val fromDb = dbHelper.getSetting("player_artwork_style", null)
-        if (fromDb != null) return fromDb
-        val fromPrefs = try { prefs.getString("player_artwork_style", null) } catch (_: Exception) { null }
-        if (fromPrefs != null) return fromPrefs
-        return "fullartwork"
+        val style = fromDb ?: try { prefs.getString("player_artwork_style", null) } catch (_: Exception) { null } ?: "fullartwork"
+        return if (com.mrtdk.liquid_glass.BuildConfig.IS_LITE && style == "animated_fullartwork") "fullartwork" else style
     }
 
     fun savePlayerArtworkStyle(style: String) {
         if (!isInitialized) return
-        _playerArtworkStyle.value = style
+        val targetStyle = if (com.mrtdk.liquid_glass.BuildConfig.IS_LITE && style == "animated_fullartwork") "fullartwork" else style
+        _playerArtworkStyle.value = targetStyle
         try {
-            prefs.edit().putString("player_artwork_style", style).apply()
+            prefs.edit().putString("player_artwork_style", targetStyle).apply()
         } catch (_: Exception) {}
-        dbHelper.saveSetting("player_artwork_style", style)
+        dbHelper.saveSetting("player_artwork_style", targetStyle)
     }
 
     fun getFullArtworkBackdropStyle(): String {
+        if (com.mrtdk.liquid_glass.BuildConfig.IS_LITE) return "accord"
         if (isInitialized) return _fullArtworkBackdropStyle.value
         val fromDb = dbHelper.getSetting("full_artwork_backdrop_style", null)
         if (fromDb != null) return fromDb

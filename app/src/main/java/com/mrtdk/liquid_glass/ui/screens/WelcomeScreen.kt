@@ -80,10 +80,12 @@ fun WelcomeScreen(
         currentStep--
     }
 
+    val isDarkMode by ThemeManager.isDarkMode.collectAsState()
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF000000))
+            .background(if (isDarkMode) Color(0xFF000000) else Color(0xFFF2F2F7))
     ) {
         Column(
             modifier = Modifier
@@ -369,28 +371,20 @@ private fun WelcomeIntroStep() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Version Badge
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .background(AppleRed.copy(alpha = 0.15f))
-                .border(1.dp, AppleRed.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
-                .padding(horizontal = 12.dp, vertical = 4.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.welcome_version_badge),
-                color = AppleRed,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 1.sp
-            )
-        }
+        val isDarkMode by ThemeManager.isDarkMode.collectAsState()
+        Text(
+            text = stringResource(R.string.welcome_version_badge),
+            color = if (isDarkMode) Color.White else Color.Black,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = 1.sp
+        )
 
         Spacer(modifier = Modifier.height(14.dp))
 
         Text(
             text = stringResource(R.string.welcome_title_prefix),
-            color = Color.White.copy(alpha = 0.85f),
+            color = if (isDarkMode) Color.White.copy(alpha = 0.85f) else Color.Black.copy(alpha = 0.85f),
             fontSize = 20.sp,
             fontWeight = FontWeight.Medium,
             textAlign = TextAlign.Center
@@ -398,7 +392,7 @@ private fun WelcomeIntroStep() {
 
         Text(
             text = "RayMusic",
-            color = Color.White,
+            color = if (isDarkMode) Color.White else Color.Black,
             fontSize = 36.sp,
             fontWeight = FontWeight.ExtraBold,
             letterSpacing = (-0.5).sp,
@@ -453,6 +447,7 @@ private fun FeatureItem(
     title: String,
     description: String
 ) {
+    val isDarkMode by ThemeManager.isDarkMode.collectAsState()
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top
@@ -477,14 +472,14 @@ private fun FeatureItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                color = Color.White,
+                color = if (isDarkMode) Color.White else Color(0xFF1C1C1E),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(3.dp))
             Text(
                 text = description,
-                color = Color.White.copy(alpha = 0.65f),
+                color = if (isDarkMode) Color.White.copy(alpha = 0.65f) else Color(0xFF1C1C1E).copy(alpha = 0.65f),
                 fontSize = 13.5.sp,
                 lineHeight = 18.sp
             )
@@ -529,23 +524,25 @@ private fun InterfaceStyleStep(
 
         Spacer(modifier = Modifier.height(28.dp))
 
-        // Option 1: Vidrio Líquido (Liquid Glass)
-        InterfacePreviewCard(
-            title = stringResource(R.string.welcome_liquid_glass_title),
-            description = stringResource(R.string.welcome_liquid_glass_desc),
-            imageRes = R.drawable.preview_liquid_glass,
-            isSelected = currentStyle == "transparent",
-            onClick = { onStyleSelected("transparent") }
-        )
+        if (!com.mrtdk.liquid_glass.BuildConfig.IS_LITE) {
+            // Option 1: Vidrio Líquido (Liquid Glass)
+            InterfacePreviewCard(
+                title = stringResource(R.string.welcome_liquid_glass_title),
+                description = stringResource(R.string.welcome_liquid_glass_desc),
+                imageRes = R.drawable.preview_liquid_glass,
+                isSelected = currentStyle == "transparent",
+                onClick = { onStyleSelected("transparent") }
+            )
 
-        Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(20.dp))
+        }
 
         // Option 2: Material 3 Expressive (Sólido)
         InterfacePreviewCard(
             title = stringResource(R.string.welcome_material3_title),
             description = stringResource(R.string.welcome_material3_desc),
             imageRes = R.drawable.preview_material3,
-            isSelected = currentStyle == "solid",
+            isSelected = currentStyle == "solid" || com.mrtdk.liquid_glass.BuildConfig.IS_LITE,
             onClick = { onStyleSelected("solid") }
         )
 
@@ -685,23 +682,25 @@ private fun ArtworkAndBackdropStep(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Option 1: Portadas animadas solamente con fullartwork (Recomendado)
-        ArtworkOptionCard(
-            title = stringResource(R.string.welcome_art_animated_full_title),
-            description = stringResource(R.string.welcome_art_animated_full_desc),
-            badge = stringResource(R.string.welcome_badge_recommended),
-            isSelected = currentArtworkStyle == "animated_fullartwork",
-            onClick = { onArtworkStyleSelected("animated_fullartwork") }
-        )
+        if (!com.mrtdk.liquid_glass.BuildConfig.IS_LITE) {
+            // Option 1: Portadas animadas solamente con fullartwork (Recomendado)
+            ArtworkOptionCard(
+                title = stringResource(R.string.welcome_art_animated_full_title),
+                description = stringResource(R.string.welcome_art_animated_full_desc),
+                badge = stringResource(R.string.welcome_badge_recommended),
+                isSelected = currentArtworkStyle == "animated_fullartwork",
+                onClick = { onArtworkStyleSelected("animated_fullartwork") }
+            )
 
-        Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+        }
 
         // Option 2: Fullartwork siempre
         ArtworkOptionCard(
             title = stringResource(R.string.welcome_art_full_title),
             description = stringResource(R.string.welcome_art_full_desc),
-            badge = null,
-            isSelected = currentArtworkStyle == "fullartwork",
+            badge = if (com.mrtdk.liquid_glass.BuildConfig.IS_LITE) stringResource(R.string.welcome_badge_recommended) else null,
+            isSelected = currentArtworkStyle == "fullartwork" || (com.mrtdk.liquid_glass.BuildConfig.IS_LITE && currentArtworkStyle == "animated_fullartwork"),
             onClick = { onArtworkStyleSelected("fullartwork") }
         )
 
@@ -733,17 +732,19 @@ private fun ArtworkAndBackdropStep(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            SubSelectorPill(
-                title = stringResource(R.string.welcome_backdrop_apple_music_title),
-                subtitle = stringResource(R.string.welcome_backdrop_apple_music_sub),
-                isSelected = currentBackdropStyle == "apple_music",
-                modifier = Modifier.weight(1f),
-                onClick = { onBackdropStyleSelected("apple_music") }
-            )
+            if (!com.mrtdk.liquid_glass.BuildConfig.IS_LITE) {
+                SubSelectorPill(
+                    title = stringResource(R.string.welcome_backdrop_apple_music_title),
+                    subtitle = stringResource(R.string.welcome_backdrop_apple_music_sub),
+                    isSelected = currentBackdropStyle == "apple_music",
+                    modifier = Modifier.weight(1f),
+                    onClick = { onBackdropStyleSelected("apple_music") }
+                )
+            }
             SubSelectorPill(
                 title = stringResource(R.string.welcome_backdrop_accord_title),
                 subtitle = stringResource(R.string.welcome_backdrop_accord_sub),
-                isSelected = currentBackdropStyle == "accord",
+                isSelected = currentBackdropStyle == "accord" || com.mrtdk.liquid_glass.BuildConfig.IS_LITE,
                 modifier = Modifier.weight(1f),
                 onClick = { onBackdropStyleSelected("accord") }
             )

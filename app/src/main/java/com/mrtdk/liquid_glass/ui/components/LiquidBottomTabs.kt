@@ -11,9 +11,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -85,23 +88,6 @@ fun LiquidBottomTabs(
     val currentBackdropStyle by com.mrtdk.liquid_glass.data.LibraryManager.fullArtworkBackdropStyle.collectAsState()
     val isFondoCompleto = currentBackdropStyle == "accord"
     val isSolid = glassStyle == "solid" || isUltraPerf
-    val solidBgColor = if (isDarkMode) Color(0xFF242428) else Color(0xFFE8E8EC)
-
-    // In Material 3 mode ("solid"): solid color and NO bubble effect
-    if (isSolid) {
-        Row(
-            modifier
-                .clip(TabsPillShape)
-                .background(containerColor ?: solidBgColor)
-                .height(64f.dp)
-                .fillMaxWidth()
-                .padding(4f.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            content = content
-        )
-        return
-    }
-
     val defaultAccentColor = Color(0xFFFA243C)
     val defaultContainerColor =
         if (isLightTheme) Color(0xFFFAFAFA).copy(0.4f)
@@ -109,6 +95,57 @@ fun LiquidBottomTabs(
 
     val actualAccentColor = accentColor ?: defaultAccentColor
     val actualContainerColor = containerColor ?: defaultContainerColor
+
+    // In Material 3 Expressive mode ("solid"): clean capsule bar with animated tonal pill indicator, NO heavy shaders
+    if (isSolid) {
+        val m3BorderColor = if (isDarkMode) Color.White.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.06f)
+        val m3ContainerBg = containerColor ?: if (isDarkMode) Color(0xFF1E1F25) else Color(0xFFF0F1F6)
+        val selectedIndex = selectedTabIndex().coerceIn(0, (tabsCount - 1).coerceAtLeast(0))
+        val animatedIndex by androidx.compose.animation.core.animateFloatAsState(
+            targetValue = selectedIndex.toFloat(),
+            animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.92f, stiffness = androidx.compose.animation.core.Spring.StiffnessMedium),
+            label = "m3TabIndicator"
+        )
+
+        BoxWithConstraints(
+            modifier = modifier
+                .clip(TabsPillShape)
+                .background(m3ContainerBg)
+                .border(width = 1.dp, color = m3BorderColor, shape = TabsPillShape)
+                .height(64f.dp)
+                .fillMaxWidth(),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            val tabWidth = (maxWidth - 8.dp) / tabsCount.coerceAtLeast(1)
+            // Animated M3 Expressive active tab pill
+            Box(
+                modifier = Modifier
+                    .padding(start = 4.dp + (tabWidth * animatedIndex))
+                    .width(tabWidth)
+                    .fillMaxHeight()
+                    .padding(vertical = 4.dp)
+                    .clip(Capsule())
+                    .background(
+                        if (isDarkMode) Color.White.copy(alpha = 0.12f)
+                        else actualAccentColor.copy(alpha = 0.15f)
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = if (isDarkMode) Color.White.copy(alpha = 0.15f) else actualAccentColor.copy(alpha = 0.25f),
+                        shape = Capsule()
+                    )
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(4f.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                content = content
+            )
+        }
+        return
+    }
 
     val tabsBackdrop = rememberLayerBackdrop()
 

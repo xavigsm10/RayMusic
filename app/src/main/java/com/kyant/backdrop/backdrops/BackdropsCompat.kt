@@ -14,7 +14,7 @@ import expo.modules.androidglassview.backdrop.backdrops.emptyBackdrop as expoEmp
 typealias LayerBackdrop = expo.modules.androidglassview.backdrop.backdrops.LayerBackdrop
 
 fun Modifier.layerBackdrop(backdrop: LayerBackdrop): Modifier =
-    expoLayerBackdrop(backdrop)
+    if (com.mrtdk.liquid_glass.BuildConfig.IS_LITE) this else expoLayerBackdrop(backdrop)
 
 @Composable
 fun rememberLayerBackdrop(

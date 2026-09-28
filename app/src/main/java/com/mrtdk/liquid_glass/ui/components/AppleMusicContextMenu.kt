@@ -3329,6 +3329,7 @@ fun GlassBoxScope.PlayerOptionsMenu(
 ) {
     var isDismissing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    var showSleepTimerDialog by remember { mutableStateOf(false) }
 
     val morphAnim = remember { androidx.compose.animation.core.Animatable(0f) }
     LaunchedEffect(Unit) {
@@ -3615,6 +3616,17 @@ fun GlassBoxScope.PlayerOptionsMenu(
                         }
                     }
 
+                    // Temporizador de reposo
+                    val sleepTimerRemaining by com.mrtdk.liquid_glass.playback.SleepTimerManager.remainingSeconds.collectAsState()
+                    val sleepFormatted = com.mrtdk.liquid_glass.playback.SleepTimerManager.getFormattedRemaining()
+                    VerticalMenuActionItem(
+                        icon = Icons.Default.Bedtime,
+                        label = stringResource(R.string.settings_sleep_timer_title),
+                        subtitle = sleepFormatted ?: stringResource(R.string.sleep_timer_off)
+                    ) {
+                        showSleepTimerDialog = true
+                    }
+
                     HorizontalDivider(color = Color.White.copy(alpha = 0.12f), thickness = 0.5.dp, modifier = Modifier.padding(vertical = 4.dp))
 
                     // Ir al álbum (con subtítulo de nombre del álbum estilo Apple Music)
@@ -3773,10 +3785,74 @@ fun GlassBoxScope.PlayerOptionsMenu(
                 }
             }
         }
+
+        if (showSleepTimerDialog) {
+            val sleepMode by com.mrtdk.liquid_glass.playback.SleepTimerManager.mode.collectAsState()
+            val sleepTimerRemaining by com.mrtdk.liquid_glass.playback.SleepTimerManager.remainingSeconds.collectAsState()
+            Dialog(onDismissRequest = { showSleepTimerDialog = false }) {
+                Box(
+                    modifier = Modifier
+                        .width(320.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(Color(0xFF2C2C2E))
+                        .padding(20.dp)
+                ) {
+                    Column {
+                        Text(
+                            text = stringResource(R.string.settings_sleep_timer_title),
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 14.dp)
+                        )
+                        val options = listOf(
+                            "off" to stringResource(R.string.sleep_timer_off),
+                            "15" to stringResource(R.string.sleep_timer_15m),
+                            "30" to stringResource(R.string.sleep_timer_30m),
+                            "45" to stringResource(R.string.sleep_timer_45m),
+                            "60" to stringResource(R.string.sleep_timer_60m),
+                            "end_of_song" to stringResource(R.string.sleep_timer_end_of_song)
+                        )
+                        options.forEach { (key, label) ->
+                            val isSelected = when (key) {
+                                "off" -> sleepMode == com.mrtdk.liquid_glass.playback.SleepTimerManager.TimerMode.OFF
+                                "end_of_song" -> sleepMode == com.mrtdk.liquid_glass.playback.SleepTimerManager.TimerMode.END_OF_SONG
+                                else -> sleepMode == com.mrtdk.liquid_glass.playback.SleepTimerManager.TimerMode.DURATION && (sleepTimerRemaining ?: 0L) in ((key.toInt() - 15) * 60 + 1)..(key.toInt() * 60)
+                            }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable {
+                                        when (key) {
+                                            "off" -> com.mrtdk.liquid_glass.playback.SleepTimerManager.cancelTimer()
+                                            "end_of_song" -> com.mrtdk.liquid_glass.playback.SleepTimerManager.startEndOfSong()
+                                            else -> key.toIntOrNull()?.let { com.mrtdk.liquid_glass.playback.SleepTimerManager.startTimerMinutes(it) }
+                                        }
+                                        showSleepTimerDialog = false
+                                        handleDismiss()
+                                    }
+                                    .padding(vertical = 11.dp, horizontal = 10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(label, color = if (isSelected) Color(0xFFFA243C) else Color.White, fontSize = 15.sp)
+                                if (isSelected) {
+                                    Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFFFA243C), modifier = Modifier.size(18.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
         }
     }
 }
 }
+
+
+
 
 @Composable
 fun GlassBoxScope.LyricsOptionsMenu(
