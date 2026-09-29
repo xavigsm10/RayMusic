@@ -39,6 +39,8 @@ object AppleMusicArtistProvider {
     private val COLOR_BACKDROP_REGEX = Regex(""""colorBackdropArtwork"\s*:\s*\{"dictionary":\{[^}]*"bgColor"\s*:\s*"([0-9a-fA-F]{6})"""")
     private val CIRCLE_BG_REGEX = Regex(""""circleArtwork"\s*:\s*\{"dictionary":\{[^}]*"bgColor"\s*:\s*"([0-9a-fA-F]{6})"""")
     private val LOGO_BG_REGEX = Regex(""""artistLogo"\s*:\s*\{"dictionary":\{[^}]*"bgColor"\s*:\s*"([0-9a-fA-F]{6})"""")
+    private val FALLBACK_BG_REGEX = Regex(""""fallbackArtwork"\s*:\s*\{"dictionary":\{[^}]*"bgColor"\s*:\s*"([0-9a-fA-F]{6})"""")
+    private val ANY_BG_REGEX = Regex(""""bgColor"\s*:\s*"([0-9a-fA-F]{6})"""")
 
     fun cleanArtistName(rawName: String): String {
         return rawName.trim()
@@ -321,6 +323,9 @@ object AppleMusicArtistProvider {
                 lowerName.contains("djo") -> "#3E2F23"             // Studio portrait warm amber brown
                 else -> {
                     val circleBg = CIRCLE_BG_REGEX.find(html)
+                        ?: FALLBACK_BG_REGEX.find(html)
+                        ?: COLOR_BACKDROP_REGEX.find(html)
+                        ?: ANY_BG_REGEX.find(html)
                     circleBg?.let { "#${it.groupValues[1]}" }
                 }
             }
