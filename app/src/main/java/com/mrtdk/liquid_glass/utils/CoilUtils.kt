@@ -21,6 +21,10 @@ object CoilUtils {
         if (url.startsWith("file:///android_asset/")) {
             return url
         }
+        // Protect all transparent PNGs / logos from being converted into JPG (which destroys transparency)
+        if (url.endsWith(".png", ignoreCase = true) || url.contains(".png?")) {
+            return url
+        }
         val targetSize = targetDimension.coerceIn(160, 800)
         val mzTarget = if (targetSize <= 240) "250x250bb.jpg" else "500x500bb.jpg"
         

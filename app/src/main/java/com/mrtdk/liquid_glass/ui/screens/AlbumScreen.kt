@@ -595,7 +595,7 @@ fun AlbumScreen(
         val screenWidth = with(density) { configuration.screenWidthDp.dp.toPx() }
         val screenHeight = with(density) { configuration.screenHeightDp.dp.toPx() }
 
-        val lastClickBounds = SharedTransitionState.carouselItemBounds[albumState.id] ?: SharedTransitionState.lastClickBounds
+        val lastClickBounds = SharedTransitionState.lastClickBounds ?: SharedTransitionState.carouselItemBounds[albumState.id]
         val sourceX = lastClickBounds?.left ?: (screenWidth / 2f - 100f)
         val sourceY = lastClickBounds?.top ?: (screenHeight / 2f - 100f)
         val sourceW = lastClickBounds?.width ?: 200f
@@ -605,7 +605,7 @@ fun AlbumScreen(
         val curY = sourceY + progress * (0f - sourceY)
         val curW = sourceW + progress * (screenWidth - sourceW)
         val curH = sourceH + progress * (screenHeight - sourceH)
-        val initialCorner = if (isMadeForYou) 18f else 12f
+        val initialCorner = if (isMadeForYou) 18f else if (SharedTransitionState.lastOpenedSource == "essentials") 8f else 12f
         val curCorner = initialCorner * (1f - progress)
 
         val popScaleBack by animateFloatAsState(
@@ -657,7 +657,7 @@ fun AlbumScreen(
                     }
                     val isHeroOffscreen by remember {
                         derivedStateOf {
-                            scrollOffsetPx > 900f || firstIndex > 1
+                            scrollOffsetPx > 1800f || firstIndex > 8
                         }
                     }
                     val heroAlpha by remember {
@@ -687,8 +687,8 @@ fun AlbumScreen(
                                         translationY = heroParallaxY
                                         alpha = if (progress < 0.99f) 0f else heroAlpha
                                         if (android.os.Build.VERSION.SDK_INT >= 31) {
-                                            val rPx = (scrollOffsetPx / 6f).coerceIn(0f, 32f) * density.density
-                                            renderEffect = if (rPx > 1f && !isHeroOffscreen) {
+                                            val rPx = (scrollOffsetPx / 6f).coerceIn(0f, 36f) * density.density
+                                            renderEffect = if (rPx > 0.5f) {
                                                 android.graphics.RenderEffect.createBlurEffect(
                                                     rPx,
                                                     rPx,
@@ -947,23 +947,61 @@ fun AlbumScreen(
                                         albumState.artist.removePrefix("Álbum • ").removePrefix("Album • ")
                                     }
                                     if (cleanArtistName.isNotBlank()) {
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(
-                                            text = cleanArtistName,
-                                            color = secondaryTextColor,
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                            style = TextStyle(
-                                                shadow = if (isLightBackground) null else Shadow(
-                                                    color = Color.Black.copy(alpha = 0.6f),
-                                                    offset = Offset(1f, 1f),
-                                                    blurRadius = 3f
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        val canGoToArtist = !isMadeForYou && !isFavoriteSongs && !isUserPlaylist
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.Center,
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(16.dp))
+                                                .then(
+                                                    if (canGoToArtist) {
+                                                        Modifier.clickable {
+                                                            val aId = artistPageData?.artist?.id ?: cleanArtistName
+                                                            val spThumb = com.mrtdk.liquid_glass.spotify.SpotifyArtistProvider.getCachedArtistImageUrl(cleanArtistName)
+                                                            onArtistSelected(
+                                                                com.mrtdk.liquid_glass.ui.screens.ArtistState(
+                                                                    id = aId,
+                                                                    name = cleanArtistName,
+                                                                    thumbnail = spThumb ?: artistPageData?.artist?.thumbnail
+                                                                )
+                                                            )
+                                                        }.padding(horizontal = 8.dp, vertical = 2.dp)
+                                                    } else {
+                                                        Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                                    }
+                                                )
+                                        ) {
+                                            if (canGoToArtist) {
+                                                com.mrtdk.liquid_glass.spotify.SpotifyArtistAvatar(
+                                                    artistName = cleanArtistName,
+                                                    fallbackUrl = artistPageData?.artist?.thumbnail,
+                                                    contentDescription = cleanArtistName,
+                                                    contentScale = ContentScale.Crop,
+                                                    modifier = Modifier
+                                                        .size(24.dp)
+                                                        .clip(CircleShape)
+                                                        .background(Color.White.copy(alpha = 0.15f))
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                            }
+                                            Text(
+                                                text = cleanArtistName,
+                                                color = secondaryTextColor,
+                                                fontSize = 15.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                                style = TextStyle(
+                                                    shadow = if (isLightBackground) null else Shadow(
+                                                        color = Color.Black.copy(alpha = 0.6f),
+                                                        offset = Offset(1f, 1f),
+                                                        blurRadius = 3f
+                                                    )
                                                 )
                                             )
-                                        )
+                                        }
                                     }
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Row(
@@ -1795,11 +1833,12 @@ fun AlbumScreen(
                                 },
                                 onGoToArtist = {
                                     val aId = artistPageData?.artist?.id ?: albumState.artist
+                                    val spThumb = com.mrtdk.liquid_glass.spotify.SpotifyArtistProvider.getCachedArtistImageUrl(albumState.artist)
                                     onArtistSelected(
                                         com.mrtdk.liquid_glass.ui.screens.ArtistState(
                                             id = aId,
                                             name = albumState.artist,
-                                            thumbnail = null
+                                            thumbnail = spThumb
                                         )
                                     )
                                 }
@@ -2816,11 +2855,15 @@ fun AlbumTopRightMorphingPill(
                                     .padding(horizontal = 16.dp, vertical = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Person,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(22.dp)
+                                val cleanName = albumState.artist.removePrefix("Álbum • ").removePrefix("Album • ")
+                                com.mrtdk.liquid_glass.spotify.SpotifyArtistAvatar(
+                                    artistName = cleanName,
+                                    fallbackUrl = null,
+                                    contentDescription = cleanName,
+                                    modifier = Modifier
+                                        .size(26.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.White.copy(alpha = 0.15f))
                                 )
                                 Spacer(modifier = Modifier.width(14.dp))
                                 Column {

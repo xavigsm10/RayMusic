@@ -210,16 +210,45 @@ fun ArtistScreen(
 
 
     val currentArtistName = artistPage?.artist?.title ?: artistState.name
-    var spotifyArtistThumb by remember(currentArtistName) { mutableStateOf<String?>(null) }
+    var spotifyArtistThumb by remember(currentArtistName) { 
+        mutableStateOf<String?>(
+            com.mrtdk.liquid_glass.spotify.SpotifyArtistProvider.getCachedArtistImageUrl(currentArtistName)
+                ?: artistState.thumbnail?.takeUnless { com.mrtdk.liquid_glass.spotify.SpotifyArtistProvider.isYouTubeUrl(it) }
+        ) 
+    }
+    var artistLogoUrl by remember(currentArtistName) {
+        mutableStateOf<String?>(
+            com.mrtdk.liquid_glass.spotify.AppleMusicLogoProvider.getCachedLogoUrl(currentArtistName)
+        )
+    }
     var artistMotionVideoUrl by remember(currentArtistName) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(currentArtistName) {
         if (currentArtistName.isNotBlank()) {
-            val spUrl = com.mrtdk.liquid_glass.spotify.SpotifyArtistProvider.getArtistImageUrl(currentArtistName)
-            if (!spUrl.isNullOrBlank()) {
-                spotifyArtistThumb = spUrl
+            // 1. Fetch Apple Music typography logo immediately in parallel (0 waiting)
+            launch(Dispatchers.IO) {
+                if (artistLogoUrl == null) {
+                    val logo = com.mrtdk.liquid_glass.spotify.AppleMusicLogoProvider.getArtistLogoUrl(currentArtistName)
+                    if (!logo.isNullOrBlank()) {
+                        withContext(Dispatchers.Main) {
+                            artistLogoUrl = logo
+                        }
+                    }
+                }
             }
-            withContext(Dispatchers.IO) {
+            // 2. Fetch portrait image in parallel
+            launch(Dispatchers.IO) {
+                if (spotifyArtistThumb == null) {
+                    val spUrl = com.mrtdk.liquid_glass.spotify.SpotifyArtistProvider.getArtistImageUrl(currentArtistName)
+                    if (!spUrl.isNullOrBlank()) {
+                        withContext(Dispatchers.Main) {
+                            spotifyArtistThumb = spUrl
+                        }
+                    }
+                }
+            }
+            // 3. Fetch motion video in parallel
+            launch(Dispatchers.IO) {
                 val motionUrl = com.mrtdk.liquid_glass.canvas.UnifiedCanvasProvider.getArtistMotionVideo(currentArtistName)
                 if (!motionUrl.isNullOrBlank()) {
                     withContext(Dispatchers.Main) {
@@ -230,21 +259,9 @@ fun ArtistScreen(
         }
     }
 
-    val artistThumb = spotifyArtistThumb ?: artistPage?.artist?.thumbnail ?: artistState.thumbnail
-    val hdThumb = artistThumb?.let { url ->
-        val width = 1200
-        val height = 1200
-        if (url.matches("https://lh3\\.googleusercontent\\.com/.*=w(\\d+)-h(\\d+).*".toRegex())) {
-            "${url.split("=w")[0]}=w$width-h$height-p-l90-rj"
-        } else if (url.matches("https://yt3\\.ggpht\\.com/.*=s(\\d+)".toRegex())) {
-            "$url-s$width"
-        } else if (url.contains("=w") && url.contains("-h")) {
-             // Generic fallback for any other google hosted image
-             "${url.split("=w")[0]}=w$width-h$height-p-l90-rj"
-        } else {
-            url
-        }
-    }
+    // NEVER use YouTube Music image for the artist. Only use the high-resolution Spotify / Apple Music portrait.
+    val artistThumb = spotifyArtistThumb
+    val hdThumb = artistThumb
 
     // Single fast API call — with fallback to search if browseId fails
     LaunchedEffect(artistState.id) {
@@ -539,6 +556,11 @@ fun ArtistScreen(
         }
     }
 
+    val animatedBackgroundColor by animateColorAsState(
+        targetValue = finalBackgroundColor,
+        animationSpec = tween(durationMillis = 400),
+        label = "artistBgColor"
+    )
 
     GlassContainer(
         modifier = Modifier
@@ -546,7 +568,7 @@ fun ArtistScreen(
             .onGloballyPositioned { artistScreenRootCoords = it },
         useShader = true,
         content = {
-            Box(modifier = Modifier.fillMaxSize().background(finalBackgroundColor)) {
+            Box(modifier = Modifier.fillMaxSize().background(animatedBackgroundColor)) {
                 // Main content
         LazyColumn(
             state = listState,
@@ -568,14 +590,29 @@ fun ArtistScreen(
                             .height(475.dp)
                             .align(Alignment.TopCenter)
                     ) {
-                        // 1. Sharp full-res cover image
-                        AsyncImage(
-                            model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
-                            contentDescription = artistState.name,
-                            contentScale = ContentScale.Crop,
-                            alignment = Alignment.TopCenter,
-                            modifier = Modifier.fillMaxSize()
-                        )
+                        // 1. Sharp full-res cover image (never YouTube)
+                        if (!hdThumb.isNullOrBlank()) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                                contentDescription = artistState.name,
+                                contentScale = ContentScale.Crop,
+                                alignment = Alignment.TopCenter,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(
+                                                Color(0xFF222228),
+                                                Color(0xFF141416)
+                                            )
+                                        )
+                                    )
+                            )
+                        }
 
                         // 1b. Single Motion Video Player (60fps, 0-lag)
                         if (!artistMotionVideoUrl.isNullOrBlank()) {
@@ -587,7 +624,7 @@ fun ArtistScreen(
                             )
                         }
 
-                        // 2. Smooth uniform gradient fade into finalBackgroundColor at the bottom
+                        // 2. Smooth uniform gradient fade into animatedBackgroundColor at the bottom
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -595,10 +632,10 @@ fun ArtistScreen(
                                     Brush.verticalGradient(
                                         0.0f to Color.Transparent,
                                         0.40f to Color.Transparent,
-                                        0.65f to finalBackgroundColor.copy(alpha = 0.35f),
-                                        0.80f to finalBackgroundColor.copy(alpha = 0.75f),
-                                        0.90f to finalBackgroundColor.copy(alpha = 0.95f),
-                                        1.0f to finalBackgroundColor
+                                        0.65f to animatedBackgroundColor.copy(alpha = 0.35f),
+                                        0.80f to animatedBackgroundColor.copy(alpha = 0.75f),
+                                        0.90f to animatedBackgroundColor.copy(alpha = 0.95f),
+                                        1.0f to animatedBackgroundColor
                                     )
                                 )
                         )
@@ -612,16 +649,32 @@ fun ArtistScreen(
                             .padding(bottom = 6.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(
-                            text = artistState.name,
-                            color = Color.White,
-                            fontSize = 34.sp,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 24.dp)
-                        )
+                        if (!artistLogoUrl.isNullOrBlank()) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(artistLogoUrl)
+                                    .allowRgb565(false)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = artistState.name,
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier
+                                    .heightIn(min = 44.dp, max = 80.dp)
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 32.dp)
+                            )
+                        } else {
+                            Text(
+                                text = artistState.name,
+                                color = Color.White,
+                                fontSize = 34.sp,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 24.dp)
+                            )
+                        }
 
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -749,12 +802,20 @@ fun ArtistScreen(
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(bottom = 12.dp)
                         )
+                        var latestReleaseCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(24.dp))
                                 .background(Color.White.copy(alpha = 0.08f))
                                 .clickable {
+                                    val bounds = latestReleaseCoords?.unclippedBoundsInRoot()
+                                    SharedTransitionState.lastOpenedSource = "latest_release"
+                                    SharedTransitionState.lastClickBounds = bounds
+                                    SharedTransitionState.lastOpenedId = release.id
+                                    if (bounds != null && bounds.width > 0f && bounds.height > 0f) {
+                                        SharedTransitionState.carouselItemBounds[release.id] = bounds
+                                    }
                                     onAlbumSelected(
                                         AlbumState(
                                             id = release.id,
@@ -770,18 +831,24 @@ fun ArtistScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             // Cover art
-                            AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(release.thumbnail)
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = release.title,
-                                contentScale = ContentScale.Crop,
+                            Box(
                                 modifier = Modifier
                                     .size(80.dp)
+                                    .onGloballyPositioned { latestReleaseCoords = it }
+                                    .sharedTransitionElement(release.id, source = "latest_release")
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(Color.DarkGray)
-                            )
+                            ) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context)
+                                        .data(release.thumbnail)
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = release.title,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
 
                             Spacer(modifier = Modifier.width(16.dp))
 
@@ -1016,10 +1083,18 @@ fun ArtistScreen(
                     ) { index ->
                         val album = essentialsItems[index]
                         val albumDescription = essentialsDescriptions[album.id] ?: getAlbumDescription(artistState.name, album.title)
+                        var imageCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
+                                    val bounds = imageCoords?.unclippedBoundsInRoot()
+                                    SharedTransitionState.lastOpenedSource = "essentials"
+                                    SharedTransitionState.lastClickBounds = bounds
+                                    SharedTransitionState.lastOpenedId = album.id
+                                    if (bounds != null && bounds.width > 0f && bounds.height > 0f) {
+                                        SharedTransitionState.carouselItemBounds[album.id] = bounds
+                                    }
                                     onAlbumSelected(
                                         AlbumState(
                                             id = album.id,
@@ -1038,18 +1113,26 @@ fun ArtistScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 // Album artwork (square, rounded corners)
-                                AsyncImage(
-                                    model = ImageRequest.Builder(context)
-                                        .data(album.thumbnail)
-                                        .crossfade(true)
-                                        .build(),
-                                    contentDescription = album.title,
-                                    contentScale = ContentScale.Crop,
+                                Box(
                                     modifier = Modifier
                                         .size(90.dp)
+                                        .onGloballyPositioned { coords ->
+                                            imageCoords = coords
+                                        }
+                                        .sharedTransitionElement(album.id, source = "essentials")
                                         .clip(RoundedCornerShape(8.dp))
                                         .background(Color.DarkGray)
-                                )
+                                ) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(context)
+                                            .data(album.thumbnail)
+                                            .crossfade(true)
+                                            .build(),
+                                        contentDescription = album.title,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
 
                                 Spacer(modifier = Modifier.width(16.dp))
 
@@ -1369,9 +1452,16 @@ fun ArtistScreen(
                                 val ra = relatedArtists[idx]
                                 val raThumb = ra.thumbnail?.replace("=w226-h226", "=w400-h400")?.replace("=w120-h120", "=w400-h400")
                                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(120.dp).clickable {
-                                    onArtistSelected(ArtistState(id = ra.id, name = ra.title, thumbnail = raThumb))
+                                    val spThumb = com.mrtdk.liquid_glass.spotify.SpotifyArtistProvider.getCachedArtistImageUrl(ra.title)
+                                    onArtistSelected(ArtistState(id = ra.id, name = ra.title, thumbnail = spThumb ?: raThumb))
                                 }) {
-                                    AsyncImage(model = ImageRequest.Builder(context).data(raThumb).crossfade(true).build(), contentDescription = ra.title, contentScale = ContentScale.Crop, modifier = Modifier.size(120.dp).clip(CircleShape).background(Color.DarkGray))
+                                    com.mrtdk.liquid_glass.spotify.SpotifyArtistAvatar(
+                                        artistName = ra.title,
+                                        fallbackUrl = raThumb,
+                                        contentDescription = ra.title,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.size(120.dp).clip(CircleShape).background(Color.DarkGray)
+                                    )
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(ra.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
@@ -1453,7 +1543,7 @@ fun ArtistScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(finalBackgroundColor)
+                    .background(animatedBackgroundColor)
             ) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize()
@@ -1465,16 +1555,24 @@ fun ArtistScreen(
                                 .fillMaxWidth()
                                 .height(430.dp)
                         ) {
-                            // 1. Sharp full-res cover image
-                            AsyncImage(
-                                model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
-                                contentDescription = artistState.name,
-                                contentScale = ContentScale.Crop,
-                                alignment = Alignment.TopCenter,
-                                modifier = Modifier.fillMaxSize()
-                            )
+                            // 1. Sharp full-res cover image (never YouTube)
+                            if (!hdThumb.isNullOrBlank()) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                                    contentDescription = artistState.name,
+                                    contentScale = ContentScale.Crop,
+                                    alignment = Alignment.TopCenter,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color(0xFF18181A))
+                                )
+                            }
 
-                            // 2. Smooth uniform gradient fade into finalBackgroundColor at the bottom
+                            // 2. Smooth uniform gradient fade into animatedBackgroundColor at the bottom
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -1482,9 +1580,9 @@ fun ArtistScreen(
                                         Brush.verticalGradient(
                                             0.0f to Color.Transparent,
                                             0.50f to Color.Transparent,
-                                            0.70f to finalBackgroundColor.copy(alpha = 0.40f),
-                                            0.85f to finalBackgroundColor.copy(alpha = 0.80f),
-                                            1.0f to finalBackgroundColor
+                                            0.70f to animatedBackgroundColor.copy(alpha = 0.40f),
+                                            0.85f to animatedBackgroundColor.copy(alpha = 0.80f),
+                                            1.0f to animatedBackgroundColor
                                         )
                                     )
                             )
@@ -1510,18 +1608,35 @@ fun ArtistScreen(
                         }
                     }
 
-                    // Artist name (left-aligned, large)
+                    // Artist name / logo (left-aligned, large)
                     item {
-                        Text(
-                            text = artistState.name,
-                            color = Color.White,
-                            fontSize = 34.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp)
-                                .padding(top = 4.dp)
-                        )
+                        if (!artistLogoUrl.isNullOrBlank()) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(artistLogoUrl)
+                                    .allowRgb565(false)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = artistState.name,
+                                contentScale = ContentScale.Fit,
+                                alignment = Alignment.CenterStart,
+                                modifier = Modifier
+                                    .heightIn(min = 40.dp, max = 64.dp)
+                                    .padding(horizontal = 20.dp)
+                                    .padding(top = 4.dp)
+                            )
+                        } else {
+                            Text(
+                                text = artistState.name,
+                                color = Color.White,
+                                fontSize = 34.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp)
+                                    .padding(top = 4.dp)
+                            )
+                        }
                     }
 
                     // Metadata: FROM, BORN, GENRE
@@ -2033,8 +2148,13 @@ private fun ItemCard(
             Column(modifier = cardMod
                 .let { if (scrollState != null) it.wiggleOnScroll(item.id, lazyListState = scrollState) else it }
                 .clickable {
-                    SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
+                    val bounds = imageCoords?.unclippedBoundsInRoot()
+                    SharedTransitionState.lastOpenedSource = "carousel"
+                    SharedTransitionState.lastClickBounds = bounds
                     SharedTransitionState.lastOpenedId = item.id
+                    if (bounds != null && bounds.width > 0f && bounds.height > 0f) {
+                        SharedTransitionState.carouselItemBounds[item.id] = bounds
+                    }
                     onAlbumSelected(AlbumState(id = item.id, playlistId = item.playlistId ?: item.id, title = item.title, artist = item.artists?.joinToString { it.name } ?: artistName, thumbnail = item.thumbnail, year = item.year as? Int ?: item.year?.toString()?.toIntOrNull()))
                 }
             ) {
@@ -2107,8 +2227,13 @@ private fun ItemCard(
             Column(modifier = cardMod
                 .let { if (scrollState != null) it.wiggleOnScroll(item.id, lazyListState = scrollState) else it }
                 .clickable {
-                    SharedTransitionState.lastClickBounds = imageCoords?.unclippedBoundsInRoot()
+                    val bounds = imageCoords?.unclippedBoundsInRoot()
+                    SharedTransitionState.lastOpenedSource = "carousel"
+                    SharedTransitionState.lastClickBounds = bounds
                     SharedTransitionState.lastOpenedId = item.id
+                    if (bounds != null && bounds.width > 0f && bounds.height > 0f) {
+                        SharedTransitionState.carouselItemBounds[item.id] = bounds
+                    }
                     onAlbumSelected(AlbumState(id = item.id, playlistId = item.id, title = item.title, artist = item.author?.name ?: artistName, thumbnail = item.thumbnail, year = null))
                 }
             ) {
@@ -2142,9 +2267,16 @@ private fun ItemCard(
         is ArtistItem -> {
             val hdThumb = item.thumbnail?.replace("=w226-h226", "=w400-h400")?.replace("=w120-h120", "=w400-h400")
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = cardMod.clickable { 
-                onArtistSelected(ArtistState(item.id, item.title, hdThumb)) 
+                val spThumb = com.mrtdk.liquid_glass.spotify.SpotifyArtistProvider.getCachedArtistImageUrl(item.title)
+                onArtistSelected(ArtistState(item.id, item.title, spThumb ?: hdThumb)) 
             }) {
-                AsyncImage(model = ImageRequest.Builder(context).data(hdThumb).size(300).crossfade(true).build(), contentDescription = item.title, contentScale = ContentScale.Crop, modifier = Modifier.size(if (fillWidth) 160.dp else 120.dp).clip(CircleShape).background(Color.DarkGray))
+                com.mrtdk.liquid_glass.spotify.SpotifyArtistAvatar(
+                    artistName = item.title,
+                    fallbackUrl = hdThumb,
+                    contentDescription = item.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.size(if (fillWidth) 160.dp else 120.dp).clip(CircleShape).background(Color.DarkGray)
+                )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(item.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }

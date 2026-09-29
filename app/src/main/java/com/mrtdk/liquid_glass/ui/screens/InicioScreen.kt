@@ -936,26 +936,50 @@ fun InicioScreen(
                                     }
                                 }
                         ) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(context).data(hdThumb).size(320).crossfade(true).build(),
-                                contentDescription = item.title,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(180.dp)
-                                    .onGloballyPositioned { coords ->
-                                        imageCoords = coords
-                                        val bounds = coords.unclippedBoundsInRoot()
-                                        if (bounds.width > 0f && bounds.height > 0f) {
-                                            SharedTransitionState.carouselItemBounds[item.id] = bounds
+                            if (isCircle) {
+                                com.mrtdk.liquid_glass.spotify.SpotifyArtistAvatar(
+                                    artistName = item.title,
+                                    fallbackUrl = hdThumb,
+                                    contentDescription = item.title,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .size(180.dp)
+                                        .onGloballyPositioned { coords ->
+                                            imageCoords = coords
+                                            val bounds = coords.unclippedBoundsInRoot()
+                                            if (bounds.width > 0f && bounds.height > 0f) {
+                                                SharedTransitionState.carouselItemBounds[item.id] = bounds
+                                            }
                                         }
-                                    }
-                                    .clip(if (isCircle) CircleShape else RoundedCornerShape(12.dp))
-                                    .background(Color(0xFF161618))
-                                    .border(0.5.dp, Color.Black.copy(alpha = 0.12f), if (isCircle) CircleShape else RoundedCornerShape(12.dp))
-                                    .graphicsLayer {
-                                        alpha = if (SharedTransitionState.animatingItemIds.contains(item.id)) 0f else 1f
-                                    }
-                            )
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF161618))
+                                        .border(0.5.dp, Color.Black.copy(alpha = 0.12f), CircleShape)
+                                        .graphicsLayer {
+                                            alpha = if (SharedTransitionState.animatingItemIds.contains(item.id)) 0f else 1f
+                                        }
+                                )
+                            } else {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context).data(hdThumb).size(320).crossfade(true).build(),
+                                    contentDescription = item.title,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .size(180.dp)
+                                        .onGloballyPositioned { coords ->
+                                            imageCoords = coords
+                                            val bounds = coords.unclippedBoundsInRoot()
+                                            if (bounds.width > 0f && bounds.height > 0f) {
+                                                SharedTransitionState.carouselItemBounds[item.id] = bounds
+                                            }
+                                        }
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(Color(0xFF161618))
+                                        .border(0.5.dp, Color.Black.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                                        .graphicsLayer {
+                                            alpha = if (SharedTransitionState.animatingItemIds.contains(item.id)) 0f else 1f
+                                        }
+                                )
+                            }
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(item.title, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.textColor, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(item.subtitle, color = com.mrtdk.liquid_glass.ui.theme.ThemeManager.subtextColor, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -1498,7 +1522,8 @@ fun InicioScreen(
                                     when (item) {
                                         is com.echo.innertube.models.ArtistItem -> {
                                             SharedTransitionState.lastOpenedId = item.id
-                                            onArtistSelected(com.mrtdk.liquid_glass.ui.screens.ArtistState(item.id, item.title, item.thumbnail))
+                                            val spThumb = com.mrtdk.liquid_glass.spotify.SpotifyArtistProvider.getCachedArtistImageUrl(item.title)
+                                            onArtistSelected(com.mrtdk.liquid_glass.ui.screens.ArtistState(item.id, item.title, spThumb ?: item.thumbnail))
                                         }
                                         is com.echo.innertube.models.SongItem -> {
                                             onSongSelected(PlayerState(item.title, item.artists.joinToString { it.name }, item.thumbnail, item.id, album = item.album?.name, albumId = item.album?.id))
@@ -1888,7 +1913,8 @@ fun InicioScreen(
                                     when (item) {
                                         is com.echo.innertube.models.ArtistItem -> {
                                             SharedTransitionState.lastOpenedId = item.id
-                                            onArtistSelected(com.mrtdk.liquid_glass.ui.screens.ArtistState(item.id, item.title, item.thumbnail))
+                                            val spThumb = com.mrtdk.liquid_glass.spotify.SpotifyArtistProvider.getCachedArtistImageUrl(item.title)
+                                            onArtistSelected(com.mrtdk.liquid_glass.ui.screens.ArtistState(item.id, item.title, spThumb ?: item.thumbnail))
                                         }
                                         is com.echo.innertube.models.SongItem -> {
                                             onSongSelected(PlayerState(item.title, item.artists.joinToString { it.name }, upgradeThumbHD(item.thumbnail), item.id, album = item.album?.name, albumId = item.album?.id))
@@ -2041,12 +2067,22 @@ fun InicioScreen(
                                     .background(Color(0xFF161618))
                                     .border(0.5.dp, Color.Black.copy(alpha = 0.12f), if (isCircle) CircleShape else RoundedCornerShape(12.dp))
                             ) {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(context).data(hdThumb).size(320).crossfade(false).build(),
-                                    contentDescription = item.title,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
+                                if (isCircle) {
+                                    com.mrtdk.liquid_glass.spotify.SpotifyArtistAvatar(
+                                        artistName = item.title,
+                                        fallbackUrl = hdThumb,
+                                        contentDescription = item.title,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                } else {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(context).data(hdThumb).size(320).crossfade(false).build(),
+                                        contentDescription = item.title,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
                             }
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(

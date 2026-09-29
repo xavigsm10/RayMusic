@@ -51,6 +51,8 @@ class MusicService : MediaSessionService() {
     private lateinit var eqProcessorB: com.mrtdk.liquid_glass.playback.eq.CustomEqualizerAudioProcessor
     private lateinit var spatialProcessorA: com.mrtdk.liquid_glass.playback.spatial.SpatialAudioProcessor
     private lateinit var spatialProcessorB: com.mrtdk.liquid_glass.playback.spatial.SpatialAudioProcessor
+    private lateinit var singProcessorA: com.mrtdk.liquid_glass.playback.sing.AppleMusicSingAudioProcessor
+    private lateinit var singProcessorB: com.mrtdk.liquid_glass.playback.sing.AppleMusicSingAudioProcessor
 
     private val serviceJob = Job()
     private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
@@ -585,6 +587,7 @@ class MusicService : MediaSessionService() {
     private fun createPlayerInstance(
         processor: com.mrtdk.liquid_glass.playback.eq.CustomEqualizerAudioProcessor,
         spatialProcessor: com.mrtdk.liquid_glass.playback.spatial.SpatialAudioProcessor,
+        singProcessor: com.mrtdk.liquid_glass.playback.sing.AppleMusicSingAudioProcessor,
         handleAudioFocus: Boolean,
         dataSourceFactory: androidx.media3.datasource.DataSource.Factory,
         extractorsFactory: androidx.media3.extractor.ExtractorsFactory
@@ -596,7 +599,7 @@ class MusicService : MediaSessionService() {
                 enableAudioTrackPlaybackParams: Boolean
             ): androidx.media3.exoplayer.audio.AudioSink? {
                 return androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(context)
-                    .setAudioProcessors(arrayOf(processor, spatialProcessor))
+                    .setAudioProcessors(arrayOf(processor, spatialProcessor, singProcessor))
                     .setEnableFloatOutput(false)
                     .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
                     .build()
@@ -778,6 +781,11 @@ class MusicService : MediaSessionService() {
         com.mrtdk.liquid_glass.playback.spatial.SpatialAudioManager.addProcessor(spatialProcessorA)
         com.mrtdk.liquid_glass.playback.spatial.SpatialAudioManager.addProcessor(spatialProcessorB)
 
+        singProcessorA = com.mrtdk.liquid_glass.playback.sing.AppleMusicSingAudioProcessor()
+        singProcessorB = com.mrtdk.liquid_glass.playback.sing.AppleMusicSingAudioProcessor()
+        com.mrtdk.liquid_glass.playback.sing.AppleMusicSingManager.addProcessor(singProcessorA)
+        com.mrtdk.liquid_glass.playback.sing.AppleMusicSingManager.addProcessor(singProcessorB)
+
         com.mrtdk.liquid_glass.playback.SleepTimerManager.onPerformFadeOutAndPause = { durationMs, onComplete ->
             serviceScope.launch {
                 try {
@@ -839,8 +847,8 @@ class MusicService : MediaSessionService() {
             )
         }
 
-        playerA = createPlayerInstance(eqProcessorA, spatialProcessorA, handleAudioFocus = true, dataSourceFactory = dataSourceFactory, extractorsFactory = extractorsFactory)
-        playerB = createPlayerInstance(eqProcessorB, spatialProcessorB, handleAudioFocus = false, dataSourceFactory = dataSourceFactory, extractorsFactory = extractorsFactory)
+        playerA = createPlayerInstance(eqProcessorA, spatialProcessorA, singProcessorA, handleAudioFocus = true, dataSourceFactory = dataSourceFactory, extractorsFactory = extractorsFactory)
+        playerB = createPlayerInstance(eqProcessorB, spatialProcessorB, singProcessorB, handleAudioFocus = false, dataSourceFactory = dataSourceFactory, extractorsFactory = extractorsFactory)
 
         playerA.addListener(createPlayerListener(playerA))
         playerB.addListener(createPlayerListener(playerB))
@@ -982,6 +990,12 @@ class MusicService : MediaSessionService() {
         }
         if (::spatialProcessorB.isInitialized) {
             com.mrtdk.liquid_glass.playback.spatial.SpatialAudioManager.removeProcessor(spatialProcessorB)
+        }
+        if (::singProcessorA.isInitialized) {
+            com.mrtdk.liquid_glass.playback.sing.AppleMusicSingManager.removeProcessor(singProcessorA)
+        }
+        if (::singProcessorB.isInitialized) {
+            com.mrtdk.liquid_glass.playback.sing.AppleMusicSingManager.removeProcessor(singProcessorB)
         }
         mediaSession?.run {
             player.release()

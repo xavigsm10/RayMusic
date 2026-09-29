@@ -112,6 +112,7 @@ import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.ToggleOff
 import androidx.compose.material.icons.filled.VerticalAlignBottom
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.infiniteRepeatable
@@ -1594,6 +1595,7 @@ fun PlayerScreen(
                 var showOptionsMenu by remember { mutableStateOf(false) }
         var showLyricsMenu by remember { mutableStateOf(false) }
         var showLyricsOptionsMenu by remember { mutableStateOf(false) }
+        var lyricSelectionTrigger by remember { mutableIntStateOf(0) }
         var openDirectlyInProvidersView by remember { mutableStateOf(false) }
         var lyricsOffset by remember { mutableStateOf(0) }
         var lyricsReloadTrigger by remember { mutableStateOf(0) }
@@ -3434,6 +3436,10 @@ fun PlayerScreen(
                                           onHideControls = {
                                               showLyricsControls = false
                                           },
+                                          songTitle = playerState?.title ?: "",
+                                          artistName = playerState?.artist ?: "",
+                                          artUrl = playerState?.artUrl,
+                                          selectionModeTrigger = lyricSelectionTrigger,
                                           modifier = Modifier.fillMaxSize()
                                       )
                                   } else if (isLyricsLoading) {
@@ -3442,6 +3448,9 @@ fun PlayerScreen(
                                           positionMs = effectivePosition,
                                           isPlaying = isPlaying,
                                           looking = true,
+                                          songTitle = playerState?.title ?: "",
+                                          artistName = playerState?.artist ?: "",
+                                          artUrl = playerState?.artUrl,
                                           modifier = Modifier.fillMaxSize()
                                       )
                                   } else {
@@ -5032,7 +5041,8 @@ fun PlayerScreen(
                     } catch (e: Exception) {}
                 },
                 pivotBounds = menuPivotBounds,
-                initialShowProviderSelection = openDirectlyInProvidersView
+                initialShowProviderSelection = openDirectlyInProvidersView,
+                onShareLyrics = { lyricSelectionTrigger++ }
             )
         }
         if (showOptionsMenu) {
@@ -5721,7 +5731,7 @@ fun PlayerBottomControls(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(60.dp, Alignment.CenterHorizontally),
+                horizontalArrangement = Arrangement.spacedBy(if (showLyrics) 32.dp else 60.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
@@ -5759,6 +5769,27 @@ fun PlayerBottomControls(
                         colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(contentColor.copy(alpha = 0.65f)),
                         modifier = Modifier.size(26.dp)
                     )
+                }
+
+                if (showLyrics) {
+                    val isSingActive by com.mrtdk.liquid_glass.playback.sing.AppleMusicSingManager.isSingEnabled.collectAsState()
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(if (isSingActive) contentColor else Color.Transparent)
+                            .clickable {
+                                com.mrtdk.liquid_glass.playback.sing.AppleMusicSingManager.toggleSing()
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Mic,
+                            contentDescription = "Apple Music Sing",
+                            tint = if (isSingActive) (if (isLightBackground) Color.White else Color(0xFF1A1A1A)) else contentColor.copy(alpha = 0.65f),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
 
                 Box(
@@ -6858,6 +6889,9 @@ fun LandscapePlayerLayout(
                             currentPosition = currentPosition,
                             lyricsOffset = lyricsOffset,
                             contentColor = contentColor,
+                            songTitle = playerState?.title ?: "",
+                            artistName = playerState?.artist ?: "",
+                            artUrl = playerState?.artUrl,
                             onSeek = onSeek
                         )
                     } else if (showQueue) {
@@ -7030,6 +7064,10 @@ private fun LandscapeLyricsView(
     currentPosition: Long,
     lyricsOffset: Int,
     contentColor: Color,
+    songTitle: String = "",
+    artistName: String = "",
+    artUrl: Any? = null,
+    selectionModeTrigger: Int = 0,
     onSeek: (Long) -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
@@ -7041,6 +7079,10 @@ private fun LandscapeLyricsView(
                 isPlaying = isPlaying,
                 looking = isLoading,
                 onSeekToLine = onSeek,
+                songTitle = songTitle,
+                artistName = artistName,
+                artUrl = artUrl,
+                selectionModeTrigger = selectionModeTrigger,
                 modifier = Modifier.fillMaxSize()
             )
         } else if (isLoading) {
@@ -7049,6 +7091,9 @@ private fun LandscapeLyricsView(
                 positionMs = currentPosition,
                 isPlaying = isPlaying,
                 looking = true,
+                songTitle = songTitle,
+                artistName = artistName,
+                artUrl = artUrl,
                 modifier = Modifier.fillMaxSize()
             )
         } else {

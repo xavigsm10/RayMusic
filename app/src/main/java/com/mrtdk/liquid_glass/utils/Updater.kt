@@ -22,6 +22,28 @@ object Updater {
         val body: String?
     )
 
+    fun parseVersion(versionStr: String): List<Int> {
+        val sanitized = versionStr.trim()
+            .removePrefix("v")
+            .removePrefix("V")
+            .substringBefore("-")
+            .trim()
+        return sanitized.split(".").mapNotNull { it.toIntOrNull() }
+    }
+
+    fun isNewerVersion(remoteVersion: String, currentVersion: String): Boolean {
+        val remoteParts = parseVersion(remoteVersion)
+        val currentParts = parseVersion(currentVersion)
+        val maxLen = maxOf(remoteParts.size, currentParts.size)
+        for (i in 0 until maxLen) {
+            val r = remoteParts.getOrElse(i) { 0 }
+            val c = currentParts.getOrElse(i) { 0 }
+            if (r > c) return true
+            if (r < c) return false
+        }
+        return false
+    }
+
     fun checkUpdate(callback: (ReleaseInfo?) -> Unit) {
         val request = Request.Builder()
             .url("https://api.github.com/repos/$GITHUB_REPO/releases/latest")
@@ -43,18 +65,49 @@ object Updater {
                     val body = response.body?.string() ?: return callback(null)
                     val json = JSONObject(body)
                     val tagName = json.optString("tag_name", "")
-                    val version = tagName.removePrefix("v")
+                    val version = tagName.removePrefix("v").removePrefix("V").trim()
                     
-                    if (version != BuildConfig.VERSION_NAME) {
+                    if (isNewerVersion(version, BuildConfig.VERSION_NAME)) {
                         val assets = json.optJSONArray("assets")
                         var downloadUrl: String? = null
                         if (assets != null) {
-                            for (i in 0 until assets.length()) {
-                                val asset = assets.getJSONObject(i)
-                                val url = asset.optString("browser_download_url", "")
-                                if (url.endsWith(".apk")) {
-                                    downloadUrl = url
-                                    break
+                            if (BuildConfig.IS_LITE) {
+                                // For Lite edition: prioritize APK with 'lite' in filename/url
+                                for (i in 0 until assets.length()) {
+                                    val asset = assets.getJSONObject(i)
+                                    val name = asset.optString("name", "").lowercase()
+                                    val url = asset.optString("browser_download_url", "")
+                                    if (url.endsWith(".apk", ignoreCase = true) &&
+                                        (name.contains("lite") || url.lowercase().contains("lite"))
+                                    ) {
+                                        downloadUrl = url
+                                        break
+                                    }
+                                }
+                            } else {
+                                // For Standard edition: prioritize standard APK without 'lite'
+                                for (i in 0 until assets.length()) {
+                                    val asset = assets.getJSONObject(i)
+                                    val name = asset.optString("name", "").lowercase()
+                                    val url = asset.optString("browser_download_url", "")
+                                    if (url.endsWith(".apk", ignoreCase = true) &&
+                                        !name.contains("lite") && !url.lowercase().contains("lite")
+                                    ) {
+                                        downloadUrl = url
+                                        break
+                                    }
+                                }
+                            }
+
+                            // Fallback to any APK available in the release assets
+                            if (downloadUrl == null) {
+                                for (i in 0 until assets.length()) {
+                                    val asset = assets.getJSONObject(i)
+                                    val url = asset.optString("browser_download_url", "")
+                                    if (url.endsWith(".apk", ignoreCase = true)) {
+                                        downloadUrl = url
+                                        break
+                                    }
                                 }
                             }
                         }

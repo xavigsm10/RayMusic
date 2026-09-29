@@ -199,7 +199,7 @@ object LyricsRepository {
      * one's own split alone.
      */
     private fun result(source: LyricsSource, lines: List<LyricLine>) =
-        Result(source, lines.withBackgroundVocals())
+        Result(source, lines.withBackgroundVocals().withInstrumentalGaps())
 
     /**
      * Longest the lookup will wait to find out which recording this is.

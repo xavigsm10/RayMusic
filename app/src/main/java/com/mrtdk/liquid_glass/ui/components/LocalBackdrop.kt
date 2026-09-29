@@ -53,6 +53,7 @@ val LocalBackdrop = staticCompositionLocalOf<Backdrop> { emptyBackdrop() }
 object SharedTransitionState {
     var lastClickBounds: Rect? = null
     var lastOpenedId: String? = null
+    var lastOpenedSource: String? = null
     var isDetailOpen: Boolean by mutableStateOf(false)
     val carouselItemBounds = java.util.concurrent.ConcurrentHashMap<String, Rect>()
     val animatingItemIds = mutableStateListOf<String>()
@@ -151,17 +152,19 @@ fun Modifier.trackTapBounds(
         }
 }
 
-fun Modifier.sharedTransitionElement(itemId: String): Modifier = composed {
+fun Modifier.sharedTransitionElement(itemId: String, source: String = "carousel"): Modifier = composed {
     val isDetailOpen = SharedTransitionState.isDetailOpen
     val lastOpenedId = SharedTransitionState.lastOpenedId
-    val isAnimating = (isDetailOpen && lastOpenedId == itemId) || SharedTransitionState.animatingItemIds.contains(itemId)
+    val lastSource = SharedTransitionState.lastOpenedSource
+    val matchesSource = (lastSource == null || lastSource == source)
+    val isAnimating = (isDetailOpen && lastOpenedId == itemId && matchesSource) || SharedTransitionState.animatingItemIds.contains(itemId)
     
     this
         .graphicsLayer {
             alpha = if (isAnimating) 0f else 1f
         }
         .onGloballyPositioned { coords ->
-            if (!SharedTransitionState.isDetailOpen) {
+            if (!SharedTransitionState.isDetailOpen && source != "essentials") {
                 val bounds = coords.unclippedBoundsInRoot()
                 if (bounds.width > 0f && bounds.height > 0f) {
                     SharedTransitionState.carouselItemBounds[itemId] = bounds
@@ -249,6 +252,7 @@ fun SharedElementTransitionContainer(
         }
         onDispose {
             SharedTransitionState.isDetailOpen = false
+            SharedTransitionState.lastOpenedSource = null
             SharedTransitionState.animatingItemIds.clear()
         }
     }

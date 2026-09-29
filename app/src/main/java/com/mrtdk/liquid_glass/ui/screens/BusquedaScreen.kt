@@ -717,12 +717,13 @@ fun BusquedaScreen(
                                         .fillMaxWidth()
                                         .clickable {
                                             dismissKeyboardAndClearFocus()
+                                            val spThumb = com.mrtdk.liquid_glass.spotify.SpotifyArtistProvider.getCachedArtistImageUrl(artist.title)
                                             LibraryManager.addRecentSearch(
                                                 RecentSearchItem(
                                                     id = artist.id,
                                                     title = artist.title,
                                                     subtitle = "Artista",
-                                                    thumbnail = artist.thumbnail,
+                                                    thumbnail = spThumb ?: artist.thumbnail,
                                                     type = "ARTIST"
                                                 )
                                             )
@@ -730,7 +731,7 @@ fun BusquedaScreen(
                                                 ArtistState(
                                                     id = artist.id,
                                                     name = artist.title,
-                                                    thumbnail = artist.thumbnail
+                                                    thumbnail = spThumb ?: artist.thumbnail
                                                 )
                                             )
                                         }
@@ -1118,12 +1119,13 @@ fun BusquedaScreen(
                                                 .fillMaxWidth()
                                                 .clickable {
                                                     dismissKeyboardAndClearFocus()
+                                                    val spThumb = com.mrtdk.liquid_glass.spotify.SpotifyArtistProvider.getCachedArtistImageUrl(item.title)
                                                     LibraryManager.addRecentSearch(
                                                         RecentSearchItem(
                                                             id = item.id,
                                                             title = item.title,
                                                             subtitle = "Artista",
-                                                            thumbnail = item.thumbnail,
+                                                            thumbnail = spThumb ?: item.thumbnail,
                                                             type = "ARTIST"
                                                         )
                                                     )
@@ -1131,7 +1133,7 @@ fun BusquedaScreen(
                                                         ArtistState(
                                                             id = item.id,
                                                             name = item.title,
-                                                            thumbnail = item.thumbnail
+                                                            thumbnail = spThumb ?: item.thumbnail
                                                         )
                                                     )
                                                 }

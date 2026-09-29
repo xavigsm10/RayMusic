@@ -209,7 +209,15 @@ fun AppleMusicLibraryContextMenu(
                                 .background(Color(0xFF1C1C1E)),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (!target.thumbnail.isNullOrBlank()) {
+                            if (isArtist) {
+                                com.mrtdk.liquid_glass.spotify.SpotifyArtistAvatar(
+                                    artistName = target.title,
+                                    fallbackUrl = target.thumbnail,
+                                    contentDescription = target.title,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else if (!target.thumbnail.isNullOrBlank()) {
                                 AsyncImage(
                                     model = ImageRequest.Builder(context)
                                         .data(target.thumbnail)
@@ -221,7 +229,7 @@ fun AppleMusicLibraryContextMenu(
                                 )
                             } else {
                                 Icon(
-                                    imageVector = if (isArtist) Icons.Default.Mic else if (isAlbum) Icons.Default.Album else Icons.Default.MusicNote,
+                                    imageVector = if (isAlbum) Icons.Default.Album else Icons.Default.MusicNote,
                                     contentDescription = null,
                                     tint = Color.Gray,
                                     modifier = Modifier.size(26.dp)

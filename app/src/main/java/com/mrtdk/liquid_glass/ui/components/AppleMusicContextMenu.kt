@@ -79,6 +79,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.animation.ExperimentalAnimationApi
+import com.mrtdk.liquid_glass.playback.sing.AppleMusicSingManager
+import kotlin.math.roundToInt
 
 data class ContextMenuSong(
     val id: String,
@@ -3883,6 +3885,7 @@ fun GlassBoxScope.LyricsOptionsMenu(
     isDuetEnabled: Boolean = true,
     onToggleDuet: () -> Unit = {},
     onCopyLyricsAsFormat: (String) -> Unit = {},
+    onShareLyrics: () -> Unit = {},
     pivotBounds: androidx.compose.ui.geometry.Rect? = null,
     initialShowProviderSelection: Boolean = false
 ) {
@@ -4215,6 +4218,141 @@ fun GlassBoxScope.LyricsOptionsMenu(
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp)
                         )
 
+                        // --- Pill 0: Apple Music Sing (Karaoke) ---
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color.White.copy(alpha = 0.08f))
+                                .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
+                        ) {
+                            val isSingEnabled by AppleMusicSingManager.isSingEnabled.collectAsState()
+                            val vocalVolume by AppleMusicSingManager.vocalVolume.collectAsState()
+
+                            VerticalMenuActionItem(
+                                icon = Icons.Default.Mic,
+                                label = "Apple Music Sing",
+                                trailingContent = {
+                                    androidx.compose.material3.Switch(
+                                        checked = isSingEnabled,
+                                        onCheckedChange = {
+                                            AppleMusicSingManager.toggleSing()
+                                        },
+                                        colors = androidx.compose.material3.SwitchDefaults.colors(
+                                            checkedThumbColor = Color(0xFFFDE69B),
+                                            checkedTrackColor = Color(0xFFFDE69B).copy(alpha = 0.4f)
+                                        ),
+                                        modifier = Modifier.graphicsLayer { scaleX = 0.8f; scaleY = 0.8f }
+                                    )
+                                },
+                                onClick = {
+                                    AppleMusicSingManager.toggleSing()
+                                }
+                            )
+
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = isSingEnabled,
+                                enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+                                exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                                ) {
+                                    HorizontalDivider(color = Color.White.copy(alpha = 0.06f), modifier = Modifier.padding(bottom = 8.dp))
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Volumen de la voz",
+                                            color = Color.White.copy(alpha = 0.8f),
+                                            fontSize = 13.sp
+                                        )
+                                        val percent = (vocalVolume * 100f).roundToInt()
+                                        val label = when {
+                                            percent <= 5 -> "Karaoke (0%)"
+                                            percent >= 95 -> "Original (100%)"
+                                            else -> "$percent%"
+                                        }
+                                        Text(
+                                            text = label,
+                                            color = Color(0xFFFDE69B),
+                                            fontSize = 12.5.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(4.dp))
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.MicOff,
+                                            contentDescription = "Mute",
+                                            tint = Color.White.copy(alpha = 0.5f),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Slider(
+                                            value = vocalVolume,
+                                            onValueChange = { AppleMusicSingManager.setVocalVolume(it) },
+                                            valueRange = 0f..1f,
+                                            modifier = Modifier.weight(1f).height(24.dp),
+                                            colors = SliderDefaults.colors(
+                                                thumbColor = Color(0xFFFDE69B),
+                                                activeTrackColor = Color(0xFFFDE69B),
+                                                inactiveTrackColor = Color.White.copy(alpha = 0.15f)
+                                            )
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Default.Mic,
+                                            contentDescription = "Full Voice",
+                                            tint = Color.White.copy(alpha = 0.8f),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(6.dp))
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        listOf(
+                                            "Karaoke" to 0.0f,
+                                            "50%" to 0.5f,
+                                            "Original" to 1.0f
+                                        ).forEach { (presetName, presetVal) ->
+                                            val isSelected = kotlin.math.abs(vocalVolume - presetVal) < 0.08f
+                                            Box(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .background(if (isSelected) Color(0xFFFDE69B).copy(alpha = 0.22f) else Color.White.copy(alpha = 0.08f))
+                                                    .border(1.dp, if (isSelected) Color(0xFFFDE69B).copy(alpha = 0.5f) else Color.Transparent, RoundedCornerShape(8.dp))
+                                                    .clickable { AppleMusicSingManager.setVocalVolume(presetVal) }
+                                                    .padding(vertical = 5.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = presetName,
+                                                    color = if (isSelected) Color(0xFFFDE69B) else Color.White.copy(alpha = 0.85f),
+                                                    fontSize = 11.sp,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         // --- Pill 1: Distribuidor y Tipografía ---
                         Column(
                             modifier = Modifier
@@ -4480,6 +4618,20 @@ fun GlassBoxScope.LyricsOptionsMenu(
                                 Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.lyrics_menu_edit), tint = Color.White, modifier = Modifier.size(20.dp))
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(stringResource(R.string.lyrics_menu_edit), color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
+                            }
+
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable {
+                                        handleDismiss { onShareLyrics() }
+                                    }
+                                    .padding(vertical = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(Icons.Default.Share, contentDescription = "Compartir", tint = Color.White, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text("Compartir", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
                             }
 
                             Column(

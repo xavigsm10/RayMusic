@@ -9,6 +9,8 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.CopyOnWriteArrayList
 import android.util.Log
+import kotlin.math.abs
+import kotlin.math.tanh
 
 /**
  * Manages active [SpatialAudioProcessor] instances and synchronizes Dolby Atmos / 3D spatial audio state.
@@ -46,17 +48,14 @@ object SpatialAudioManager {
 /**
  * Virtual 7.1.4 Reference Dolby Atmos Binaural Spatializer for ExoPlayer/Media3.
  *
- * Implements full 7.1.4 virtual speaker deconstruction:
- * 1. Dedicated Center Channel: Isolated lead vocals & kick with presence boost (+1.8 dB @ 2.7 kHz).
- *    Vocals stay razor-sharp and centered without being recessed or muffled by the room.
- * 2. Dedicated LFE Subwoofer Channel: 2nd-order Butterworth low-pass (< 95 Hz) with +4.5 dB cinema foundation.
- * 3. Overhead Height Channels (Top Front & Top Rear): 2nd-order high-pass (> 4.2 kHz), +3.5 dB elevation
- *    air shelf (@ 11.5 kHz) and 7.2 ms ceiling acoustic propagation delay.
- * 4. Surround & Rear Side Channels (Side & Back Surrounds): Depth recess (-2.8 dB @ 3.4 kHz),
- *    Schroeder all-pass phase decorrelator and 15 ms Haas spatial expansion.
- * 5. Virtual Theater Early Reflections: 4 prime-spaced room boundary taps simulating a Dolby-calibrated studio.
- * 6. Binaural 7.1.4 Summing: Maps all virtual speakers into binaural earcups with head-shadow crossfeed.
- * 7. Studio Soft-Knee Limiter: Prevents any digital clipping while preserving transient punch and analog warmth.
+ * Implements reference 7.1.4 virtual acoustic rendering with strict energy conservation:
+ * 1. Normalized Gain Staging: Eliminates digital saturation and distortion on modern loud commercial masters (0 dBFS).
+ * 2. Dedicated Center Channel: Clean presence anchor (+1.0 dB @ 2.7 kHz) keeping vocals intimate and clear.
+ * 3. Dedicated LFE Subwoofer Channel: 2nd-order Butterworth low-pass (< 95 Hz) calibrated for warm, tight bass rumble.
+ * 4. Overhead Height Channels (Top Front & Top Rear): 2nd-order high-pass (> 4.2 kHz) with +1.5 dB air shelf and 7.2 ms delay.
+ * 5. Surround 360-Degree Ambience: Distance notch (-2.5 dB @ 3.4 kHz), Schroeder all-pass decorrelation, and Haas delay.
+ * 6. Binaural 7.1.4 Summing with Head-Shadow: Maps all virtual speakers into earcups with energy-conserving coefficients.
+ * 7. Studio Analog Soft-Knee Limiter: Continuous hyperbolic compression above 0.82 prevents any hard clipping.
  */
 @UnstableApi
 class SpatialAudioProcessor : AudioProcessor {
@@ -159,12 +158,12 @@ class SpatialAudioProcessor : AudioProcessor {
     private fun initFilters(rate: Int) {
         if (rate <= 0) return
 
-        // 1. Center Vocal & Snare Clarity Anchor (+1.8 dB @ 2.7 kHz, Q=1.1)
+        // 1. Center Vocal Clarity Anchor (subtle +1.0 dB @ 2.7 kHz, Q=1.2)
         centerClarityFilter = BiquadFilter(
             sampleRate = rate,
             frequency = 2700.0,
-            gain = 1.8,
-            q = 1.1,
+            gain = 1.0,
+            q = 1.2,
             filterType = FilterType.PK
         )
 
@@ -186,20 +185,20 @@ class SpatialAudioProcessor : AudioProcessor {
             filterType = FilterType.HPQ
         )
 
-        // 4. Overhead Pinna Elevation Air Shelf (+3.5 dB @ 11.5 kHz, Q=0.75)
+        // 4. Overhead Pinna Elevation Air Shelf (+1.5 dB @ 11.5 kHz, Q=0.707)
         overheadAirFilter = BiquadFilter(
             sampleRate = rate,
             frequency = 11500.0,
-            gain = 3.5,
-            q = 0.75,
+            gain = 1.5,
+            q = 0.707,
             filterType = FilterType.HSC
         )
 
-        // 5. Surround Side/Back Distance Notch (-2.8 dB @ 3.4 kHz, Q=1.2) - pushes sound 3m away
+        // 5. Surround Side/Back Distance Notch (-2.5 dB @ 3.4 kHz, Q=1.2) - pushes sound 3m away
         sideDepthFilter = BiquadFilter(
             sampleRate = rate,
             frequency = 3400.0,
-            gain = -2.8,
+            gain = -2.5,
             q = 1.2,
             filterType = FilterType.PK
         )
@@ -284,10 +283,10 @@ class SpatialAudioProcessor : AudioProcessor {
         val heightAir = overheadAirFilter
         val sideDepth = sideDepthFilter
 
-        // Surround spatialization gain (+5 dB)
-        val surroundGain = 1.82
-        // Subwoofer boost factor (+4.5 dB)
-        val lfeBoost = 1.68
+        // Surround spatialization gain (balanced for wide 360-degree diffusion without gain inflation)
+        val surroundGain = 0.72
+        // Subwoofer blend factor (warm cinema rumble matching main mix level)
+        val lfeBoost = 0.65
 
         for (i in 0 until samplePairs) {
             val rawL = input.getShort().toDouble() / 32768.0
@@ -299,30 +298,26 @@ class SpatialAudioProcessor : AudioProcessor {
             val centerRaw = (rawL + rawR) * 0.5
             val sideRaw = (rawL - rawR) * 0.5
 
-            // Direct Front Left and Front Right (minus center spill for maximum stereo separation)
-            val frontL = rawL - centerRaw * 0.40
-            val frontR = rawR - centerRaw * 0.40
+            // Direct Front Left and Front Right
+            val frontL = rawL - centerRaw * 0.30
+            val frontR = rawR - centerRaw * 0.30
 
             // ==========================================
             // 2. DEDICATED CENTER SPEAKER (Lead Vocals)
             // ==========================================
-            // Enhanced with vocal clarity filter so the singer is upfront, intimate and crisp
             val centerProcessed = centerFilter?.processSample(centerRaw) ?: centerRaw
 
             // ==========================================
             // 3. DEDICATED LFE SUBWOOFER CHANNEL
             // ==========================================
-            // Steep low-pass filter below 95 Hz for visceral theater sub-bass rumble
             val lfeSample = (lfeFilter?.processSample(centerRaw) ?: 0.0) * lfeBoost
 
             // ==========================================
             // 4. OVERHEAD HEIGHT SPEAKERS (Top Front/Rear)
             // ==========================================
-            // Extract high-frequency diffuse ambient content
             val heightRawL = heightHp?.processSample(frontL) ?: 0.0
             val heightRawR = heightHp?.processSample(frontR) ?: 0.0
 
-            // Apply pinna elevation air shelf (+3.5 dB @ 11.5 kHz)
             val (heightShapedL, heightShapedR) = heightAir?.processStereo(heightRawL, heightRawR) ?: Pair(heightRawL, heightRawR)
 
             // Ceiling acoustic delay (~7.2 ms)
@@ -336,7 +331,6 @@ class SpatialAudioProcessor : AudioProcessor {
             // ==========================================
             // 5. SURROUND & REAR SPEAKERS (360-degree Wall)
             // ==========================================
-            // Distance perception notch (-2.8 dB @ 3.4 kHz) moves side speakers 3 meters away
             val sideDeep = sideDepth?.processSample(sideRaw) ?: sideRaw
 
             // Schroeder All-Pass Phase Decorrelation (diffuse ambient cloud)
@@ -363,28 +357,27 @@ class SpatialAudioProcessor : AudioProcessor {
             val er4 = erBuffer[(erWriteIndex - erTap4 + erBufferSize) and erMask]
             erWriteIndex = (erWriteIndex + 1) and erMask
 
-            val roomReflectionsL = er1 * 0.12 - er3 * 0.08
-            val roomReflectionsR = -er2 * 0.10 + er4 * 0.06
+            val roomReflectionsL = er1 * 0.06 - er3 * 0.04
+            val roomReflectionsR = -er2 * 0.05 + er4 * 0.03
 
             // Surround speakers left & right
-            val surroundL = diffuseSurround + surroundDelayed * 0.38 + roomReflectionsL
-            val surroundR = -diffuseSurround - surroundDelayed * 0.38 + roomReflectionsR
+            val surroundL = diffuseSurround + surroundDelayed * 0.22 + roomReflectionsL
+            val surroundR = -diffuseSurround - surroundDelayed * 0.22 + roomReflectionsR
 
             // ==========================================
             // 7. BINAURAL 7.1.4 SUMMING WITH HEAD SHADOW
             // ==========================================
-            // Recursive 2-pole lowpass for subtle cross-ear acoustic shadow
             headShadowL1 += headShadowAlpha * (surroundL - headShadowL1)
             headShadowL2 += headShadowAlpha * (headShadowL1 - headShadowL2)
             headShadowR1 += headShadowAlpha * (surroundR - headShadowR1)
             headShadowR2 += headShadowAlpha * (headShadowR1 - headShadowR2)
 
-            // Sum all virtual speakers into earcups (exact 7.1.4 coefficient balance)
-            val earL = frontL * 0.90 + centerProcessed * 0.72 + lfeSample + surroundL + heightDelayedL * 0.65 + headShadowR2 * 0.16
-            val earR = frontR * 0.90 + centerProcessed * 0.72 + lfeSample + surroundR + heightDelayedR * 0.65 + headShadowL2 * 0.16
+            // Normalized Reference 7.1.4 Summing Matrix (conserves energy, prevents clipping on loud tracks)
+            val earL = frontL * 0.62 + centerProcessed * 0.44 + lfeSample * 0.32 + surroundL * 0.36 + heightDelayedL * 0.25 + headShadowR2 * 0.08
+            val earR = frontR * 0.62 + centerProcessed * 0.44 + lfeSample * 0.32 + surroundR * 0.36 + heightDelayedR * 0.25 + headShadowL2 * 0.08
 
             // ==========================================
-            // 8. STUDIO SOFT-KNEE LIMITER (Pure Dynamics)
+            // 8. STUDIO SOFT-KNEE ANALOG LIMITER
             // ==========================================
             val limitedL = softLimit(earL)
             val limitedR = softLimit(earR)
@@ -398,16 +391,16 @@ class SpatialAudioProcessor : AudioProcessor {
     }
 
     /**
-     * Fast, branch-friendly polynomial soft-knee limiter for studio-master dynamic control.
+     * Smooth, non-saturating analog soft-knee limiter.
+     * 100% linear below 0.82 (zero distortion).
+     * Smooth hyperbolic compression above 0.82 with zero hard clipping.
      */
-    private inline fun softLimit(x: Double): Double {
-        return when {
-            x > 1.25 -> 0.988
-            x < -1.25 -> -0.988
-            x > 0.82 -> 0.82 + (x - 0.82) / (1.0 + (x - 0.82) * (x - 0.82))
-            x < -0.82 -> -0.82 + (x + 0.82) / (1.0 + (x + 0.82) * (x + 0.82))
-            else -> x
-        }
+    private fun softLimit(x: Double): Double {
+        val absX = abs(x)
+        if (absX <= 0.82) return x
+        val excess = absX - 0.82
+        val compressed = 0.82 + 0.16 * tanh(excess / 0.45)
+        return if (x >= 0.0) compressed else -compressed
     }
 
     override fun getOutput(): ByteBuffer {

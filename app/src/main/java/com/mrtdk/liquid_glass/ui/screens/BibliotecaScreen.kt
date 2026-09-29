@@ -311,13 +311,16 @@ fun BibliotecaScreen(
                                                                 album = itm.album
                                                             )
                                                         )
-                                                        ItemType.ARTIST -> onArtistSelected(
-                                                            com.mrtdk.liquid_glass.ui.screens.ArtistState(
-                                                                id = itm.id,
-                                                                name = itm.title,
-                                                                thumbnail = itm.thumbnail
+                                                        ItemType.ARTIST -> {
+                                                            val spThumb = com.mrtdk.liquid_glass.spotify.SpotifyArtistProvider.getCachedArtistImageUrl(itm.title)
+                                                            onArtistSelected(
+                                                                com.mrtdk.liquid_glass.ui.screens.ArtistState(
+                                                                    id = itm.id,
+                                                                    name = itm.title,
+                                                                    thumbnail = spThumb ?: itm.thumbnail
+                                                                )
                                                             )
-                                                        )
+                                                        }
                                                         ItemType.ALBUM -> onAlbumSelected(
                                                             com.mrtdk.liquid_glass.ui.screens.AlbumState(
                                                                 id = itm.id,
@@ -451,11 +454,12 @@ fun BibliotecaScreen(
                                                     )
                                                 }
                                                 ItemType.ARTIST -> {
+                                                    val spThumb = com.mrtdk.liquid_glass.spotify.SpotifyArtistProvider.getCachedArtistImageUrl(item.title)
                                                     onArtistSelected(
                                                         com.mrtdk.liquid_glass.ui.screens.ArtistState(
                                                             id = item.id,
                                                             name = item.title,
-                                                            thumbnail = item.thumbnail
+                                                            thumbnail = spThumb ?: item.thumbnail
                                                         )
                                                     )
                                                 }
@@ -494,15 +498,25 @@ fun BibliotecaScreen(
                                         .clip(if (item.type == ItemType.ARTIST) androidx.compose.foundation.shape.CircleShape else RoundedCornerShape(12.dp))
                                         .background(Color(0xFF1C1C1E))
                                 ) {
-                                    AsyncImage(
-                                        model = ImageRequest.Builder(context)
-                                            .data(item.thumbnail)
-                                            .crossfade(true)
-                                            .build(),
-                                        contentDescription = item.title,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
+                                    if (item.type == ItemType.ARTIST) {
+                                        com.mrtdk.liquid_glass.spotify.SpotifyArtistAvatar(
+                                            artistName = item.title,
+                                            fallbackUrl = item.thumbnail,
+                                            contentDescription = item.title,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    } else {
+                                        AsyncImage(
+                                            model = ImageRequest.Builder(context)
+                                                .data(item.thumbnail)
+                                                .crossfade(true)
+                                                .build(),
+                                            contentDescription = item.title,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    }
                                 }
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
@@ -633,13 +647,16 @@ fun BibliotecaScreen(
                                                             album = itm.album
                                                         )
                                                     )
-                                                    ItemType.ARTIST -> onArtistSelected(
-                                                        com.mrtdk.liquid_glass.ui.screens.ArtistState(
-                                                            id = itm.id,
-                                                            name = itm.title,
-                                                            thumbnail = itm.thumbnail
+                                                    ItemType.ARTIST -> {
+                                                        val spThumb = com.mrtdk.liquid_glass.spotify.SpotifyArtistProvider.getCachedArtistImageUrl(itm.title)
+                                                        onArtistSelected(
+                                                            com.mrtdk.liquid_glass.ui.screens.ArtistState(
+                                                                id = itm.id,
+                                                                name = itm.title,
+                                                                thumbnail = spThumb ?: itm.thumbnail
+                                                            )
                                                         )
-                                                    )
+                                                    }
                                                     ItemType.ALBUM -> onAlbumSelected(
                                                         com.mrtdk.liquid_glass.ui.screens.AlbumState(
                                                             id = itm.id,
@@ -815,11 +832,12 @@ fun BibliotecaScreen(
                                         )
                                     }
                                     ItemType.ARTIST -> {
+                                        val spThumb = com.mrtdk.liquid_glass.spotify.SpotifyArtistProvider.getCachedArtistImageUrl(item.title)
                                         onArtistSelected(
                                             com.mrtdk.liquid_glass.ui.screens.ArtistState(
                                                 id = item.id,
                                                 name = item.title,
-                                                thumbnail = item.thumbnail
+                                                thumbnail = spThumb ?: item.thumbnail
                                             )
                                         )
                                     }
@@ -858,15 +876,25 @@ fun BibliotecaScreen(
                             .clip(if (item.type == ItemType.ARTIST) androidx.compose.foundation.shape.CircleShape else RoundedCornerShape(12.dp))
                             .background(Color(0xFF1C1C1E))
                     ) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(item.thumbnail)
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = item.title,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
+                        if (item.type == ItemType.ARTIST) {
+                            com.mrtdk.liquid_glass.spotify.SpotifyArtistAvatar(
+                                artistName = item.title,
+                                fallbackUrl = item.thumbnail,
+                                contentDescription = item.title,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(item.thumbnail)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = item.title,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
@@ -951,11 +979,12 @@ fun BibliotecaScreen(
                         )
                     }
                     ItemType.ARTIST -> {
+                        val spThumb = com.mrtdk.liquid_glass.spotify.SpotifyArtistProvider.getCachedArtistImageUrl(target.title)
                         onArtistSelected(
                             com.mrtdk.liquid_glass.ui.screens.ArtistState(
                                 id = target.id,
                                 name = target.title,
-                                thumbnail = target.thumbnail
+                                thumbnail = spThumb ?: target.thumbnail
                             )
                         )
                     }

@@ -313,6 +313,32 @@ fun BetterLyricsFloatingDock(
                     .background(Color.White.copy(alpha = 0.15f))
             )
 
+            // Apple Music Sing Karaoke Toggle Button
+            val isSingActive by com.mrtdk.liquid_glass.playback.sing.AppleMusicSingManager.isSingEnabled.collectAsState()
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(if (isSingActive) Color(0xFFFA243C) else Color.Transparent)
+                    .clickable { com.mrtdk.liquid_glass.playback.sing.AppleMusicSingManager.toggleSing() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Mic,
+                    contentDescription = "Apple Music Sing",
+                    tint = if (isSingActive) Color.White else Color.White.copy(alpha = 0.75f),
+                    modifier = Modifier.size(15.dp)
+                )
+            }
+
+            // Divider 3
+            Box(
+                modifier = Modifier
+                    .height(16.dp)
+                    .width(1.dp)
+                    .background(Color.White.copy(alpha = 0.15f))
+            )
+
             // 3. Timing Offset Controls (Clock + [-] [0.0s] [+])
             Row(
                 modifier = Modifier

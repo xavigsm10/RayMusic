@@ -1599,14 +1599,26 @@ fun PlaylistDetailScreen(
                             .padding(horizontal = 20.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        AsyncImage(
+                        if (track.type == com.mrtdk.liquid_glass.data.ItemType.ARTIST) {
+                            com.mrtdk.liquid_glass.spotify.SpotifyArtistAvatar(
+                                artistName = track.title,
+                                fallbackUrl = track.thumbnail,
+                                contentDescription = track.title,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                            )
+                        } else {
+                            AsyncImage(
                                 model = track.thumbnail ?: playlistCoverForPlayer,
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
                                     .size(48.dp)
                                     .clip(RoundedCornerShape(8.dp))
-                        )
+                            )
+                        }
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
@@ -3662,8 +3674,9 @@ fun AddMusicContent(
                                              .padding(horizontal = 24.dp, vertical = 8.dp),
                                          verticalAlignment = Alignment.CenterVertically
                                      ) {
-                                         AsyncImage(
-                                             model = item.thumbnail,
+                                         com.mrtdk.liquid_glass.spotify.SpotifyArtistAvatar(
+                                             artistName = item.title,
+                                             fallbackUrl = item.thumbnail,
                                              contentDescription = null,
                                              contentScale = ContentScale.Crop,
                                              modifier = Modifier
