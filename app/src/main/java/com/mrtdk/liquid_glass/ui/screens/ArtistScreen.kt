@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material.icons.filled.Check
@@ -226,6 +227,11 @@ fun ArtistScreen(
             com.mrtdk.liquid_glass.spotify.AppleMusicArtistProvider.getCachedBgColor(currentArtistName)
         )
     }
+    var appleMusicInfoBgColorHex by remember(currentArtistName) {
+        mutableStateOf<String?>(
+            com.mrtdk.liquid_glass.spotify.AppleMusicArtistProvider.getCachedInfoBgColor(currentArtistName)
+        )
+    }
     var artistMotionVideoUrl by remember(currentArtistName) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(currentArtistName) {
@@ -243,6 +249,9 @@ fun ArtistScreen(
                         }
                         if (!data.bgColorHex.isNullOrBlank()) {
                             appleMusicBgColorHex = data.bgColorHex
+                        }
+                        if (!data.infoBgColorHex.isNullOrBlank()) {
+                            appleMusicInfoBgColorHex = data.infoBgColorHex
                         }
                     }
                 }
@@ -571,6 +580,27 @@ fun ArtistScreen(
         }
     }
 
+    val infoCardBackgroundColor = remember(appleMusicInfoBgColorHex, dominantColor, artistState.name) {
+        if (!appleMusicInfoBgColorHex.isNullOrBlank()) {
+            try {
+                val parsed = android.graphics.Color.parseColor(appleMusicInfoBgColorHex)
+                Color(parsed)
+            } catch (_: Exception) {
+                Color(0xFF222B38)
+            }
+        } else if (dominantColor != Color.Unspecified) {
+            val ratio = 0.50f
+            Color(
+                red = (dominantColor.red * ratio).coerceIn(0f, 1f),
+                green = (dominantColor.green * ratio).coerceIn(0f, 1f),
+                blue = (dominantColor.blue * ratio).coerceIn(0f, 1f),
+                alpha = 1f
+            )
+        } else {
+            Color(0xFF222B38)
+        }
+    }
+
     val animatedBackgroundColor by animateColorAsState(
         targetValue = finalBackgroundColor,
         animationSpec = tween(durationMillis = 400),
@@ -635,7 +665,7 @@ fun ArtistScreen(
                                 videoUrl = artistMotionVideoUrl!!,
                                 modifier = Modifier.fillMaxSize(),
                                 enableFrameCapture = false,
-                                isPaused = isHeroOffscreen || showAllAlbumsOverlay || showAllSongsOverlay || showAllSectionOverlay
+                                isPaused = isHeroOffscreen || showAllAlbumsOverlay || showAllSongsOverlay || showAllSectionOverlay || showInfoOverlay
                             )
                         }
 
@@ -1552,210 +1582,219 @@ fun ArtistScreen(
 
         // Floating Top Bar moved to glassContent slot of root GlassContainer
 
-        // ── INFO / ABOUT OVERLAY PAGE ──────────────────
+        // ── INFO / ABOUT OVERLAY MODAL (APPLE MUSIC MOBILE STYLE) ──────────────────
         if (showInfoOverlay) {
             val metadata = extractArtistMetadata(artistPage?.description)
+            // Dimmed scrim background (click outside to dismiss)
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(animatedBackgroundColor)
+                    .background(Color.Black.copy(alpha = 0.65f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { showInfoOverlay = false },
+                contentAlignment = Alignment.Center
             ) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize()
+                // Floating modal card centered on screen with rounded corners
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.92f)
+                        .fillMaxHeight(0.85f)
+                        .clip(RoundedCornerShape(32.dp))
+                        .background(infoCardBackgroundColor)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { /* Consume clicks inside card */ }
                 ) {
-                    // Full-width artist image with soft bottom blur & gradient (matching player technique)
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(430.dp)
-                        ) {
-                            // 1. Sharp full-res cover image (never YouTube)
-                            if (!hdThumb.isNullOrBlank()) {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
-                                    contentDescription = artistState.name,
-                                    contentScale = ContentScale.Crop,
-                                    alignment = Alignment.TopCenter,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        // Header artist studio portrait with gradient fade into infoCardBackgroundColor
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(340.dp)
+                            ) {
+                                if (!hdThumb.isNullOrBlank()) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                                        contentDescription = artistState.name,
+                                        contentScale = ContentScale.Crop,
+                                        alignment = Alignment.TopCenter,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(infoCardBackgroundColor)
+                                    )
+                                }
+
+                                // Smooth uniform vertical gradient fade into infoCardBackgroundColor
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .background(Color(0xFF18181A))
-                                )
-                            }
-
-                            // 2. Smooth uniform gradient fade into animatedBackgroundColor at the bottom
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.verticalGradient(
-                                            0.0f to Color.Transparent,
-                                            0.50f to Color.Transparent,
-                                            0.70f to animatedBackgroundColor.copy(alpha = 0.40f),
-                                            0.85f to animatedBackgroundColor.copy(alpha = 0.80f),
-                                            1.0f to animatedBackgroundColor
+                                        .background(
+                                            Brush.verticalGradient(
+                                                0.0f to Color.Transparent,
+                                                0.35f to Color.Transparent,
+                                                0.65f to infoCardBackgroundColor.copy(alpha = 0.50f),
+                                                0.85f to infoCardBackgroundColor.copy(alpha = 0.90f),
+                                                1.0f to infoCardBackgroundColor
+                                            )
                                         )
-                                    )
-                            )
+                                )
 
-                            // Back button floating at top left
-                            Box(
-                                modifier = Modifier
-                                    .statusBarsPadding()
-                                    .padding(start = 16.dp, top = 8.dp)
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.White.copy(alpha = 0.18f))
-                                    .clickable { showInfoOverlay = false },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.flecha_atras),
-                                    contentDescription = "Back",
-                                    tint = if (isDarkMode) Color.White else Color(0xFF151515),
-                                    modifier = Modifier.size(20.dp).offset(x = (-1).dp)
+                                // Close "X" button (Apple Music mobile style: top-left circular translucent)
+                                Box(
+                                    modifier = Modifier
+                                        .padding(start = 16.dp, top = 16.dp)
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.Black.copy(alpha = 0.40f))
+                                        .clickable { showInfoOverlay = false },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = androidx.compose.material.icons.Icons.Default.Close,
+                                        contentDescription = "Close",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        // Artist Logo or Name
+                        item {
+                            if (!artistLogoUrl.isNullOrBlank()) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context)
+                                        .data(artistLogoUrl)
+                                        .allowRgb565(false)
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = artistState.name,
+                                    contentScale = ContentScale.Fit,
+                                    alignment = Alignment.CenterStart,
+                                    modifier = Modifier
+                                        .heightIn(min = 36.dp, max = 56.dp)
+                                        .padding(horizontal = 24.dp)
+                                        .padding(top = 4.dp)
+                                )
+                            } else {
+                                Text(
+                                    text = artistState.name,
+                                    color = Color.White,
+                                    fontSize = 32.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 24.dp)
+                                        .padding(top = 4.dp)
                                 )
                             }
                         }
-                    }
 
-                    // Artist name / logo (left-aligned, large)
-                    item {
-                        if (!artistLogoUrl.isNullOrBlank()) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(artistLogoUrl)
-                                    .allowRgb565(false)
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = artistState.name,
-                                contentScale = ContentScale.Fit,
-                                alignment = Alignment.CenterStart,
-                                modifier = Modifier
-                                    .heightIn(min = 40.dp, max = 64.dp)
-                                    .padding(horizontal = 20.dp)
-                                    .padding(top = 4.dp)
-                            )
-                        } else {
-                            Text(
-                                text = artistState.name,
-                                color = Color.White,
-                                fontSize = 34.sp,
-                                fontWeight = FontWeight.Bold,
+                        // Metadata: Born, From, Genre (Apple Music mobile stacked layout)
+                        item {
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 20.dp)
-                                    .padding(top = 4.dp)
-                            )
-                        }
-                    }
-
-                    // Metadata: FROM, BORN, GENRE
-                    item {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp)
-                                .padding(top = 16.dp, bottom = 8.dp)
-                        ) {
-                            // FROM and BORN side by side
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(40.dp)
+                                    .padding(horizontal = 24.dp)
+                                    .padding(top = 16.dp, bottom = 4.dp)
                             ) {
-                                metadata.from?.let { origin ->
-                                    Column {
-                                        Text(
-                                            text = "FROM",
-                                            color = Color.White.copy(alpha = 0.5f),
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(
-                                            text = origin,
-                                            color = Color.White,
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                    }
-                                }
                                 metadata.born?.let { date ->
-                                    Column {
-                                        Text(
-                                            text = "BORN",
-                                            color = Color.White.copy(alpha = 0.5f),
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(
-                                            text = date,
-                                            color = Color.White,
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                    }
+                                    Text(
+                                        text = "Born",
+                                        color = Color.White.copy(alpha = 0.65f),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = date,
+                                        color = Color.White,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Spacer(modifier = Modifier.height(14.dp))
                                 }
-                            }
 
-                            // GENRE
-                            if (metadata.genres.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Text(
-                                    text = "GENRE",
-                                    color = Color.White.copy(alpha = 0.5f),
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    metadata.genres.forEach { genre ->
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(16.dp))
-                                                .background(Color.White.copy(alpha = 0.12f))
-                                                .padding(horizontal = 12.dp, vertical = 6.dp)
-                                        ) {
-                                            Text(
-                                                text = genre,
-                                                color = Color.White,
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Medium
-                                            )
+                                metadata.from?.let { origin ->
+                                    Text(
+                                        text = "From",
+                                        color = Color.White.copy(alpha = 0.65f),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = origin,
+                                        color = Color.White,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Spacer(modifier = Modifier.height(14.dp))
+                                }
+
+                                if (metadata.genres.isNotEmpty()) {
+                                    Text(
+                                        text = "Genre",
+                                        color = Color.White.copy(alpha = 0.65f),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        metadata.genres.forEach { genre ->
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(16.dp))
+                                                    .background(Color.White.copy(alpha = 0.16f))
+                                                    .padding(horizontal = 14.dp, vertical = 6.dp)
+                                            ) {
+                                                Text(
+                                                    text = genre,
+                                                    color = Color.White,
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                            }
                                         }
                                     }
+                                    Spacer(modifier = Modifier.height(16.dp))
                                 }
                             }
                         }
-                    }
 
-                    // About section
-                    item {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp)
-                                .padding(top = 20.dp, bottom = 100.dp)
-                        ) {
-                            Text(
-                                text = "About",
-                                color = Color.White,
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = artistPage?.description ?: "No description available.",
-                                color = Color.White.copy(alpha = 0.8f),
-                                fontSize = 15.sp,
-                                lineHeight = 23.sp,
-                                modifier = Modifier.fillMaxWidth()
-                            )
+                        // About section
+                        item {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 24.dp)
+                                    .padding(top = 10.dp, bottom = 40.dp)
+                            ) {
+                                Text(
+                                    text = "About",
+                                    color = Color.White,
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = artistPage?.description ?: "No description available.",
+                                    color = Color.White.copy(alpha = 0.85f),
+                                    fontSize = 15.sp,
+                                    lineHeight = 22.sp,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
                         }
                     }
                 }
