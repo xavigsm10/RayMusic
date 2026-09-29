@@ -210,44 +210,44 @@ fun ArtistScreen(
 
 
     val currentArtistName = artistPage?.artist?.title ?: artistState.name
-    var spotifyArtistThumb by remember(currentArtistName) { 
+    var appleMusicArtistThumb by remember(currentArtistName) { 
         mutableStateOf<String?>(
-            com.mrtdk.liquid_glass.spotify.SpotifyArtistProvider.getCachedArtistImageUrl(currentArtistName)
+            com.mrtdk.liquid_glass.spotify.AppleMusicArtistProvider.getCachedImageUrl(currentArtistName)
                 ?: artistState.thumbnail?.takeUnless { com.mrtdk.liquid_glass.spotify.SpotifyArtistProvider.isYouTubeUrl(it) }
         ) 
     }
     var artistLogoUrl by remember(currentArtistName) {
         mutableStateOf<String?>(
-            com.mrtdk.liquid_glass.spotify.AppleMusicLogoProvider.getCachedLogoUrl(currentArtistName)
+            com.mrtdk.liquid_glass.spotify.AppleMusicArtistProvider.getCachedLogoUrl(currentArtistName)
+        )
+    }
+    var appleMusicBgColorHex by remember(currentArtistName) {
+        mutableStateOf<String?>(
+            com.mrtdk.liquid_glass.spotify.AppleMusicArtistProvider.getCachedBgColor(currentArtistName)
         )
     }
     var artistMotionVideoUrl by remember(currentArtistName) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(currentArtistName) {
         if (currentArtistName.isNotBlank()) {
-            // 1. Fetch Apple Music typography logo immediately in parallel (0 waiting)
+            // 1. Unified Apple Music data fetch (studio portrait + official logo + background color)
             launch(Dispatchers.IO) {
-                if (artistLogoUrl == null) {
-                    val logo = com.mrtdk.liquid_glass.spotify.AppleMusicLogoProvider.getArtistLogoUrl(currentArtistName)
-                    if (!logo.isNullOrBlank()) {
-                        withContext(Dispatchers.Main) {
-                            artistLogoUrl = logo
+                val data = com.mrtdk.liquid_glass.spotify.AppleMusicArtistProvider.getArtistData(currentArtistName)
+                if (data != null) {
+                    withContext(Dispatchers.Main) {
+                        if (!data.imageUrl.isNullOrBlank()) {
+                            appleMusicArtistThumb = data.imageUrl
+                        }
+                        if (!data.logoUrl.isNullOrBlank()) {
+                            artistLogoUrl = data.logoUrl
+                        }
+                        if (!data.bgColorHex.isNullOrBlank()) {
+                            appleMusicBgColorHex = data.bgColorHex
                         }
                     }
                 }
             }
-            // 2. Fetch portrait image in parallel
-            launch(Dispatchers.IO) {
-                if (spotifyArtistThumb == null) {
-                    val spUrl = com.mrtdk.liquid_glass.spotify.SpotifyArtistProvider.getArtistImageUrl(currentArtistName)
-                    if (!spUrl.isNullOrBlank()) {
-                        withContext(Dispatchers.Main) {
-                            spotifyArtistThumb = spUrl
-                        }
-                    }
-                }
-            }
-            // 3. Fetch motion video in parallel
+            // 2. Fetch motion video in parallel
             launch(Dispatchers.IO) {
                 val motionUrl = com.mrtdk.liquid_glass.canvas.UnifiedCanvasProvider.getArtistMotionVideo(currentArtistName)
                 if (!motionUrl.isNullOrBlank()) {
@@ -259,8 +259,8 @@ fun ArtistScreen(
         }
     }
 
-    // NEVER use YouTube Music image for the artist. Only use the high-resolution Spotify / Apple Music portrait.
-    val artistThumb = spotifyArtistThumb
+    // Use official Apple Music portrait exclusively (never YouTube Music)
+    val artistThumb = appleMusicArtistThumb
     val hdThumb = artistThumb
 
     // Single fast API call — with fallback to search if browseId fails
@@ -539,8 +539,23 @@ fun ArtistScreen(
         }
     }
 
-    val finalBackgroundColor = remember(dominantColor, artistState.name) {
-        if (artistState.name.lowercase().contains("billie")) {
+    val finalBackgroundColor = remember(appleMusicBgColorHex, dominantColor, artistState.name) {
+        if (!appleMusicBgColorHex.isNullOrBlank()) {
+            try {
+                val parsed = android.graphics.Color.parseColor(appleMusicBgColorHex)
+                Color(parsed)
+            } catch (_: Exception) {
+                if (dominantColor != Color.Unspecified) {
+                    val ratio = 0.55f
+                    Color(
+                        red = (dominantColor.red * ratio).coerceIn(0f, 1f),
+                        green = (dominantColor.green * ratio).coerceIn(0f, 1f),
+                        blue = (dominantColor.blue * ratio).coerceIn(0f, 1f),
+                        alpha = 1f
+                    )
+                } else Color(0xFF111111)
+            }
+        } else if (artistState.name.lowercase().contains("billie")) {
             Color(0xFF061424) // Azul marino profundo de la imagen
         } else if (dominantColor != Color.Unspecified) {
             // Use the dominant color with slight darkening to keep readability
