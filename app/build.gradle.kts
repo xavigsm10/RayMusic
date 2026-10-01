@@ -17,6 +17,7 @@ android {
         targetSdk = 36
         versionCode = 7
         versionName = "0.6.5"
+        missingDimensionStrategy("edition", "standard")
     }
 
     flavorDimensions += "edition"

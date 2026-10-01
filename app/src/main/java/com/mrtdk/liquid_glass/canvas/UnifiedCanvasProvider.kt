@@ -303,6 +303,8 @@ object UnifiedCanvasProvider {
     suspend fun getArtistMotionVideo(artistName: String): String? = withContext(Dispatchers.IO) {
         if (artistName.isBlank()) return@withContext null
         try {
+            val fromProvider = com.mrtdk.liquid_glass.spotify.AppleMusicArtistProvider.getArtistVideoUrl(artistName)
+            if (!fromProvider.isNullOrBlank()) return@withContext fromProvider
             AppleMusicArtistBackgroundProvider.getByArtistName(artistName)
         } catch (_: Exception) {
             null
