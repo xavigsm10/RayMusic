@@ -520,11 +520,14 @@ fun GlassBoxScope.AppleMusicSongMenu(
     )
     val currentScrimAlpha = if (pivotBounds != null) (morphProgress * 0.38f).coerceIn(0f, 0.38f) else scrimAlpha
 
+    val isDarkSongMenu = com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState().value
+    val songMenuDimColor = rememberAndroidLiquidGlassDimColor(isDarkSongMenu)
+
     // Semi-transparent overlay to tap and dismiss
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = currentScrimAlpha))
+            .background(songMenuDimColor.copy(alpha = songMenuDimColor.alpha * (currentScrimAlpha / 0.38f).coerceIn(0f, 1f)))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -923,11 +926,14 @@ fun GlassBoxScope.AppleMusicAlbumMenu(
     )
     val currentScrimAlpha = if (pivotBounds != null) (morphProgress * 0.35f).coerceIn(0f, 0.35f) else scrimAlpha
 
+    val isDarkAlbumMenu = com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState().value
+    val albumMenuDimColor = rememberAndroidLiquidGlassDimColor(isDarkAlbumMenu)
+
     // Full screen overlay with subtle dimming
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = currentScrimAlpha))
+            .background(albumMenuDimColor.copy(alpha = albumMenuDimColor.alpha * (currentScrimAlpha / 0.35f).coerceIn(0f, 1f)))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -1881,10 +1887,13 @@ fun GlassBoxScope.AppleMusicPlaylistMenu(
         handleDismiss()
     }
 
+    val isDark = com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState().value
+    val dimColor = rememberAndroidLiquidGlassDimColor(isDark)
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.4f))
+            .background(dimColor.copy(alpha = dimColor.alpha * alpha))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -1906,39 +1915,11 @@ fun GlassBoxScope.AppleMusicPlaylistMenu(
                 }
                 .width(260.dp)
                 .wrapContentHeight()
-                .let {
-                    if (isSolid) {
-                        it.background(Color(0xFF202022).copy(alpha = 0.95f), RoundedCornerShape(24.dp))
-                    } else {
-                        it.drawBackdrop(
-                            backdrop = backdrop,
-                            shape = { RoundedCornerShape(24.dp) },
-                            effects = {
-                                if (!isLightweight) {
-                                    vibrancy()
-                                    blur(12f.dp.toPx())
-                                    lens(2f.dp.toPx(), 3f.dp.toPx(), depthEffect = false, chromaticAberration = false)
-                                } else {
-                                    blur(3f.dp.toPx())
-                                }
-                            },
-                            highlight = { Highlight(width = 0.8.dp, alpha = 0.45f) },
-                            shadow = { Shadow(radius = 16.dp, color = Color.Black.copy(alpha = 0.25f)) },
-                            onDrawSurface = { /* Untinted Frosted Glass */ }
-                        )
-                        .border(
-                            width = 0.8.dp,
-                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                                listOf(
-                                    Color.White.copy(alpha = 0.35f),
-                                    Color.White.copy(alpha = 0.08f)
-                                )
-                            ),
-                            shape = RoundedCornerShape(24.dp)
-                        )
-                    }
-                }
-                .clip(RoundedCornerShape(24.dp))
+                .androidLiquidGlassEffect(
+                    shape = RoundedCornerShape(24.dp),
+                    isDark = isDark,
+                    backdrop = backdrop
+                )
         ) {
             Column(
                 modifier = Modifier
@@ -2562,10 +2543,13 @@ fun GlassBoxScope.AppleMusicArtistMenu(
         handleDismiss()
     }
 
+    val isDarkArtistMenu = com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState().value
+    val artistMenuDimColor = rememberAndroidLiquidGlassDimColor(isDarkArtistMenu)
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = currentScrimAlpha))
+            .background(artistMenuDimColor.copy(alpha = artistMenuDimColor.alpha * (currentScrimAlpha / 0.38f).coerceIn(0f, 1f)))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -2894,10 +2878,13 @@ fun GlassBoxScope.AppleMusicCreateMenu(
         handleDismiss()
     }
 
+    val isDark = com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState().value
+    val dimColor = rememberAndroidLiquidGlassDimColor(isDark)
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.4f))
+            .background(dimColor.copy(alpha = dimColor.alpha * alpha))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -2919,39 +2906,11 @@ fun GlassBoxScope.AppleMusicCreateMenu(
                 }
                 .width(260.dp)
                 .wrapContentHeight()
-                .let {
-                    if (isSolid) {
-                        it.background(Color(0xFF202022).copy(alpha = 0.95f), RoundedCornerShape(24.dp))
-                    } else {
-                        it.drawBackdrop(
-                            backdrop = backdrop,
-                            shape = { RoundedCornerShape(24.dp) },
-                            effects = {
-                                if (!isLightweight) {
-                                    vibrancy()
-                                    blur(12f.dp.toPx())
-                                    lens(2f.dp.toPx(), 3f.dp.toPx(), depthEffect = false, chromaticAberration = false)
-                                } else {
-                                    blur(3f.dp.toPx())
-                                }
-                            },
-                            highlight = { Highlight(width = 0.8.dp, alpha = 0.45f) },
-                            shadow = { Shadow(radius = 16.dp, color = Color.Black.copy(alpha = 0.25f)) },
-                            onDrawSurface = { /* Untinted Frosted Glass */ }
-                        )
-                        .border(
-                            width = 0.8.dp,
-                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                                listOf(
-                                    Color.White.copy(alpha = 0.35f),
-                                    Color.White.copy(alpha = 0.08f)
-                                )
-                            ),
-                            shape = RoundedCornerShape(24.dp)
-                        )
-                    }
-                }
-                .clip(RoundedCornerShape(24.dp))
+                .androidLiquidGlassEffect(
+                    shape = RoundedCornerShape(24.dp),
+                    isDark = isDark,
+                    backdrop = backdrop
+                )
         ) {
             Column(
                 modifier = Modifier
@@ -3028,10 +2987,13 @@ fun GlassBoxScope.PlaylistsPageMoreMenu(
         handleDismiss()
     }
 
+    val isDark = com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState().value
+    val dimColor = rememberAndroidLiquidGlassDimColor(isDark)
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.4f))
+            .background(dimColor.copy(alpha = dimColor.alpha * alpha))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -3053,39 +3015,11 @@ fun GlassBoxScope.PlaylistsPageMoreMenu(
                 }
                 .width(260.dp)
                 .wrapContentHeight()
-                .let {
-                    if (isSolid) {
-                        it.background(Color(0xFF202022).copy(alpha = 0.95f), RoundedCornerShape(24.dp))
-                    } else {
-                        it.drawBackdrop(
-                            backdrop = backdrop,
-                            shape = { RoundedCornerShape(24.dp) },
-                            effects = {
-                                if (!isLightweight) {
-                                    vibrancy()
-                                    blur(12f.dp.toPx())
-                                    lens(2f.dp.toPx(), 3f.dp.toPx(), depthEffect = false, chromaticAberration = false)
-                                } else {
-                                    blur(3f.dp.toPx())
-                                }
-                            },
-                            highlight = { Highlight(width = 0.8.dp, alpha = 0.45f) },
-                            shadow = { Shadow(radius = 16.dp, color = Color.Black.copy(alpha = 0.25f)) },
-                            onDrawSurface = { /* Untinted Frosted Glass */ }
-                        )
-                        .border(
-                            width = 0.8.dp,
-                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                                listOf(
-                                    Color.White.copy(alpha = 0.35f),
-                                    Color.White.copy(alpha = 0.08f)
-                                )
-                            ),
-                            shape = RoundedCornerShape(24.dp)
-                        )
-                    }
-                }
-                .clip(RoundedCornerShape(24.dp))
+                .androidLiquidGlassEffect(
+                    shape = RoundedCornerShape(24.dp),
+                    isDark = isDark,
+                    backdrop = backdrop
+                )
         ) {
             Column(
                 modifier = Modifier
@@ -3217,10 +3151,13 @@ fun GlassBoxScope.PlaylistsPageSortMenu(
         handleDismiss()
     }
 
+    val isDark = com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState().value
+    val dimColor = rememberAndroidLiquidGlassDimColor(isDark)
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.4f))
+            .background(dimColor.copy(alpha = dimColor.alpha * alpha))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -3242,39 +3179,11 @@ fun GlassBoxScope.PlaylistsPageSortMenu(
                 }
                 .width(260.dp)
                 .wrapContentHeight()
-                .let {
-                    if (isSolid) {
-                        it.background(Color(0xFF202022).copy(alpha = 0.95f), RoundedCornerShape(24.dp))
-                    } else {
-                        it.drawBackdrop(
-                            backdrop = backdrop,
-                            shape = { RoundedCornerShape(24.dp) },
-                            effects = {
-                                if (!isLightweight) {
-                                    vibrancy()
-                                    blur(12f.dp.toPx())
-                                    lens(2f.dp.toPx(), 3f.dp.toPx(), depthEffect = false, chromaticAberration = false)
-                                } else {
-                                    blur(3f.dp.toPx())
-                                }
-                            },
-                            highlight = { Highlight(width = 0.8.dp, alpha = 0.45f) },
-                            shadow = { Shadow(radius = 16.dp, color = Color.Black.copy(alpha = 0.25f)) },
-                            onDrawSurface = { /* Untinted Frosted Glass */ }
-                        )
-                        .border(
-                            width = 0.8.dp,
-                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                                listOf(
-                                    Color.White.copy(alpha = 0.35f),
-                                    Color.White.copy(alpha = 0.08f)
-                                )
-                            ),
-                            shape = RoundedCornerShape(24.dp)
-                        )
-                    }
-                }
-                .clip(RoundedCornerShape(24.dp))
+                .androidLiquidGlassEffect(
+                    shape = RoundedCornerShape(24.dp),
+                    isDark = isDark,
+                    backdrop = backdrop
+                )
         ) {
             Column(
                 modifier = Modifier
@@ -3368,10 +3277,13 @@ fun GlassBoxScope.PlayerOptionsMenu(
     val dominantColor by LibraryManager.currentDominantColor.collectAsState()
     val tintColor = remember(dominantColor) { dominantColor.copy(alpha = 0.35f) }
 
+    val isDarkPlayerMenu = com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState().value
+    val playerMenuDimColor = rememberAndroidLiquidGlassDimColor(isDarkPlayerMenu)
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = currentScrimAlpha))
+            .background(playerMenuDimColor.copy(alpha = playerMenuDimColor.alpha * (currentScrimAlpha / 0.38f).coerceIn(0f, 1f)))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -3933,10 +3845,13 @@ fun GlassBoxScope.LyricsOptionsMenu(
 
     val dominantColor by LibraryManager.currentDominantColor.collectAsState()
 
+    val isDarkLyricsMenu = com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState().value
+    val lyricsMenuDimColor = rememberAndroidLiquidGlassDimColor(isDarkLyricsMenu)
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = currentScrimAlpha))
+            .background(lyricsMenuDimColor.copy(alpha = lyricsMenuDimColor.alpha * (currentScrimAlpha / 0.38f).coerceIn(0f, 1f)))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -4392,7 +4307,7 @@ fun GlassBoxScope.LyricsOptionsMenu(
                             HorizontalDivider(color = Color.White.copy(alpha = 0.06f), modifier = Modifier.padding(horizontal = 12.dp))
 
                             var currentFont by remember { 
-                                mutableStateOf(com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_font_family") ?: "Satoshi") 
+                                mutableStateOf(com.mrtdk.liquid_glass.data.LibraryManager.getString("lyrics_font_family") ?: "SF Pro") 
                             }
                             val displayFontText = if (currentFont == "Sistema") stringResource(R.string.lyrics_font_system) else currentFont
                             VerticalMenuActionItem(
@@ -4408,9 +4323,10 @@ fun GlassBoxScope.LyricsOptionsMenu(
                                 },
                                 onClick = {
                                     val nextFont = when (currentFont) {
+                                        "SF Pro" -> "Satoshi"
                                         "Satoshi" -> "Inter"
                                         "Inter" -> "Sistema"
-                                        else -> "Satoshi"
+                                        else -> "SF Pro"
                                     }
                                     currentFont = nextFont
                                     com.mrtdk.liquid_glass.data.LibraryManager.saveString("lyrics_font_family", nextFont)
@@ -4720,10 +4636,13 @@ fun GlassBoxScope.ArtistOptionsMenu(
 
     val dominantColor by LibraryManager.currentDominantColor.collectAsState()
 
+    val isDark = com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState().value
+    val dimColor = rememberAndroidLiquidGlassDimColor(isDark)
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = currentScrimAlpha))
+            .background(dimColor.copy(alpha = dimColor.alpha * morphProgress))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null

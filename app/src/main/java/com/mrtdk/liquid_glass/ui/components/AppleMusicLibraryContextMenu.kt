@@ -134,10 +134,14 @@ fun AppleMusicLibraryContextMenu(
     ) {
         val scrimAlpha = (morphProgress * 0.42f).coerceIn(0f, 0.42f)
 
+        val isDark = com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState().value
+        val dimColor = rememberAndroidLiquidGlassDimColor(isDark)
+        val backdrop = LocalBackdrop.current
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = scrimAlpha))
+                .background(dimColor.copy(alpha = dimColor.alpha * (scrimAlpha / 0.42f).coerceIn(0f, 1f)))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
@@ -186,16 +190,14 @@ fun AppleMusicLibraryContextMenu(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(18.dp))
-                            .background(Color(0xFF2C2C2E).copy(alpha = 0.94f))
-                            .border(
-                                width = 0.6.dp,
-                                color = Color.White.copy(alpha = 0.15f),
-                                shape = RoundedCornerShape(18.dp)
+                            .androidLiquidGlassEffect(
+                                shape = RoundedCornerShape(18.dp),
+                                isDark = isDark,
+                                backdrop = backdrop
                             )
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
-                                indication = ripple(color = Color.White.copy(alpha = 0.15f)),
+                                indication = ripple(color = (if (isDark) Color.White else Color.Black).copy(alpha = 0.15f)),
                                 onClick = { handleDismiss { onOpenDetail() } }
                             )
                             .padding(horizontal = 12.dp, vertical = 10.dp),
@@ -243,7 +245,7 @@ fun AppleMusicLibraryContextMenu(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = target.title,
-                                color = Color.White,
+                                color = if (isDark) Color.White else Color(0xFF1C1C1E),
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
@@ -251,7 +253,7 @@ fun AppleMusicLibraryContextMenu(
                             )
                             Text(
                                 text = target.subtitle,
-                                color = Color.White.copy(alpha = 0.65f),
+                                color = if (isDark) Color.White.copy(alpha = 0.65f) else Color(0xFF1C1C1E).copy(alpha = 0.65f),
                                 fontSize = 13.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -264,7 +266,7 @@ fun AppleMusicLibraryContextMenu(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                             contentDescription = null,
-                            tint = Color.White.copy(alpha = 0.5f),
+                            tint = if (isDark) Color.White.copy(alpha = 0.5f) else Color(0xFF1C1C1E).copy(alpha = 0.5f),
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -273,12 +275,10 @@ fun AppleMusicLibraryContextMenu(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(22.dp))
-                            .background(Color(0xFF2C2C2E).copy(alpha = 0.94f))
-                            .border(
-                                width = 0.6.dp,
-                                color = Color.White.copy(alpha = 0.15f),
-                                shape = RoundedCornerShape(22.dp)
+                            .androidLiquidGlassEffect(
+                                shape = RoundedCornerShape(22.dp),
+                                isDark = isDark,
+                                backdrop = backdrop
                             )
                     ) {
                         // 2A. Top 3 Action buttons row: [ Descargar ] [ Agregar a favoritos ] [ Compartir ]

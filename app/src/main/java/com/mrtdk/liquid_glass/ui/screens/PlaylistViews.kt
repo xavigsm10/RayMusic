@@ -51,6 +51,8 @@ import com.mrtdk.liquid_glass.ui.components.sharedTransitionElement
 import com.mrtdk.liquid_glass.ui.components.DetailBackPillButton
 import com.mrtdk.liquid_glass.ui.components.PlaylistsPageMoreMenu
 import com.mrtdk.liquid_glass.ui.components.PlaylistsPageSortMenu
+import com.mrtdk.liquid_glass.ui.components.androidLiquidGlassEffect
+import com.mrtdk.liquid_glass.ui.theme.ThemeManager
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -220,21 +222,12 @@ fun PlaylistsListScreen(
                                 Box(
                                     modifier = Modifier
                                         .height(48.dp)
-                                        .drawBackdrop(
+                                        .androidLiquidGlassEffect(
                                             backdrop = pillBackdrop,
                                             shape = { Capsule() },
-                                            effects = {
-                                                if (!isLightweight) {
-                                                    vibrancy()
-                                                    blur(2f.dp.toPx())
-                                                    lens(12f.dp.toPx(), 24f.dp.toPx())
-                                                } else {
-                                                    blur(1.5f.dp.toPx())
-                                                }
-                                            },
-                                            onDrawSurface = {
-                                                drawRect(Color(0xFF1C1C1E).copy(alpha = 0.35f))
-                                            }
+                                            isDark = ThemeManager.isDarkMode.collectAsState().value,
+                                            refractionHeight = 24.dp,
+                                            refractionAmount = 48.dp
                                         )
                                         .padding(horizontal = 8.dp),
                                     contentAlignment = Alignment.Center
@@ -406,21 +399,12 @@ fun PlaylistsListScreen(
                                 Box(
                                     modifier = Modifier
                                         .height(48.dp)
-                                        .drawBackdrop(
+                                        .androidLiquidGlassEffect(
                                             backdrop = pillBackdrop,
                                             shape = { Capsule() },
-                                            effects = {
-                                                if (!isLightweight) {
-                                                    vibrancy()
-                                                    blur(2f.dp.toPx())
-                                                    lens(12f.dp.toPx(), 24f.dp.toPx())
-                                                } else {
-                                                    blur(1.5f.dp.toPx())
-                                                }
-                                            },
-                                            onDrawSurface = {
-                                                drawRect(Color(0xFF1C1C1E).copy(alpha = 0.35f))
-                                            }
+                                            isDark = ThemeManager.isDarkMode.collectAsState().value,
+                                            refractionHeight = 24.dp,
+                                            refractionAmount = 48.dp
                                         )
                                         .padding(horizontal = 8.dp),
                                     contentAlignment = Alignment.Center

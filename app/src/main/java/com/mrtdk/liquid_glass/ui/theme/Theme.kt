@@ -8,7 +8,9 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
@@ -53,6 +55,12 @@ fun LiquidglassuicomponentTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
-        content = content
+        content = {
+            CompositionLocalProvider(
+                LocalTextStyle provides LocalTextStyle.current.copy(fontFamily = SFPro)
+            ) {
+                content()
+            }
+        }
     )
 }

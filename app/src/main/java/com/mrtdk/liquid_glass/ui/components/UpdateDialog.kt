@@ -111,11 +111,13 @@ private fun UpdateDialogContent(
         handleDismiss()
     }
 
+    val dimColor = rememberAndroidLiquidGlassDimColor(isDark)
+
     // Full-screen overlay dimming
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = if (isSolid) 0.65f else 0.4f))
+            .background(dimColor.copy(alpha = dimColor.alpha * alpha))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -223,21 +225,16 @@ private fun UpdateDialogContent(
                 )
             }
         } else {
-            Surface(
+            val backdrop = LocalBackdrop.current
+            Box(
                 modifier = cardModifier
-                    .border(
-                        1.dp,
-                        Brush.verticalGradient(
-                            listOf(
-                                Color.White.copy(alpha = 0.3f),
-                                Color.White.copy(alpha = 0.08f)
-                            )
-                        ),
-                        RoundedCornerShape(cornerRadius.dp)
-                    ),
-                shape = RoundedCornerShape(cornerRadius.dp),
-                color = Color(0xFF18181C).copy(alpha = 0.95f),
-                tonalElevation = 8.dp
+                    .androidLiquidGlassEffect(
+                        backdrop = backdrop,
+                        shape = { RoundedCornerShape(cornerRadius.dp) },
+                        isDark = isDark,
+                        refractionHeight = 24.dp,
+                        refractionAmount = 48.dp
+                    )
             ) {
                 UpdateInnerContent(
                     context = context,

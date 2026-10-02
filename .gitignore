@@ -25,4 +25,5 @@ Spotui/
 music-os-26/
 *.apk
 .agents/
-
+*.pkg
+Font Apple Music/

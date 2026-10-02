@@ -3,6 +3,7 @@ package com.kyant.backdrop.effects
 import androidx.annotation.FloatRange
 import expo.modules.androidglassview.backdrop.BackdropEffectScope
 import expo.modules.androidglassview.backdrop.effects.blur as expoBlur
+import expo.modules.androidglassview.backdrop.effects.colorControls as expoColorControls
 import expo.modules.androidglassview.backdrop.effects.lens as expoLens
 import expo.modules.androidglassview.backdrop.effects.vibrancy as expoVibrancy
 
@@ -14,5 +15,11 @@ fun BackdropEffectScope.lens(
     depthEffect: Boolean = false,
     chromaticAberration: Boolean = false
 ) = expoLens(refractionHeight, refractionAmount, depthEffect, chromaticAberration)
+
+fun BackdropEffectScope.colorControls(
+    brightness: Float = 0f,
+    contrast: Float = 1f,
+    saturation: Float = 1f
+) = expoColorControls(brightness, contrast, saturation)
 
 fun BackdropEffectScope.vibrancy() = expoVibrancy()

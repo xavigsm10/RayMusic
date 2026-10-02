@@ -80,11 +80,14 @@ fun PlaylistContextMenuOverlay(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
+            val isDark = com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState().value
+            val dimColor = rememberAndroidLiquidGlassDimColor(isDark)
+
             // Dim/dismiss background
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.45f))
+                    .background(dimColor)
                     .pointerInput(Unit) {
                         detectTapGestures(onTap = { onDismiss() })
                     }
@@ -159,11 +162,17 @@ fun PlaylistContextMenuOverlay(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // 2. Menu Options container
+                val backdrop = LocalBackdrop.current
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color(0xFF2C2C2E).copy(alpha = 0.95f))
+                        .androidLiquidGlassEffect(
+                            backdrop = backdrop,
+                            shape = { RoundedCornerShape(16.dp) },
+                            isDark = isDark,
+                            refractionHeight = 24.dp,
+                            refractionAmount = 48.dp
+                        )
                 ) {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         // Top row buttons: Descargar, Favorito, Compartir

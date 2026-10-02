@@ -2465,21 +2465,7 @@ fun AlbumTopRightMorphingPill(
     glassScope.GlassBox(
         modifier = Modifier
             .size(width = morphWidth, height = morphHeight)
-            .clip(morphShape)
-            .then(
-                if (morphProgress > 0.05f) {
-                    Modifier.border(
-                        width = 0.8.dp,
-                        brush = Brush.verticalGradient(
-                            listOf(
-                                Color.White.copy(alpha = morphProgress * 0.35f),
-                                Color.White.copy(alpha = morphProgress * 0.08f)
-                            )
-                        ),
-                        shape = morphShape
-                    )
-                } else Modifier
-            ),
+            .clip(morphShape),
         shape = morphShape,
         tint = morphTint,
         blur = 0.85f,

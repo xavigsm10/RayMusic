@@ -39,6 +39,9 @@ import expo.modules.androidglassview.backdrop.backdrops.emptyBackdrop
 import expo.modules.androidglassview.backdrop.backdrops.layerBackdrop
 import expo.modules.androidglassview.backdrop.backdrops.rememberLayerBackdrop
 import expo.modules.androidglassview.backdrop.drawBackdrop
+import expo.modules.androidglassview.backdrop.effects.blur
+import expo.modules.androidglassview.backdrop.effects.colorControls
+import expo.modules.androidglassview.backdrop.effects.lens
 import expo.modules.androidglassview.backdrop.highlight.Highlight
 import expo.modules.androidglassview.backdrop.isRenderEffectSupported
 import expo.modules.androidglassview.backdrop.shadow.Shadow
@@ -174,19 +177,34 @@ fun ExpoGlassPill(
             content = content
         )
     } else {
+        val isDark = com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState().value
+        val isLightTheme = !isDark
+        val containerColor = if (resolvedTint.isSpecified) {
+            resolvedTint
+        } else if (isLightTheme) {
+            Color(0xFFFAFAFA).copy(alpha = 0.6f)
+        } else {
+            Color(0xFF121212).copy(alpha = 0.4f)
+        }
+
         Box(
             modifier = modifier
                 .drawBackdrop(
                     backdrop = backdrop,
                     shape = { shape },
                     effects = {
-                        if (!isLightweight) {
-                            glassEffects(state)
-                        } else {
-                            glassEffects(state, effectScale = 1.5f)
-                        }
+                        colorControls(
+                            brightness = if (isLightTheme) 0.2f else 0f,
+                            saturation = 1.5f
+                        )
+                        blur(if (isLightTheme) 16f.dp.toPx() else 8f.dp.toPx())
+                        lens(
+                            refractionHeight = 16f.dp.toPx(),
+                            refractionAmount = 32f.dp.toPx(),
+                            depthEffect = true
+                        )
                     },
-                    highlight = { Highlight(width = 0.8.dp, alpha = 0.45f) },
+                    highlight = { Highlight.Plain },
                     shadow = { Shadow(radius = 16.dp, color = Color.Black.copy(alpha = 0.25f)) },
                     layerBlock = if (isInteractive) {
                         {
@@ -209,17 +227,7 @@ fun ExpoGlassPill(
                                     (height / width).fastCoerceAtMost(1f)
                         }
                     } else null,
-                    onDrawSurface = { glassSurface(state, effectsSupported) }
-                )
-                .border(
-                    width = 0.8.dp,
-                    brush = Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.35f),
-                            Color.White.copy(alpha = 0.08f)
-                        )
-                    ),
-                    shape = shape
+                    onDrawSurface = { drawRect(containerColor) }
                 )
                 .clickable(
                     interactionSource = interactionSource,
@@ -284,31 +292,36 @@ fun ExpoGlassMenuCard(
             content = content
         )
     } else {
+        val isDark = com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState().value
+        val isLightTheme = !isDark
+        val containerColor = if (resolvedTint.isSpecified) {
+            resolvedTint
+        } else if (isLightTheme) {
+            Color(0xFFFAFAFA).copy(alpha = 0.6f)
+        } else {
+            Color(0xFF121212).copy(alpha = 0.4f)
+        }
+
         Box(
             modifier = modifier
                 .drawBackdrop(
                     backdrop = backdrop,
                     shape = { shape },
                     effects = {
-                        if (!isLightweight) {
-                            glassEffects(state)
-                        } else {
-                            glassEffects(state, effectScale = 1.5f)
-                        }
-                    },
-                    highlight = { Highlight(width = 0.8.dp, alpha = 0.45f) },
-                    shadow = { Shadow(radius = 16.dp, color = Color.Black.copy(alpha = 0.25f)) },
-                    onDrawSurface = { glassSurface(state, effectsSupported) }
-                )
-                .border(
-                    width = 0.8.dp,
-                    brush = Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.35f),
-                            Color.White.copy(alpha = 0.08f)
+                        colorControls(
+                            brightness = if (isLightTheme) 0.2f else 0f,
+                            saturation = 1.5f
                         )
-                    ),
-                    shape = shape
+                        blur(if (isLightTheme) 16f.dp.toPx() else 8f.dp.toPx())
+                        lens(
+                            refractionHeight = 24f.dp.toPx(),
+                            refractionAmount = 48f.dp.toPx(),
+                            depthEffect = true
+                        )
+                    },
+                    highlight = { Highlight.Plain },
+                    shadow = { Shadow(radius = 16.dp, color = Color.Black.copy(alpha = 0.25f)) },
+                    onDrawSurface = { drawRect(containerColor) }
                 ),
             content = content
         )
@@ -316,7 +329,7 @@ fun ExpoGlassMenuCard(
 }
 
 /**
- * Standard GlassBox implementation using the "Frosted" variant from expo-android-glass-view.
+ * Standard GlassBox implementation using the exact AndroidLiquidGlass Dialog effect.
  */
 @Composable
 fun GlassBoxScope.GlassBox(
@@ -342,26 +355,8 @@ fun GlassBoxScope.GlassBox(
 ) {
     val glassStyle = LocalGlassStyle.current
     val isSolid = glassStyle == "solid" || com.mrtdk.liquid_glass.BuildConfig.IS_LITE
-    val isLightweight = LocalLightweightGlass.current
-    val effectsSupported = isRenderEffectSupported()
 
     val resolvedTint = if (tint == DarkGrayGlassTint) Color.Unspecified else tint
-
-    val state = remember(resolvedTint, blur, depthEffect) {
-        GlassState().apply {
-            this.themed = false
-            this.dark = false
-            this.tintColor = resolvedTint
-            this.heightOverride = 2f
-            this.amountOverride = 3f
-            this.blurOverride = if (blur > 0f) (blur * 12f).coerceIn(8f, 16f) else 12f
-            this.chromaticAberration = false // Pure neutral refraction without color fringes
-            this.depthEffect = depthEffect
-            this.highlight = true
-            this.shadow = true
-            this.vibrancyOverride = true
-        }
-    }
 
     if (isSolid) {
         val isDark = com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState().value
@@ -381,34 +376,39 @@ fun GlassBoxScope.GlassBox(
             content = content
         )
     } else {
+        val isDark = com.mrtdk.liquid_glass.ui.theme.ThemeManager.isDarkMode.collectAsState().value
+        val isLightTheme = !isDark
+        val containerColor = if (resolvedTint.isSpecified) {
+            resolvedTint
+        } else if (isLightTheme) {
+            Color(0xFFFAFAFA).copy(alpha = 0.6f)
+        } else {
+            Color(0xFF121212).copy(alpha = 0.4f)
+        }
+
         Box(
             modifier = modifier
                 .drawBackdrop(
                     backdrop = backdrop,
                     shape = { shape },
                     effects = {
-                        if (!isLightweight) {
-                            glassEffects(state)
-                        } else {
-                            glassEffects(state, effectScale = 1.5f)
-                        }
+                        colorControls(
+                            brightness = if (isLightTheme) 0.2f else 0f,
+                            saturation = 1.5f
+                        )
+                        blur(if (isLightTheme) 16f.dp.toPx() else 8f.dp.toPx())
+                        lens(
+                            refractionHeight = 24f.dp.toPx(),
+                            refractionAmount = 48f.dp.toPx(),
+                            depthEffect = depthEffect
+                        )
                     },
-                    highlight = { Highlight(width = 0.8.dp, alpha = 0.45f) },
+                    highlight = { Highlight.Plain },
                     shadow = {
                         val shadowRadius = if (elevation > 0.dp) elevation else 16.dp
                         Shadow(radius = shadowRadius, color = Color.Black.copy(alpha = 0.25f))
                     },
-                    onDrawSurface = { glassSurface(state, effectsSupported) }
-                )
-                .border(
-                    width = 0.8.dp,
-                    brush = Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.35f),
-                            Color.White.copy(alpha = 0.08f)
-                        )
-                    ),
-                    shape = shape
+                    onDrawSurface = { drawRect(containerColor) }
                 ),
             contentAlignment = contentAlignment,
             propagateMinConstraints = propagateMinConstraints,

@@ -194,10 +194,7 @@ fun DetailBackPillButton(
     isDarkMode: Boolean = ThemeManager.isDarkMode.collectAsState().value,
     onClick: () -> Unit
 ) {
-    val isSolid = com.mrtdk.glass.LocalGlassStyle.current == "solid" || LibraryManager.getGlassStyle() == "solid"
-    val arrowColor = if (isSolid || isDarkMode) Color.White else Color.Black
-    val borderColor = if (isSolid) Color.White.copy(alpha = 0.15f) else if (isDarkMode) Color.White.copy(alpha = 0.75f) else Color.Black.copy(alpha = 0.5f)
-    val bgColor = if (isSolid) Color(0xFF242428) else if (isDarkMode) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.04f)
+    val arrowColor = if (isDarkMode) Color.White else Color.Black
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
@@ -205,6 +202,7 @@ fun DetailBackPillButton(
         animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
         label = "pillPress"
     )
+    val backdrop = LocalBackdrop.current
 
     Box(
         modifier = Modifier
@@ -213,9 +211,13 @@ fun DetailBackPillButton(
                 scaleX = scale
                 scaleY = scale
             }
-            .clip(CircleShape)
-            .border(width = 1.dp, color = borderColor, shape = CircleShape)
-            .background(bgColor)
+            .androidLiquidGlassEffect(
+                backdrop = backdrop,
+                shape = { CircleShape },
+                isDark = isDarkMode,
+                refractionHeight = 12.dp,
+                refractionAmount = 24.dp
+            )
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,

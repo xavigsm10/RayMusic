@@ -96,11 +96,14 @@ private fun WhatsNewDialogContent(
         handleDismiss()
     }
 
+    val isLightTheme = !isDark
+    val dimColor = rememberAndroidLiquidGlassDimColor(isDark)
+
     // Full-screen backdrop overlay
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.55f))
+            .background(dimColor.copy(alpha = dimColor.alpha * alpha))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
@@ -108,6 +111,7 @@ private fun WhatsNewDialogContent(
         contentAlignment = Alignment.Center
     ) {
         val cardWidth = 350.dp
+        val cornerRadius = 28.dp
 
         val cardModifier = Modifier
             .graphicsLayer {
@@ -127,7 +131,7 @@ private fun WhatsNewDialogContent(
             val surfaceBorder = if (isDark) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.08f)
             Surface(
                 modifier = cardModifier,
-                shape = RoundedCornerShape(28.dp),
+                shape = RoundedCornerShape(cornerRadius),
                 color = surfaceBg,
                 shadowElevation = 16.dp,
                 tonalElevation = 6.dp,
@@ -140,41 +144,17 @@ private fun WhatsNewDialogContent(
                     onDismiss = { handleDismiss() }
                 )
             }
-        } else if (glassScope != null) {
-            glassScope.GlassBox(
-                modifier = cardModifier,
-                blur = 0.85f,
-                scale = 0.02f,
-                centerDistortion = 0.1f,
-                warpEdges = 0.35f,
-                elevation = 6.dp,
-                shape = RoundedCornerShape(28.dp),
-                tint = dominantColor.copy(alpha = 0.28f),
-                darkness = 0.3f
-            ) {
-                CardInnerContent(
-                    scrollState = scrollState,
-                    isSolid = false,
-                    isDark = isDark,
-                    onDismiss = { handleDismiss() }
-                )
-            }
         } else {
-            Surface(
+            val backdrop = LocalBackdrop.current
+            Box(
                 modifier = cardModifier
-                    .border(
-                        1.dp,
-                        Brush.verticalGradient(
-                            listOf(
-                                Color.White.copy(alpha = 0.3f),
-                                Color.White.copy(alpha = 0.08f)
-                            )
-                        ),
-                        RoundedCornerShape(28.dp)
-                    ),
-                shape = RoundedCornerShape(28.dp),
-                color = Color(0xFF18181C).copy(alpha = 0.95f),
-                tonalElevation = 8.dp
+                    .androidLiquidGlassEffect(
+                        backdrop = backdrop,
+                        shape = { RoundedCornerShape(cornerRadius) },
+                        isDark = isDark,
+                        refractionHeight = 24.dp,
+                        refractionAmount = 48.dp
+                    )
             ) {
                 CardInnerContent(
                     scrollState = scrollState,
