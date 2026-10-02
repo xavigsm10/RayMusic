@@ -152,6 +152,70 @@ data class LatestReleaseInfo(
     val playlistId: String
 )
 
+/**
+ * Adapts an artist background color to the dark theme according to Apple Music's OKLCH color engine.
+ * If lightness or chroma exceed dark-theme legibility thresholds, it scales them down smoothly
+ * (max lightness = 0.30, max chroma = 0.125), keeping hue and character intact.
+ */
+private fun adjustColorForDarkTheme(color: Color): Color {
+    val r = color.red
+    val g = color.green
+    val b = color.blue
+
+    fun srgbToLinear(c: Float): Double =
+        if (c <= 0.04045f) c.toDouble() / 12.92 else Math.pow((c + 0.055) / 1.055, 2.4)
+
+    fun linearToSrgb(c: Double): Float =
+        (if (c <= 0.0031308) 12.92 * c else 1.055 * Math.pow(c, 1.0 / 2.4) - 0.055).toFloat().coerceIn(0f, 1f)
+
+    val lr = srgbToLinear(r)
+    val lg = srgbToLinear(g)
+    val lb = srgbToLinear(b)
+
+    val l = Math.cbrt(0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb)
+    val m = Math.cbrt(0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb)
+    val s = Math.cbrt(0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb)
+
+    val L = 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s
+    val a = 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s
+    val bVal = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
+
+    val C = Math.sqrt(a * a + bVal * bVal)
+    val h = Math.atan2(bVal, a)
+
+    val maxL = 0.30
+    val maxC = 0.125
+
+    if (L <= maxL && C <= maxC) {
+        return color
+    }
+
+    val newL = Math.min(L, maxL)
+    val newC = Math.min(C, maxC)
+
+    val newA = newC * Math.cos(h)
+    val newB = newC * Math.sin(h)
+
+    val l_ = newL + 0.3963377774 * newA + 0.2158037573 * newB
+    val m_ = newL - 0.1055613458 * newA - 0.0638541728 * newB
+    val s_ = newL - 0.0894841775 * newA - 1.2914855480 * newB
+
+    val lr_ = l_ * l_ * l_
+    val lg_ = m_ * m_ * m_
+    val lb_ = s_ * s_ * s_
+
+    val rOut = +4.0767434770 * lr_ - 3.3077115913 * lg_ + 0.2309699292 * lb_
+    val gOut = -1.2684380046 * lr_ + 2.6097574011 * lg_ - 0.3413193965 * lb_
+    val bOut = -0.0041960863 * lr_ - 0.7034186147 * lg_ + 1.7076147010 * lb_
+
+    return Color(
+        red = linearToSrgb(rOut),
+        green = linearToSrgb(gOut),
+        blue = linearToSrgb(bOut),
+        alpha = color.alpha
+    )
+}
+
 @Composable
 fun ArtistScreen(
     artistState: ArtistState,
@@ -598,39 +662,25 @@ fun ArtistScreen(
     }
 
     val finalBackgroundColor = remember(appleMusicBgColorHex, dominantColor, artistState.name) {
-        if (!appleMusicBgColorHex.isNullOrBlank()) {
+        val baseColor = if (!appleMusicBgColorHex.isNullOrBlank()) {
             try {
                 val parsed = android.graphics.Color.parseColor(appleMusicBgColorHex)
                 Color(parsed)
             } catch (_: Exception) {
-                if (dominantColor != Color.Unspecified) {
-                    val ratio = 0.55f
-                    Color(
-                        red = (dominantColor.red * ratio).coerceIn(0f, 1f),
-                        green = (dominantColor.green * ratio).coerceIn(0f, 1f),
-                        blue = (dominantColor.blue * ratio).coerceIn(0f, 1f),
-                        alpha = 1f
-                    )
-                } else Color(0xFF111111)
+                if (dominantColor != Color.Unspecified) dominantColor else Color(0xFF111111)
             }
         } else if (artistState.name.lowercase().contains("billie")) {
             Color(0xFF061424) // Azul marino profundo de la imagen
         } else if (dominantColor != Color.Unspecified) {
-            // Use the dominant color with slight darkening to keep readability
-            val ratio = 0.55f
-            Color(
-                red = (dominantColor.red * ratio).coerceIn(0f, 1f),
-                green = (dominantColor.green * ratio).coerceIn(0f, 1f),
-                blue = (dominantColor.blue * ratio).coerceIn(0f, 1f),
-                alpha = 1f
-            )
+            dominantColor
         } else {
             Color(0xFF111111)
         }
+        adjustColorForDarkTheme(baseColor)
     }
 
     val infoCardBackgroundColor = remember(appleMusicInfoBgColorHex, dominantColor, artistState.name) {
-        if (!appleMusicInfoBgColorHex.isNullOrBlank()) {
+        val baseColor = if (!appleMusicInfoBgColorHex.isNullOrBlank()) {
             try {
                 val parsed = android.graphics.Color.parseColor(appleMusicInfoBgColorHex)
                 Color(parsed)
@@ -638,16 +688,11 @@ fun ArtistScreen(
                 Color(0xFF222B38)
             }
         } else if (dominantColor != Color.Unspecified) {
-            val ratio = 0.50f
-            Color(
-                red = (dominantColor.red * ratio).coerceIn(0f, 1f),
-                green = (dominantColor.green * ratio).coerceIn(0f, 1f),
-                blue = (dominantColor.blue * ratio).coerceIn(0f, 1f),
-                alpha = 1f
-            )
+            dominantColor
         } else {
             Color(0xFF222B38)
         }
+        adjustColorForDarkTheme(baseColor)
     }
 
     val animatedBackgroundColor by animateColorAsState(
@@ -1181,14 +1226,15 @@ fun ArtistScreen(
                         // Latest Release Card: directly under buttons, NO header text, matching Image 2
                         if (latestRelease != null) {
                             val release = latestRelease
-                            Spacer(modifier = Modifier.height(32.dp))
+                            Spacer(modifier = Modifier.height(30.dp))
                             var latestReleaseCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 18.dp)
-                                    .clip(RoundedCornerShape(22.dp))
-                                    .background(Color.White.copy(alpha = 0.08f))
+                                    .padding(horizontal = 16.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(Color.White.copy(alpha = 0.04f))
+                                    .border(0.75.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
                                     .clickable {
                                         val bounds = latestReleaseCoords?.unclippedBoundsInRoot()
                                         SharedTransitionState.lastOpenedSource = "latest_release"
@@ -1211,13 +1257,13 @@ fun ArtistScreen(
                                     .padding(12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                // Cover art (enlarged to 88.dp)
+                                // Cover art (Apple Music mobile standard: 76.dp, 6.dp radius)
                                 Box(
                                     modifier = Modifier
-                                        .size(88.dp)
+                                        .size(76.dp)
                                         .onGloballyPositioned { latestReleaseCoords = it }
                                         .sharedTransitionElement(release.id, source = "latest_release")
-                                        .clip(RoundedCornerShape(12.dp))
+                                        .clip(RoundedCornerShape(6.dp))
                                         .background(Color(0xFF222222))
                                 ) {
                                     AsyncImage(
@@ -1231,35 +1277,35 @@ fun ArtistScreen(
                                     )
                                 }
 
-                                Spacer(modifier = Modifier.width(16.dp))
+                                Spacer(modifier = Modifier.width(14.dp))
 
                                 // Date, Title, Song Count / Single
                                 Column(
                                     modifier = Modifier.weight(1f)
                                 ) {
-                                    if (release.dateText.isNotEmpty()) {
-                                        Text(
-                                            text = release.dateText,
-                                            color = Color.White.copy(alpha = 0.70f),
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Normal,
-                                            maxLines = 1
-                                        )
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                    }
                                     Text(
                                         text = release.title,
-                                        color = Color.White,
+                                        color = Color.White.copy(alpha = 0.95f),
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.Bold,
                                         maxLines = 2,
                                         overflow = TextOverflow.Ellipsis
                                     )
+                                    if (release.dateText.isNotEmpty()) {
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = release.dateText,
+                                            color = Color.White.copy(alpha = 0.64f),
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Normal,
+                                            maxLines = 1
+                                        )
+                                    }
                                     if (release.songCountText.isNotEmpty()) {
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
                                             text = release.songCountText,
-                                            color = Color.White.copy(alpha = 0.70f),
+                                            color = Color.White.copy(alpha = 0.64f),
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.Normal,
                                             maxLines = 1
@@ -1267,7 +1313,7 @@ fun ArtistScreen(
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.width(12.dp))
+                                Spacer(modifier = Modifier.width(10.dp))
 
                                 val isLatestReleaseSaved by androidx.compose.runtime.produceState(initialValue = false, release.id) {
                                     LibraryManager.savedItems.collect { list ->
@@ -1278,9 +1324,9 @@ fun ArtistScreen(
                                 // Add / Save circular button
                                 Box(
                                     modifier = Modifier
-                                        .size(36.dp)
+                                        .size(32.dp)
                                         .clip(CircleShape)
-                                        .background(Color.White.copy(alpha = 0.14f))
+                                        .background(Color.White.copy(alpha = 0.12f))
                                         .clickable {
                                             if (!isLatestReleaseSaved) {
                                                 LibraryManager.saveItem(
@@ -1304,7 +1350,7 @@ fun ArtistScreen(
                                         imageVector = if (isLatestReleaseSaved) Icons.Default.Check else Icons.Default.Add,
                                         contentDescription = if (isLatestReleaseSaved) "Saved" else "Add",
                                         tint = Color.White.copy(alpha = 0.95f),
-                                        modifier = Modifier.size(19.dp)
+                                        modifier = Modifier.size(18.dp)
                                     )
                                 }
                             }
@@ -1346,13 +1392,13 @@ fun ArtistScreen(
                         horizontalArrangement = Arrangement.Start,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(stringResource(R.string.top_songs), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.top_songs), color = Color.White.copy(alpha = 0.95f), fontSize = 22.sp, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.width(6.dp))
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                             contentDescription = "Ver todo",
-                            tint = Color.White.copy(alpha = 0.6f),
-                            modifier = Modifier.size(28.dp)
+                            tint = Color.White.copy(alpha = 0.45f),
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
@@ -1363,93 +1409,105 @@ fun ArtistScreen(
                     contentType = { "artist_song" }
                 ) { index ->
                     val song = songs[index]
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                val upgradedArt = upgradeArtToHD(song.thumbnail)
-                                val artistQueue = songs.drop(index + 1).map { t ->
-                                    QueueItem(
-                                        title = t.title,
-                                        artist = t.artists.joinToString { it.name },
-                                        artUrl = upgradeArtToHD(t.thumbnail),
-                                        videoId = t.id
-                                    )
-                                }
-                                onSongSelected(PlayerState(
-                                    title = song.title,
-                                    artist = song.artists.joinToString { it.name },
-                                    artUrl = upgradedArt,
-                                    videoId = song.id,
-                                    queue = artistQueue,
-                                    isExclusiveQueue = true
-                                ))
-                            }
-                            .padding(horizontal = 20.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(context).data(song.thumbnail).crossfade(true).build(),
-                            contentDescription = song.title,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.size(52.dp).clip(RoundedCornerShape(6.dp))
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(song.title, color = Color.White, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(song.artists.joinToString { it.name }, color = Color.White.copy(alpha = 0.75f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        // Keyline divider between tracks (Apple Music style, starts at text offset)
+                        if (index > 0) {
+                            Spacer(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 84.dp)
+                                    .height(0.5.dp)
+                                    .background(Color.White.copy(alpha = 0.12f))
+                            )
                         }
-                        var songDotsCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
-                        val dotsInteractionSource = remember { MutableInteractionSource() }
-                        val isDotsPressed by dotsInteractionSource.collectIsPressedAsState()
-                        val dotsPressScale by animateFloatAsState(
-                            targetValue = if (isDotsPressed) 0.86f else 1f,
-                            animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
-                            label = "topSongDotsPress"
-                        )
-                        val isThisSongActive = activeSongForMenu?.id == song.id
-
-                        Box(
+                        Row(
                             modifier = Modifier
-                                .onGloballyPositioned { songDotsCoords = it }
-                                .size(36.dp)
-                                .graphicsLayer {
-                                    scaleX = dotsPressScale
-                                    scaleY = dotsPressScale
-                                    alpha = if (isThisSongActive) 0f else 1f
-                                }
-                                .clip(CircleShape)
-                                .clickable(
-                                    interactionSource = dotsInteractionSource,
-                                    indication = null,
-                                    enabled = !isThisSongActive
-                                ) {
-                                    val rootCoords = artistScreenRootCoords
-                                    if (rootCoords != null && songDotsCoords != null && rootCoords.isAttached && songDotsCoords!!.isAttached) {
-                                        val localOffset = rootCoords.localPositionOf(songDotsCoords!!, Offset.Zero)
-                                        val size = songDotsCoords!!.size
-                                        activeSongPivotBounds = Rect(localOffset, Size(size.width.toFloat(), size.height.toFloat()))
-                                    } else {
-                                        activeSongPivotBounds = songDotsCoords?.boundsInRoot()
+                                .fillMaxWidth()
+                                .clickable {
+                                    val upgradedArt = upgradeArtToHD(song.thumbnail)
+                                    val artistQueue = songs.drop(index + 1).map { t ->
+                                        QueueItem(
+                                            title = t.title,
+                                            artist = t.artists.joinToString { it.name },
+                                            artUrl = upgradeArtToHD(t.thumbnail),
+                                            videoId = t.id
+                                        )
                                     }
-                                    activeSongForMenu = ContextMenuSong(
-                                        id = song.id,
+                                    onSongSelected(PlayerState(
                                         title = song.title,
                                         artist = song.artists.joinToString { it.name },
-                                        thumbnail = song.thumbnail,
-                                        album = song.album?.name,
-                                        artistId = song.artists.firstOrNull()?.id ?: artistState.id,
-                                        albumId = song.album?.id
-                                    )
-                                },
-                            contentAlignment = Alignment.Center
+                                        artUrl = upgradedArt,
+                                        videoId = song.id,
+                                        queue = artistQueue,
+                                        isExclusiveQueue = true
+                                    ))
+                                }
+                                .padding(horizontal = 20.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                Icons.Default.MoreHoriz,
-                                null,
-                                tint = Color.White.copy(alpha = 0.7f),
-                                modifier = Modifier.size(20.dp)
+                            AsyncImage(
+                                model = ImageRequest.Builder(context).data(song.thumbnail).crossfade(true).build(),
+                                contentDescription = song.title,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.size(52.dp).clip(RoundedCornerShape(6.dp))
                             )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(song.title, color = Color.White.copy(alpha = 0.95f), fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(song.artists.joinToString { it.name }, color = Color.White.copy(alpha = 0.64f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            var songDotsCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+                            val dotsInteractionSource = remember { MutableInteractionSource() }
+                            val isDotsPressed by dotsInteractionSource.collectIsPressedAsState()
+                            val dotsPressScale by animateFloatAsState(
+                                targetValue = if (isDotsPressed) 0.86f else 1f,
+                                animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
+                                label = "topSongDotsPress"
+                            )
+                            val isThisSongActive = activeSongForMenu?.id == song.id
+
+                            Box(
+                                modifier = Modifier
+                                    .onGloballyPositioned { songDotsCoords = it }
+                                    .size(36.dp)
+                                    .graphicsLayer {
+                                        scaleX = dotsPressScale
+                                        scaleY = dotsPressScale
+                                        alpha = if (isThisSongActive) 0f else 1f
+                                    }
+                                    .clip(CircleShape)
+                                    .clickable(
+                                        interactionSource = dotsInteractionSource,
+                                        indication = null,
+                                        enabled = !isThisSongActive
+                                    ) {
+                                        val rootCoords = artistScreenRootCoords
+                                        if (rootCoords != null && songDotsCoords != null && rootCoords.isAttached && songDotsCoords!!.isAttached) {
+                                            val localOffset = rootCoords.localPositionOf(songDotsCoords!!, Offset.Zero)
+                                            val size = songDotsCoords!!.size
+                                            activeSongPivotBounds = Rect(localOffset, Size(size.width.toFloat(), size.height.toFloat()))
+                                        } else {
+                                            activeSongPivotBounds = songDotsCoords?.boundsInRoot()
+                                        }
+                                        activeSongForMenu = ContextMenuSong(
+                                            id = song.id,
+                                            title = song.title,
+                                            artist = song.artists.joinToString { it.name },
+                                            thumbnail = song.thumbnail,
+                                            album = song.album?.name,
+                                            artistId = song.artists.firstOrNull()?.id ?: artistState.id,
+                                            albumId = song.album?.id
+                                        )
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.MoreHoriz,
+                                    null,
+                                    tint = Color.White.copy(alpha = 0.64f),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -1462,7 +1520,7 @@ fun ArtistScreen(
                         Spacer(modifier = Modifier.height(24.dp))
                         Text(
                             text = "Essentials",
-                            color = Color.White,
+                            color = Color.White.copy(alpha = 0.95f),
                             fontSize = 22.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
@@ -1535,7 +1593,7 @@ fun ArtistScreen(
                                 ) {
                                     Text(
                                         text = album.title,
-                                        color = Color.White,
+                                        color = Color.White.copy(alpha = 0.95f),
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.Bold,
                                         maxLines = 1,
@@ -1544,7 +1602,7 @@ fun ArtistScreen(
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = albumDescription,
-                                        color = Color.White.copy(alpha = 0.8f),
+                                        color = Color.White.copy(alpha = 0.64f),
                                         fontSize = 14.sp,
                                         maxLines = 3,
                                         overflow = TextOverflow.Ellipsis,
@@ -1558,7 +1616,7 @@ fun ArtistScreen(
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                     contentDescription = null,
-                                    tint = Color.White.copy(alpha = 0.7f),
+                                    tint = Color.White.copy(alpha = 0.45f),
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -1570,8 +1628,8 @@ fun ArtistScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(start = 106.dp) // Aligns with text start (90dp image + 16dp spacer)
-                                        .height(1.dp)
-                                        .background(Color.White.copy(alpha = 0.1f))
+                                        .height(0.5.dp)
+                                        .background(Color.White.copy(alpha = 0.12f))
                                 )
                             }
                         }
@@ -1613,14 +1671,14 @@ fun ArtistScreen(
                         horizontalArrangement = Arrangement.Start,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(stringResource(R.string.albumes), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.albumes), color = Color.White.copy(alpha = 0.95f), fontSize = 22.sp, fontWeight = FontWeight.Bold)
                         if (isClickable) {
                             Spacer(modifier = Modifier.width(6.dp))
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                 contentDescription = "Ver todo",
-                                tint = Color.White.copy(alpha = 0.6f),
-                                modifier = Modifier.size(28.dp)
+                                tint = Color.White.copy(alpha = 0.45f),
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
@@ -1672,14 +1730,14 @@ fun ArtistScreen(
                         horizontalArrangement = Arrangement.Start,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(stringResource(R.string.sencillos_y_ep), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.sencillos_y_ep), color = Color.White.copy(alpha = 0.95f), fontSize = 22.sp, fontWeight = FontWeight.Bold)
                         if (isClickable) {
                             Spacer(modifier = Modifier.width(6.dp))
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                 contentDescription = "Ver todo",
-                                tint = Color.White.copy(alpha = 0.6f),
-                                modifier = Modifier.size(28.dp)
+                                tint = Color.White.copy(alpha = 0.45f),
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
@@ -1731,14 +1789,14 @@ fun ArtistScreen(
                         horizontalArrangement = Arrangement.Start,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(stringResource(R.string.videos), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.videos), color = Color.White.copy(alpha = 0.95f), fontSize = 22.sp, fontWeight = FontWeight.Bold)
                         if (isClickable) {
                             Spacer(modifier = Modifier.width(6.dp))
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                 contentDescription = "Ver todo",
-                                tint = Color.White.copy(alpha = 0.6f),
-                                modifier = Modifier.size(28.dp)
+                                tint = Color.White.copy(alpha = 0.45f),
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
@@ -1760,7 +1818,7 @@ fun ArtistScreen(
                 val lazyRowState = carouselLazyListStates.getOrPut(featuredSection.title) { LazyListState() }
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(stringResource(R.string.destacado_en), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+                    Text(stringResource(R.string.destacado_en), color = Color.White.copy(alpha = 0.95f), fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
                     LazyRow(
                         state = lazyRowState,
                         modifier = Modifier.fillMaxWidth(),
@@ -1809,14 +1867,14 @@ fun ArtistScreen(
                         horizontalArrangement = Arrangement.Start,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(stringResource(R.string.playlists), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.playlists), color = Color.White.copy(alpha = 0.95f), fontSize = 22.sp, fontWeight = FontWeight.Bold)
                         if (isClickable) {
                             Spacer(modifier = Modifier.width(6.dp))
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                 contentDescription = "Ver todo",
-                                tint = Color.White.copy(alpha = 0.6f),
-                                modifier = Modifier.size(28.dp)
+                                tint = Color.White.copy(alpha = 0.45f),
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
@@ -1839,7 +1897,7 @@ fun ArtistScreen(
                 if (relatedArtists.isNotEmpty()) {
                     item {
                         Spacer(modifier = Modifier.height(24.dp))
-                        Text(stringResource(R.string.puede_gustar), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+                        Text(stringResource(R.string.puede_gustar), color = Color.White.copy(alpha = 0.95f), fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
                         LazyRow(contentPadding = PaddingValues(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                             items(relatedArtists.size, key = { idx -> "artist_rel_${relatedArtists[idx].id}" }) { idx ->
                                 val ra = relatedArtists[idx]
@@ -1856,7 +1914,7 @@ fun ArtistScreen(
                                         modifier = Modifier.size(120.dp).clip(CircleShape).background(Color.DarkGray)
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
-                                    Text(ra.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(ra.title, color = Color.White.copy(alpha = 0.95f), fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                             }
                         }
@@ -1899,14 +1957,14 @@ fun ArtistScreen(
                         horizontalArrangement = Arrangement.Start,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(section.title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                        Text(section.title, color = Color.White.copy(alpha = 0.95f), fontSize = 22.sp, fontWeight = FontWeight.Bold)
                         if (isClickable) {
                             Spacer(modifier = Modifier.width(6.dp))
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                 contentDescription = "Ver todo",
-                                tint = Color.White.copy(alpha = 0.7f),
-                                modifier = Modifier.size(28.dp)
+                                tint = Color.White.copy(alpha = 0.45f),
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
@@ -2529,94 +2587,105 @@ fun ArtistScreen(
                     // Vertical list of all songs
                     items(allSongs.size) { index ->
                         val song = allSongs[index]
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    val upgradedArt = upgradeArtToHD(song.thumbnail)
-                                    val artistQueue = allSongs.drop(index + 1).map { t ->
-                                        QueueItem(
-                                            title = t.title,
-                                            artist = t.artists.joinToString { it.name },
-                                            artUrl = upgradeArtToHD(t.thumbnail),
-                                            videoId = t.id
-                                        )
-                                    }
-                                    onSongSelected(PlayerState(
-                                        title = song.title,
-                                        artist = song.artists.joinToString { it.name },
-                                        artUrl = upgradedArt,
-                                        videoId = song.id,
-                                        queue = artistQueue,
-                                        isExclusiveQueue = true
-                                    ))
-                                }
-                                .padding(horizontal = 20.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("${index + 1}", color = Color.White.copy(alpha = 0.6f), fontSize = 16.sp, modifier = Modifier.width(36.dp))
-                            AsyncImage(
-                                model = ImageRequest.Builder(context).data(song.thumbnail).crossfade(true).build(),
-                                contentDescription = song.title,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.size(48.dp).clip(RoundedCornerShape(6.dp))
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(song.title, color = Color.White, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(song.artists.joinToString { it.name }, color = Color.White.copy(alpha = 0.75f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            if (index > 0) {
+                                Spacer(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 96.dp)
+                                        .height(0.5.dp)
+                                        .background(if (isDarkMode) Color.White.copy(alpha = 0.12f) else Color.Black.copy(alpha = 0.12f))
+                                )
                             }
-                            var songDotsCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
-                            val dotsInteractionSource = remember { MutableInteractionSource() }
-                            val isDotsPressed by dotsInteractionSource.collectIsPressedAsState()
-                            val dotsPressScale by animateFloatAsState(
-                                targetValue = if (isDotsPressed) 0.86f else 1f,
-                                animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
-                                label = "allSongDotsPress"
-                            )
-                            val isThisSongActive = activeSongForMenu?.id == song.id
-
-                            Box(
+                            Row(
                                 modifier = Modifier
-                                    .onGloballyPositioned { songDotsCoords = it }
-                                    .size(36.dp)
-                                    .graphicsLayer {
-                                        scaleX = dotsPressScale
-                                        scaleY = dotsPressScale
-                                        alpha = if (isThisSongActive) 0f else 1f
-                                    }
-                                    .clip(CircleShape)
-                                    .clickable(
-                                        interactionSource = dotsInteractionSource,
-                                        indication = null,
-                                        enabled = !isThisSongActive
-                                    ) {
-                                        val rootCoords = artistScreenRootCoords
-                                        if (rootCoords != null && songDotsCoords != null && rootCoords.isAttached && songDotsCoords!!.isAttached) {
-                                            val localOffset = rootCoords.localPositionOf(songDotsCoords!!, Offset.Zero)
-                                            val size = songDotsCoords!!.size
-                                            activeSongPivotBounds = Rect(localOffset, Size(size.width.toFloat(), size.height.toFloat()))
-                                        } else {
-                                            activeSongPivotBounds = songDotsCoords?.boundsInRoot()
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        val upgradedArt = upgradeArtToHD(song.thumbnail)
+                                        val artistQueue = allSongs.drop(index + 1).map { t ->
+                                            QueueItem(
+                                                title = t.title,
+                                                artist = t.artists.joinToString { it.name },
+                                                artUrl = upgradeArtToHD(t.thumbnail),
+                                                videoId = t.id
+                                            )
                                         }
-                                        activeSongForMenu = ContextMenuSong(
-                                            id = song.id,
+                                        onSongSelected(PlayerState(
                                             title = song.title,
                                             artist = song.artists.joinToString { it.name },
-                                            thumbnail = song.thumbnail,
-                                            album = song.album?.name,
-                                            artistId = song.artists.firstOrNull()?.id ?: artistState.id,
-                                            albumId = song.album?.id
-                                        )
-                                    },
-                                contentAlignment = Alignment.Center
+                                            artUrl = upgradedArt,
+                                            videoId = song.id,
+                                            queue = artistQueue,
+                                            isExclusiveQueue = true
+                                        ))
+                                    }
+                                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.tres_puntos),
-                                    contentDescription = "More",
-                                    tint = if (isDarkMode) Color.White.copy(alpha = 0.7f) else Color.Black.copy(alpha = 0.7f),
-                                    modifier = Modifier.width(20.dp).height(16.dp)
+                                Text("${index + 1}", color = if (isDarkMode) Color.White.copy(alpha = 0.64f) else Color.Black.copy(alpha = 0.64f), fontSize = 16.sp, modifier = Modifier.width(36.dp))
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context).data(song.thumbnail).crossfade(true).build(),
+                                    contentDescription = song.title,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.size(48.dp).clip(RoundedCornerShape(6.dp))
                                 )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(song.title, color = if (isDarkMode) Color.White.copy(alpha = 0.95f) else Color.Black.copy(alpha = 0.95f), fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(song.artists.joinToString { it.name }, color = if (isDarkMode) Color.White.copy(alpha = 0.64f) else Color.Black.copy(alpha = 0.64f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                                var songDotsCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+                                val dotsInteractionSource = remember { MutableInteractionSource() }
+                                val isDotsPressed by dotsInteractionSource.collectIsPressedAsState()
+                                val dotsPressScale by animateFloatAsState(
+                                    targetValue = if (isDotsPressed) 0.86f else 1f,
+                                    animationSpec = spring(dampingRatio = 0.7f, stiffness = 400f),
+                                    label = "allSongDotsPress"
+                                )
+                                val isThisSongActive = activeSongForMenu?.id == song.id
+
+                                Box(
+                                    modifier = Modifier
+                                        .onGloballyPositioned { songDotsCoords = it }
+                                        .size(36.dp)
+                                        .graphicsLayer {
+                                            scaleX = dotsPressScale
+                                            scaleY = dotsPressScale
+                                            alpha = if (isThisSongActive) 0f else 1f
+                                        }
+                                        .clip(CircleShape)
+                                        .clickable(
+                                            interactionSource = dotsInteractionSource,
+                                            indication = null,
+                                            enabled = !isThisSongActive
+                                        ) {
+                                            val rootCoords = artistScreenRootCoords
+                                            if (rootCoords != null && songDotsCoords != null && rootCoords.isAttached && songDotsCoords!!.isAttached) {
+                                                val localOffset = rootCoords.localPositionOf(songDotsCoords!!, Offset.Zero)
+                                                val size = songDotsCoords!!.size
+                                                activeSongPivotBounds = Rect(localOffset, Size(size.width.toFloat(), size.height.toFloat()))
+                                            } else {
+                                                activeSongPivotBounds = songDotsCoords?.boundsInRoot()
+                                            }
+                                            activeSongForMenu = ContextMenuSong(
+                                                id = song.id,
+                                                title = song.title,
+                                                artist = song.artists.joinToString { it.name },
+                                                thumbnail = song.thumbnail,
+                                                album = song.album?.name,
+                                                artistId = song.artists.firstOrNull()?.id ?: artistState.id,
+                                                albumId = song.album?.id
+                                            )
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.tres_puntos),
+                                        contentDescription = "More",
+                                        tint = if (isDarkMode) Color.White.copy(alpha = 0.64f) else Color.Black.copy(alpha = 0.64f),
+                                        modifier = Modifier.width(20.dp).height(16.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -2834,9 +2903,9 @@ private fun ItemCard(
                         }
                     }
                     .let { if (!fillWidth) it.sharedTransitionElement(item.id) else it }
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(10.dp))
                     .background(Color(0xFF161618))
-                    .border(0.5.dp, Color.Black.copy(alpha = 0.14f), RoundedCornerShape(12.dp))
+                    .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(10.dp))
                 ) {
                     AsyncImage(
                         model = ImageRequest.Builder(context).data(hdThumb).size(360).crossfade(true).build(),
@@ -2846,8 +2915,8 @@ private fun ItemCard(
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(item.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("${item.year ?: ""}", color = Color.White.copy(alpha = 0.75f), fontSize = 13.sp)
+                Text(item.title, color = Color.White.copy(alpha = 0.95f), fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("${item.year ?: ""}", color = Color.White.copy(alpha = 0.64f), fontSize = 13.sp)
             }
         }
         is SongItem -> {
@@ -2870,9 +2939,9 @@ private fun ItemCard(
                             }
                         }
                     }
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(10.dp))
                     .background(Color(0xFF161618))
-                    .border(0.5.dp, Color.Black.copy(alpha = 0.14f), RoundedCornerShape(12.dp))
+                    .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(10.dp))
                 ) {
                     AsyncImage(
                         model = ImageRequest.Builder(context).data(hdThumb).size(360).crossfade(true).build(),
@@ -2882,8 +2951,8 @@ private fun ItemCard(
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(item.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(item.artists.joinToString { it.name }, color = Color.White.copy(alpha = 0.75f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(item.title, color = Color.White.copy(alpha = 0.95f), fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(item.artists.joinToString { it.name }, color = Color.White.copy(alpha = 0.64f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         is PlaylistItem -> {
@@ -2913,9 +2982,9 @@ private fun ItemCard(
                         }
                     }
                     .let { if (!fillWidth) it.sharedTransitionElement(item.id) else it }
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(10.dp))
                     .background(Color(0xFF161618))
-                    .border(0.5.dp, Color.Black.copy(alpha = 0.14f), RoundedCornerShape(12.dp))
+                    .border(0.5.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(10.dp))
                 ) {
                     AsyncImage(
                         model = ImageRequest.Builder(context).data(hdThumb).size(360).crossfade(true).build(),
@@ -2925,8 +2994,8 @@ private fun ItemCard(
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(item.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(item.author?.name ?: stringResource(R.string.playlists), color = Color.White.copy(alpha = 0.75f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(item.title, color = Color.White.copy(alpha = 0.95f), fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(item.author?.name ?: stringResource(R.string.playlists), color = Color.White.copy(alpha = 0.64f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         is ArtistItem -> {
