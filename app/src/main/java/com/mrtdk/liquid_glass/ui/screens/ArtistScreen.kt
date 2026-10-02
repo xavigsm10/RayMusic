@@ -115,6 +115,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -261,6 +262,11 @@ fun ArtistScreen(
             com.mrtdk.liquid_glass.spotify.AppleMusicArtistProvider.getCachedBio(currentArtistName)
         )
     }
+
+    val density = LocalDensity.current
+    var mainHeroCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    var mainLogoTopInHeroDp by remember { mutableStateOf<Dp?>(null) }
+    var mainLogoHeightDp by remember { mutableStateOf<Dp?>(null) }
 
     LaunchedEffect(currentArtistName) {
         if (currentArtistName.isNotBlank()) {
@@ -681,6 +687,7 @@ fun ArtistScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(heroHeight)
+                        .onGloballyPositioned { mainHeroCoords = it }
                 ) {
                     val hasMotionVideo = !artistMotionVideoUrl.isNullOrBlank()
 
@@ -1029,31 +1036,46 @@ fun ArtistScreen(
                             .padding(bottom = 16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        if (!artistLogoUrl.isNullOrBlank()) {
-                            AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(artistLogoUrl)
-                                    .allowRgb565(false)
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = artistState.name,
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier
-                                    .heightIn(min = 44.dp, max = 80.dp)
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 32.dp)
-                            )
-                        } else {
-                            Text(
-                                text = artistState.name,
-                                color = Color.White,
-                                fontSize = 34.sp,
-                                fontWeight = FontWeight.Bold,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 24.dp)
-                            )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onGloballyPositioned { logoCoords ->
+                                    mainHeroCoords?.let { hero ->
+                                        val localY = hero.localPositionOf(logoCoords, Offset.Zero).y
+                                        if (localY > 0f) {
+                                            mainLogoTopInHeroDp = with(density) { localY.toDp() }
+                                            mainLogoHeightDp = with(density) { logoCoords.size.height.toDp() }
+                                        }
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (!artistLogoUrl.isNullOrBlank()) {
+                                AsyncImage(
+                                    model = ImageRequest.Builder(context)
+                                        .data(artistLogoUrl)
+                                        .allowRgb565(false)
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = artistState.name,
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier
+                                        .heightIn(min = 44.dp, max = 80.dp)
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 32.dp)
+                                )
+                            } else {
+                                Text(
+                                    text = artistState.name,
+                                    color = Color.White,
+                                    fontSize = 34.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 24.dp)
+                                )
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(22.dp))
@@ -1916,471 +1938,476 @@ fun ArtistScreen(
                     .fillMaxSize()
                     .background(animatedInfoBgColor)
             ) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize()
+                val infoScrollState = rememberScrollState()
+                val hasLatestRelease = latestRelease != null
+                val logoTop = mainLogoTopInHeroDp ?: (if (hasLatestRelease) 375.dp else 410.dp)
+                val logoHeight = mainLogoHeightDp ?: 56.dp
+                val originalHeight = 440.dp
+                val heroHeight = 520.dp
+
+                // Full-width artist hero backdrop with complete reflection & diffusion effect (matching main artist view)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(heroHeight)
+                        .graphicsLayer {
+                            translationY = -infoScrollState.value.toFloat()
+                        }
+                        .clipToBounds()
                 ) {
-                    // Full-width artist hero with reflection & diffusion effect (matching main artist view)
-                    item {
-                        val heroHeight = 520.dp
-                        val originalHeight = 440.dp
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(heroHeight)
-                                .clipToBounds()
-                        ) {
-                            // 1. IMAGEN SUPERIOR (Fondo base nítido completo, 100% sólido de 0 a 436dp, fundiéndose suavemente al reflejo)
-                            val sharpTotalHeight = originalHeight + 8.dp
-                            val sharpFadeStart = (436.dp / sharpTotalHeight).coerceIn(0f, 1f)
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(sharpTotalHeight)
-                                    .align(Alignment.TopCenter)
-                                    .graphicsLayer {
-                                        compositingStrategy = CompositingStrategy.Offscreen
-                                    }
-                                    .drawWithContent {
-                                        drawContent()
-                                        drawRect(
-                                            brush = Brush.verticalGradient(
-                                                0.00f to Color.Black,
-                                                sharpFadeStart to Color.Black,
-                                                1.00f to Color.Transparent
-                                            ),
-                                            blendMode = BlendMode.DstIn
-                                        )
-                                    }
-                            ) {
-                                if (!hdThumb.isNullOrBlank()) {
-                                    AsyncImage(
-                                        model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
-                                        contentDescription = artistState.name,
-                                        contentScale = ContentScale.Crop,
-                                        alignment = Alignment.TopCenter,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                } else {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(
-                                                Brush.verticalGradient(
-                                                    listOf(
-                                                        Color(0xFF222228),
-                                                        Color(0xFF141416)
-                                                    )
-                                                )
-                                            )
-                                    )
-                                }
+                    // 1. IMAGEN SUPERIOR (Fondo base nítido completo, 100% sólido de 0 a 436dp, fundiéndose suavemente al reflejo)
+                    val sharpTotalHeight = originalHeight + 8.dp
+                    val sharpFadeStart = (436.dp / sharpTotalHeight).coerceIn(0f, 1f)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(sharpTotalHeight)
+                            .align(Alignment.TopCenter)
+                            .graphicsLayer {
+                                compositingStrategy = CompositingStrategy.Offscreen
                             }
-
-                            // 1b. DIFUMINADO EN LA PARTE DE ABAJO DE LA IMAGEN SUPERIOR (de 340dp a 448dp)
-                            val topDifStart = (340.dp / sharpTotalHeight).coerceIn(0f, 1f)
-                            val topDifFull = (410.dp / sharpTotalHeight).coerceIn(0f, 1f)
-                            val topDifFade = (436.dp / sharpTotalHeight).coerceIn(0f, 1f)
-
-                            if (!hdThumb.isNullOrBlank()) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(sharpTotalHeight)
-                                        .align(Alignment.TopCenter)
-                                        .graphicsLayer {
-                                            compositingStrategy = CompositingStrategy.Offscreen
-                                        }
-                                        .drawWithContent {
-                                            drawContent()
-                                            drawRect(
-                                                brush = Brush.verticalGradient(
-                                                    0.00f to Color.Transparent,
-                                                    topDifStart to Color.Transparent,
-                                                    topDifFull to Color.Black,
-                                                    topDifFade to Color.Black,
-                                                    1.00f to Color.Transparent
-                                                ),
-                                                blendMode = BlendMode.DstIn
-                                            )
-                                        }
-                                ) {
-                                    AsyncImage(
-                                        model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(),
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Crop,
-                                        alignment = Alignment.TopCenter,
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .graphicsLayer {
-                                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                                    renderEffect = android.graphics.RenderEffect
-                                                        .createBlurEffect(22f, 22f, android.graphics.Shader.TileMode.MIRROR)
-                                                        .asComposeRenderEffect()
-                                                }
-                                            }
-                                            .then(
-                                                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-                                                    Modifier.blur(14.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
-                                                } else Modifier
-                                            )
-                                    )
-                                }
+                            .drawWithContent {
+                                drawContent()
+                                drawRect(
+                                    brush = Brush.verticalGradient(
+                                        0.00f to Color.Black,
+                                        sharpFadeStart to Color.Black,
+                                        1.00f to Color.Transparent
+                                    ),
+                                    blendMode = BlendMode.DstIn
+                                )
                             }
-
-                            // 1c. DIFUSIÓN HORIZONTAL EN LA PARTE DE ABAJO DE LA IMAGEN SUPERIOR (de 340dp a 448dp)
-                            if (!hdThumb.isNullOrBlank()) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(sharpTotalHeight)
-                                        .align(Alignment.TopCenter)
-                                        .graphicsLayer {
-                                            compositingStrategy = CompositingStrategy.Offscreen
-                                        }
-                                        .drawWithContent {
-                                            drawContent()
-                                            drawRect(
-                                                brush = Brush.verticalGradient(
-                                                    0.00f to Color.Transparent,
-                                                    topDifStart to Color.Transparent,
-                                                    topDifFull to Color.Black.copy(alpha = 0.80f),
-                                                    topDifFade to Color.Black.copy(alpha = 0.80f),
-                                                    1.00f to Color.Transparent
-                                                ),
-                                                blendMode = BlendMode.DstIn
-                                            )
-                                        }
-                                ) {
-                                    AsyncImage(
-                                        model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(),
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Crop,
-                                        alignment = Alignment.TopCenter,
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .graphicsLayer {
-                                                scaleX = 1.04f
-                                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                                    renderEffect = android.graphics.RenderEffect
-                                                        .createBlurEffect(120f, 25f, android.graphics.Shader.TileMode.MIRROR)
-                                                        .asComposeRenderEffect()
-                                                }
-                                            }
-                                            .then(
-                                                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-                                                    Modifier.blur(100.dp, 22.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
-                                                } else Modifier
-                                            )
-                                    )
-                                }
-                            }
-
-                            // 2. REFLEJO INVERTIDO (Donde termina la imagen original, estirado hacia abajo y disuelto suavemente)
-                            val reflStop1 = (50.dp / originalHeight).coerceIn(0f, 1f)
-                            val reflStop2 = (100.dp / originalHeight).coerceIn(0f, 1f)
-                            val reflStop3 = (140.dp / originalHeight).coerceIn(0f, 1f)
-                            val reflStop4 = (175.dp / originalHeight).coerceIn(0f, 1f)
-                            val reflStopEnd = (210.dp / originalHeight).coerceIn(0f, 1f)
-
-                            val stretchFactor = 2.2f
-                            val originY = stretchFactor / (1f + stretchFactor)
-
-                            if (!hdThumb.isNullOrBlank()) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(originalHeight)
-                                        .offset(y = originalHeight - 8.dp)
-                                        .graphicsLayer {
-                                            compositingStrategy = CompositingStrategy.Offscreen
-                                        }
-                                        .drawWithContent {
-                                            drawContent()
-                                            drawRect(
-                                                brush = Brush.verticalGradient(
-                                                    0.00f to Color.Black,
-                                                    reflStop1 to Color.Black.copy(alpha = 0.88f),
-                                                    reflStop2 to Color.Black.copy(alpha = 0.65f),
-                                                    reflStop3 to Color.Black.copy(alpha = 0.35f),
-                                                    reflStop4 to Color.Black.copy(alpha = 0.12f),
-                                                    reflStopEnd to Color.Transparent,
-                                                    1.00f to Color.Transparent
-                                                ),
-                                                blendMode = BlendMode.DstIn
-                                            )
-                                        }
-                                ) {
-                                    AsyncImage(
-                                        model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(),
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Crop,
-                                        alignment = Alignment.TopCenter,
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .graphicsLayer {
-                                                scaleY = -stretchFactor
-                                                transformOrigin = TransformOrigin(0.5f, originY)
-                                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                                    renderEffect = android.graphics.RenderEffect
-                                                        .createBlurEffect(40f, 50f, android.graphics.Shader.TileMode.MIRROR)
-                                                        .asComposeRenderEffect()
-                                                }
-                                            }
-                                            .then(
-                                                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-                                                    Modifier.blur(30.dp, 36.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
-                                                } else Modifier
-                                            )
-                                    )
-                                }
-                            }
-
-                            // 2b. CAPA DE DIFUMINADO HORIZONTAL DEL REFLEJO INVERTIDO (Donde termina la imagen original)
-                            if (!hdThumb.isNullOrBlank()) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(originalHeight)
-                                        .offset(y = originalHeight - 8.dp)
-                                        .graphicsLayer {
-                                            compositingStrategy = CompositingStrategy.Offscreen
-                                        }
-                                        .drawWithContent {
-                                            drawContent()
-                                            drawRect(
-                                                brush = Brush.verticalGradient(
-                                                    0.00f to Color.Black.copy(alpha = 0.75f),
-                                                    reflStop1 to Color.Black.copy(alpha = 0.68f),
-                                                    reflStop2 to Color.Black.copy(alpha = 0.48f),
-                                                    reflStop3 to Color.Black.copy(alpha = 0.25f),
-                                                    reflStop4 to Color.Black.copy(alpha = 0.08f),
-                                                    reflStopEnd to Color.Transparent,
-                                                    1.00f to Color.Transparent
-                                                ),
-                                                blendMode = BlendMode.DstIn
-                                            )
-                                        }
-                                ) {
-                                    AsyncImage(
-                                        model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(),
-                                        contentDescription = null,
-                                        contentScale = ContentScale.Crop,
-                                        alignment = Alignment.TopCenter,
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .graphicsLayer {
-                                                scaleY = -stretchFactor
-                                                scaleX = 1.04f
-                                                transformOrigin = TransformOrigin(0.5f, originY)
-                                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                                    renderEffect = android.graphics.RenderEffect
-                                                        .createBlurEffect(80f, 40f, android.graphics.Shader.TileMode.MIRROR)
-                                                        .asComposeRenderEffect()
-                                                }
-                                            }
-                                            .then(
-                                                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-                                                    Modifier.blur(55.dp, 28.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
-                                                } else Modifier
-                                            )
-                                    )
-                                }
-                            }
-
-                            // 3. DIFUMINADO UNIFICADOR DE COLOR PROGRESIVO SOBRE LA IMAGEN Y REFLEJO (Estilo Apple Music)
-                            val fadeStart = (320.dp / heroHeight).coerceIn(0f, 1f)
-                            val nameTop = (370.dp / heroHeight).coerceIn(fadeStart, 1f)
-                            val nameCenter = (405.dp / heroHeight).coerceIn(nameTop, 1f)
-                            val seamPos = (originalHeight / heroHeight).coerceIn(nameCenter, 1f) // 440dp
-                            val reflMid = (475.dp / heroHeight).coerceIn(seamPos, 1f)
-                            val blendNearSolid = (500.dp / heroHeight).coerceIn(reflMid, 1f)
-                            val blendSolid = (515.dp / heroHeight).coerceIn(blendNearSolid, 1f)
-
+                    ) {
+                        if (!hdThumb.isNullOrBlank()) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context).data(hdThumb).crossfade(true).build(),
+                                contentDescription = artistState.name,
+                                contentScale = ContentScale.Crop,
+                                alignment = Alignment.TopCenter,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .background(
                                         Brush.verticalGradient(
-                                            colorStops = arrayOf(
-                                                0.00f to Color.Transparent,
-                                                fadeStart to Color.Transparent,                                 // 320dp: imagen superior nítida
-                                                nameTop to animatedInfoBgColor.copy(alpha = 0.18f),             // 370dp: inicio suave del velo de color
-                                                nameCenter to animatedInfoBgColor.copy(alpha = 0.38f),          // 405dp: sobre el nombre del artista
-                                                seamPos to animatedInfoBgColor.copy(alpha = 0.56f),             // 440dp: disuelve la unión con el reflejo
-                                                reflMid to animatedInfoBgColor.copy(alpha = 0.78f),             // 475dp: transición continua sin cortes
-                                                blendNearSolid to animatedInfoBgColor.copy(alpha = 0.97f),      // 500dp: casi sólido
-                                                blendSolid to animatedInfoBgColor,                              // 515dp: 100% sólido unificado
-                                                1.00f to animatedInfoBgColor
+                                            listOf(
+                                                Color(0xFF222228),
+                                                Color(0xFF141416)
                                             )
                                         )
                                     )
                             )
-
-                            // Foreground: Artist Name / Logo overlay on top of reflection (matching main view)
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .align(Alignment.BottomStart)
-                                    .padding(horizontal = 24.dp)
-                                    .padding(bottom = 16.dp)
-                            ) {
-                                if (!artistLogoUrl.isNullOrBlank()) {
-                                    AsyncImage(
-                                        model = ImageRequest.Builder(context)
-                                            .data(artistLogoUrl)
-                                            .allowRgb565(false)
-                                            .crossfade(true)
-                                            .build(),
-                                        contentDescription = artistState.name,
-                                        contentScale = ContentScale.Fit,
-                                        alignment = Alignment.CenterStart,
-                                        modifier = Modifier
-                                            .heightIn(min = 40.dp, max = 64.dp)
-                                            .fillMaxWidth()
-                                    )
-                                } else {
-                                    Text(
-                                        text = artistState.name,
-                                        color = Color.White,
-                                        fontSize = 34.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
-                            }
-
-                            // Botón atrás flotante en la esquina superior izquierda
-                            Box(
-                                modifier = Modifier
-                                    .statusBarsPadding()
-                                    .padding(start = 16.dp, top = 8.dp)
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.Black.copy(alpha = 0.35f))
-                                    .clickable { showInfoOverlay = false },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.flecha_atras),
-                                    contentDescription = "Back",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp).offset(x = (-1).dp)
-                                )
-                            }
                         }
                     }
 
-                    // Metadata: From and Born side by side (matches Apple Music layout)
-                    item {
-                        val displayFrom = artistFrom ?: metadata.from
-                        val displayBorn = artistBorn ?: metadata.born
+                    // 1b. DIFUMINADO EN LA PARTE DE ABAJO DE LA IMAGEN SUPERIOR (de 340dp a 448dp)
+                    val topDifStart = (340.dp / sharpTotalHeight).coerceIn(0f, 1f)
+                    val topDifFull = (410.dp / sharpTotalHeight).coerceIn(0f, 1f)
+                    val topDifFade = (436.dp / sharpTotalHeight).coerceIn(0f, 1f)
 
-                        if (!displayFrom.isNullOrBlank() || !displayBorn.isNullOrBlank()) {
-                            Row(
+                    if (!hdThumb.isNullOrBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(sharpTotalHeight)
+                                .align(Alignment.TopCenter)
+                            .graphicsLayer {
+                                compositingStrategy = CompositingStrategy.Offscreen
+                            }
+                            .drawWithContent {
+                                drawContent()
+                                drawRect(
+                                    brush = Brush.verticalGradient(
+                                        0.00f to Color.Transparent,
+                                        topDifStart to Color.Transparent,
+                                        topDifFull to Color.Black,
+                                        topDifFade to Color.Black,
+                                        1.00f to Color.Transparent
+                                    ),
+                                    blendMode = BlendMode.DstIn
+                                )
+                            }
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                alignment = Alignment.TopCenter,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer {
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                            renderEffect = android.graphics.RenderEffect
+                                                .createBlurEffect(22f, 22f, android.graphics.Shader.TileMode.MIRROR)
+                                                .asComposeRenderEffect()
+                                        }
+                                    }
+                                    .then(
+                                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                                            Modifier.blur(14.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
+                                        } else Modifier
+                                    )
+                            )
+                        }
+                    }
+
+                    // 1c. DIFUSIÓN HORIZONTAL EN LA PARTE DE ABAJO DE LA IMAGEN SUPERIOR (de 340dp a 448dp)
+                    if (!hdThumb.isNullOrBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(sharpTotalHeight)
+                                .align(Alignment.TopCenter)
+                                .graphicsLayer {
+                                    compositingStrategy = CompositingStrategy.Offscreen
+                                }
+                                .drawWithContent {
+                                    drawContent()
+                                    drawRect(
+                                        brush = Brush.verticalGradient(
+                                            0.00f to Color.Transparent,
+                                            topDifStart to Color.Transparent,
+                                            topDifFull to Color.Black.copy(alpha = 0.80f),
+                                            topDifFade to Color.Black.copy(alpha = 0.80f),
+                                            1.00f to Color.Transparent
+                                        ),
+                                        blendMode = BlendMode.DstIn
+                                    )
+                                }
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                alignment = Alignment.TopCenter,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer {
+                                        scaleX = 1.04f
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                            renderEffect = android.graphics.RenderEffect
+                                                .createBlurEffect(120f, 25f, android.graphics.Shader.TileMode.MIRROR)
+                                                .asComposeRenderEffect()
+                                        }
+                                    }
+                                    .then(
+                                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                                            Modifier.blur(100.dp, 22.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
+                                        } else Modifier
+                                    )
+                            )
+                        }
+                    }
+
+                    // 2. REFLEJO INVERTIDO (Donde termina la imagen original, estirado hacia abajo y disuelto suavemente)
+                    val reflStop1 = (50.dp / originalHeight).coerceIn(0f, 1f)
+                    val reflStop2 = (100.dp / originalHeight).coerceIn(0f, 1f)
+                    val reflStop3 = (140.dp / originalHeight).coerceIn(0f, 1f)
+                    val reflStop4 = (175.dp / originalHeight).coerceIn(0f, 1f)
+                    val reflStopEnd = (210.dp / originalHeight).coerceIn(0f, 1f)
+
+                    val stretchFactor = 2.2f
+                    val originY = stretchFactor / (1f + stretchFactor)
+
+                    if (!hdThumb.isNullOrBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(originalHeight)
+                                .offset(y = originalHeight - 8.dp)
+                                .graphicsLayer {
+                                    compositingStrategy = CompositingStrategy.Offscreen
+                                }
+                                .drawWithContent {
+                                    drawContent()
+                                    drawRect(
+                                        brush = Brush.verticalGradient(
+                                            0.00f to Color.Black,
+                                            reflStop1 to Color.Black.copy(alpha = 0.88f),
+                                            reflStop2 to Color.Black.copy(alpha = 0.65f),
+                                            reflStop3 to Color.Black.copy(alpha = 0.35f),
+                                            reflStop4 to Color.Black.copy(alpha = 0.12f),
+                                            reflStopEnd to Color.Transparent,
+                                            1.00f to Color.Transparent
+                                        ),
+                                        blendMode = BlendMode.DstIn
+                                    )
+                                }
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                alignment = Alignment.TopCenter,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer {
+                                        scaleY = -stretchFactor
+                                        transformOrigin = TransformOrigin(0.5f, originY)
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                            renderEffect = android.graphics.RenderEffect
+                                                .createBlurEffect(40f, 50f, android.graphics.Shader.TileMode.MIRROR)
+                                                .asComposeRenderEffect()
+                                        }
+                                    }
+                                    .then(
+                                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                                            Modifier.blur(30.dp, 36.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
+                                        } else Modifier
+                                    )
+                            )
+                        }
+                    }
+
+                    // 2b. CAPA DE DIFUMINADO HORIZONTAL DEL REFLEJO INVERTIDO (Donde termina la imagen original)
+                    if (!hdThumb.isNullOrBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(originalHeight)
+                                .offset(y = originalHeight - 8.dp)
+                                .graphicsLayer {
+                                    compositingStrategy = CompositingStrategy.Offscreen
+                                }
+                                .drawWithContent {
+                                    drawContent()
+                                    drawRect(
+                                        brush = Brush.verticalGradient(
+                                            0.00f to Color.Black.copy(alpha = 0.75f),
+                                            reflStop1 to Color.Black.copy(alpha = 0.68f),
+                                            reflStop2 to Color.Black.copy(alpha = 0.48f),
+                                            reflStop3 to Color.Black.copy(alpha = 0.25f),
+                                            reflStop4 to Color.Black.copy(alpha = 0.08f),
+                                            reflStopEnd to Color.Transparent,
+                                            1.00f to Color.Transparent
+                                        ),
+                                        blendMode = BlendMode.DstIn
+                                    )
+                                }
+                        ) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context).data(hdThumb).crossfade(false).build(),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                alignment = Alignment.TopCenter,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer {
+                                        scaleY = -stretchFactor
+                                        scaleX = 1.04f
+                                        transformOrigin = TransformOrigin(0.5f, originY)
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                            renderEffect = android.graphics.RenderEffect
+                                                .createBlurEffect(80f, 40f, android.graphics.Shader.TileMode.MIRROR)
+                                                .asComposeRenderEffect()
+                                        }
+                                    }
+                                    .then(
+                                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                                            Modifier.blur(55.dp, 28.dp, edgeTreatment = BlurredEdgeTreatment.Rectangle)
+                                        } else Modifier
+                                    )
+                            )
+                        }
+                    }
+
+                    // 3. DIFUMINADO UNIFICADOR DE COLOR PROGRESIVO SOBRE LA IMAGEN Y REFLEJO (Estilo Apple Music)
+                    val fadeStart = (320.dp / heroHeight).coerceIn(0f, 1f)
+                    val nameTop = (370.dp / heroHeight).coerceIn(fadeStart, 1f)
+                    val nameCenter = (405.dp / heroHeight).coerceIn(nameTop, 1f)
+                    val seamPos = (originalHeight / heroHeight).coerceIn(nameCenter, 1f) // 440dp
+                    val reflMid = (475.dp / heroHeight).coerceIn(seamPos, 1f)
+                    val blendNearSolid = (500.dp / heroHeight).coerceIn(reflMid, 1f)
+                    val blendSolid = (515.dp / heroHeight).coerceIn(blendNearSolid, 1f)
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colorStops = arrayOf(
+                                        0.00f to Color.Transparent,
+                                        fadeStart to Color.Transparent,                                 // 320dp: imagen superior nítida
+                                        nameTop to animatedInfoBgColor.copy(alpha = 0.18f),             // 370dp: inicio suave del velo de color
+                                        nameCenter to animatedInfoBgColor.copy(alpha = 0.38f),          // 405dp: sobre el nombre del artista
+                                        seamPos to animatedInfoBgColor.copy(alpha = 0.56f),             // 440dp: disuelve la unión con el reflejo
+                                        reflMid to animatedInfoBgColor.copy(alpha = 0.78f),             // 475dp: transición continua sin cortes
+                                        blendNearSolid to animatedInfoBgColor.copy(alpha = 0.97f),      // 500dp: casi sólido
+                                        blendSolid to animatedInfoBgColor,                              // 515dp: 100% sólido unificado
+                                        1.00f to animatedInfoBgColor
+                                    )
+                                )
+                            )
+                    )
+                }
+
+                // Foreground scrollable content (continuous flow matching user screenshot)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(infoScrollState)
+                ) {
+                    // Foreground: Artist Name / Logo overlay matching main view position & alignment
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = logoTop)
+                            .height(logoHeight),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (!artistLogoUrl.isNullOrBlank()) {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(artistLogoUrl)
+                                    .allowRgb565(false)
+                                    .crossfade(true)
+                                    .build(),
+                                contentDescription = artistState.name,
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier
+                                    .heightIn(min = 44.dp, max = 80.dp)
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 32.dp)
+                            )
+                        } else {
+                            Text(
+                                text = artistState.name,
+                                color = Color.White,
+                                fontSize = 34.sp,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 24.dp)
-                                    .padding(top = 16.dp, bottom = 4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(40.dp)
-                            ) {
-                                if (!displayFrom.isNullOrBlank()) {
-                                    Column(modifier = Modifier.weight(1f, fill = false)) {
-                                        Text(
-                                            text = "From",
-                                            color = Color.White.copy(alpha = 0.65f),
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                        Spacer(modifier = Modifier.height(3.dp))
-                                        Text(
-                                            text = displayFrom,
-                                            color = Color.White,
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
+                            )
+                        }
+                    }
+
+                    // Foreground: From and Born (placed right below the artist name)
+                    val displayFrom = artistFrom ?: metadata.from
+                    val displayBorn = artistBorn ?: metadata.born
+                    if (!displayFrom.isNullOrBlank() || !displayBorn.isNullOrBlank()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp)
+                                .padding(top = 16.dp, bottom = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(40.dp)
+                        ) {
+                            if (!displayFrom.isNullOrBlank()) {
+                                Column(modifier = Modifier.weight(1f, fill = false)) {
+                                    Text(
+                                        text = "From",
+                                        color = Color.White.copy(alpha = 0.65f),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Spacer(modifier = Modifier.height(3.dp))
+                                    Text(
+                                        text = displayFrom,
+                                        color = Color.White,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
-                                if (!displayBorn.isNullOrBlank()) {
-                                    Column(modifier = Modifier.weight(1f, fill = false)) {
-                                        Text(
-                                            text = "Born",
-                                            color = Color.White.copy(alpha = 0.65f),
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                        Spacer(modifier = Modifier.height(3.dp))
-                                        Text(
-                                            text = displayBorn,
-                                            color = Color.White,
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
+                            }
+                            if (!displayBorn.isNullOrBlank()) {
+                                Column(modifier = Modifier.weight(1f, fill = false)) {
+                                    Text(
+                                        text = "Born",
+                                        color = Color.White.copy(alpha = 0.65f),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Spacer(modifier = Modifier.height(3.dp))
+                                    Text(
+                                        text = displayBorn,
+                                        color = Color.White,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
                                 }
                             }
                         }
                     }
 
                     // Genre (Pill chip, title-cased label)
-                    item {
-                        val displayGenre = artistGenre ?: metadata.genres.firstOrNull() ?: "Pop"
-                        Column(
+                    val displayGenre = artistGenre ?: metadata.genres.firstOrNull() ?: "Pop"
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp)
+                            .padding(top = 14.dp)
+                    ) {
+                        Text(
+                            text = "Genre",
+                            color = Color.White.copy(alpha = 0.65f),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 24.dp)
-                                .padding(top = 14.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(Color.White.copy(alpha = 0.14f))
+                                .padding(horizontal = 16.dp, vertical = 7.dp)
                         ) {
                             Text(
-                                text = "Genre",
-                                color = Color.White.copy(alpha = 0.65f),
-                                fontSize = 13.sp,
+                                text = displayGenre,
+                                color = Color.White,
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Medium
                             )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(50))
-                                    .background(Color.White.copy(alpha = 0.14f))
-                                    .padding(horizontal = 16.dp, vertical = 7.dp)
-                            ) {
-                                Text(
-                                    text = displayGenre,
-                                    color = Color.White,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
                         }
                     }
 
                     // About section
-                    item {
-                        val displayBio = artistBio ?: artistPage?.description
-                        if (!displayBio.isNullOrBlank()) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 24.dp)
-                                    .padding(top = 22.dp, bottom = 120.dp)
-                            ) {
-                                Text(
-                                    text = "About",
-                                    color = Color.White,
-                                    fontSize = 22.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.height(10.dp))
-                                Text(
-                                    text = displayBio,
-                                    color = Color.White.copy(alpha = 0.75f),
-                                    fontSize = 15.sp,
-                                    lineHeight = 23.sp,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
+                    val displayBio = artistBio ?: artistPage?.description
+                    if (!displayBio.isNullOrBlank()) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp)
+                                .padding(top = 22.dp, bottom = 120.dp)
+                        ) {
+                            Text(
+                                text = "About",
+                                color = Color.White,
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                text = displayBio,
+                                color = Color.White.copy(alpha = 0.75f),
+                                fontSize = 15.sp,
+                                lineHeight = 23.sp,
+                                modifier = Modifier.fillMaxWidth()
+                            )
                         }
                     }
+                }
+
+                // Botón atrás flotante en la esquina superior izquierda
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .statusBarsPadding()
+                        .padding(start = 16.dp, top = 8.dp)
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.35f))
+                        .clickable { showInfoOverlay = false },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.flecha_atras),
+                        contentDescription = "Back",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp).offset(x = (-1).dp)
+                    )
                 }
             }
         }
