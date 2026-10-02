@@ -2,7 +2,7 @@
   <img src="app/src/main/res/drawable/splash_logo.webp" width="140" alt="RayMusic Logo">
 </p>
 
-<h1 align="center">RayMusic</h1>
+<h1 align="center">Rayen</h1>
 
 <p align="center">
   <b>Redefining the YouTube Music Experience on Android.</b><br>
