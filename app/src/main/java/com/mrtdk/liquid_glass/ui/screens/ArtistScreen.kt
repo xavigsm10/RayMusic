@@ -58,6 +58,8 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.PaintingStyle
 import com.kyant.shapes.Capsule
+import com.mrtdk.liquid_glass.ui.components.shapes.ContinuousCapsule
+import com.mrtdk.liquid_glass.ui.components.shapes.ContinuousRoundedRectangle
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
@@ -3182,9 +3184,13 @@ fun ArtistTopRightMorphingPill(
 
     // Smooth continuous 2D size & corner interpolation
     val targetMenuHeight = 350.dp
-    val morphWidth = androidx.compose.ui.unit.lerp(106.dp, 268.dp, morphProgress)
+    val morphWidth = androidx.compose.ui.unit.lerp(124.dp, 268.dp, morphProgress)
     val morphHeight = androidx.compose.ui.unit.lerp(44.dp, targetMenuHeight, morphProgress)
-    val morphCorner = androidx.compose.ui.unit.lerp(22.dp, 24.dp, morphProgress)
+    val morphShape = com.mrtdk.liquid_glass.ui.components.shapes.lerp(
+        start = ContinuousCapsule,
+        stop = ContinuousRoundedRectangle(24.dp),
+        fraction = morphProgress
+    )
     val morphTint = Color.Unspecified
 
     // Smooth crossfade opacities
@@ -3194,7 +3200,7 @@ fun ArtistTopRightMorphingPill(
     glassScope.GlassBox(
         modifier = Modifier
             .size(width = morphWidth, height = morphHeight)
-            .clip(RoundedCornerShape(morphCorner))
+            .clip(morphShape)
             .then(
                 if (morphProgress > 0.05f) {
                     Modifier.border(
@@ -3205,11 +3211,11 @@ fun ArtistTopRightMorphingPill(
                                 Color.White.copy(alpha = morphProgress * 0.08f)
                             )
                         ),
-                        shape = RoundedCornerShape(morphCorner)
+                        shape = morphShape
                     )
                 } else Modifier
             ),
-        shape = RoundedCornerShape(morphCorner),
+        shape = morphShape,
         tint = morphTint,
         blur = 0.85f,
         centerDistortion = 0.1f,
@@ -3224,9 +3230,9 @@ fun ArtistTopRightMorphingPill(
                 Row(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .width(106.dp)
+                        .width(124.dp)
                         .height(44.dp)
-                        .padding(horizontal = 10.dp)
+                        .padding(start = 6.dp, end = 8.dp)
                         .graphicsLayer { alpha = pillIconsAlpha },
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically

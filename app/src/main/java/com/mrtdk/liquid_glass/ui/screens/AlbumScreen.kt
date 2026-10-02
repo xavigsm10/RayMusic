@@ -63,6 +63,8 @@ import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 import com.kyant.shapes.Capsule
+import com.mrtdk.liquid_glass.ui.components.shapes.ContinuousCapsule
+import com.mrtdk.liquid_glass.ui.components.shapes.ContinuousRoundedRectangle
 import com.mrtdk.liquid_glass.data.ItemType
 import com.mrtdk.liquid_glass.data.LibraryItem
 import com.mrtdk.liquid_glass.data.LibraryManager
@@ -2263,16 +2265,16 @@ fun AlbumScreen(
                                         scaleY = popScaleShare
                                         alpha = popScaleShare
                                     }
-                                    .width(106.dp)
+                                    .width(124.dp)
                                     .height(44.dp)
-                                    .clip(RoundedCornerShape(percent = 50))
+                                    .clip(ContinuousCapsule)
                                     .background(glassButtonTint),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 10.dp),
+                                        .padding(start = 6.dp, end = 8.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -2447,9 +2449,13 @@ fun AlbumTopRightMorphingPill(
 
     // Smooth continuous 2D size & corner interpolation
     val targetMenuHeight = if (isPlaylistsScreen) 370.dp else 390.dp
-    val morphWidth = androidx.compose.ui.unit.lerp(106.dp, 268.dp, morphProgress)
+    val morphWidth = androidx.compose.ui.unit.lerp(124.dp, 268.dp, morphProgress)
     val morphHeight = androidx.compose.ui.unit.lerp(44.dp, targetMenuHeight, morphProgress)
-    val morphCorner = androidx.compose.ui.unit.lerp(22.dp, 24.dp, morphProgress)
+    val morphShape = com.mrtdk.liquid_glass.ui.components.shapes.lerp(
+        start = ContinuousCapsule,
+        stop = ContinuousRoundedRectangle(24.dp),
+        fraction = morphProgress
+    )
     val morphTint = Color.Unspecified
 
     // Smooth crossfade opacities
@@ -2459,7 +2465,7 @@ fun AlbumTopRightMorphingPill(
     glassScope.GlassBox(
         modifier = Modifier
             .size(width = morphWidth, height = morphHeight)
-            .clip(RoundedCornerShape(morphCorner))
+            .clip(morphShape)
             .then(
                 if (morphProgress > 0.05f) {
                     Modifier.border(
@@ -2470,11 +2476,11 @@ fun AlbumTopRightMorphingPill(
                                 Color.White.copy(alpha = morphProgress * 0.08f)
                             )
                         ),
-                        shape = RoundedCornerShape(morphCorner)
+                        shape = morphShape
                     )
                 } else Modifier
             ),
-        shape = RoundedCornerShape(morphCorner),
+        shape = morphShape,
         tint = morphTint,
         blur = 0.85f,
         centerDistortion = 0.1f,
@@ -2489,9 +2495,9 @@ fun AlbumTopRightMorphingPill(
                 Row(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .width(106.dp)
+                        .width(124.dp)
                         .height(44.dp)
-                        .padding(horizontal = 10.dp)
+                        .padding(start = 6.dp, end = 8.dp)
                         .graphicsLayer { alpha = pillIconsAlpha },
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically

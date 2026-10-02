@@ -67,6 +67,7 @@ import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 import com.kyant.shapes.Capsule
+import com.mrtdk.liquid_glass.ui.components.shapes.ContinuousCapsule
 import com.mrtdk.liquid_glass.R
 import com.mrtdk.liquid_glass.data.LibraryManager
 import com.mrtdk.liquid_glass.data.Playlist
@@ -1061,16 +1062,16 @@ fun PlaylistDetailScreen(
                                         scaleY = popScaleShare
                                         alpha = popScaleShare
                                     }
-                                    .width(106.dp)
+                                    .width(124.dp)
                                     .height(44.dp)
-                                    .clip(RoundedCornerShape(percent = 50))
+                                    .clip(ContinuousCapsule)
                                     .background(dominantColor.copy(alpha = 0.35f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 10.dp),
+                                        .padding(start = 6.dp, end = 8.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -1306,9 +1307,9 @@ fun PlaylistDetailScreen(
                                             scaleY = popScaleShare
                                             alpha = popScaleShare
                                         }
-                                        .width(106.dp)
+                                        .width(124.dp)
                                         .height(44.dp),
-                                    shape = RoundedCornerShape(percent = 50),
+                                    shape = ContinuousCapsule,
                                     tint = Color.Unspecified,
                                     blur = 0.8f,
                                     centerDistortion = 0.1f,
@@ -1320,7 +1321,7 @@ fun PlaylistDetailScreen(
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(horizontal = 10.dp),
+                                            .padding(start = 6.dp, end = 8.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
@@ -2126,16 +2127,16 @@ fun PlaylistDetailScreen(
                                         scaleY = popScaleShare
                                         alpha = popScaleShare
                                     }
-                                    .width(106.dp)
+                                    .width(124.dp)
                                     .height(44.dp)
-                                    .clip(RoundedCornerShape(percent = 50))
+                                    .clip(ContinuousCapsule)
                                     .background(dominantColor.copy(alpha = 0.35f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 10.dp),
+                                        .padding(start = 6.dp, end = 8.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
