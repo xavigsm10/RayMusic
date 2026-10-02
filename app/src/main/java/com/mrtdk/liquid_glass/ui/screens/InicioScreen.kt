@@ -81,9 +81,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.BlurredEdgeTreatment
-import androidx.compose.ui.draw.drawWithCache
-import com.skydoves.cloudy.cloudy
-import android.os.Build
+
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.TransformOrigin

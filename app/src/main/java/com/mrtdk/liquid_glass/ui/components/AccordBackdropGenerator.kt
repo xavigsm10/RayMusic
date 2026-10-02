@@ -32,6 +32,9 @@ object AccordBackdropGenerator {
     var lastContrastScrimAlpha: Float = 0f
         private set
 
+    private val backdropCache = android.util.LruCache<String, ImageBitmap>(8)
+    private val lyricsBackdropCache = android.util.LruCache<Int, ImageBitmap>(8)
+
     /**
      * Genera un fondo difuminado estático ultra-suave y de alto rendimiento para
      * la vista de letras y cola de reproducción (estilo Apple Music).
@@ -43,11 +46,18 @@ object AccordBackdropGenerator {
             val emptyBmp = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
             return@withContext emptyBmp.asImageBitmap()
         }
+        val cacheKey = source.generationId
+        val cached = lyricsBackdropCache.get(cacheKey)
+        if (cached != null) return@withContext cached
+
         try {
             val targetSize = 160
             val scaled = Bitmap.createScaledBitmap(source, targetSize, targetSize, true)
             val blurred = fastBlurKeepingSize(scaled, 28.0f)
-            blurred.asImageBitmap()
+            if (scaled !== source) scaled.recycle()
+            val result = blurred.asImageBitmap()
+            lyricsBackdropCache.put(cacheKey, result)
+            result
         } catch (e: Exception) {
             source.asImageBitmap()
         }
@@ -79,6 +89,10 @@ object AccordBackdropGenerator {
             return@withContext emptyBmp.asImageBitmap()
         }
 
+        val cacheKey = "${source.generationId}_${targetW}_${targetH}_$includeCover"
+        val cached = backdropCache.get(cacheKey)
+        if (cached != null) return@withContext cached
+
         try {
             // ── Fase 1: Escalar y posicionar carátula con la proporción de carátula completa ──
             val coverHeight = min(targetH - 1, max(1, (targetW * 1.35f).toInt()))
@@ -108,9 +122,12 @@ object AccordBackdropGenerator {
 
             val lowerSliceBitmap = Bitmap.createBitmap(createBitmap, 0, coerceIn, targetW, sliceH)
             canvasCopy.drawBitmap(lowerSliceBitmap, null, Rect(0, coerceIn2, targetW, coverHeight), paintCopy)
+            lowerSliceBitmap.recycle()
 
             // Doble pasada de desenfoque StackBlur: 10.0f y 88.0f
-            val fastBlurKeepingSize = fastBlurKeepingSize(fastBlurKeepingSize(copy, 10.0f), 88.0f)
+            val firstBlur = fastBlurKeepingSize(copy, 10.0f)
+            val fastBlurKeepingSize = fastBlurKeepingSize(firstBlur, 88.0f)
+            firstBlur.recycle()
 
             // ── Fase 3: Suavizado radial S-curve de bordes (copy2) ──
             val copy2 = createBitmap.copy(Bitmap.Config.ARGB_8888, true)
@@ -121,21 +138,28 @@ object AccordBackdropGenerator {
             createBitmap.getPixels(arrCrisp, 0, targetW, 0, 0, targetW, coverHeight)
             val blurred30 = fastBlurKeepingSize(createBitmap, 30.0f)
             blurred30.getPixels(arrBlur30, 0, targetW, 0, 0, targetW, coverHeight)
+            blurred30.recycle()
 
             val centerX = targetW / 2.0f
             val radiusThreshold = (min(targetW, coverHeight) * 0.38f) + (coverHeight / 2.0f)
             val radiusBand = min(targetW, coverHeight) * 0.15f
+            val invRadiusBand = if (radiusBand > 0f) 1f / radiusBand else 1f
+
+            val dxSqArr = FloatArray(targetW) { x ->
+                val dx = x.toFloat() - centerX
+                dx * dx
+            }
 
             for (y in 0 until coverHeight) {
                 val dy2 = y.toFloat()
                 val dySq = dy2 * dy2
+                val rowOffset = y * targetW
                 for (x in 0 until targetW) {
-                    val dx2 = x.toFloat() - centerX
-                    val dist = sqrt((dx2 * dx2) + dySq)
-                    val t = ((dist - radiusThreshold) / radiusBand).coerceIn(0f, 1f)
+                    val dist = sqrt(dxSqArr[x] + dySq)
+                    val t = ((dist - radiusThreshold) * invRadiusBand).coerceIn(0f, 1f)
                     val factor = (3.0f - (2.0f * t)) * t * t
 
-                    val idx = (y * targetW) + x
+                    val idx = rowOffset + x
                     val cCrisp = arrCrisp[idx]
                     val cBlur = arrBlur30[idx]
 
@@ -170,7 +194,10 @@ object AccordBackdropGenerator {
 
                 // Desenfocar la extensión inferior con radio 84f
                 val lowerSlice = Bitmap.createBitmap(createBitmap3, 0, coverHeight, targetW, bottomExtensionH)
-                canvas3.drawBitmap(fastBlurKeepingSize(lowerSlice, 84.0f), 0f, fCoverH, paintBackdrop)
+                val lowerBlurred = fastBlurKeepingSize(lowerSlice, 84.0f)
+                canvas3.drawBitmap(lowerBlurred, 0f, fCoverH, paintBackdrop)
+                lowerSlice.recycle()
+                lowerBlurred.recycle()
 
                 // Desenfocar banda de transición con radio 90f
                 val transTop = (0.84f * fCoverH).toInt().coerceIn(0, targetH - 1)
@@ -179,6 +206,8 @@ object AccordBackdropGenerator {
                     val transSlice = Bitmap.createBitmap(createBitmap3, 0, transTop, targetW, transBottom - transTop)
                     val transBlurred = fastBlurKeepingSize(transSlice, 90.0f)
                     canvas3.drawBitmap(transBlurred, 0f, transTop.toFloat(), paintBackdrop)
+                    transSlice.recycle()
+                    transBlurred.recycle()
                 }
 
                 // Muestrear colores de copy2
@@ -239,7 +268,9 @@ object AccordBackdropGenerator {
                 drawMeshBlob(canvas3, 0.52f * fW, (0.82f * bottomExtensionH) + fCoverH, fW * 1.08f, withAlpha(adjustSaturationAndValue(1.45f, 0.55f, sampleCenter), 158))
 
                 // Suavizar el backdrop general con radio 10f
-                createBitmap3 = fastBlurKeepingSize(createBitmap3, 10.0f)
+                val blurredFinal = fastBlurKeepingSize(createBitmap3, 10.0f)
+                createBitmap3.recycle()
+                createBitmap3 = blurredFinal
 
                 // Aplicar micro-dithering procedural anti-banding
                 applyAntiBandingDither(createBitmap3, (fCoverH + (0.10f * bottomExtensionH)).toInt())
@@ -254,6 +285,7 @@ object AccordBackdropGenerator {
 
                 copy2.getPixels(arrCoverCrisp, 0, targetW, 0, 0, targetW, coverHeight)
                 scaledBlurredCover.getPixels(arrCoverBlur, 0, targetW, 0, 0, targetW, coverHeight)
+                scaledBlurredCover.recycle()
 
                 val f40 = coverHeight.toFloat()
                 val f41 = 0.65f * f40
@@ -261,38 +293,43 @@ object AccordBackdropGenerator {
                 val f43 = 0.73f * f40
                 val coerceIn13 = 0.10f * f40
 
-                // Curvatura horizontal tipo arco
-                val fArr = FloatArray(targetW)
+                // Curvatura horizontal tipo arco precalculada por columna X
+                val startYArr = FloatArray(targetW)
+                val invSpanYArr = FloatArray(targetW)
+                val fadeStartYArr = FloatArray(targetW)
+                val invFadeSpanArr = FloatArray(targetW)
+
                 for (i in 0 until targetW) {
                     val f12 = if (targetW > 1) {
                         ((i.toFloat() / (targetW - 1).toFloat()) * 2.0f) - 1.0f
                     } else 0f
                     val coerceIn14 = (1.0f - abs(f12).toDouble().pow(1.45).toFloat()).coerceIn(0f, 1f)
-                    fArr[i] = (3.0f - (2.0f * coerceIn14)) * coerceIn14 * coerceIn14 * coerceIn13
+                    val curveOffset = (3.0f - (2.0f * coerceIn14)) * coerceIn14 * coerceIn14 * coerceIn13
+
+                    val startY = f41 + curveOffset
+                    val spanY = max(1.0f, ((curveOffset * 0.82f) + f42) - startY)
+                    startYArr[i] = startY
+                    invSpanYArr[i] = 1.0f / spanY
+
+                    val fadeStartY = min(f40 - 1.0f, (curveOffset * 0.62f) + f43)
+                    val fadeSpan = max(1.0f, f40 - fadeStartY)
+                    fadeStartYArr[i] = fadeStartY
+                    invFadeSpanArr[i] = 1.0f / fadeSpan
                 }
 
                 for (y in 0 until coverHeight) {
                     val fy = y.toFloat()
+                    val rowOffset = y * targetW
                     for (x in 0 until targetW) {
-                        val idx = (y * targetW) + x
+                        val idx = rowOffset + x
                         val cCrisp = arrCoverCrisp[idx]
                         val cBlur = arrCoverBlur[idx]
-                        val curveOffset = fArr[x]
 
-                        val startY = f41 + curveOffset
-                        var spanY = ((curveOffset * 0.82f) + f42) - startY
-                        if (spanY < 1.0f) spanY = 1.0f
-
-                        val t1 = ((fy - startY) / spanY).coerceIn(0f, 1f)
+                        val t1 = ((fy - startYArr[x]) * invSpanYArr[x]).coerceIn(0f, 1f)
                         val s1 = (3.0f - (2.0f * t1)) * t1 * t1
                         val s2 = (3.0f - (2.0f * s1)) * s1 * s1 // Doble smoothstep para suavidad aterciopelada
 
-                        var fadeStartY = (curveOffset * 0.62f) + f43
-                        val maxFadeY = f40 - 1.0f
-                        if (fadeStartY > maxFadeY) fadeStartY = maxFadeY
-                        var fadeSpan = f40 - fadeStartY
-                        if (fadeSpan < 1.0f) fadeSpan = 1.0f
-                        val t2 = ((fy - fadeStartY) / fadeSpan).coerceIn(0f, 1f)
+                        val t2 = ((fy - fadeStartYArr[x]) * invFadeSpanArr[x]).coerceIn(0f, 1f)
                         val alphaFactor = (1.0f - ((3.0f - (2.0f * t2)) * t2 * t2)).coerceIn(0f, 1f)
 
                         val a = (Color.alpha(cCrisp) * alphaFactor).toInt().coerceIn(0, 255)
@@ -348,8 +385,11 @@ object AccordBackdropGenerator {
             createBitmap.recycle()
             copy.recycle()
             copy2.recycle()
+            fastBlurKeepingSize.recycle()
 
-            createBitmap3.asImageBitmap()
+            val finalResult = createBitmap3.asImageBitmap()
+            backdropCache.put(cacheKey, finalResult)
+            finalResult
         } catch (e: Exception) {
             e.printStackTrace()
             lastContrastScrimAlpha = 0f
@@ -476,10 +516,9 @@ object AccordBackdropGenerator {
         yw = 0
         yi = 0
 
-        val stack = Array(div) { IntArray(3) }
+        val stack = IntArray(div * 3)
         var stackpointer: Int
         var stackstart: Int
-        var sir: IntArray
         var rbs: Int
         val r1 = r + 1
         var routsum: Int; var goutsum: Int; var boutsum: Int
@@ -493,22 +532,25 @@ object AccordBackdropGenerator {
             i = -r
             while (i <= r) {
                 p = pix[yi + min(wm, max(i, 0))]
-                sir = stack[i + r]
-                sir[0] = (p and 0xff0000) shr 16
-                sir[1] = (p and 0x00ff00) shr 8
-                sir[2] = p and 0x0000ff
+                val sIdx = (i + r) * 3
+                val pr = (p and 0xff0000) shr 16
+                val pg = (p and 0x00ff00) shr 8
+                val pb = p and 0x0000ff
+                stack[sIdx] = pr
+                stack[sIdx + 1] = pg
+                stack[sIdx + 2] = pb
                 rbs = r1 - abs(i)
-                rsum += sir[0] * rbs
-                gsum += sir[1] * rbs
-                bsum += sir[2] * rbs
+                rsum += pr * rbs
+                gsum += pg * rbs
+                bsum += pb * rbs
                 if (i > 0) {
-                    rinsum += sir[0]
-                    ginsum += sir[1]
-                    binsum += sir[2]
+                    rinsum += pr
+                    ginsum += pg
+                    binsum += pb
                 } else {
-                    routsum += sir[0]
-                    goutsum += sir[1]
-                    boutsum += sir[2]
+                    routsum += pr
+                    goutsum += pg
+                    boutsum += pb
                 }
                 i++
             }
@@ -525,39 +567,42 @@ object AccordBackdropGenerator {
                 bsum -= boutsum
 
                 stackstart = stackpointer - r + div
-                sir = stack[stackstart % div]
+                val stStartIdx = (stackstart % div) * 3
 
-                routsum -= sir[0]
-                goutsum -= sir[1]
-                boutsum -= sir[2]
+                routsum -= stack[stStartIdx]
+                goutsum -= stack[stStartIdx + 1]
+                boutsum -= stack[stStartIdx + 2]
 
                 if (y == 0) {
                     vmin[x] = min(x + r + 1, wm)
                 }
                 p = pix[yw + vmin[x]]
 
-                sir[0] = (p and 0xff0000) shr 16
-                sir[1] = (p and 0x00ff00) shr 8
-                sir[2] = p and 0x0000ff
+                val stPtrIdx = (stackpointer % div) * 3
+                val nPr = (p and 0xff0000) shr 16
+                val nPg = (p and 0x00ff00) shr 8
+                val nPb = p and 0x0000ff
+                stack[stPtrIdx] = nPr
+                stack[stPtrIdx + 1] = nPg
+                stack[stPtrIdx + 2] = nPb
 
-                rinsum += sir[0]
-                ginsum += sir[1]
-                binsum += sir[2]
+                rinsum += nPr
+                ginsum += nPg
+                binsum += nPb
 
                 rsum += rinsum
                 gsum += ginsum
                 bsum += binsum
 
                 stackpointer = (stackpointer + 1) % div
-                sir = stack[stackpointer % div]
 
-                routsum += sir[0]
-                goutsum += sir[1]
-                boutsum += sir[2]
+                routsum += stack[stPtrIdx]
+                goutsum += stack[stPtrIdx + 1]
+                boutsum += stack[stPtrIdx + 2]
 
-                rinsum -= sir[0]
-                ginsum -= sir[1]
-                binsum -= sir[2]
+                rinsum -= stack[stPtrIdx]
+                ginsum -= stack[stPtrIdx + 1]
+                binsum -= stack[stPtrIdx + 2]
 
                 yi++
                 x++
@@ -575,22 +620,25 @@ object AccordBackdropGenerator {
             i = -r
             while (i <= r) {
                 yi = max(0, yp) + x
-                sir = stack[i + r]
-                sir[0] = rBuff[yi]
-                sir[1] = gBuff[yi]
-                sir[2] = bBuff[yi]
+                val sIdx = (i + r) * 3
+                val br = rBuff[yi]
+                val bg = gBuff[yi]
+                val bb = bBuff[yi]
+                stack[sIdx] = br
+                stack[sIdx + 1] = bg
+                stack[sIdx + 2] = bb
                 rbs = r1 - abs(i)
-                rsum += rBuff[yi] * rbs
-                gsum += gBuff[yi] * rbs
-                bsum += bBuff[yi] * rbs
+                rsum += br * rbs
+                gsum += bg * rbs
+                bsum += bb * rbs
                 if (i > 0) {
-                    rinsum += sir[0]
-                    ginsum += sir[1]
-                    binsum += sir[2]
+                    rinsum += br
+                    ginsum += bg
+                    binsum += bb
                 } else {
-                    routsum += sir[0]
-                    goutsum += sir[1]
-                    boutsum += sir[2]
+                    routsum += br
+                    goutsum += bg
+                    boutsum += bb
                 }
                 if (i < hm) {
                     yp += w
@@ -608,39 +656,42 @@ object AccordBackdropGenerator {
                 bsum -= boutsum
 
                 stackstart = stackpointer - r + div
-                sir = stack[stackstart % div]
+                val stStartIdx = (stackstart % div) * 3
 
-                routsum -= sir[0]
-                goutsum -= sir[1]
-                boutsum -= sir[2]
+                routsum -= stack[stStartIdx]
+                goutsum -= stack[stStartIdx + 1]
+                boutsum -= stack[stStartIdx + 2]
 
                 if (x == 0) {
                     vmin[y] = min(y + r1, hm) * w
                 }
                 p = x + vmin[y]
 
-                sir[0] = rBuff[p]
-                sir[1] = gBuff[p]
-                sir[2] = bBuff[p]
+                val stPtrIdx = (stackpointer % div) * 3
+                val nPr = rBuff[p]
+                val nPg = gBuff[p]
+                val nPb = bBuff[p]
+                stack[stPtrIdx] = nPr
+                stack[stPtrIdx + 1] = nPg
+                stack[stPtrIdx + 2] = nPb
 
-                rinsum += sir[0]
-                ginsum += sir[1]
-                binsum += sir[2]
+                rinsum += nPr
+                ginsum += nPg
+                binsum += nPb
 
                 rsum += rinsum
                 gsum += ginsum
                 bsum += binsum
 
                 stackpointer = (stackpointer + 1) % div
-                sir = stack[stackpointer]
 
-                routsum += sir[0]
-                goutsum += sir[1]
-                boutsum += sir[2]
+                routsum += stack[stPtrIdx]
+                goutsum += stack[stPtrIdx + 1]
+                boutsum += stack[stPtrIdx + 2]
 
-                rinsum -= sir[0]
-                ginsum -= sir[1]
-                binsum -= sir[2]
+                rinsum -= stack[stPtrIdx]
+                ginsum -= stack[stPtrIdx + 1]
+                binsum -= stack[stPtrIdx + 2]
 
                 yi += w
                 y++
@@ -669,12 +720,15 @@ object AccordBackdropGenerator {
         bitmap.getPixels(pixels, 0, w, 0, 0, w, h)
 
         val spanH = max(1, h - coerceStartY)
+        val invSpanH = 1.0f / spanH.toFloat()
         for (y in coerceStartY until h) {
-            val progress = (y - coerceStartY).toFloat() / spanH.toFloat()
+            val progress = (y - coerceStartY).toFloat() * invSpanH
             val factor = (3.0f - (2.0f * progress)) * progress * progress * 4.2f
+            val rowOffset = y * w
+            val seedY = 668265263 * y + 17965859
             for (x in 0 until w) {
-                val idx = (y * w) + x
-                val seed = (668265263 * y) + (374761393 * x) + 17965859
+                val idx = rowOffset + x
+                val seed = seedY + (374761393 * x)
                 val hash = ((seed ushr 13) xor seed) * 1274126177
                 val noise = (((((hash xor (hash ushr 16)) ushr 24) and 255) - 128) / 128f) * factor
 

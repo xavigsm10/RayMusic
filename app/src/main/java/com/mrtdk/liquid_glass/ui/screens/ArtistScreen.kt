@@ -737,9 +737,10 @@ fun ArtistScreen(
                     val hasMotionVideo = !artistMotionVideoUrl.isNullOrBlank()
 
                     if (!hasMotionVideo) {
-                        // 1. IMAGEN SUPERIOR (Fondo base nítido completo, 100% sólido de 0 a 436dp, fundiéndose suavemente al reflejo)
-                        val sharpTotalHeight = originalHeight + 8.dp
-                        val sharpFadeStart = (436.dp / sharpTotalHeight).coerceIn(0f, 1f)
+                        // 1. IMAGEN SUPERIOR (Fondo base nítido completo, 100% sólido de 0 a 350dp, fundiéndose suavemente al reflejo)
+                        val sharpTotalHeight = originalHeight + 20.dp
+                        val sharpFadeStart = (350.dp / sharpTotalHeight).coerceIn(0f, 1f)
+                        val sharpFadeMid = (410.dp / sharpTotalHeight).coerceIn(sharpFadeStart, 1f)
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -754,6 +755,7 @@ fun ArtistScreen(
                                         brush = Brush.verticalGradient(
                                             0.00f to Color.Black,
                                             sharpFadeStart to Color.Black,
+                                            sharpFadeMid to Color.Black.copy(alpha = 0.50f),
                                             1.00f to Color.Transparent
                                         ),
                                         blendMode = BlendMode.DstIn
@@ -784,10 +786,10 @@ fun ArtistScreen(
                             }
                         }
 
-                        // 1b. DIFUMINADO EN LA PARTE DE ABAJO DE LA IMAGEN SUPERIOR (de 340dp a 448dp)
-                        val topDifStart = (340.dp / sharpTotalHeight).coerceIn(0f, 1f)
-                        val topDifFull = (410.dp / sharpTotalHeight).coerceIn(0f, 1f)
-                        val topDifFade = (436.dp / sharpTotalHeight).coerceIn(0f, 1f)
+                        // 1b. DIFUMINADO EN LA PARTE DE ABAJO DE LA IMAGEN SUPERIOR
+                        val topDifStart = (310.dp / sharpTotalHeight).coerceIn(0f, 1f)
+                        val topDifFull = (385.dp / sharpTotalHeight).coerceIn(0f, 1f)
+                        val topDifFade = (430.dp / sharpTotalHeight).coerceIn(0f, 1f)
 
                         if (!hdThumb.isNullOrBlank()) {
                             Box(
@@ -805,7 +807,7 @@ fun ArtistScreen(
                                                 0.00f to Color.Transparent,
                                                 topDifStart to Color.Transparent,
                                                 topDifFull to Color.Black,
-                                                topDifFade to Color.Black,
+                                                topDifFade to Color.Black.copy(alpha = 0.70f),
                                                 1.00f to Color.Transparent
                                             ),
                                             blendMode = BlendMode.DstIn
@@ -835,7 +837,7 @@ fun ArtistScreen(
                             }
                         }
 
-                        // 1c. DIFUSIÓN HORIZONTAL EN LA PARTE DE ABAJO DE LA IMAGEN SUPERIOR (de 340dp a 448dp)
+                        // 1c. DIFUSIÓN HORIZONTAL EN LA PARTE DE ABAJO DE LA IMAGEN SUPERIOR
                         if (!hdThumb.isNullOrBlank()) {
                             Box(
                                 modifier = Modifier
@@ -852,7 +854,7 @@ fun ArtistScreen(
                                                 0.00f to Color.Transparent,
                                                 topDifStart to Color.Transparent,
                                                 topDifFull to Color.Black.copy(alpha = 0.80f),
-                                                topDifFade to Color.Black.copy(alpha = 0.80f),
+                                                topDifFade to Color.Black.copy(alpha = 0.55f),
                                                 1.00f to Color.Transparent
                                             ),
                                             blendMode = BlendMode.DstIn
@@ -884,21 +886,23 @@ fun ArtistScreen(
                         }
 
                         // 2. REFLEJO INVERTIDO (Donde termina la imagen original, estirado hacia abajo y disuelto suavemente)
-                        val reflStop1 = (50.dp / originalHeight).coerceIn(0f, 1f)
-                        val reflStop2 = (100.dp / originalHeight).coerceIn(0f, 1f)
-                        val reflStop3 = (140.dp / originalHeight).coerceIn(0f, 1f)
-                        val reflStop4 = (175.dp / originalHeight).coerceIn(0f, 1f)
-                        val reflStopEnd = (210.dp / originalHeight).coerceIn(0f, 1f)
-
                         val stretchFactor = 2.2f
                         val originY = stretchFactor / (1f + stretchFactor)
+                        val reflOverlap = 30.dp
+                        val reflFadeIn = (reflOverlap / originalHeight).coerceIn(0f, 1f)
+                        val reflRemaining = 1f - reflFadeIn
+                        val reflStop1 = reflFadeIn + (50.dp / originalHeight) * reflRemaining
+                        val reflStop2 = reflFadeIn + (100.dp / originalHeight) * reflRemaining
+                        val reflStop3 = reflFadeIn + (140.dp / originalHeight) * reflRemaining
+                        val reflStop4 = reflFadeIn + (175.dp / originalHeight) * reflRemaining
+                        val reflStopEnd = reflFadeIn + (210.dp / originalHeight) * reflRemaining
 
                         if (!hdThumb.isNullOrBlank()) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(originalHeight)
-                                    .offset(y = originalHeight - 8.dp)
+                                    .offset(y = originalHeight - reflOverlap)
                                     .graphicsLayer {
                                         compositingStrategy = CompositingStrategy.Offscreen
                                     }
@@ -906,7 +910,9 @@ fun ArtistScreen(
                                         drawContent()
                                         drawRect(
                                             brush = Brush.verticalGradient(
-                                                0.00f to Color.Black,
+                                                0.00f to Color.Transparent,
+                                                (reflFadeIn * 0.5f) to Color.Black.copy(alpha = 0.50f),
+                                                reflFadeIn to Color.Black,
                                                 reflStop1 to Color.Black.copy(alpha = 0.88f),
                                                 reflStop2 to Color.Black.copy(alpha = 0.65f),
                                                 reflStop3 to Color.Black.copy(alpha = 0.35f),
@@ -949,7 +955,7 @@ fun ArtistScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(originalHeight)
-                                    .offset(y = originalHeight - 8.dp)
+                                    .offset(y = originalHeight - reflOverlap)
                                     .graphicsLayer {
                                         compositingStrategy = CompositingStrategy.Offscreen
                                     }
@@ -957,7 +963,9 @@ fun ArtistScreen(
                                         drawContent()
                                         drawRect(
                                             brush = Brush.verticalGradient(
-                                                0.00f to Color.Black.copy(alpha = 0.75f),
+                                                0.00f to Color.Transparent,
+                                                (reflFadeIn * 0.5f) to Color.Black.copy(alpha = 0.35f),
+                                                reflFadeIn to Color.Black.copy(alpha = 0.75f),
                                                 reflStop1 to Color.Black.copy(alpha = 0.68f),
                                                 reflStop2 to Color.Black.copy(alpha = 0.48f),
                                                 reflStop3 to Color.Black.copy(alpha = 0.25f),
@@ -996,8 +1004,8 @@ fun ArtistScreen(
                         }
 
                         // 3. DIFUMINADO UNIFICADOR DE COLOR PROGRESIVO SOBRE LA IMAGEN Y REFLEJO (Estilo Apple Music)
-                        val fadeStart = (320.dp / heroHeight).coerceIn(0f, 1f)
-                        val nameTop = (370.dp / heroHeight).coerceIn(fadeStart, 1f)
+                        val fadeStart = (300.dp / heroHeight).coerceIn(0f, 1f)
+                        val nameTop = (365.dp / heroHeight).coerceIn(fadeStart, 1f)
                         val nameCenter = (405.dp / heroHeight).coerceIn(nameTop, 1f)
                         val seamPos = (originalHeight / heroHeight).coerceIn(nameCenter, 1f) // 440dp
                         val buttonsCenter = (480.dp / heroHeight).coerceIn(seamPos, 1f)
@@ -1012,13 +1020,13 @@ fun ArtistScreen(
                                     Brush.verticalGradient(
                                         colorStops = arrayOf(
                                             0.00f to Color.Transparent,
-                                            fadeStart to Color.Transparent,                                 // 320dp: imagen superior nítida
-                                            nameTop to animatedBackgroundColor.copy(alpha = 0.18f),        // 370dp: inicio suave del velo de color
-                                            nameCenter to animatedBackgroundColor.copy(alpha = 0.38f),     // 405dp: sobre el nombre del artista
-                                            seamPos to animatedBackgroundColor.copy(alpha = 0.56f),        // 440dp: disuelve la unión con el reflejo
-                                            buttonsCenter to animatedBackgroundColor.copy(alpha = 0.78f),  // 480dp: sobre los botones de acción
-                                            buttonsBottom to animatedBackgroundColor.copy(alpha = 0.90f),  // 515dp: transición continua sin cortes
-                                            blendNearSolid to animatedBackgroundColor.copy(alpha = 0.97f), // 538dp: casi sólido al llegar a la tarjeta
+                                            fadeStart to Color.Transparent,                                 // 300dp: imagen superior nítida
+                                            nameTop to animatedBackgroundColor.copy(alpha = 0.20f),        // 365dp: inicio suave del velo de color
+                                            nameCenter to animatedBackgroundColor.copy(alpha = 0.45f),     // 405dp: sobre el nombre del artista
+                                            seamPos to animatedBackgroundColor.copy(alpha = 0.68f),        // 440dp: disuelve la unión con el reflejo de forma continua
+                                            buttonsCenter to animatedBackgroundColor.copy(alpha = 0.84f),  // 480dp: sobre los botones de acción
+                                            buttonsBottom to animatedBackgroundColor.copy(alpha = 0.92f),  // 515dp: transición continua sin cortes
+                                            blendNearSolid to animatedBackgroundColor.copy(alpha = 0.98f), // 538dp: casi sólido al llegar a la tarjeta
                                             blendSolid to animatedBackgroundColor,                          // 560dp: 100% sólido unificado
                                             1.00f to animatedBackgroundColor
                                         )
@@ -2013,9 +2021,10 @@ fun ArtistScreen(
                         }
                         .clipToBounds()
                 ) {
-                    // 1. IMAGEN SUPERIOR (Fondo base nítido completo, 100% sólido de 0 a 436dp, fundiéndose suavemente al reflejo)
-                    val sharpTotalHeight = originalHeight + 8.dp
-                    val sharpFadeStart = (436.dp / sharpTotalHeight).coerceIn(0f, 1f)
+                    // 1. IMAGEN SUPERIOR (Fondo base nítido completo, 100% sólido de 0 a 350dp, fundiéndose suavemente al reflejo)
+                    val sharpTotalHeight = originalHeight + 20.dp
+                    val sharpFadeStart = (350.dp / sharpTotalHeight).coerceIn(0f, 1f)
+                    val sharpFadeMid = (410.dp / sharpTotalHeight).coerceIn(sharpFadeStart, 1f)
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -2030,6 +2039,7 @@ fun ArtistScreen(
                                     brush = Brush.verticalGradient(
                                         0.00f to Color.Black,
                                         sharpFadeStart to Color.Black,
+                                        sharpFadeMid to Color.Black.copy(alpha = 0.50f),
                                         1.00f to Color.Transparent
                                     ),
                                     blendMode = BlendMode.DstIn
@@ -2060,10 +2070,10 @@ fun ArtistScreen(
                         }
                     }
 
-                    // 1b. DIFUMINADO EN LA PARTE DE ABAJO DE LA IMAGEN SUPERIOR (de 340dp a 448dp)
-                    val topDifStart = (340.dp / sharpTotalHeight).coerceIn(0f, 1f)
-                    val topDifFull = (410.dp / sharpTotalHeight).coerceIn(0f, 1f)
-                    val topDifFade = (436.dp / sharpTotalHeight).coerceIn(0f, 1f)
+                    // 1b. DIFUMINADO EN LA PARTE DE ABAJO DE LA IMAGEN SUPERIOR
+                    val topDifStart = (310.dp / sharpTotalHeight).coerceIn(0f, 1f)
+                    val topDifFull = (385.dp / sharpTotalHeight).coerceIn(0f, 1f)
+                    val topDifFade = (430.dp / sharpTotalHeight).coerceIn(0f, 1f)
 
                     if (!hdThumb.isNullOrBlank()) {
                         Box(
@@ -2081,7 +2091,7 @@ fun ArtistScreen(
                                         0.00f to Color.Transparent,
                                         topDifStart to Color.Transparent,
                                         topDifFull to Color.Black,
-                                        topDifFade to Color.Black,
+                                        topDifFade to Color.Black.copy(alpha = 0.70f),
                                         1.00f to Color.Transparent
                                     ),
                                     blendMode = BlendMode.DstIn
@@ -2111,7 +2121,7 @@ fun ArtistScreen(
                         }
                     }
 
-                    // 1c. DIFUSIÓN HORIZONTAL EN LA PARTE DE ABAJO DE LA IMAGEN SUPERIOR (de 340dp a 448dp)
+                    // 1c. DIFUSIÓN HORIZONTAL EN LA PARTE DE ABAJO DE LA IMAGEN SUPERIOR
                     if (!hdThumb.isNullOrBlank()) {
                         Box(
                             modifier = Modifier
@@ -2128,7 +2138,7 @@ fun ArtistScreen(
                                             0.00f to Color.Transparent,
                                             topDifStart to Color.Transparent,
                                             topDifFull to Color.Black.copy(alpha = 0.80f),
-                                            topDifFade to Color.Black.copy(alpha = 0.80f),
+                                            topDifFade to Color.Black.copy(alpha = 0.55f),
                                             1.00f to Color.Transparent
                                         ),
                                         blendMode = BlendMode.DstIn
@@ -2160,21 +2170,23 @@ fun ArtistScreen(
                     }
 
                     // 2. REFLEJO INVERTIDO (Donde termina la imagen original, estirado hacia abajo y disuelto suavemente)
-                    val reflStop1 = (50.dp / originalHeight).coerceIn(0f, 1f)
-                    val reflStop2 = (100.dp / originalHeight).coerceIn(0f, 1f)
-                    val reflStop3 = (140.dp / originalHeight).coerceIn(0f, 1f)
-                    val reflStop4 = (175.dp / originalHeight).coerceIn(0f, 1f)
-                    val reflStopEnd = (210.dp / originalHeight).coerceIn(0f, 1f)
-
                     val stretchFactor = 2.2f
                     val originY = stretchFactor / (1f + stretchFactor)
+                    val reflOverlap = 30.dp
+                    val reflFadeIn = (reflOverlap / originalHeight).coerceIn(0f, 1f)
+                    val reflRemaining = 1f - reflFadeIn
+                    val reflStop1 = reflFadeIn + (50.dp / originalHeight) * reflRemaining
+                    val reflStop2 = reflFadeIn + (100.dp / originalHeight) * reflRemaining
+                    val reflStop3 = reflFadeIn + (140.dp / originalHeight) * reflRemaining
+                    val reflStop4 = reflFadeIn + (175.dp / originalHeight) * reflRemaining
+                    val reflStopEnd = reflFadeIn + (210.dp / originalHeight) * reflRemaining
 
                     if (!hdThumb.isNullOrBlank()) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(originalHeight)
-                                .offset(y = originalHeight - 8.dp)
+                                .offset(y = originalHeight - reflOverlap)
                                 .graphicsLayer {
                                     compositingStrategy = CompositingStrategy.Offscreen
                                 }
@@ -2182,7 +2194,9 @@ fun ArtistScreen(
                                     drawContent()
                                     drawRect(
                                         brush = Brush.verticalGradient(
-                                            0.00f to Color.Black,
+                                            0.00f to Color.Transparent,
+                                            (reflFadeIn * 0.5f) to Color.Black.copy(alpha = 0.50f),
+                                            reflFadeIn to Color.Black,
                                             reflStop1 to Color.Black.copy(alpha = 0.88f),
                                             reflStop2 to Color.Black.copy(alpha = 0.65f),
                                             reflStop3 to Color.Black.copy(alpha = 0.35f),
@@ -2225,7 +2239,7 @@ fun ArtistScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(originalHeight)
-                                .offset(y = originalHeight - 8.dp)
+                                .offset(y = originalHeight - reflOverlap)
                                 .graphicsLayer {
                                     compositingStrategy = CompositingStrategy.Offscreen
                                 }
@@ -2233,7 +2247,9 @@ fun ArtistScreen(
                                     drawContent()
                                     drawRect(
                                         brush = Brush.verticalGradient(
-                                            0.00f to Color.Black.copy(alpha = 0.75f),
+                                            0.00f to Color.Transparent,
+                                            (reflFadeIn * 0.5f) to Color.Black.copy(alpha = 0.35f),
+                                            reflFadeIn to Color.Black.copy(alpha = 0.75f),
                                             reflStop1 to Color.Black.copy(alpha = 0.68f),
                                             reflStop2 to Color.Black.copy(alpha = 0.48f),
                                             reflStop3 to Color.Black.copy(alpha = 0.25f),
@@ -2272,8 +2288,8 @@ fun ArtistScreen(
                     }
 
                     // 3. DIFUMINADO UNIFICADOR DE COLOR PROGRESIVO SOBRE LA IMAGEN Y REFLEJO (Estilo Apple Music)
-                    val fadeStart = (320.dp / heroHeight).coerceIn(0f, 1f)
-                    val nameTop = (370.dp / heroHeight).coerceIn(fadeStart, 1f)
+                    val fadeStart = (300.dp / heroHeight).coerceIn(0f, 1f)
+                    val nameTop = (365.dp / heroHeight).coerceIn(fadeStart, 1f)
                     val nameCenter = (405.dp / heroHeight).coerceIn(nameTop, 1f)
                     val seamPos = (originalHeight / heroHeight).coerceIn(nameCenter, 1f) // 440dp
                     val reflMid = (475.dp / heroHeight).coerceIn(seamPos, 1f)
@@ -2287,12 +2303,12 @@ fun ArtistScreen(
                                 Brush.verticalGradient(
                                     colorStops = arrayOf(
                                         0.00f to Color.Transparent,
-                                        fadeStart to Color.Transparent,                                 // 320dp: imagen superior nítida
-                                        nameTop to animatedInfoBgColor.copy(alpha = 0.18f),             // 370dp: inicio suave del velo de color
-                                        nameCenter to animatedInfoBgColor.copy(alpha = 0.38f),          // 405dp: sobre el nombre del artista
-                                        seamPos to animatedInfoBgColor.copy(alpha = 0.56f),             // 440dp: disuelve la unión con el reflejo
-                                        reflMid to animatedInfoBgColor.copy(alpha = 0.78f),             // 475dp: transición continua sin cortes
-                                        blendNearSolid to animatedInfoBgColor.copy(alpha = 0.97f),      // 500dp: casi sólido
+                                        fadeStart to Color.Transparent,                                 // 300dp: imagen superior nítida
+                                        nameTop to animatedInfoBgColor.copy(alpha = 0.20f),             // 365dp: inicio suave del velo de color
+                                        nameCenter to animatedInfoBgColor.copy(alpha = 0.45f),          // 405dp: sobre el nombre del artista
+                                        seamPos to animatedInfoBgColor.copy(alpha = 0.68f),             // 440dp: disuelve la unión con el reflejo de forma continua
+                                        reflMid to animatedInfoBgColor.copy(alpha = 0.84f),             // 475dp: transición continua sin cortes
+                                        blendNearSolid to animatedInfoBgColor.copy(alpha = 0.98f),      // 500dp: casi sólido
                                         blendSolid to animatedInfoBgColor,                              // 515dp: 100% sólido unificado
                                         1.00f to animatedInfoBgColor
                                     )

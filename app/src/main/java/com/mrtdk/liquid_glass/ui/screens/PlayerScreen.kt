@@ -155,7 +155,6 @@ import androidx.compose.ui.draw.BlurredEdgeTreatment
 
 import androidx.compose.ui.draw.clipToBounds
 
-import com.skydoves.cloudy.cloudy
 
 import androidx.compose.ui.geometry.Offset
 
@@ -6583,7 +6582,7 @@ fun LandscapePlayerLayout(
                                     renderEffect = BlurEffect(90f, 90f, TileMode.Clamp)
                                 }
                             } else {
-                                Modifier.cloudy(radius = 35)
+                                Modifier
                             }
                         )
                         .drawWithContent {
@@ -6622,7 +6621,7 @@ fun LandscapePlayerLayout(
                                     renderEffect = BlurEffect(90f, 90f, TileMode.Clamp)
                                 }
                             } else {
-                                Modifier.cloudy(radius = 35)
+                                Modifier
                             }
                         )
                         .drawWithContent {
