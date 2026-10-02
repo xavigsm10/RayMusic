@@ -44,7 +44,7 @@
 
 ## Resumen de la Aplicación
 
-**RayMusic** no es solo otro cliente genérico de YouTube Music para Android. Es un reproductor personalizado desarrollado desde cero para los entusiastas de la música que valoran la privacidad, el rendimiento extremo y una estética visual impresionante.
+**Rayen** no es solo otro cliente genérico de YouTube Music para Android. Es un reproductor personalizado desarrollado desde cero para los entusiastas de la música que valoran la privacidad, el rendimiento extremo y una estética visual impresionante.
 
 La aplicación destaca por su revolucionaria interfaz **Liquid Glass** (cristal líquido). Este motor visual dinámico procesa las portadas de los álbumes en tiempo real para generar desenfoques inmersivos, reflejos estirados en 1D y degradados translúcidos fluidos que tiñen toda la interfaz. De este modo, la aplicación se funde cromáticamente con el tema de la canción en reproducción, creando una atmósfera verdaderamente premium, limpia y carente de elementos oscuros innecesarios.
 
