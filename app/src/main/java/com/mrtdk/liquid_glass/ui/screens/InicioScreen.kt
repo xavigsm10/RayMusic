@@ -853,7 +853,7 @@ fun InicioScreen(
                                 is com.echo.innertube.models.PlaylistItem -> item.id
                                 else -> "$index"
                             }
-                            "${baseId}_$index"
+                            "${baseId}"
                         },
                         contentType = { "suggestion_card" }
                     ) { index ->
@@ -901,7 +901,7 @@ fun InicioScreen(
                     val itemsToDisplay = recentlyPlayed.take(20)
                     items(
                         count = itemsToDisplay.size,
-                        key = { index -> "${itemsToDisplay.getOrNull(index)?.id ?: index}_$index" },
+                        key = { index -> "recent_${itemsToDisplay.getOrNull(index)?.id ?: index}" },
                         contentType = { "recent_item" }
                     ) { index ->
                         val item = itemsToDisplay[index]
@@ -1014,7 +1014,7 @@ fun InicioScreen(
                 ) {
                     items(
                         count = elMundoDe.albums.size,
-                        key = { index -> "${elMundoDe.albums.getOrNull(index)?.id ?: index}_$index" },
+                        key = { index -> "elmundo_${elMundoDe.albums.getOrNull(index)?.id ?: index}" },
                         contentType = { "mundo_album" }
                     ) { index ->
                         val album = elMundoDe.albums[index]
@@ -1110,7 +1110,7 @@ fun InicioScreen(
                     val playlists = fansSection.playlists
                     items(
                         count = playlists.size,
-                        key = { index -> "${playlists.getOrNull(index)?.id ?: index}_$index" },
+                        key = { index -> "pl_${playlists.getOrNull(index)?.id ?: index}" },
                         contentType = { "fans_playlist" }
                     ) { index ->
                         val pl = playlists[index]
@@ -1212,7 +1212,7 @@ fun InicioScreen(
                                 is com.echo.innertube.models.AlbumItem -> itm.id
                                 else -> "$index"
                             }
-                            "${baseId}_$index"
+                            "${baseId}"
                         },
                         contentType = { "fiesta_item" }
                     ) { index ->
@@ -1346,7 +1346,7 @@ fun InicioScreen(
                     val playlists = state.madeForYouPlaylists
                     items(
                         count = playlists.size,
-                        key = { index -> "${playlists.getOrNull(index)?.id ?: index}_$index" },
+                        key = { index -> "pl_fav_${playlists.getOrNull(index)?.id ?: index}" },
                         contentType = { "made_for_you_playlist" }
                     ) { index ->
                         val pl = playlists[index]
@@ -1405,7 +1405,7 @@ fun InicioScreen(
                     val stations = state.artistStations.distinctBy { it.id }
                     items(
                         count = stations.size,
-                        key = { index -> "${stations.getOrNull(index)?.id ?: index}_$index" },
+                        key = { index -> "st_${stations.getOrNull(index)?.id ?: index}" },
                         contentType = { "artist_station" }
                     ) { index ->
                         val station = stations[index]
@@ -1484,7 +1484,7 @@ fun InicioScreen(
                                 is com.echo.innertube.models.PlaylistItem -> itm.id
                                 else -> "$idx"
                             }
-                            "sim_${section.artistName}_${baseId}_$idx"
+                            "sim_${section.artistName}_${baseId}"
                         },
                         contentType = { "similar_item" }
                     ) { idx ->
@@ -1868,7 +1868,7 @@ fun InicioScreen(
                                 is com.echo.innertube.models.PlaylistItem -> itm.id
                                 else -> "$index"
                             }
-                            "overlay1_${itmId}_$index"
+                            "overlay1_${itmId}"
                         },
                         contentType = { "overlay_item" }
                     ) { index ->
@@ -2020,7 +2020,7 @@ fun InicioScreen(
                         count = mappedRecentlyPlayed.size,
                         key = { index ->
                             val itm = mappedRecentlyPlayed.getOrNull(index)
-                            "rec_${itm?.id ?: index}_$index"
+                            "rec_${itm?.id ?: index}"
                         },
                         contentType = { "recent_item" }
                     ) { index ->
@@ -2155,7 +2155,7 @@ fun InicioScreen(
                 ) {
                     items(
                         count = overlayItems.size,
-                        key = { index -> "pq_ov_${overlayItems.getOrNull(index)?.id ?: index}_$index" },
+                        key = { index -> "pq_ov_${overlayItems.getOrNull(index)?.id ?: index}" },
                         contentType = { "overlay_song" }
                     ) { index ->
                         val item = overlayItems[index]
@@ -2259,7 +2259,7 @@ fun InicioScreen(
                 ) {
                     items(
                         count = overlayItems.size,
-                        key = { index -> "sel_ov_${overlayItems.getOrNull(index)?.id ?: index}_$index" },
+                        key = { index -> "sel_ov_${overlayItems.getOrNull(index)?.id ?: index}" },
                         contentType = { "overlay_song" }
                     ) { index ->
                         val item = overlayItems[index]

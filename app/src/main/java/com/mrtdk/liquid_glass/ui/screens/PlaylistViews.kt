@@ -2731,7 +2731,7 @@ fun FavoriteSongsScreen(
                     // Songs list
                     itemsIndexed(
                         items = songs,
-                        key = { trackIndex, track -> "fav_track_${track.id}_$trackIndex" },
+                        key = { _, track -> "fav_track_${track.id}" },
                         contentType = { _, _ -> "fav_track" }
                     ) { trackIndex, track ->
                         Row(

@@ -80,7 +80,12 @@ android {
     }
 }
 
+composeCompiler {
+    stabilityConfigurationFiles.add(project.layout.projectDirectory.file("compose_stability.conf"))
+}
+
 dependencies {
+    implementation("androidx.profileinstaller:profileinstaller:1.3.1")
     implementation(project(":shazamkit"))
     implementation(project(":innertube"))
     implementation(libs.androidx.core.ktx)

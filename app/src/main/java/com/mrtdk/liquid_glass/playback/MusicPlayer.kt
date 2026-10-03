@@ -236,7 +236,7 @@ class MusicPlayer(private val context: Context) {
         
         val mediaItem = MediaItem.Builder()
             .setMediaId(videoId)
-            .setUri(Uri.parse("yt://$videoId"))
+            .setUri(Uri.parse("https://music.youtube.com/watch?v=$videoId"))
             .setCustomCacheKey(videoId)
             .setMediaMetadata(metadata)
             .build()
@@ -248,15 +248,24 @@ class MusicPlayer(private val context: Context) {
 
     fun playOnlineSongs(songs: List<MediaItem>, startIndex: Int = 0) {
         _playbackError.value = null
-        songs.forEach { item ->
+        val mappedSongs = songs.map { item ->
             val vId = item.mediaId
             val t = item.mediaMetadata.title?.toString().orEmpty()
             val a = item.mediaMetadata.artist?.toString().orEmpty()
             if (vId.isNotBlank() && (t.isNotBlank() || a.isNotBlank())) {
                 songMetadataCache[vId] = Pair(t, a)
             }
+            val currentUri = item.localConfiguration?.uri
+            if (vId.isNotBlank() && (currentUri == null || currentUri.scheme == "yt")) {
+                item.buildUpon()
+                    .setUri(Uri.parse("https://music.youtube.com/watch?v=$vId"))
+                    .setCustomCacheKey(vId)
+                    .build()
+            } else {
+                item
+            }
         }
-        controller?.setMediaItems(songs, startIndex, 0L)
+        controller?.setMediaItems(mappedSongs, startIndex, 0L)
         controller?.prepare()
         controller?.play()
     }
@@ -273,7 +282,7 @@ class MusicPlayer(private val context: Context) {
         
         val mediaItem = MediaItem.Builder()
             .setMediaId(videoId)
-            .setUri(Uri.parse("yt://$videoId"))
+            .setUri(Uri.parse("https://music.youtube.com/watch?v=$videoId"))
             .setCustomCacheKey(videoId)
             .setMediaMetadata(metadata)
             .build()

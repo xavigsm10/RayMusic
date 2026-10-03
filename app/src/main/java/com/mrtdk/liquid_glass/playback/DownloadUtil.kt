@@ -67,12 +67,18 @@ class DownloadUtil private constructor(private val context: Context) {
                         .build()
                 )
             )
+            .setCacheWriteDataSinkFactory(null)
+            .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
     ) { dataSpec ->
-        val mediaId = dataSpec.key ?: error("No media id")
+        val uri = dataSpec.uri
+        val mediaId = dataSpec.key
+            ?: uri.getQueryParameter("v")
+            ?: (if (uri.scheme == "yt") uri.toString().removePrefix("yt://") else uri.host)
+            ?: error("No media id")
         
         // If it's already in player cache, skip URL resolution
         if (playerCache.isCached(mediaId, dataSpec.position, if (dataSpec.length >= 0) dataSpec.length else 1)) {
-            return@Factory dataSpec
+            return@Factory dataSpec.buildUpon().setKey(mediaId).build()
         }
 
         // Otherwise resolve stream url
@@ -80,7 +86,10 @@ class DownloadUtil private constructor(private val context: Context) {
             com.mrtdk.liquid_glass.playback.MusicPlayer.resolveUrl(mediaId)
         } ?: error("Failed to resolve URL for download: $mediaId")
 
-        dataSpec.withUri(Uri.parse(streamUrl))
+        dataSpec.buildUpon()
+            .setUri(Uri.parse(streamUrl))
+            .setKey(mediaId)
+            .build()
     }
 
     val downloadNotificationHelper = DownloadNotificationHelper(context, ExoDownloadService.CHANNEL_ID)
@@ -90,7 +99,7 @@ class DownloadUtil private constructor(private val context: Context) {
         databaseProvider,
         downloadCache,
         dataSourceFactory,
-        Executor { it.run() }
+        java.util.concurrent.Executors.newFixedThreadPool(3)
     ).apply {
         maxParallelDownloads = 3
         addListener(object : DownloadManager.Listener {
@@ -144,11 +153,11 @@ class DownloadUtil private constructor(private val context: Context) {
     init {
         val result = mutableMapOf<String, Download>()
         try {
-            val cursor = downloadManager.downloadIndex.getDownloads()
-            while (cursor.moveToNext()) {
-                result[cursor.download.request.id] = cursor.download
+            downloadManager.downloadIndex.getDownloads().use { cursor ->
+                while (cursor.moveToNext()) {
+                    result[cursor.download.request.id] = cursor.download
+                }
             }
-            cursor.close()
         } catch (e: Exception) {
             e.printStackTrace()
         }

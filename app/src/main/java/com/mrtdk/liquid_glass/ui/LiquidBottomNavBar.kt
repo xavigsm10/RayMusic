@@ -342,6 +342,7 @@ fun LiquidBottomNavBar(
                                     zIndexInOverlay = 1f
                                 )
                                 .size(48.dp)
+                                .skipToLookaheadSize()
                                 .then(capsuleGlassModifier())
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
@@ -405,6 +406,7 @@ fun LiquidBottomNavBar(
                                     onSeek = onSeek,
                                     modifier = Modifier
                                         .fillMaxSize()
+                                        .skipToLookaheadSize()
                                         .then(miniPlayerGlassModifier())
                                 )
                             }
@@ -419,6 +421,7 @@ fun LiquidBottomNavBar(
                         Box(
                             modifier = Modifier
                                 .size(48.dp)
+                                .skipToLookaheadSize()
                                 .sharedElement(
                                     sharedContentState = rememberSharedContentState("standaloneTab"),
                                     animatedVisibilityScope = this@AnimatedContent,

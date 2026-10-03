@@ -364,6 +364,9 @@
     <string name="player_like_download_desc">Favori olarak işaretlendiğinde şarkıyı otomatik indirir</string>
     <string name="player_persistent_queue_title">Kalıcı kuyruk</string>
     <string name="player_persistent_queue_desc">Uygulama kapatıldığında çalma listesini kayıtlı tutar</string>
+    <string name="player_hide_volume_bar_title">Ses çubuğu olmadan</string>
+    <string name="player_hide_volume_bar_desc">Ses çubuğunu gizle ve oynatma kontrollerini büyüt</string>
+
 
     <string name="together_username_title">Kullanıcı adı</string>
     <string name="together_server_title">WebSockets Sunucusu</string>

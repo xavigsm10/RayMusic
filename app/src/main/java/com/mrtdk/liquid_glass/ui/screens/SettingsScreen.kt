@@ -835,6 +835,7 @@ fun PlayerSettingsScreen(
     var autoplaySimilar by remember { mutableStateOf(LibraryManager.getString("autoplay_similar", "true") == "true") }
     var autoDownloadOnLike by remember { mutableStateOf(LibraryManager.getString("auto_download_on_like", "false") == "true") }
     var persistentQueue by remember { mutableStateOf(LibraryManager.getString("persistent_queue", "true") == "true") }
+    var hideVolumeBar by remember { mutableStateOf(LibraryManager.isHideVolumeBarEnabled()) }
 
     var soundCheck by remember { mutableStateOf(LibraryManager.getString("sound_check_enabled", "false") == "true") }
     var dolbyAtmos by remember { mutableStateOf(LibraryManager.getString("dolby_atmos_enabled", "false") == "true") }
@@ -1039,6 +1040,34 @@ fun PlayerSettingsScreen(
                             )
                         },
                         onClick = { showSleepTimerDialog = true }
+                    )
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Material3SettingsGroup(
+                title = stringResource(R.string.settings_section_behavior),
+                items = listOf(
+                    Material3SettingsItem(
+                        icon = rememberPainter(Icons.Default.VolumeOff),
+                        title = { Text(stringResource(R.string.player_hide_volume_bar_title)) },
+                        description = { Text(stringResource(R.string.player_hide_volume_bar_desc)) },
+                        trailingContent = {
+                            Switch(
+                                checked = hideVolumeBar,
+                                onCheckedChange = { value ->
+                                    hideVolumeBar = value
+                                    LibraryManager.setHideVolumeBarEnabled(value)
+                                },
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFFFA243C))
+                            )
+                        },
+                        onClick = {
+                            val value = !hideVolumeBar
+                            hideVolumeBar = value
+                            LibraryManager.setHideVolumeBarEnabled(value)
+                        }
                     )
                 )
             )

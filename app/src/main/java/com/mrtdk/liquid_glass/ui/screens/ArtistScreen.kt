@@ -283,7 +283,7 @@ fun ArtistScreen(
     var appleMusicArtistThumb by remember(currentArtistName) { 
         mutableStateOf<String?>(
             com.mrtdk.liquid_glass.spotify.AppleMusicArtistProvider.getCachedImageUrl(currentArtistName)
-                ?: artistState.thumbnail?.takeUnless { com.mrtdk.liquid_glass.spotify.SpotifyArtistProvider.isYouTubeUrl(it) }
+                ?: artistState.thumbnail
         ) 
     }
     var artistLogoUrl by remember(currentArtistName) {
@@ -381,8 +381,8 @@ fun ArtistScreen(
         }
     }
 
-    // Use official Apple Music portrait exclusively (never YouTube Music)
-    val artistThumb = appleMusicArtistThumb
+    // Use official Apple Music portrait with artistState.thumbnail as immediate fallback
+    val artistThumb = appleMusicArtistThumb ?: artistState.thumbnail
     val hdThumb = artistThumb
 
     // Single fast API call — with fallback to search if browseId fails

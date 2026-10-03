@@ -364,6 +364,9 @@
     <string name="player_like_download_desc">Baixa automaticamente a música quando for marcada como favorita</string>
     <string name="player_persistent_queue_title">Fila persistente</string>
     <string name="player_persistent_queue_desc">Mantém a lista de reprodução salva ao fechar o app</string>
+    <string name="player_hide_volume_bar_title">Sem barra de volume</string>
+    <string name="player_hide_volume_bar_desc">Oculta a barra de volume e amplia os controles de reprodução</string>
+
 
     <string name="together_username_title">Nome de usuário</string>
     <string name="together_server_title">Servidor WebSockets</string>

@@ -220,11 +220,14 @@ object YouTube {
             val playlistId = AlbumPage.getPlaylistId(response)
                 ?: response.microformat?.microformatDataRenderer?.urlCanonical?.substringAfterLast('=').takeIf { !it.isNullOrBlank() && !it.startsWith("http") }
                 ?: if (browseId.startsWith("MPREb_")) "OLAK5uy_${browseId.removePrefix("MPREb_")}" else null
-                ?: throw Exception("Playlist ID not found")
+                ?: if (browseId.startsWith("MPRE")) "OLAK5uy_${browseId.removePrefix("MPRE")}" else null
+                ?: browseId
 
             val title = AlbumPage.getTitle(response)
                 ?: response.contents?.twoColumnBrowseResultsRenderer?.tabs?.firstOrNull()?.tabRenderer?.content?.sectionListRenderer?.contents?.firstOrNull()?.musicResponsiveHeaderRenderer?.title?.runs?.firstOrNull()?.text
-                ?: throw Exception("Title not found")
+                ?: response.header?.musicDetailHeaderRenderer?.title?.runs?.firstOrNull()?.text
+                ?: response.header?.musicHeaderRenderer?.title?.runs?.firstOrNull()?.text
+                ?: "Album"
 
             val artists = AlbumPage.getArtists(response).takeIf { it.isNotEmpty() }
                 ?: response.contents?.twoColumnBrowseResultsRenderer?.tabs?.firstOrNull()?.tabRenderer?.content?.sectionListRenderer?.contents?.firstOrNull()?.musicResponsiveHeaderRenderer?.straplineTextOne?.runs?.oddElements()?.map {
@@ -239,7 +242,9 @@ object YouTube {
 
             val thumbnail = AlbumPage.getThumbnail(response)
                 ?: response.contents?.twoColumnBrowseResultsRenderer?.tabs?.firstOrNull()?.tabRenderer?.content?.sectionListRenderer?.contents?.firstOrNull()?.musicResponsiveHeaderRenderer?.thumbnail?.musicThumbnailRenderer?.thumbnail?.thumbnails?.lastOrNull()?.url
-                ?: throw Exception("Thumbnail not found")
+                ?: response.header?.musicDetailHeaderRenderer?.thumbnail?.croppedSquareThumbnailRenderer?.getThumbnailUrl()
+                ?: response.header?.musicHeaderRenderer?.thumbnail?.thumbnails?.lastOrNull()?.url
+                ?: ""
 
             val albumItem = AlbumItem(
                 browseId = browseId,
@@ -340,7 +345,9 @@ object YouTube {
                 id = browseId,
                 title = response.header?.musicImmersiveHeaderRenderer?.title?.runs?.firstOrNull()?.text
                     ?: response.header?.musicVisualHeaderRenderer?.title?.runs?.firstOrNull()?.text
-                    ?: response.header?.musicHeaderRenderer?.title?.runs?.firstOrNull()?.text!!,
+                    ?: response.header?.musicHeaderRenderer?.title?.runs?.firstOrNull()?.text
+                    ?: response.contents?.twoColumnBrowseResultsRenderer?.tabs?.firstOrNull()?.tabRenderer?.content?.sectionListRenderer?.contents?.firstOrNull()?.musicResponsiveHeaderRenderer?.title?.runs?.firstOrNull()?.text
+                    ?: "",
                 thumbnail = response.header?.musicImmersiveHeaderRenderer?.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl()
                     ?: response.header?.musicVisualHeaderRenderer?.foregroundThumbnail?.musicThumbnailRenderer?.getThumbnailUrl()
                     ?: response.header?.musicDetailHeaderRenderer?.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl(),
@@ -354,9 +361,11 @@ object YouTube {
                         ?.contents?.firstOrNull()?.musicShelfRenderer?.contents?.firstOrNull()?.musicResponsiveListItemRenderer?.navigationEndpoint?.watchPlaylistEndpoint,
                 radioEndpoint = response.header?.musicImmersiveHeaderRenderer?.startRadioButton?.buttonRenderer?.navigationEndpoint?.watchEndpoint
             ),
-            sections = response.contents?.singleColumnBrowseResultsRenderer?.tabs?.firstOrNull()
+            sections = (response.contents?.singleColumnBrowseResultsRenderer?.tabs?.firstOrNull()
                 ?.tabRenderer?.content?.sectionListRenderer?.contents
-                ?.mapNotNull(ArtistPage::fromSectionListRendererContent)!!,
+                ?: response.contents?.twoColumnBrowseResultsRenderer?.secondaryContents?.sectionListRenderer?.contents
+                ?: response.contents?.sectionListRenderer?.contents)
+                ?.mapNotNull(ArtistPage::fromSectionListRendererContent).orEmpty(),
             description = descriptionRuns?.joinToString(separator = "") { it.text },
             subscriberCountText = response.header?.musicImmersiveHeaderRenderer?.subscriptionButton2
                 ?.subscribeButtonRenderer?.subscriberCountWithSubscribeText.extractCountText()
@@ -493,7 +502,7 @@ object YouTube {
         val title = header?.title?.runs?.firstOrNull()?.text
             ?: response.header?.musicDetailHeaderRenderer?.title?.runs?.firstOrNull()?.text
             ?: response.header?.musicHeaderRenderer?.title?.runs?.firstOrNull()?.text
-            ?: throw Exception("Failed to parse playlist title")
+            ?: "Playlist"
 
         val author = (header?.straplineTextOne ?: response.header?.musicDetailHeaderRenderer?.subtitle ?: response.header?.musicHeaderRenderer?.subtitle)
             ?.runs?.firstOrNull()?.let {
@@ -510,7 +519,7 @@ object YouTube {
             ?: response.header?.musicDetailHeaderRenderer?.thumbnail?.croppedSquareThumbnailRenderer?.getThumbnailUrl()
             ?: response.header?.musicHeaderRenderer?.thumbnail?.thumbnails?.lastOrNull()?.url
             ?: response.background?.musicThumbnailRenderer?.getThumbnailUrl()
-            ?: throw Exception("Failed to parse playlist thumbnail")
+            ?: ""
 
         val editable = base?.musicEditablePlaylistDetailHeaderRenderer != null
 

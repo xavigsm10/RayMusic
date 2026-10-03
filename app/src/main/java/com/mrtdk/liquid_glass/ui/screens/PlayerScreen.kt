@@ -4,10 +4,13 @@ package com.mrtdk.liquid_glass.ui.screens
 
 import android.net.Uri
 import android.os.Build
+import com.mrtdk.liquid_glass.pearmesh.PearMeshState
+import com.mrtdk.liquid_glass.pearmesh.PearMeshSurface
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.zIndex
 import android.content.Context
@@ -1191,57 +1194,175 @@ fun GlassBoxScope.AudioIconPickerDialog(
 
 
 
-private fun extractDominantColor(bitmap: android.graphics.Bitmap, isBillieJean: Boolean): Color {
+private fun extractPredominantAlbumColor(
+    bitmap: android.graphics.Bitmap,
+    fallbackColor: Color = Color(0xFF1E1E1E),
+    isBillieJean: Boolean = false
+): Color {
+    val palette = try {
+        androidx.palette.graphics.Palette.from(bitmap).maximumColorCount(24).generate()
+    } catch (_: Exception) { null }
 
-    val palette = androidx.palette.graphics.Palette.from(bitmap).maximumColorCount(8).generate()
+    if (palette == null) return fallbackColor
 
-    val domRgb = palette.getDominantColor(android.graphics.Color.DKGRAY)
-
-    val vibRgb = palette.getVibrantColor(domRgb)
-
-    val mutedRgb = palette.getMutedColor(domRgb)
-
-    
-
-    val chosenRgb = if (vibRgb != domRgb && Color(vibRgb).luminance() > 0.1f) {
-
-        vibRgb
-
-    } else if (mutedRgb != domRgb && Color(mutedRgb).luminance() > 0.1f) {
-
-        mutedRgb
-
-    } else {
-
-        domRgb
-
+    val swatches = palette.swatches
+    if (swatches.isEmpty()) {
+        val dom = palette.getDominantColor(android.graphics.Color.DKGRAY)
+        return if (dom != android.graphics.Color.DKGRAY) Color(dom) else fallbackColor
     }
 
-    
+    val dominantSwatch = palette.dominantSwatch ?: swatches.maxByOrNull { it.population }
 
-    val extractedColor = Color(chosenRgb)
+    // If dominant swatch is nearly pure white or light grey (S < 0.08, L > 0.75),
+    // pick the most prominent colored swatch
+    val chosenSwatch = if (dominantSwatch != null && dominantSwatch.hsl[1] < 0.08f && dominantSwatch.hsl[2] > 0.75f) {
+        val minPop = (dominantSwatch.population * 0.08f).toInt()
+        swatches.filter { it.hsl[1] >= 0.12f && it.population >= minPop }
+            .maxByOrNull { it.population * (1f + it.hsl[1]) } ?: dominantSwatch
+    } else {
+        dominantSwatch ?: swatches.first()
+    }
 
-    
+    val h = chosenSwatch.hsl[0]
+    var s = chosenSwatch.hsl[1]
+    var l = chosenSwatch.hsl[2]
+
+    // Tone Lightness and Saturation for an Apple Music full player background:
+    // Ensures high contrast for white text/controls (L in 0.28..0.40)
+    if (l > 0.42f) {
+        l = 0.30f + (l - 0.42f) * 0.14f
+        s = (s * 1.4f).coerceIn(0.28f, 0.75f)
+    } else if (l < 0.14f && s > 0.10f) {
+        l = 0.18f
+    }
+
+    val v = l + s * minOf(l, 1f - l)
+    val sv = if (v == 0f) 0f else 2f * (1f - l / v)
+    val hsv = floatArrayOf(h, sv.coerceIn(0f, 1f), v.coerceIn(0f, 1f))
+    val outRgb = android.graphics.Color.HSVToColor(hsv)
+    val extractedColor = Color(outRgb)
 
     return if (isBillieJean) {
-
-        val skinTone = Color(0xFF6E472A) 
-
+        val skinTone = Color(0xFF6E472A)
         Color(
-
             red = (extractedColor.red * 0.5f + skinTone.red * 0.5f),
-
             green = (extractedColor.green * 0.5f + skinTone.green * 0.5f),
-
             blue = (extractedColor.blue * 0.5f + skinTone.blue * 0.5f),
-
             alpha = 1f
-
         )
-
     } else {
         extractedColor
     }
+}
+
+private data class AlbumMeshPalette(
+    val primary: Color,
+    val secondary: Color,
+    val accent: Color
+)
+
+private fun extractAlbumMeshPalette(
+    bitmap: android.graphics.Bitmap,
+    fallbackDominant: Color
+): AlbumMeshPalette {
+    val palette = try {
+        androidx.palette.graphics.Palette.from(bitmap).maximumColorCount(32).generate()
+    } catch (_: Exception) { null }
+
+    if (palette == null) {
+        return deriveFallbackMeshPalette(fallbackDominant)
+    }
+
+    val swatches = palette.swatches
+    if (swatches.isEmpty()) {
+        return deriveFallbackMeshPalette(fallbackDominant)
+    }
+
+    val totalPop = swatches.sumOf { it.population }.coerceAtLeast(1)
+    val sorted = swatches.sortedByDescending { it.population }
+
+    // 1. Primario: El color más predominante de la carátula (mayor población de píxeles)
+    val domCandidate = sorted.first()
+    val primarySwatch = if (domCandidate.hsl[1] < 0.06f && (domCandidate.hsl[2] > 0.85f || domCandidate.hsl[2] < 0.12f)) {
+        sorted.firstOrNull { it.hsl[1] >= 0.10f && (it.population.toFloat() / totalPop) >= 0.10f } ?: domCandidate
+    } else {
+        domCandidate
+    }
+
+    val priHsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(primarySwatch.rgb, priHsv)
+    if (priHsv[1] < 0.15f && priHsv[1] > 0.02f) priHsv[1] = 0.25f
+    priHsv[2] = priHsv[2].coerceIn(0.38f, 0.75f)
+    val primary = Color(android.graphics.Color.HSVToColor(priHsv))
+
+    // 2. Secundario: El segundo color MÁS PREDOMINANTE (por población) que tenga presencia real en la imagen
+    val secCandidate = sorted.firstOrNull { swatch ->
+        if (swatch == primarySwatch) return@firstOrNull false
+        val popRatio = swatch.population.toFloat() / totalPop
+        if (popRatio < 0.04f) return@firstOrNull false // Debe representar al menos 4% de la carátula
+        val dHue = kotlin.math.abs(swatch.hsl[0] - primarySwatch.hsl[0]).let { kotlin.math.min(it, 360f - it) }
+        val dLum = kotlin.math.abs(swatch.hsl[2] - primarySwatch.hsl[2])
+        dHue > 18f || dLum > 0.18f
+    } ?: sorted.firstOrNull { it != primarySwatch && (it.population.toFloat() / totalPop) >= 0.03f }
+
+    val secondary = if (secCandidate != null) {
+        val secHsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(secCandidate.rgb, secHsv)
+        if (secHsv[1] < 0.15f && secHsv[1] > 0.02f) secHsv[1] = 0.25f
+        secHsv[2] = secHsv[2].coerceIn(0.40f, 0.75f)
+        Color(android.graphics.Color.HSVToColor(secHsv))
+    } else {
+        // Si no hay un segundo color predominante, derivar una variante armónica sutil del primario
+        val secHsv = priHsv.clone()
+        secHsv[0] = (secHsv[0] + 20f) % 360f
+        secHsv[1] = (secHsv[1] * 0.88f).coerceIn(0.30f, 0.70f)
+        secHsv[2] = (secHsv[2] * 0.92f).coerceIn(0.40f, 0.70f)
+        Color(android.graphics.Color.HSVToColor(secHsv))
+    }
+
+    // 3. Acento: Tercer color representativo con presencia real en la carátula (al menos 3% de píxeles)
+    val accCandidate = sorted.filter { swatch ->
+        swatch != primarySwatch && swatch != secCandidate &&
+        (swatch.population.toFloat() / totalPop) >= 0.03f
+    }.maxByOrNull { it.hsl[1] } // El más vivo dentro de los que tienen presencia real
+
+    val accent = if (accCandidate != null) {
+        val accHsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(accCandidate.rgb, accHsv)
+        accHsv[1] = accHsv[1].coerceIn(0.35f, 0.85f)
+        accHsv[2] = accHsv[2].coerceIn(0.45f, 0.80f)
+        Color(android.graphics.Color.HSVToColor(accHsv))
+    } else {
+        val accHsv = priHsv.clone()
+        accHsv[0] = (accHsv[0] + 345f) % 360f
+        accHsv[1] = (accHsv[1] * 1.10f).coerceIn(0.35f, 0.80f)
+        accHsv[2] = (accHsv[2] * 1.05f).coerceIn(0.48f, 0.80f)
+        Color(android.graphics.Color.HSVToColor(accHsv))
+    }
+
+    return AlbumMeshPalette(
+        primary = primary,
+        secondary = secondary,
+        accent = accent
+    )
+}
+
+private fun deriveFallbackMeshPalette(fallback: Color): AlbumMeshPalette {
+    val hsv = FloatArray(3)
+    android.graphics.Color.colorToHSV(fallback.toArgb(), hsv)
+    val baseHue = hsv[0]
+    val baseSat = hsv[1].coerceIn(0.35f, 0.75f)
+    val baseVal = hsv[2].coerceIn(0.42f, 0.75f)
+
+    val priHsv = floatArrayOf(baseHue, baseSat, baseVal)
+    val secHsv = floatArrayOf((baseHue + 20f) % 360f, (baseSat * 0.88f).coerceIn(0.30f, 0.70f), (baseVal * 0.92f).coerceIn(0.40f, 0.70f))
+    val accHsv = floatArrayOf((baseHue + 345f) % 360f, (baseSat * 1.10f).coerceIn(0.35f, 0.80f), (baseVal * 1.05f).coerceIn(0.45f, 0.75f))
+
+    return AlbumMeshPalette(
+        primary = Color(android.graphics.Color.HSVToColor(priHsv)),
+        secondary = Color(android.graphics.Color.HSVToColor(secHsv)),
+        accent = Color(android.graphics.Color.HSVToColor(accHsv))
+    )
 }
 
 @Composable
@@ -1652,6 +1773,9 @@ fun PlayerScreen(
         var dominantColor by remember { mutableStateOf(Color(0xFF1E1E1E)) }
         var bottomAverageColor by remember { mutableStateOf(Color(0xFF1E1E1E)) }
         var rightSideAverageColor by remember { mutableStateOf(Color(0xFF1E1E1E)) }
+        var meshPrimaryColor by remember { mutableStateOf<Color?>(null) }
+        var meshSecondaryColor by remember { mutableStateOf<Color?>(null) }
+        var meshAccentColor by remember { mutableStateOf<Color?>(null) }
 
         var parentCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
 
@@ -1816,6 +1940,14 @@ fun PlayerScreen(
         var motionCoverBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
         var accordBackdropBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
         var lyricsBackdropBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+        var rawCoverBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+        val pearMeshState = remember {
+            PearMeshState(
+                behindLyricsProgress = 1f,
+                scrimAlpha = 0.38f,
+                blurEnabled = true
+            )
+        }
         var hasGeneratedMotionBackdrop by remember(playerState?.artist, playerState?.title) { mutableStateOf(false) }
         var frameToken by remember { mutableStateOf(0L) }
         var lastColorSampleTime by remember { mutableLongStateOf(0L) }
@@ -1823,6 +1955,8 @@ fun PlayerScreen(
         var masterAnimatedPlayer by remember { mutableStateOf<androidx.media3.exoplayer.ExoPlayer?>(null) }
         val fullArtworkBackdropStyle by LibraryManager.fullArtworkBackdropStyle.collectAsState()
         val isUltraPerformance by LibraryManager.ultraPerformanceMode.collectAsState()
+        val hideVolumeBar by LibraryManager.hideVolumeBar.collectAsState()
+
 
         LaunchedEffect(playerState?.artist, playerState?.title, playerState?.album) {
             val artist = playerState?.artist
@@ -1858,7 +1992,8 @@ fun PlayerScreen(
 
 
 
-        LaunchedEffect(hdArtUrl, playerState?.title, playerState?.artist) {
+        val artModelToLoad = hdArtUrl ?: playerState?.artUrl
+        LaunchedEffect(artModelToLoad, playerState?.title, playerState?.artist) {
             motionCoverBitmap = null
             if (!isUltraPerformance) {
                 coverBitmap = null
@@ -1866,13 +2001,12 @@ fun PlayerScreen(
             frameToken++
             reflectionSkew = 0.12f
 
-            if (hdArtUrl != null) {
+            if (artModelToLoad != null) {
                 withContext(Dispatchers.Default) {
                     val request = ImageRequest.Builder(context)
-                        .data(hdArtUrl)
+                        .data(artModelToLoad)
                         .allowHardware(false)
-                        .size(200)
-                        .memoryCachePolicy(coil.request.CachePolicy.READ_ONLY)
+                        .size(320)
                         .build()
 
                     val result = coil.Coil.imageLoader(context).execute(request)
@@ -1924,20 +2058,13 @@ fun PlayerScreen(
                                 }
                                 val rightColor = Color((rRight / countY).toInt(), (gRight / countY).toInt(), (bRight / countY).toInt())
 
-                                val palette = try {
-                                    androidx.palette.graphics.Palette.from(bitmap).maximumColorCount(12).generate()
-                                } catch (e: Exception) { null }
-                                val domRgb = palette?.getDominantColor(android.graphics.Color.DKGRAY)
-                                val vibRgb = palette?.getVibrantColor(domRgb ?: android.graphics.Color.DKGRAY)
-                                val bestDominant = if (vibRgb != null && vibRgb != android.graphics.Color.DKGRAY) {
-                                    Color(vibRgb)
-                                } else if (domRgb != null && domRgb != android.graphics.Color.DKGRAY) {
-                                    Color(domRgb)
-                                } else {
-                                    avgColor
-                                }
+                                val isBillieJean = (playerState?.title?.contains("Billie Jean", ignoreCase = true) == true) ||
+                                        (playerState?.artist?.contains("Michael Jackson", ignoreCase = true) == true)
+                                val bestDominant = extractPredominantAlbumColor(bitmap, avgColor, isBillieJean)
+                                val meshPalette = extractAlbumMeshPalette(bitmap, bestDominant)
 
                                 withContext(Dispatchers.Main) {
+                                    rawCoverBitmap = bitmap
                                     if ((!isVideoPlaying && animatedArtworkUrl.isNullOrBlank()) || fullArtworkBackdropStyle == "accord") {
                                         coverBitmap = asComposeBmp
                                         frameToken++
@@ -1947,9 +2074,13 @@ fun PlayerScreen(
                                     dominantColor = bestDominant
                                     onDominantColorChanged(bestDominant)
                                     rightSideAverageColor = rightColor
+                                    meshPrimaryColor = meshPalette.primary
+                                    meshSecondaryColor = meshPalette.secondary
+                                    meshAccentColor = meshPalette.accent
                                 }
                             } catch (e: Exception) {
                                 withContext(Dispatchers.Main) {
+                                    rawCoverBitmap = bitmap
                                     if (!isVideoPlaying && animatedArtworkUrl.isNullOrBlank()) {
                                         coverBitmap = asComposeBmp
                                         frameToken++
@@ -1959,15 +2090,16 @@ fun PlayerScreen(
                             }
                         }
                     }
-                }
             }
-
         }
 
-        // Generar fondo difuminado estático para la vista de letras y cola de reproducción (estilo Apple Music, 100% estático)
+    }
+
+        // Fondo difuminado estático / Mesh Gradient para letras y cola de reproducción
         LaunchedEffect(coverBitmap, hdArtUrl, playerState?.artUrl) {
-            val src = coverBitmap?.asAndroidBitmap()
+            val src = coverBitmap?.asAndroidBitmap() ?: rawCoverBitmap
             if (src != null && !src.isRecycled) {
+                rawCoverBitmap = src
                 lyricsBackdropBitmap = com.mrtdk.liquid_glass.ui.components.AccordBackdropGenerator.generateLyricsBlurredBackdrop(src)
             } else {
                 val urlStr = (hdArtUrl ?: playerState?.artUrl)?.toString()
@@ -1977,7 +2109,7 @@ fun PlayerScreen(
                             val req = coil.request.ImageRequest.Builder(context)
                                 .data(urlStr)
                                 .allowHardware(false)
-                                .size(160)
+                                .size(320)
                                 .build()
                             val res = coil.Coil.imageLoader(context).execute(req)
                             if (res is coil.request.SuccessResult) {
@@ -1985,6 +2117,7 @@ fun PlayerScreen(
                                 if (bmp != null && !bmp.isRecycled) {
                                     val generated = com.mrtdk.liquid_glass.ui.components.AccordBackdropGenerator.generateLyricsBlurredBackdrop(bmp)
                                     withContext(Dispatchers.Main) {
+                                        rawCoverBitmap = bmp
                                         lyricsBackdropBitmap = generated
                                     }
                                 }
@@ -1993,6 +2126,18 @@ fun PlayerScreen(
                     }
                 }
             }
+        }
+
+        // Conectar carátula y estado de reproducción al motor PearMesh OpenGL ES 3.0
+        LaunchedEffect(rawCoverBitmap, coverBitmap) {
+            val bmp = rawCoverBitmap ?: coverBitmap?.asAndroidBitmap()
+            if (bmp != null && !bmp.isRecycled) {
+                pearMeshState.setArtwork(bmp)
+            }
+        }
+
+        LaunchedEffect(isPlaying) {
+            pearMeshState.setPlaybackPlaying(isPlaying)
         }
 
         
@@ -2126,17 +2271,13 @@ fun PlayerScreen(
 
 
             if (isLandscape) {
-                val landscapePosition by if (musicPlayer != null) {
-                    musicPlayer.currentPosition.collectAsState()
-                } else {
-                    androidx.compose.runtime.remember { androidx.compose.runtime.mutableLongStateOf(currentPosition) }
-                }
                 LandscapePlayerLayout(
                     maxWidth = maxWidth,
                     maxHeight = maxHeight,
                     playerState = playerState,
                     isPlaying = isPlaying,
-                    currentPosition = landscapePosition,
+                    musicPlayer = musicPlayer,
+                    fallbackPosition = currentPosition,
                     duration = duration,
                     upNextSongs = upNextSongs,
                     shuffleModeEnabled = shuffleModeEnabled,
@@ -2374,7 +2515,7 @@ fun PlayerScreen(
             val expandedHeight = if (isNormalArtwork) normalCardSize else (maxWidth * 1.35f)
             val expandedX = if (isNormalArtwork) normalX else 0.dp
             val expandedY = if (isNormalArtwork) normalY else 0.dp
-            val defaultCorner = if (isNormalArtwork) 22.dp else 12.dp
+            val defaultCorner = if (isNormalArtwork) 10.dp else 12.dp
 
             val p = dragProgress.coerceIn(0f, 1f)
             val contentAlpha = if (isOverlayActive) (1f - p * 2.2f).coerceIn(0f, 1f) else 1f
@@ -2384,7 +2525,7 @@ fun PlayerScreen(
             val startHeight = if (isOverlayActive) lyricsImageSize else expandedHeight
             val startOffsetX = if (isOverlayActive) 24.dp else expandedX
             val startOffsetY = if (isOverlayActive) 64.dp else expandedY
-            val startCorner = if (isOverlayActive) 12.dp else defaultCorner
+            val startCorner = if (isOverlayActive) 10.dp else defaultCorner
 
             val imgWidthTarget: androidx.compose.ui.unit.Dp
             val imgHeightTarget: androidx.compose.ui.unit.Dp
@@ -2609,11 +2750,16 @@ fun PlayerScreen(
 
 
             val normalTopColor = dominantColor.copy(alpha = 1.0f)
-            val normalMidColor = bottomAverageColor.copy(alpha = 1.0f)
+            val normalMidColor = Color(
+                red = (dominantColor.red * 0.82f).coerceIn(0f, 1f),
+                green = (dominantColor.green * 0.82f).coerceIn(0f, 1f),
+                blue = (dominantColor.blue * 0.82f).coerceIn(0f, 1f),
+                alpha = 1.0f
+            )
             val normalBottomColor = Color(
-                red = (bottomAverageColor.red * 0.50f + dominantColor.red * 0.20f).coerceIn(0f, 1f),
-                green = (bottomAverageColor.green * 0.50f + dominantColor.green * 0.20f).coerceIn(0f, 1f),
-                blue = (bottomAverageColor.blue * 0.50f + dominantColor.blue * 0.20f).coerceIn(0f, 1f),
+                red = (dominantColor.red * 0.58f).coerceIn(0f, 1f),
+                green = (dominantColor.green * 0.58f).coerceIn(0f, 1f),
+                blue = (dominantColor.blue * 0.58f).coerceIn(0f, 1f),
                 alpha = 1.0f
             )
 
@@ -2799,35 +2945,13 @@ fun PlayerScreen(
                          .fillMaxSize()
                          .graphicsLayer {
                              alpha = (overlayAlpha * overlayTransitionProgress).coerceIn(0f, 1f)
-                             translationY = with(density) { (80.dp * (1f - overlayTransitionProgress)).toPx() }
-                             compositingStrategy = CompositingStrategy.ModulateAlpha
                          }
                  ) {
-                     val secCol = if (rightSideAverageColor != Color.Transparent && rightSideAverageColor != dominantColor) {
-                         rightSideAverageColor
-                     } else {
-                         bottomAverageColor
-                     }
-                     val fluidPrimary = if (isNormalArtwork) normalTopColor else dominantColor
-                     val fluidSecondary = if (isNormalArtwork) normalMidColor else secCol
-                     val fluidAccent = if (isNormalArtwork) normalBottomColor else bottomAverageColor
-
-                      // Fondo de formas estáticas (sin movimiento) para letras y cola: estilo Apple Music con Mesh Gradient.
-                      if (fullArtworkBackdropStyle != "accord") {
-                          com.mrtdk.liquid_glass.ui.components.RayMusicStaticMeshGradientBackground(
-                              primaryColor = fluidPrimary,
-                              secondaryColor = fluidSecondary,
-                              accentColor = fluidAccent,
-                              modifier = Modifier.fillMaxSize()
-                          )
-                      } else {
-                          // Filtro un poco oscuro para Fondo Completo ("accord") en letras y cola
-                          Box(
-                              modifier = Modifier
-                                  .fillMaxSize()
-                                  .background(Color.Black.copy(alpha = 0.38f))
-                          )
-                      }
+                     // Fondo Mesh Gradient de Pear-Wall con shaders OpenGL ES 3.0 para letras y cola
+                     PearMeshSurface(
+                         state = pearMeshState,
+                         modifier = Modifier.fillMaxSize()
+                     )
                  }
 
                       // Height of the content area: terminates ~5px (6dp) right above the seekbar
@@ -3705,6 +3829,50 @@ fun PlayerScreen(
                         model = ImageRequest.Builder(context)
                             .data(currentArt)
                             .crossfade(true)
+                            .allowHardware(false)
+                            .listener(
+                                onSuccess = { _, successResult ->
+                                    val drawable = successResult.drawable
+                                    val bmp = (drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                                    if (bmp != null && !bmp.isRecycled) {
+                                        scope.launch(Dispatchers.Default) {
+                                            try {
+                                                val w = bmp.width
+                                                val h = bmp.height
+                                                val bottomPixels = IntArray(w)
+                                                bmp.getPixels(bottomPixels, 0, w, 0, h - 1, w, 1)
+                                                var r = 0L; var g = 0L; var b = 0L
+                                                val stepX = maxOf(1, w / 16)
+                                                var countX = 0
+                                                for (x in 0 until w step stepX) {
+                                                    val pixel = bottomPixels[x]
+                                                    r += android.graphics.Color.red(pixel)
+                                                    g += android.graphics.Color.green(pixel)
+                                                    b += android.graphics.Color.blue(pixel)
+                                                    countX++
+                                                }
+                                                val avgColor = Color((r / countX).toInt(), (g / countX).toInt(), (b / countX).toInt())
+                                                val isBillieJean = (playerState?.title?.contains("Billie Jean", ignoreCase = true) == true) ||
+                                                        (playerState?.artist?.contains("Michael Jackson", ignoreCase = true) == true)
+                                                val bestDominant = extractPredominantAlbumColor(bmp, avgColor, isBillieJean)
+                                                val meshPalette = extractAlbumMeshPalette(bmp, bestDominant)
+                                                withContext(Dispatchers.Main) {
+                                                    dominantColor = bestDominant
+                                                    onDominantColorChanged(bestDominant)
+                                                    bottomAverageColor = avgColor
+                                                    meshPrimaryColor = meshPalette.primary
+                                                    meshSecondaryColor = meshPalette.secondary
+                                                    meshAccentColor = meshPalette.accent
+                                                    if (coverBitmap == null) {
+                                                        coverBitmap = bmp.asImageBitmap()
+                                                        frameToken++
+                                                    }
+                                                }
+                                            } catch (_: Exception) {}
+                                        }
+                                    }
+                                }
+                            )
                             .build(),
                         imageLoader = animatedImageLoader,
                         contentDescription = "Album Art",
@@ -3741,7 +3909,7 @@ fun PlayerScreen(
                                 alpha = if (isVideoPlaying) videoOverlayAlpha else 0f
                             },
                         isPaused = isOverlayActive && overlayTransitionProgress >= 0.98f,
-                        enableFrameCapture = (dragProgress == 0f) && !isOverlayActive && overlayTransitionProgress == 0f,
+                        enableFrameCapture = (dragProgress == 0f) && !isOverlayActive && overlayTransitionProgress == 0f && !showOptionsMenu && !showArtistOptionsMenu && !showLyricsOptionsMenu && !showPlaylistMenu,
                         onPlayerCreated = { masterAnimatedPlayer = it },
                         onPlaybackStarted = { isVideoPlaying = true },
                         onPlaybackFailed = {
@@ -4084,7 +4252,8 @@ fun PlayerScreen(
                                 onSkipPrevious = { swipeDirection = -1; onSkipPrevious() },
                                 fillHeight = true,
                                 sliderActiveColor = sliderActiveColor,
-                                sliderInactiveColor = sliderInactiveColor
+                                sliderInactiveColor = sliderInactiveColor,
+                                hideVolumeBar = hideVolumeBar
                             )
                         }
                     }
@@ -5557,7 +5726,8 @@ fun PlayerBottomControls(
     onSkipPrevious: () -> Unit = {},
     fillHeight: Boolean = false,
     sliderActiveColor: Color = if (contentColor != Color.White) Color(0xFF1A1A1A) else Color(0xFFE5E5EA),
-    sliderInactiveColor: Color = if (contentColor != Color.White) Color.Black.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.18f)
+    sliderInactiveColor: Color = if (contentColor != Color.White) Color.Black.copy(alpha = 0.15f) else Color.White.copy(alpha = 0.18f),
+    hideVolumeBar: Boolean = false
 ) {
     val isLightBackground = contentColor != Color.White
 
@@ -5615,6 +5785,12 @@ fun PlayerBottomControls(
             Spacer(modifier = Modifier.weight(1f))
         }
 
+        val skipButtonSize = if (hideVolumeBar) 88.dp else 74.dp
+        val skipIconSize = if (hideVolumeBar) 72.dp else 60.dp
+        val playPauseBoxSize = if (hideVolumeBar) 102.dp else 84.dp
+        val playPauseIconSize = if (hideVolumeBar) 86.dp else 70.dp
+        val buttonSpacing = if (hideVolumeBar) 28.dp else 22.dp
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
@@ -5624,12 +5800,12 @@ fun PlayerBottomControls(
                 iconId = R.drawable.previous,
                 contentDescription = "Previous",
                 contentColor = contentColor,
-                sizeDp = 74.dp,
-                iconSizeDp = 60.dp,
+                sizeDp = skipButtonSize,
+                iconSizeDp = skipIconSize,
                 onClick = onSkipPrevious
             )
 
-            Spacer(modifier = Modifier.width(22.dp))
+            Spacer(modifier = Modifier.width(buttonSpacing))
 
             val playPauseInteractionSource = remember { MutableInteractionSource() }
             val isPlayPausePressed by playPauseInteractionSource.collectIsPressedAsState()
@@ -5641,7 +5817,7 @@ fun PlayerBottomControls(
 
             Box(
                 modifier = Modifier
-                    .size(84.dp)
+                    .size(playPauseBoxSize)
                     .clip(CircleShape)
                     .background(playPauseBgColor)
                     .clickable(
@@ -5663,69 +5839,77 @@ fun PlayerBottomControls(
                         painter = painterResource(id = if (playing) R.drawable.pause else R.drawable.resume),
                         contentDescription = if (playing) "Pause" else "Play",
                         tint = contentColor,
-                        modifier = Modifier.size(70.dp)
+                        modifier = Modifier.size(playPauseIconSize)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.width(22.dp))
+            Spacer(modifier = Modifier.width(buttonSpacing))
 
             AnimatedSkipButton(
                 iconId = R.drawable.forward,
                 contentDescription = "Next",
                 contentColor = contentColor,
-                sizeDp = 74.dp,
-                iconSizeDp = 60.dp,
+                sizeDp = skipButtonSize,
+                iconSizeDp = skipIconSize,
                 onClick = onSkipNext
             )
         }
 
         if (fillHeight) {
-            Spacer(modifier = Modifier.weight(1.1f))
+            Spacer(modifier = Modifier.weight(if (hideVolumeBar) 1.5f else 1.1f))
         }
 
         if (includeVolumeAndIcons) {
-            if (!fillHeight) {
-                Spacer(modifier = Modifier.height(30.dp))
-            }
+            if (!hideVolumeBar) {
+                if (!fillHeight) {
+                    Spacer(modifier = Modifier.height(30.dp))
+                }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.albumspeaker),
-                    contentDescription = "Low volume",
-                    tint = contentColor.copy(alpha = 0.55f),
-                    modifier = Modifier.size(15.dp)
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.albumspeaker),
+                        contentDescription = "Low volume",
+                        tint = contentColor.copy(alpha = 0.55f),
+                        modifier = Modifier.size(15.dp)
+                    )
 
-                Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
 
-                AppleMusicSlider(
-                    value = volumePosition, onValueChange = { onVolumeChange(it) },
-                    modifier = Modifier.weight(1f).height(26.dp),
-                    activeColor = sliderActiveColor,
-                    inactiveColor = sliderInactiveColor,
-                    barHeightDp = 8.dp
-                )
+                    AppleMusicSlider(
+                        value = volumePosition, onValueChange = { onVolumeChange(it) },
+                        modifier = Modifier.weight(1f).height(26.dp),
+                        activeColor = sliderActiveColor,
+                        inactiveColor = sliderInactiveColor,
+                        barHeightDp = 8.dp
+                    )
 
-                Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
 
-                Icon(
-                    painter = painterResource(id = R.drawable.albumspeakerlarge),
-                    contentDescription = "High volume",
-                    tint = contentColor.copy(alpha = 0.55f),
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+                    Icon(
+                        painter = painterResource(id = R.drawable.albumspeakerlarge),
+                        contentDescription = "High volume",
+                        tint = contentColor.copy(alpha = 0.55f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
 
-            if (!fillHeight) {
-                Spacer(modifier = Modifier.height(28.dp))
+                if (!fillHeight) {
+                    Spacer(modifier = Modifier.height(28.dp))
+                } else {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
             } else {
-                Spacer(modifier = Modifier.weight(1f))
+                if (fillHeight) {
+                    Spacer(modifier = Modifier.weight(1.3f))
+                } else {
+                    Spacer(modifier = Modifier.height(28.dp))
+                }
             }
 
             Row(
@@ -5733,11 +5917,15 @@ fun PlayerBottomControls(
                 horizontalArrangement = Arrangement.spacedBy(if (showLyrics) 32.dp else 60.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val isLightBackground = contentColor != Color.White
+                val unselectedIconColor = contentColor.copy(alpha = 0.65f)
+                val activeBgColor = if (isLightBackground) Color.Black.copy(alpha = 0.12f) else Color(0xFF8E8E93).copy(alpha = 0.35f)
+
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(if (showLyrics) 30.dp else 34.dp)
                         .clip(CircleShape)
-                        .background(if (showLyrics) contentColor else Color.Transparent)
+                        .background(if (showLyrics) activeBgColor else Color.Transparent)
                         .clickable { onToggleLyrics() },
                     contentAlignment = Alignment.Center
                 ) {
@@ -5745,15 +5933,15 @@ fun PlayerBottomControls(
                         model = "file:///android_asset/img reproductor/Letras.png",
                         contentDescription = "Lyrics",
                         colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(
-                            if (showLyrics) (if (isLightBackground) Color.White else Color(0xFF1A1A1A)) else contentColor.copy(alpha = 0.65f)
+                            if (showLyrics) contentColor else unselectedIconColor
                         ),
-                        modifier = Modifier.size(26.dp)
+                        modifier = Modifier.size(if (showLyrics) 18.dp else 20.dp)
                     )
                 }
 
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(34.dp)
                         .pointerInput(Unit) {
                             detectTapGestures(
                                 onTap = { AudioRoutingState.showAudioRoutingMenu = true },
@@ -5765,8 +5953,8 @@ fun PlayerBottomControls(
                     AsyncImage(
                         model = AudioRoutingState.selectedOutputIcon.assetPath,
                         contentDescription = "Audio output",
-                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(contentColor.copy(alpha = 0.65f)),
-                        modifier = Modifier.size(26.dp)
+                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(unselectedIconColor),
+                        modifier = Modifier.size(20.dp)
                     )
                 }
 
@@ -5774,9 +5962,9 @@ fun PlayerBottomControls(
                     val isSingActive by com.mrtdk.liquid_glass.playback.sing.AppleMusicSingManager.isSingEnabled.collectAsState()
                     Box(
                         modifier = Modifier
-                            .size(48.dp)
+                            .size(if (isSingActive) 30.dp else 34.dp)
                             .clip(CircleShape)
-                            .background(if (isSingActive) contentColor else Color.Transparent)
+                            .background(if (isSingActive) activeBgColor else Color.Transparent)
                             .clickable {
                                 com.mrtdk.liquid_glass.playback.sing.AppleMusicSingManager.toggleSing()
                             },
@@ -5785,25 +5973,25 @@ fun PlayerBottomControls(
                         Icon(
                             imageVector = Icons.Default.Mic,
                             contentDescription = "Apple Music Sing",
-                            tint = if (isSingActive) (if (isLightBackground) Color.White else Color(0xFF1A1A1A)) else contentColor.copy(alpha = 0.65f),
-                            modifier = Modifier.size(24.dp)
+                            tint = if (isSingActive) contentColor else unselectedIconColor,
+                            modifier = Modifier.size(if (isSingActive) 18.dp else 20.dp)
                         )
                     }
                 }
 
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(if (showQueue) 30.dp else 34.dp)
                         .clip(CircleShape)
-                        .background(if (showQueue) contentColor else Color.Transparent)
+                        .background(if (showQueue) activeBgColor else Color.Transparent)
                         .clickable { onToggleQueue() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         painter = painterResource(id = R.drawable.nextinfo),
                         contentDescription = "Next Info",
-                        tint = if (showQueue) (if (isLightBackground) Color.White else Color(0xFF1A1A1A)) else contentColor.copy(alpha = 0.65f),
-                        modifier = Modifier.size(26.dp)
+                        tint = if (showQueue) contentColor else unselectedIconColor,
+                        modifier = Modifier.size(if (showQueue) 18.dp else 20.dp)
                     )
                 }
             }
@@ -6014,7 +6202,7 @@ fun downloadSong(context: android.content.Context, videoId: String, title: Strin
 
         val metaString = "$title||$artist||${artUrl ?: ""}||${album ?: ""}"
 
-        val downloadRequest = androidx.media3.exoplayer.offline.DownloadRequest.Builder(videoId, android.net.Uri.parse("yt://$videoId"))
+        val downloadRequest = androidx.media3.exoplayer.offline.DownloadRequest.Builder(videoId, android.net.Uri.parse("https://music.youtube.com/watch?v=$videoId"))
 
             .setCustomCacheKey(videoId)
 
@@ -6101,7 +6289,8 @@ fun LandscapePlayerLayout(
     maxHeight: androidx.compose.ui.unit.Dp,
     playerState: PlayerState?,
     isPlaying: Boolean,
-    currentPosition: Long,
+    musicPlayer: com.mrtdk.liquid_glass.playback.MusicPlayer? = null,
+    fallbackPosition: Long = 0L,
     duration: Long,
     upNextSongs: List<com.echo.innertube.models.SongItem>,
     shuffleModeEnabled: Boolean,
@@ -6182,6 +6371,7 @@ fun LandscapePlayerLayout(
     ) {
         val audioManager = remember { context.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager }
         val maxVolume = remember { audioManager.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC).toFloat() }
+        val hideVolumeBar by LibraryManager.hideVolumeBar.collectAsState()
 
 
 
@@ -6885,7 +7075,8 @@ fun LandscapePlayerLayout(
                             lyrics = rayMusicLyrics,
                             isLoading = isLyricsLoading,
                             isPlaying = isPlaying,
-                            currentPosition = currentPosition,
+                            musicPlayer = musicPlayer,
+                            fallbackPosition = fallbackPosition,
                             lyricsOffset = lyricsOffset,
                             contentColor = contentColor,
                             songTitle = playerState?.title ?: "",
@@ -6915,7 +7106,8 @@ fun LandscapePlayerLayout(
                     } else {
                         LandscapeControlsView(
                             duration = duration,
-                            currentPosition = currentPosition,
+                            musicPlayer = musicPlayer,
+                            fallbackPosition = fallbackPosition,
                             onSeek = onSeek,
                             sliderActiveColor = sliderActiveColor,
                             sliderInactiveColor = sliderInactiveColor,
@@ -6928,7 +7120,8 @@ fun LandscapePlayerLayout(
                             onVolumePositionChange = onVolumePositionChange,
                             audioManager = audioManager,
                             maxVolume = maxVolume,
-                            onVolumeChange = onVolumeChange
+                            onVolumeChange = onVolumeChange,
+                            hideVolumeBar = hideVolumeBar
                         )
                     }
                 }
@@ -6938,61 +7131,38 @@ fun LandscapePlayerLayout(
                 // Shared Bottom Bar Buttons Row (Lyrics, Cast/Format, Queue)
 
                 Row(
-
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-
                     horizontalArrangement = Arrangement.SpaceBetween,
-
                     verticalAlignment = Alignment.CenterVertically
-
                 ) {
+                    val unselectedIconColor = contentColor.copy(alpha = 0.65f)
+                    val activeBgColor = if (isLightBackground) Color.Black.copy(alpha = 0.12f) else Color(0xFF8E8E93).copy(alpha = 0.35f)
 
                     Box(
-
                         modifier = Modifier
-
-                            .size(40.dp)
-
+                            .size(if (showLyrics) 30.dp else 34.dp)
                             .clip(CircleShape)
-
-                            .background(if (showLyrics) contentColor else Color.Transparent)
-
+                            .background(if (showLyrics) activeBgColor else Color.Transparent)
                             .clickable {
-
                                 onShowLyricsChange(!showLyrics)
-
                                 onShowQueueChange(false)
-
                             },
-
                         contentAlignment = Alignment.Center
-
                     ) {
-
                         AsyncImage(
-
                             model = "file:///android_asset/img reproductor/Letras.png",
-
                             contentDescription = "Lyrics",
-
                             colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(
-
-                                if (showLyrics) (if (isLightBackground) Color.White else Color(0xFF1A1A1A)) else contentColor
-
+                                if (showLyrics) contentColor else unselectedIconColor
                             ),
-
-                            modifier = Modifier.size(20.dp)
-
+                            modifier = Modifier.size(if (showLyrics) 18.dp else 20.dp)
                         )
-
                     }
-
-
 
                     AsyncImage(
                         model = AudioRoutingState.selectedOutputIcon.assetPath,
                         contentDescription = "Audio output",
-                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(contentColor),
+                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(unselectedIconColor),
                         modifier = Modifier
                             .height(20.dp)
                             .padding(horizontal = 8.dp)
@@ -7004,44 +7174,24 @@ fun LandscapePlayerLayout(
                             }
                     )
 
-
-
                     Box(
-
                         modifier = Modifier
-
-                            .size(40.dp)
-
+                            .size(if (showQueue) 30.dp else 34.dp)
                             .clip(CircleShape)
-
-                            .background(if (showQueue) contentColor else Color.Transparent)
-
+                            .background(if (showQueue) activeBgColor else Color.Transparent)
                             .clickable {
-
                                 onShowQueueChange(!showQueue)
-
                                 onShowLyricsChange(false)
-
                             },
-
                         contentAlignment = Alignment.Center
-
                     ) {
-
                         Icon(
-
                             painter = painterResource(id = R.drawable.nextinfo),
-
                             contentDescription = "Next Info",
-
-                            tint = if (showQueue) (if (isLightBackground) Color.White else Color(0xFF1A1A1A)) else contentColor,
-
-                            modifier = Modifier.size(24.dp)
-
+                            tint = if (showQueue) contentColor else unselectedIconColor,
+                            modifier = Modifier.size(if (showQueue) 18.dp else 20.dp)
                         )
-
                     }
-
                 }
 
             }
@@ -7060,7 +7210,8 @@ private fun LandscapeLyricsView(
     lyrics: List<com.mrtdk.liquid_glass.data.lyrics.LyricLine>?,
     isLoading: Boolean,
     isPlaying: Boolean,
-    currentPosition: Long,
+    musicPlayer: com.mrtdk.liquid_glass.playback.MusicPlayer?,
+    fallbackPosition: Long,
     lyricsOffset: Int,
     contentColor: Color,
     songTitle: String = "",
@@ -7069,6 +7220,13 @@ private fun LandscapeLyricsView(
     selectionModeTrigger: Int = 0,
     onSeek: (Long) -> Unit
 ) {
+    val livePosition by if (musicPlayer != null) {
+        musicPlayer.currentPosition.collectAsState()
+    } else {
+        androidx.compose.runtime.remember { androidx.compose.runtime.mutableLongStateOf(fallbackPosition) }
+    }
+    val currentPosition = if (musicPlayer != null) livePosition else fallbackPosition
+
     Box(modifier = Modifier.fillMaxSize()) {
         val currentLyrics = lyrics
         if (currentLyrics != null && currentLyrics.isNotEmpty()) {
@@ -7520,9 +7678,53 @@ private fun LandscapeQueueView(
 }
 
 @Composable
+private fun IsolatedLandscapeSeekbar(
+    musicPlayer: com.mrtdk.liquid_glass.playback.MusicPlayer?,
+    fallbackPosition: Long,
+    duration: Long,
+    sliderActiveColor: Color,
+    sliderInactiveColor: Color,
+    contentColor: Color,
+    onSeek: (Long) -> Unit
+) {
+    val livePosition by if (musicPlayer != null) {
+        musicPlayer.currentPosition.collectAsState()
+    } else {
+        androidx.compose.runtime.remember { androidx.compose.runtime.mutableLongStateOf(fallbackPosition) }
+    }
+    val effectivePos = if (musicPlayer != null) livePosition else fallbackPosition
+    var scrubPos by remember { mutableStateOf<Long?>(null) }
+    val displayPos = scrubPos ?: effectivePos
+    val progressVal = if (duration > 0) displayPos.toFloat() / duration.toFloat() else 0f
+
+    AppleMusicSlider(
+        value = progressVal,
+        onValueChange = { scrubPos = (it * duration).toLong() },
+        onValueChangeFinished = { finalProg ->
+            onSeek((finalProg * duration).toLong())
+            scrubPos = null
+        },
+        modifier = Modifier.fillMaxWidth().height(24.dp),
+        activeColor = sliderActiveColor,
+        inactiveColor = sliderInactiveColor,
+        barHeightDp = 8.dp
+    )
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(formatDuration(displayPos), color = contentColor.copy(alpha = 0.50f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+        Text("-${formatDuration(duration - displayPos)}", color = contentColor.copy(alpha = 0.50f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+@Composable
 private fun LandscapeControlsView(
     duration: Long,
-    currentPosition: Long,
+    musicPlayer: com.mrtdk.liquid_glass.playback.MusicPlayer?,
+    fallbackPosition: Long,
     onSeek: (Long) -> Unit,
     sliderActiveColor: Color,
     sliderInactiveColor: Color,
@@ -7535,33 +7737,29 @@ private fun LandscapeControlsView(
     onVolumePositionChange: (Float) -> Unit,
     audioManager: android.media.AudioManager,
     maxVolume: Float,
-    onVolumeChange: (Float) -> Unit
+    onVolumeChange: (Float) -> Unit,
+    hideVolumeBar: Boolean = false
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         Spacer(modifier = Modifier.weight(1f))
 
-        // Apple Music slider
-        val progressVal = if (duration > 0) currentPosition.toFloat() / duration.toFloat() else 0f
-
-        AppleMusicSlider(
-            value = progressVal,
-            onValueChange = { onSeek((it * duration).toLong()) },
-            modifier = Modifier.fillMaxWidth().height(24.dp),
-            activeColor = sliderActiveColor,
-            inactiveColor = sliderInactiveColor,
-            barHeightDp = 8.dp
+        IsolatedLandscapeSeekbar(
+            musicPlayer = musicPlayer,
+            fallbackPosition = fallbackPosition,
+            duration = duration,
+            sliderActiveColor = sliderActiveColor,
+            sliderInactiveColor = sliderInactiveColor,
+            contentColor = contentColor,
+            onSeek = onSeek
         )
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(formatDuration(currentPosition), color = contentColor.copy(alpha = 0.50f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
-            Text("-${formatDuration(duration - currentPosition)}", color = contentColor.copy(alpha = 0.50f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
-        }
-
         Spacer(modifier = Modifier.height(16.dp))
+
+        val skipButtonSize = if (hideVolumeBar) 96.dp else 84.dp
+        val skipIconSize = if (hideVolumeBar) 76.dp else 64.dp
+        val playPauseBoxSize = if (hideVolumeBar) 110.dp else 96.dp
+        val playPauseIconSize = if (hideVolumeBar) 90.dp else 76.dp
+        val buttonSpacing = if (hideVolumeBar) 22.dp else 16.dp
 
         // Playback controls (Prev, Play, Next)
         Row(
@@ -7573,12 +7771,12 @@ private fun LandscapeControlsView(
                 iconId = R.drawable.previous,
                 contentDescription = "Previous",
                 contentColor = contentColor,
-                sizeDp = 84.dp,
-                iconSizeDp = 64.dp,
+                sizeDp = skipButtonSize,
+                iconSizeDp = skipIconSize,
                 onClick = onSkipPrevious
             )
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(buttonSpacing))
 
             val playPauseInteractionSource = remember { MutableInteractionSource() }
             val isPlayPausePressed by playPauseInteractionSource.collectIsPressedAsState()
@@ -7597,7 +7795,7 @@ private fun LandscapeControlsView(
 
             Box(
                 modifier = Modifier
-                    .size(96.dp)
+                    .size(playPauseBoxSize)
                     .clip(CircleShape)
                     .background(playPauseBgColor)
                     .clickable(
@@ -7620,7 +7818,7 @@ private fun LandscapeControlsView(
                         contentDescription = if (playing) "Pause" else "Play",
                         tint = contentColor,
                         modifier = Modifier
-                            .size(76.dp)
+                            .size(playPauseIconSize)
                             .graphicsLayer {
                                 rotationZ = playPauseRotation
                             }
@@ -7628,55 +7826,57 @@ private fun LandscapeControlsView(
                 }
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(buttonSpacing))
 
             AnimatedSkipButton(
                 iconId = R.drawable.forward,
                 contentDescription = "Next",
                 contentColor = contentColor,
-                sizeDp = 84.dp,
-                iconSizeDp = 64.dp,
+                sizeDp = skipButtonSize,
+                iconSizeDp = skipIconSize,
                 onClick = onSkipNext
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        if (!hideVolumeBar) {
+            Spacer(modifier = Modifier.height(24.dp))
 
-        // Volume Row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.albumspeaker),
-                contentDescription = "Low volume",
-                tint = contentColor.copy(alpha = 0.7f),
-                modifier = Modifier.size(16.dp)
-            )
+            // Volume Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.albumspeaker),
+                    contentDescription = "Low volume",
+                    tint = contentColor.copy(alpha = 0.7f),
+                    modifier = Modifier.size(16.dp)
+                )
 
-            Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.width(10.dp))
 
-            AppleMusicSlider(
-                value = volumePosition,
-                onValueChange = { v ->
-                    onVolumePositionChange(v)
-                    audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, (v * maxVolume).toInt(), 0)
-                    onVolumeChange(v)
-                },
-                modifier = Modifier.weight(1f).height(24.dp),
-                activeColor = sliderActiveColor,
-                inactiveColor = sliderInactiveColor,
-                barHeightDp = 8.dp
-            )
+                AppleMusicSlider(
+                    value = volumePosition,
+                    onValueChange = { v ->
+                        onVolumePositionChange(v)
+                        audioManager.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, (v * maxVolume).toInt(), 0)
+                        onVolumeChange(v)
+                    },
+                    modifier = Modifier.weight(1f).height(24.dp),
+                    activeColor = sliderActiveColor,
+                    inactiveColor = sliderInactiveColor,
+                    barHeightDp = 8.dp
+                )
 
-            Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.width(10.dp))
 
-            Icon(
-                painter = painterResource(id = R.drawable.albumspeakerlarge),
-                contentDescription = "High volume",
-                tint = contentColor.copy(alpha = 0.7f),
-                modifier = Modifier.size(24.dp)
-            )
+                Icon(
+                    painter = painterResource(id = R.drawable.albumspeakerlarge),
+                    contentDescription = "High volume",
+                    tint = contentColor.copy(alpha = 0.7f),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.weight(1f))

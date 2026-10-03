@@ -118,6 +118,9 @@ class InnerTube {
 
         defaultRequest {
             url(YouTubeClient.API_URL_YOUTUBE_MUSIC)
+            header("Accept", "application/json")
+            header("Accept-Language", "${locale.hl},${locale.gl};q=0.9,en;q=0.8")
+            header("Cache-Control", "no-cache")
         }
     }
 
@@ -199,15 +202,17 @@ class InnerTube {
         query: String? = null,
         params: String? = null,
         continuation: String? = null,
+        setLogin: Boolean? = null,
     ) = withRetry {
+        val effectiveLogin = (setLogin ?: useLoginForBrowse) && !cookie.isNullOrEmpty()
         httpClient.post("search") {
-            ytClient(client, setLogin = useLoginForBrowse)
+            ytClient(client, setLogin = effectiveLogin)
             setBody(
                 SearchBody(
                     context = client.toContext(
                         locale,
                         visitorData,
-                        if (useLoginForBrowse) dataSyncId else null
+                        if (effectiveLogin) dataSyncId else null
                     ),
                     query = query,
                     params = params
@@ -281,14 +286,15 @@ class InnerTube {
         continuation: String? = null,
         setLogin: Boolean = false,
     ) = withRetry {
+        val effectiveLogin = (setLogin || useLoginForBrowse) && !cookie.isNullOrEmpty()
         httpClient.post("browse") {
-            ytClient(client, setLogin = setLogin || useLoginForBrowse)
+            ytClient(client, setLogin = effectiveLogin)
             setBody(
                 BrowseBody(
                     context = client.toContext(
                         locale,
                         visitorData,
-                        if (setLogin || useLoginForBrowse) dataSyncId else null
+                        if (effectiveLogin) dataSyncId else null
                     ),
                     browseId = browseId,
                     params = params,

@@ -145,7 +145,7 @@ class MusicService : MediaSessionService() {
             }
             androidx.media3.common.MediaItem.Builder()
                 .setMediaId(videoId)
-                .setUri(android.net.Uri.parse("yt://$videoId"))
+                .setUri(android.net.Uri.parse("https://music.youtube.com/watch?v=$videoId"))
                 .setCustomCacheKey(videoId)
                 .setMediaMetadata(metadata)
                 .build()
@@ -412,11 +412,11 @@ class MusicService : MediaSessionService() {
     private fun handleNewMediaItem(mediaItem: androidx.media3.common.MediaItem, startPositionMs: Long = 0L) {
         val automix = com.mrtdk.liquid_glass.playback.PlaybackQueue.isAutomixEnabled
         if (automix && activePlayer.isPlaying) {
+            val uri = mediaItem.localConfiguration?.uri
+            val isLocal = uri != null && (uri.scheme == "content" || uri.scheme == "file" || uri.scheme == "android.resource")
             val videoId = mediaItem.mediaId.takeIf { it.isNotBlank() }
-                ?: mediaItem.localConfiguration?.uri?.let { uri ->
-                    if (uri.scheme == "yt") uri.toString().removePrefix("yt://") else null
-                }
-            val isLocal = mediaItem.localConfiguration?.uri?.scheme != "yt" && mediaItem.localConfiguration?.uri != null
+                ?: uri?.getQueryParameter("v")
+                ?: uri?.let { if (it.scheme == "yt") it.toString().removePrefix("yt://") else null }
             val state = com.mrtdk.liquid_glass.ui.screens.PlayerState(
                 title = mediaItem.mediaMetadata.title?.toString() ?: "",
                 artist = mediaItem.mediaMetadata.artist?.toString() ?: "",
@@ -1239,10 +1239,7 @@ class MusicService : MediaSessionService() {
                 androidx.media3.datasource.cache.CacheDataSource.Factory()
                     .setCache(playerCache)
                     .setUpstreamDataSourceFactory(
-                        androidx.media3.datasource.DefaultDataSource.Factory(
-                            this,
-                            androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(okHttpClient)
-                        )
+                        androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(okHttpClient)
                     )
             )
             .setCacheWriteDataSinkFactory(null)
@@ -1254,13 +1251,35 @@ class MusicService : MediaSessionService() {
         val downloadCache = downloadUtil.downloadCache
         val playerCache = downloadUtil.playerCache
 
-        return androidx.media3.datasource.ResolvingDataSource.Factory(createCacheDataSource(okHttpClient)) { dataSpec ->
-            val mediaId = dataSpec.key ?: dataSpec.uri.host ?: dataSpec.uri.toString().removePrefix("yt://")
+        return androidx.media3.datasource.ResolvingDataSource.Factory(
+            androidx.media3.datasource.DefaultDataSource.Factory(this, createCacheDataSource(okHttpClient))
+        ) { dataSpec ->
+            val uri = dataSpec.uri
+            val mediaId = dataSpec.key
+                ?: uri.getQueryParameter("v")
+                ?: (if (uri.scheme == "yt") uri.toString().removePrefix("yt://") else uri.host)
+                ?: error("No media id for playback")
 
-            // 1. If fully downloaded offline, play immediately without network
-            val isFullyDownloaded = downloadCache.isCached(mediaId, 0, -1) || downloadUtil.downloads.value[mediaId]?.state == androidx.media3.exoplayer.offline.Download.STATE_COMPLETED
+            // If it's a local storage URI, bypass resolving
+            if (mediaId.startsWith("content://") || mediaId.startsWith("file://") || uri.scheme == "content" || uri.scheme == "file") {
+                return@Factory dataSpec
+            }
+
+            val seedUri = android.net.Uri.parse("https://music.youtube.com/watch?v=$mediaId")
+
+            // 1. If fully downloaded offline, play immediately without network (matching Echo-Music)
+            val cachedSpans = downloadCache.getCachedSpans(mediaId)
+            val isDownloadedInDb = downloadUtil.downloads.value[mediaId]?.state == androidx.media3.exoplayer.offline.Download.STATE_COMPLETED ||
+                    com.mrtdk.liquid_glass.data.LibraryManager.isSongDownloaded(mediaId)
+
+            val isFullyDownloaded = isDownloadedInDb || (cachedSpans.isNotEmpty() && run {
+                val contentLength = androidx.media3.datasource.cache.ContentMetadata.getContentLength(downloadCache.getContentMetadata(mediaId))
+                if (contentLength > 0) downloadCache.isCached(mediaId, 0, contentLength) else true
+            })
+
             if (isFullyDownloaded) {
                 return@Factory dataSpec.buildUpon()
+                    .setUri(seedUri)
                     .setKey(mediaId)
                     .build()
             }
@@ -1290,7 +1309,13 @@ class MusicService : MediaSessionService() {
                     .setUri(android.net.Uri.parse(streamUrl))
                     .setKey(mediaId)
                     .build()
-                    .subrange(dataSpec.uriPositionOffset, CHUNK_LENGTH)
+            } else if (cachedSpans.isNotEmpty() || playerCache.isCached(mediaId, dataSpec.position, 1)) {
+                // Offline fallback if network fails
+                android.util.Log.w("MusicService", "Network resolution failed for $mediaId, falling back to cache")
+                dataSpec.buildUpon()
+                    .setUri(seedUri)
+                    .setKey(mediaId)
+                    .build()
             } else {
                 throw java.io.IOException("No se pudo obtener el flujo de reproducción para $mediaId")
             }

@@ -6,8 +6,8 @@ import kotlinx.serialization.Serializable
 data class Context(
     val client: Client,
     val thirdParty: ThirdParty? = null,
-    private val request: Request = Request(),
-    private val user: User = User()
+    val request: Request = Request(),
+    val user: User = User()
 ) {
     @Serializable
     data class Client(

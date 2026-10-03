@@ -11,6 +11,7 @@ import com.echo.innertube.models.YouTubeClient
 import com.echo.innertube.models.YouTubeClient.Companion.ANDROID_CREATOR
 import com.echo.innertube.models.YouTubeClient.Companion.ANDROID_VR_1_43_32
 import com.echo.innertube.models.YouTubeClient.Companion.ANDROID_VR_1_61_48
+import com.echo.innertube.models.YouTubeClient.Companion.ANDROID_VR_1_65_10
 import com.echo.innertube.models.YouTubeClient.Companion.ANDROID_VR_NO_AUTH
 import com.echo.innertube.models.YouTubeClient.Companion.IOS
 import com.echo.innertube.models.YouTubeClient.Companion.IPADOS
@@ -55,21 +56,21 @@ object YTPlayerUtils {
 
     /**
      * Primary client for YouTube playback streams.
-     * ANDROID_VR_1_43_32 provides direct unencrypted streaming URLs without 403 bot blocks
-     * and uses fixed-bitrate audio stream fixing audio stuttering.
+     * VISIONOS and ANDROID_VR_1_65_10 provide direct unencrypted streaming URLs without 403 bot blocks
+     * and serve complete files without preview truncation.
      */
-    private val MAIN_CLIENT: YouTubeClient = ANDROID_VR_1_43_32
+    private val MAIN_CLIENT: YouTubeClient = VISIONOS
 
     private val STREAM_FALLBACK_CLIENTS: Array<YouTubeClient> = arrayOf(
         VISIONOS,
-        ANDROID_VR_1_61_48,
-        ANDROID_VR_1_43_32,
+        ANDROID_VR_1_65_10,
         TVHTML5,
-        ANDROID_CREATOR,
+        ANDROID_VR_1_43_32,
         IPADOS,
+        IOS,
+        ANDROID_CREATOR,
         ANDROID_VR_NO_AUTH,
         MOBILE,
-        IOS,
         WEB_REMIX,
         WEB_CREATOR
     )
@@ -580,10 +581,14 @@ object YTPlayerUtils {
                 .head()
                 .url(urlStr)
                 .header("User-Agent", userAgent ?: YouTubeClient.USER_AGENT_WEB)
+                .header("Range", "bytes=0-524287")
 
             httpClient.newCall(requestBuilder.build()).execute().use { response ->
-                response.isSuccessful || response.code == 206 || response.code == 200
+                response.isSuccessful || response.code == 206 || response.code == 200 || response.code == 405
             }
+        } catch (e: java.io.IOException) {
+            // Network timeout / reset while HEAD-probing. Stream itself may still be fine; accept optimistically
+            true
         } catch (_: Exception) {
             false
         }

@@ -364,6 +364,9 @@
     <string name="player_like_download_desc">Automatically downloads the song when marked as favorite</string>
     <string name="player_persistent_queue_title">Persistent queue</string>
     <string name="player_persistent_queue_desc">Saves the current playlist on app exit</string>
+    <string name="player_hide_volume_bar_title">No volume bar</string>
+    <string name="player_hide_volume_bar_desc">Hides the volume bar and enlarges playback controls</string>
+
 
     <string name="together_username_title">Username</string>
     <string name="together_server_title">WebSocket Server</string>

@@ -3337,7 +3337,7 @@ fun GlassBoxScope.PlayerOptionsMenu(
         this@PlayerOptionsMenu.GlassBox(
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .offset(x = currentLeft, y = currentTop)
+                .offset { androidx.compose.ui.unit.IntOffset(currentLeft.roundToPx(), currentTop.roundToPx()) }
                 .size(width = currentWidth, height = currentHeight)
                 .clip(RoundedCornerShape(currentCorner)),
             blur = 0.85f,
@@ -3904,7 +3904,7 @@ fun GlassBoxScope.LyricsOptionsMenu(
         this@LyricsOptionsMenu.GlassBox(
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .offset(x = currentLeft, y = currentTop)
+                .offset { androidx.compose.ui.unit.IntOffset(currentLeft.roundToPx(), currentTop.roundToPx()) }
                 .size(width = currentWidth, height = currentHeight)
                 .clip(RoundedCornerShape(currentCorner)),
             blur = 0.8f,
@@ -4696,7 +4696,7 @@ fun GlassBoxScope.ArtistOptionsMenu(
         this@ArtistOptionsMenu.GlassBox(
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .offset(x = currentLeft, y = currentTop)
+                .offset { androidx.compose.ui.unit.IntOffset(currentLeft.roundToPx(), currentTop.roundToPx()) }
                 .size(width = currentWidth, height = currentHeight)
                 .clip(RoundedCornerShape(currentCorner)),
             blur = 0.8f,

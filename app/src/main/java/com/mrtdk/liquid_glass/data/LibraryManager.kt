@@ -89,6 +89,10 @@ object LibraryManager {
     private val _dolbyAtmosEnabled = MutableStateFlow(false)
     val dolbyAtmosEnabled: StateFlow<Boolean> = _dolbyAtmosEnabled
 
+    private val _hideVolumeBar = MutableStateFlow(false)
+    val hideVolumeBar: StateFlow<Boolean> = _hideVolumeBar
+
+
     private fun parseItemType(value: String): ItemType? {
         return try {
             ItemType.valueOf(value)
@@ -130,6 +134,8 @@ object LibraryManager {
         _ultraPerformanceMode.value = isUltraPerformanceMode()
         _dolbyAtmosEnabled.value = getString("dolby_atmos_enabled", "false") == "true"
         com.mrtdk.liquid_glass.playback.spatial.SpatialAudioManager.init(_dolbyAtmosEnabled.value)
+        _hideVolumeBar.value = getString("hide_volume_bar", "false") == "true"
+
 
         val initialPinned = mutableSetOf<String>()
         try {
@@ -358,6 +364,10 @@ object LibraryManager {
         _downloadedSongs.value = dbHelper.getDownloadedSongs()
     }
 
+    fun isSongDownloaded(id: String): Boolean {
+        return _downloadedSongs.value.any { it.id == id }
+    }
+
     fun deleteDownloadedSong(context: Context, id: String) {
         if (!isInitialized) return
         dbHelper.deleteDownloadedSong(id)
@@ -370,6 +380,13 @@ object LibraryManager {
                 id,
                 false
             )
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        try {
+            val downloadUtil = com.mrtdk.liquid_glass.playback.DownloadUtil.getInstance(context)
+            downloadUtil.downloadCache.removeResource(id)
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -738,6 +755,17 @@ object LibraryManager {
         saveString("dolby_atmos_enabled", enabled.toString())
         com.mrtdk.liquid_glass.playback.spatial.SpatialAudioManager.setSpatialEnabled(enabled)
     }
+
+    fun isHideVolumeBarEnabled(): Boolean {
+        if (isInitialized) return _hideVolumeBar.value
+        return getString("hide_volume_bar", "false") == "true"
+    }
+
+    fun setHideVolumeBarEnabled(enabled: Boolean) {
+        _hideVolumeBar.value = enabled
+        saveString("hide_volume_bar", enabled.toString())
+    }
+
 
     fun getString(key: String, defaultValue: String? = null): String? {
         if (!isInitialized) return defaultValue

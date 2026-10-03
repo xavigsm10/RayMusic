@@ -159,6 +159,25 @@ data class YouTubeClient(
         )
 
         /**
+         * Current ANDROID_VR pin, matching yt-dlp master and YouTube.js.
+         * Whole-file capable without 403 bot gates.
+         */
+        val ANDROID_VR_1_65_10 = YouTubeClient(
+            clientName = "ANDROID_VR",
+            clientVersion = "1.65.10",
+            clientId = "28",
+            userAgent = "com.google.android.apps.youtube.vr.oculus/1.65.10 (Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip",
+            osName = "Android",
+            osVersion = "12L",
+            deviceMake = "Oculus",
+            deviceModel = "Quest 3",
+            androidSdkVersion = "32",
+            friendlyName = "Android VR 1.65",
+            loginSupported = false,
+            useSignatureTimestamp = false
+        )
+
+        /**
          * Uses non adaptive bitrate, which fixes audio stuttering with YT Music.
          * Does not use AV1.
          */

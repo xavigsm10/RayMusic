@@ -343,7 +343,9 @@ fun AnimatedArtworkPlayer(
             if (isCurrentUltraPerf) {
                 kotlinx.coroutines.delay(33) // ~30 fps cap in ultra performance mode
             } else {
-                androidx.compose.runtime.withFrameNanos { }
+                // Throttle frame capture to ~30 fps matching the native video framerate.
+                // Prevents synchronous GPU-to-CPU readback stalls on 90Hz and 120Hz displays.
+                kotlinx.coroutines.delay(32)
             }
             if (exoPlayer.isPlaying && enableFrameCapture && !isPaused && tv.isAvailable) {
                 val targetBmp = if (useA) reusableBmpA else reusableBmpB
